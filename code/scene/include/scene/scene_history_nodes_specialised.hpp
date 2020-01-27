@@ -8,5 +8,7 @@
 #   include <scene/records/collider/history_nodes.hpp>
 #   include <scene/records/rigid_body/history_nodes.hpp>
 #   include <scene/records/agent/history_nodes.hpp>
+#   include <scene/records/device/history_nodes.hpp>
+#   include <scene/records/sensor/history_nodes.hpp>
 
 #endif

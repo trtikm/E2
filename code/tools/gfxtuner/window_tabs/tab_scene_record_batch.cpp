@@ -105,7 +105,7 @@ void  register_record_handler_for_insert_scene_record(
     insert_record_handlers.insert({
             scn::get_batches_folder_name(),
             {
-                true, // allows multiple records in the folder (i.e. to open the name-selection dialog).
+                true, // Allows multiple records in the folder (i.e. to open the name-selection dialog).
                 [](widgets* const  w, std::string const&, std::unordered_set<std::string> const&  used_names)
                     -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
                     boost::filesystem::path const&  root_dir =

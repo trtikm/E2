@@ -1,15 +1,15 @@
-#include <gfxtuner/window_tabs/tab_scene_record_agent.hpp>
+#include <gfxtuner/window_tabs/tab_scene_record_device.hpp>
 #include <gfxtuner/window_tabs/tab_scene.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/window_tabs/skeleton_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
-#include <gfxtuner/dialog_windows/agent_props_dialog.hpp>
+#include <gfxtuner/dialog_windows/device_props_dialog.hpp>
 #include <scene/scene.hpp>
 #include <scene/scene_history.hpp>
 #include <scene/scene_node_record_id.hpp>
 #include <scene/scene_utils_specialised.hpp>
-#include <ai/agents.hpp>
+#include <ai/devices.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <utility/assumptions.hpp>
@@ -29,48 +29,48 @@
 #include <QLineEdit>
 #include <QGroupBox>
 
-namespace window_tabs { namespace tab_scene { namespace record_agent {
+namespace window_tabs { namespace tab_scene { namespace record_device {
 
 
 void  register_record_icons(std::unordered_map<std::string, QIcon>& icons_of_records)
 {
     icons_of_records.insert({
-        scn::get_agent_folder_name(),
-        QIcon((boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/icons/agent.png").string().c_str())
+        scn::get_device_folder_name(),
+        QIcon((boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/icons/device.png").string().c_str())
         });
 }
 
 
 void  register_record_undo_redo_processors(widgets* const  w)
 {
-    scn::scene_history_agent_insert::set_undo_processor(
-        [w](scn::scene_history_agent_insert const&  history_node) {
-            INVARIANT(history_node.get_id().get_folder_name() == scn::get_agent_folder_name());
-            w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(history_node.get_id()));
+    scn::scene_history_device_insert::set_undo_processor(
+        [w](scn::scene_history_device_insert const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_device_folder_name());
+            w->wnd()->glwindow().call_now(&simulator::erase_device, std::cref(history_node.get_id()));
             remove_record_from_tree_widget(w->scene_tree(), history_node.get_id());
         });
-    scn::scene_history_agent_insert::set_redo_processor(
-        [w](scn::scene_history_agent_insert const&  history_node) {
-            INVARIANT(history_node.get_id().get_folder_name() == scn::get_agent_folder_name());
-            w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(history_node.get_id()), std::cref(history_node.get_props()));
+    scn::scene_history_device_insert::set_redo_processor(
+        [w](scn::scene_history_device_insert const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_device_folder_name());
+            w->wnd()->glwindow().call_now(&simulator::insert_device, std::cref(history_node.get_id()), std::cref(history_node.get_props()));
             insert_record_to_tree_widget(
                     w->scene_tree(),
                     history_node.get_id(),
-                    w->get_record_icon(scn::get_agent_folder_name()),
+                    w->get_record_icon(scn::get_device_folder_name()),
                     w->get_folder_icon());
         });
 
-    scn::scene_history_agent_update_props::set_undo_processor(
-        [w](scn::scene_history_agent_update_props const&  history_node) {
-            INVARIANT(history_node.get_id().get_folder_name() == scn::get_agent_folder_name());
-            w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(history_node.get_id()));
-            w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(history_node.get_id()), std::cref(history_node.get_old_props()));
+    scn::scene_history_device_update_props::set_undo_processor(
+        [w](scn::scene_history_device_update_props const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_device_folder_name());
+            w->wnd()->glwindow().call_now(&simulator::erase_device, std::cref(history_node.get_id()));
+            w->wnd()->glwindow().call_now(&simulator::insert_device, std::cref(history_node.get_id()), std::cref(history_node.get_old_props()));
         });
-    scn::scene_history_agent_update_props::set_redo_processor(
-        [w](scn::scene_history_agent_update_props const&  history_node) {
-            INVARIANT(history_node.get_id().get_folder_name() == scn::get_agent_folder_name());
-            w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(history_node.get_id()));
-            w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(history_node.get_id()), std::cref(history_node.get_new_props()));
+    scn::scene_history_device_update_props::set_redo_processor(
+        [w](scn::scene_history_device_update_props const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_device_folder_name());
+            w->wnd()->glwindow().call_now(&simulator::erase_device, std::cref(history_node.get_id()));
+            w->wnd()->glwindow().call_now(&simulator::insert_device, std::cref(history_node.get_id()), std::cref(history_node.get_new_props()));
         });
 }
 
@@ -84,14 +84,14 @@ void  register_record_handler_for_insert_scene_record(
         )
 {
     insert_record_handlers.insert({
-            scn::get_agent_folder_name(),
+            scn::get_device_folder_name(),
             {
                 false, // There cannot be mutiple records in one folder.
                 [](widgets* const  w, std::string const&, std::unordered_set<std::string> const&  used_names)
                     -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
                         if (used_names.size() != 0UL)
                         {
-                            w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one agent entity.", 10000);
+                            w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one device entity.", 10000);
                             return{ "",{} };
                         }
 
@@ -123,17 +123,17 @@ void  register_record_handler_for_insert_scene_record(
                         }
 
                         return {
-                            scn::get_agent_record_name(),
+                            scn::get_device_record_name(),
                             [w, skeleton_dir, skeletal_motion_templates](
                                 scn::scene_record_id const&  record_id) -> void
                                 {
-                                    scn::agent_props const  props {
-                                        ai::AGENT_KIND::STATIONARY,
+                                    scn::device_props const  props {
+                                        ai::DEVICE_KIND::DEFAULT,
                                         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates)
                                     };
                                     insert_skeleton_joint_nodes(record_id, props.m_skeleton_props, w);
-                                    w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(record_id), std::cref(props));
-                                    w->get_scene_history()->insert<scn::scene_history_agent_insert>(record_id, props, false);
+                                    w->wnd()->glwindow().call_now(&simulator::insert_device, std::cref(record_id), std::cref(props));
+                                    w->get_scene_history()->insert<scn::scene_history_device_insert>(record_id, props, false);
                                 }
                             };
                     }
@@ -147,21 +147,21 @@ void  register_record_handler_for_update_scene_record(
         )
 {
     update_record_handlers.insert({
-            scn::get_agent_folder_name(),
+            scn::get_device_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
-                    scn::agent_props  old_props;
-                    w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(record_id.get_node_id()), std::ref(old_props));
-                    dialog_windows::agent_props_dialog  dlg(w->wnd(), old_props);
+                    scn::device_props  old_props;
+                    w->wnd()->glwindow().call_now(&simulator::get_device_info, std::cref(record_id.get_node_id()), std::ref(old_props));
+                    dialog_windows::device_props_dialog  dlg(w->wnd(), old_props);
                     dlg.exec();
                     if (!dlg.ok())
                         return;
-                    w->get_scene_history()->insert<scn::scene_history_agent_update_props>(
+                    w->get_scene_history()->insert<scn::scene_history_device_update_props>(
                             record_id,
                             old_props,
                             dlg.get_new_props(),
                             false);
-                    w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(record_id));
-                    w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(record_id), std::cref(dlg.get_new_props()));
+                    w->wnd()->glwindow().call_now(&simulator::erase_device, std::cref(record_id));
+                    w->wnd()->glwindow().call_now(&simulator::insert_device, std::cref(record_id), std::cref(dlg.get_new_props()));
                 }
             });
 }
@@ -173,12 +173,12 @@ void  register_record_handler_for_duplicate_scene_record(
         )
 {
     duplicate_record_handlers.insert({
-            scn::get_agent_folder_name(),
+            scn::get_device_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  src_record_id, scn::scene_record_id const&  dst_record_id) -> void {
-                    scn::agent_props  props;
-                    w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(src_record_id.get_node_id()), std::ref(props));
-                    w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(dst_record_id), std::cref(props));
-                    w->get_scene_history()->insert<scn::scene_history_agent_insert>(dst_record_id, props, false);
+                    scn::device_props  props;
+                    w->wnd()->glwindow().call_now(&simulator::get_device_info, std::cref(src_record_id.get_node_id()), std::ref(props));
+                    w->wnd()->glwindow().call_now(&simulator::insert_device, std::cref(dst_record_id), std::cref(props));
+                    w->get_scene_history()->insert<scn::scene_history_device_insert>(dst_record_id, props, false);
                 }
             });
 }
@@ -190,12 +190,12 @@ void  register_record_handler_for_erase_scene_record(
         )
 {
     erase_record_handlers.insert({
-            scn::get_agent_folder_name(),
+            scn::get_device_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  id) -> void {
-                    scn::agent_props  props;
-                    w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(id.get_node_id()), std::ref(props));
-                    w->get_scene_history()->insert<scn::scene_history_agent_insert>(id, props, true);
-                    w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(id));
+                    scn::device_props  props;
+                    w->wnd()->glwindow().call_now(&simulator::get_device_info, std::cref(id.get_node_id()), std::ref(props));
+                    w->get_scene_history()->insert<scn::scene_history_device_insert>(id, props, true);
+                    w->wnd()->glwindow().call_now(&simulator::erase_device, std::cref(id));
                 }
             });
 }
@@ -211,28 +211,28 @@ void  register_record_handler_for_load_scene_record(
         )
 {
     load_record_handlers.insert({
-            scn::get_agent_folder_name(),
+            scn::get_device_folder_name(),
             []( widgets* const  w,
                 scn::scene_record_id const&  id,
                 boost::property_tree::ptree const&  data,
                 std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
                 bool const  do_update_history) -> void {
                     w->wnd()->glwindow().call_now(
-                            &simulator::load_agent,
+                            &simulator::load_device,
                             std::cref(data),
                             std::cref(id)
                             );
                     insert_record_to_tree_widget(
                             w->scene_tree(),
                             id,
-                            w->get_record_icon(scn::get_agent_folder_name()),
+                            w->get_record_icon(scn::get_device_folder_name()),
                             w->get_folder_icon()
                             );
                     if (do_update_history)
                     {
-                        scn::agent_props  props;
-                        w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(id.get_node_id()), std::ref(props));
-                        w->get_scene_history()->insert<scn::scene_history_agent_insert>(id, props, false);
+                        scn::device_props  props;
+                        w->wnd()->glwindow().call_now(&simulator::get_device_info, std::cref(id.get_node_id()), std::ref(props));
+                        w->get_scene_history()->insert<scn::scene_history_device_insert>(id, props, false);
                     }
                 }
             });
@@ -249,14 +249,14 @@ void  register_record_handler_for_save_scene_record(
         )
 {
     save_record_handlers.insert({
-            scn::get_agent_folder_name(),
+            scn::get_device_folder_name(),
             []( widgets* const  w,
                 scn::scene_node_ptr const  node_ptr,
                 scn::scene_node_record_id const&  id,
                 boost::property_tree::ptree&  data,
                 std::unordered_map<std::string, boost::property_tree::ptree>&  infos) -> void {
                     w->wnd()->glwindow().call_now(
-                            &simulator::save_agent,
+                            &simulator::save_device,
                             node_ptr,
                             std::ref(data)
                             );

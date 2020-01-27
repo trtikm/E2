@@ -2754,6 +2754,99 @@ void  simulator::erase_agent(scn::scene_record_id const&  id)
 }
 
 
+void  simulator::get_agent_info(scn::scene_node_id const& id, scn::agent_props&  props)
+{
+    scn::agent const* const  agent_ptr = scn::get_agent(*get_scene_node(id));
+    ASSUMPTION(agent_ptr != nullptr);
+    props = agent_ptr->get_props();
+}
+
+
+void  simulator::insert_device(scn::scene_record_id const&  id, scn::device_props const&  props)
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
+    ai::device_id const  device_id =
+            get_ai_simulator()->insert_device(
+                    id.get_node_id(),
+                    props.m_skeleton_props->skeletal_motion_templates,
+                    props.m_device_kind
+                    );
+    scn::insert_device(*node_ptr, device_id, props);
+    m_binding_of_devices_to_scene[device_id] = id.get_node_id();
+}
+
+
+void  simulator::erase_device(scn::scene_record_id const&  id)
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
+    scn::device const* const  device_ptr = scn::get_device(*node_ptr);
+    ASSUMPTION(device_ptr != nullptr);
+
+    get_ai_simulator()->erase_device(device_ptr->id());
+    m_binding_of_devices_to_scene.erase(device_ptr->id());
+
+    m_scene_selection.erase_record(id);
+    scn::erase_device(*node_ptr);
+}
+
+
+void  simulator::get_device_info(scn::scene_node_id const& id, scn::device_props&  props)
+{
+    scn::device const* const  device_ptr = scn::get_device(*get_scene_node(id));
+    ASSUMPTION(device_ptr != nullptr);
+    props = device_ptr->get_props();
+}
+
+
+void  simulator::insert_sensor(scn::scene_record_id const&  id, scn::sensor_props const&  props)
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
+    ai::sensor_id const  sensor_id =
+            get_ai_simulator()->insert_sensor(
+                    id.get_node_id(),
+                    props.m_sensor_kind
+                    );
+    scn::insert_sensor(*node_ptr, id.get_record_name(), sensor_id, props);
+    m_binding_of_sensors_to_scene.insert({ sensor_id, id });
+}
+
+
+void  simulator::erase_sensor(scn::scene_record_id const&  id)
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
+    scn::sensor const* const  sensor_ptr = scn::get_sensor(*node_ptr, id.get_record_name());
+    ASSUMPTION(sensor_ptr != nullptr);
+
+    get_ai_simulator()->erase_sensor(sensor_ptr->id());
+    m_binding_of_sensors_to_scene.erase(sensor_ptr->id());
+
+    m_scene_selection.erase_record(id);
+    scn::erase_sensor(*node_ptr, id.get_record_name());
+}
+
+
+void  simulator::get_sensor_info(scn::scene_record_id const& id, scn::sensor_props&  props)
+{
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
+    scn::sensor const* const  sensor_ptr = scn::get_sensor(*node_ptr, id.get_record_name());
+    ASSUMPTION(sensor_ptr != nullptr);
+    props = sensor_ptr->get_props();
+}
+
+
 void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id)
 {
     TMPROF_BLOCK();
@@ -2957,11 +3050,51 @@ void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property
 }
 
 
-void  simulator::get_agent_info(scn::scene_node_id const& id, scn::agent_props&  props)
+void  simulator::load_device(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id)
 {
-    scn::agent* const  agent_ptr = scn::get_agent(*get_scene_node(id));
-    ASSUMPTION(agent_ptr != nullptr);
-    props = agent_ptr->get_props();
+    TMPROF_BLOCK();
+
+    boost::filesystem::path const  skeleton_dir = data.get<std::string>("skeleton_dir");
+    scn::device_props const  props{
+        ai::as_device_kind(data.get<std::string>("kind")),
+        scn::create_skeleton_props(
+                skeleton_dir,
+                skeleton_dir.empty() ? ai::skeletal_motion_templates() : ai::skeletal_motion_templates(skeleton_dir, 75U)
+                )
+    };
+    insert_device(id, props);
+}
+
+
+void  simulator::save_device(scn::scene_node_ptr const  node_ptr, boost::property_tree::ptree&  data)
+{
+    TMPROF_BLOCK();
+
+    scn::device* const  device_ptr = scn::get_device(*node_ptr);
+    ASSUMPTION(device_ptr != nullptr);
+    data.put("kind", ai::as_string(device_ptr->get_props().m_device_kind));
+    data.put("skeleton_dir", device_ptr->get_props().m_skeleton_props->skeleton_directory.string());
+}
+
+
+void  simulator::load_sensor(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id)
+{
+    TMPROF_BLOCK();
+
+    scn::sensor_props const  props{
+        ai::as_sensor_kind(data.get<std::string>("kind"))
+    };
+    insert_sensor(id, props);
+}
+
+
+void  simulator::save_sensor(scn::scene_node_ptr const  node_ptr, scn::scene_node_record_id const&  id, boost::property_tree::ptree&  data)
+{
+    TMPROF_BLOCK();
+
+    scn::sensor const* const  sensor_ptr = scn::get_sensor(*node_ptr, id.get_record_name());
+    ASSUMPTION(sensor_ptr != nullptr);
+    data.put("kind", ai::as_string(sensor_ptr->get_props().m_sensor_kind));
 }
 
 

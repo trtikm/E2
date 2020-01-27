@@ -1,8 +1,9 @@
-#ifndef E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_RECORD_COLLIDER_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_RECORD_COLLIDER_HPP_INCLUDED
+#ifndef E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_RECORD_DEVICE_HPP_INCLUDED
+#   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_RECORD_DEVICE_HPP_INCLUDED
 
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
+#   include <scene/records/device/device.hpp>
 #   include <unordered_map>
 #   include <unordered_set>
 #   include <functional>
@@ -17,7 +18,7 @@ struct  widgets;
 
 }}
 
-namespace window_tabs { namespace tab_scene { namespace record_collider {
+namespace window_tabs { namespace tab_scene { namespace record_device {
 
 
 void  register_record_icons(std::unordered_map<std::string, QIcon>& icons_of_records);

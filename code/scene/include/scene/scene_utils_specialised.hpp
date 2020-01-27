@@ -7,5 +7,7 @@
 #   include <scene/records/collider/utils.hpp>
 #   include <scene/records/rigid_body/utils.hpp>
 #   include <scene/records/agent/utils.hpp>
+#   include <scene/records/device/utils.hpp>
+#   include <scene/records/sensor/utils.hpp>
 
 #endif

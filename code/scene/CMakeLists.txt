@@ -26,6 +26,7 @@ add_library(${THIS_TARGET_NAME}
     ./include/scene/scene_utils_specialised.hpp
     ./src/scene_utils.cpp
 
+    ./include/scene/records/skeleton_props.hpp
     ./include/scene/records/batch/utils.hpp
     ./include/scene/records/batch/history_nodes.hpp
     ./include/scene/records/collider/collider.hpp
@@ -37,6 +38,12 @@ add_library(${THIS_TARGET_NAME}
     ./include/scene/records/agent/agent.hpp
     ./include/scene/records/agent/utils.hpp
     ./include/scene/records/agent/history_nodes.hpp
+    ./include/scene/records/device/device.hpp
+    ./include/scene/records/device/utils.hpp
+    ./include/scene/records/device/history_nodes.hpp
+    ./include/scene/records/sensor/sensor.hpp
+    ./include/scene/records/sensor/utils.hpp
+    ./include/scene/records/sensor/history_nodes.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

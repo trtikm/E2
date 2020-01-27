@@ -38,6 +38,8 @@ add_executable(${THIS_TARGET_NAME}
 
     window_tabs/tab_scene.hpp
     window_tabs/tab_scene.cpp
+    window_tabs/skeleton_utils.hpp
+    window_tabs/skeleton_utils.cpp
     window_tabs/tab_scene_bool_lock.hpp
     window_tabs/tab_scene_record_id_reverse_builder.hpp
     window_tabs/tab_scene_record_id_reverse_builder.cpp
@@ -55,6 +57,10 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_scene_record_rigid_body.cpp
     window_tabs/tab_scene_record_agent.hpp
     window_tabs/tab_scene_record_agent.cpp
+    window_tabs/tab_scene_record_device.hpp
+    window_tabs/tab_scene_record_device.cpp
+    window_tabs/tab_scene_record_sensor.hpp
+    window_tabs/tab_scene_record_sensor.cpp
 
     window_tabs/tab_simulation.hpp
     window_tabs/tab_simulation.cpp
@@ -74,6 +80,10 @@ add_executable(${THIS_TARGET_NAME}
 
     dialog_windows/agent_props_dialog.hpp
     dialog_windows/agent_props_dialog.cpp
+    dialog_windows/device_props_dialog.hpp
+    dialog_windows/device_props_dialog.cpp
+    dialog_windows/sensor_props_dialog.hpp
+    dialog_windows/sensor_props_dialog.cpp
     dialog_windows/collider_props_dialog.hpp 
     dialog_windows/collider_props_dialog.cpp 
     dialog_windows/effects_config_dialog.hpp

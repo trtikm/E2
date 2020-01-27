@@ -5,6 +5,7 @@
 #   include <scene/scene.hpp>
 #   include <scene/scene.hpp>
 #   include <scene/scene_node_id.hpp>
+#   include <scene/scene_node_record_id.hpp>
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_selection.hpp>
 #   include <scene/scene_history.hpp>
@@ -12,6 +13,8 @@
 #   include <scene/records/collider/collider.hpp>
 #   include <scene/records/rigid_body/rigid_body.hpp>
 #   include <scene/records/agent/agent.hpp>
+#   include <scene/records/device/device.hpp>
+#   include <scene/records/sensor/sensor.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
@@ -219,6 +222,15 @@ struct simulator : public qtgl::real_time_simulator
 
     void  insert_agent(scn::scene_record_id const&  id, scn::agent_props const&  props);
     void  erase_agent(scn::scene_record_id const&  id);
+    void  get_agent_info(scn::scene_node_id const&  id, scn::agent_props&  props);
+
+    void  insert_device(scn::scene_record_id const&  id, scn::device_props const&  props);
+    void  erase_device(scn::scene_record_id const&  id);
+    void  get_device_info(scn::scene_node_id const&  id, scn::device_props&  props);
+
+    void  insert_sensor(scn::scene_record_id const&  id, scn::sensor_props const&  props);
+    void  erase_sensor(scn::scene_record_id const&  id);
+    void  get_sensor_info(scn::scene_record_id const&  id, scn::sensor_props&  props);
 
     void  load_collider(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id);
     void  save_collider(scn::collider const&  collider, boost::property_tree::ptree&  data);
@@ -229,7 +241,11 @@ struct simulator : public qtgl::real_time_simulator
     void  load_agent(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id);
     void  save_agent(scn::scene_node_ptr const  node_ptr, boost::property_tree::ptree&  data);
 
-    void  get_agent_info(scn::scene_node_id const& id, scn::agent_props&  props);
+    void  load_device(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id);
+    void  save_device(scn::scene_node_ptr const  node_ptr, boost::property_tree::ptree&  data);
+
+    void  load_sensor(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id);
+    void  save_sensor(scn::scene_node_ptr const  node_ptr, scn::scene_node_record_id const&  id, boost::property_tree::ptree&  data);
 
     void  clear_scene();
 
@@ -273,7 +289,7 @@ struct simulator : public qtgl::real_time_simulator
 
     scn::scene_node_id const&  get_scene_node_of_agent(ai::agent_id const  id) const { return m_binding_of_agents_to_scene.at(id); }
     scn::scene_node_id const&  get_scene_node_of_device(ai::device_id const  id) const { return m_binding_of_devices_to_scene.at(id); }
-    scn::scene_node_id const&  get_scene_node_of_sensor(ai::sensor_id const  id) const { return m_binding_of_sensors_to_scene.at(id); }
+    scn::scene_record_id const&  get_scene_node_of_sensor(ai::sensor_id const  id) const { return m_binding_of_sensors_to_scene.at(id); }
 
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_id const&  id)
@@ -453,7 +469,7 @@ private:
     std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
     std::unordered_map<ai::agent_id, scn::scene_node_id>  m_binding_of_agents_to_scene;
     std::unordered_map<ai::device_id, scn::scene_node_id>  m_binding_of_devices_to_scene;
-    std::unordered_map<ai::sensor_id, scn::scene_node_id>  m_binding_of_sensors_to_scene;
+    std::unordered_map<ai::sensor_id, scn::scene_record_id>  m_binding_of_sensors_to_scene;
 
     // Debugging
 

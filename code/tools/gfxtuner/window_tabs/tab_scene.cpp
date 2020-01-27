@@ -3,6 +3,7 @@
 #include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
 #include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
 #include <gfxtuner/window_tabs/tab_scene_record_agent.hpp>
+#include <gfxtuner/window_tabs/skeleton_utils.hpp>
 #include <gfxtuner/dialog_windows/insert_name_dialog.hpp>
 #include <gfxtuner/dialog_windows/insert_number_dialog.hpp>
 #include <gfxtuner/program_window.hpp>
@@ -2174,7 +2175,7 @@ void  widgets::on_scene_agent_reset_skeleton_pose()
         return;
     }
     for (auto const& id_and_props : agents)
-        record_agent::reset_skeleton_joint_nodes_under_agent_node(id_and_props.first, id_and_props.second, this);
+        reset_skeleton_joint_nodes(id_and_props.first, id_and_props.second, this);
 }
 
 

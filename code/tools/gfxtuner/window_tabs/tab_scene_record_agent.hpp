@@ -1,5 +1,5 @@
-#ifndef ANGEO_COLLISION_SCENE_RECORD_AGENT_HPP_INCLUDED
-#   define ANGEO_COLLISION_SCENE_RECORD_AGENT_HPP_INCLUDED
+#ifndef E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_RECORD_AGENT_HPP_INCLUDED
+#   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_RECORD_AGENT_HPP_INCLUDED
 
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
@@ -62,18 +62,6 @@ void  register_record_handler_for_save_scene_record(
                                                            boost::property_tree::ptree&,
                                                            std::unordered_map<std::string, boost::property_tree::ptree>&)>>&
                 save_record_handlers
-        );
-
-
-}}}
-
-namespace window_tabs { namespace tab_scene { namespace record_agent {
-
-
-void  reset_skeleton_joint_nodes_under_agent_node(
-        scn::scene_record_id const&  agent_record_id,
-        scn::skeleton_props_const_ptr const  skeleton_props,
-        widgets* const  w
         );
 
 
