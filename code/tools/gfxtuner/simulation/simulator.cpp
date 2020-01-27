@@ -2834,6 +2834,7 @@ void  simulator::save_collider(scn::collider const&  collider, boost::property_t
     }
 
     data.put("material", to_string(m_collision_scene_ptr->get_material(collider.id())));
+    data.put("collision_class", to_string(m_collision_scene_ptr->get_collision_class(collider.id())));
     data.put("is_dynamic", m_collision_scene_ptr->is_dynamic(collider.id()));
     data.put("density_multiplier", collider.get_density_multiplier());
 }
