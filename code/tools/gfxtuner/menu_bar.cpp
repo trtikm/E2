@@ -153,15 +153,18 @@ menu_bar::menu_bar(program_window* const  wnd)
         boost::filesystem::create_directories(m_default_scene_root_dir);
     m_default_scene_root_dir = canonical_path(m_default_scene_root_dir);
 
-    std::multimap<std::string, std::pair<std::string, record_menu_items::record_menu_item_info> >  record_menu_items;
+    std::vector<record_menu_items::record_menu_item_info>  record_menu_items;
     record_menu_items::register_record_menu_items(record_menu_items);
-    for (auto const& record_kind_and_info : record_menu_items)
-    {
-        QAction* const  action = new QAction(QString(record_kind_and_info.second.second.m_name.c_str()), wnd);
-        action->setShortcut(QString(record_kind_and_info.second.second.m_shortcut.c_str()));
-        action->setToolTip(QString(record_kind_and_info.second.second.m_tooltip.c_str()));
-        m_record_menu_items.insert({record_kind_and_info.first, { action, record_kind_and_info.second.first } });
-    }
+    for (record_menu_items::record_menu_item_info const& info : record_menu_items)
+        if (info.is_separator())
+            m_record_menu_items.push_back({});
+        else
+        {
+            QAction* const  action = new QAction(QString(info.m_name.c_str()), wnd);
+            action->setShortcut(QString(info.m_shortcut.c_str()));
+            action->setToolTip(QString(info.m_tooltip.c_str()));
+            m_record_menu_items.push_back({ action, info.m_folder_name, info.m_mode });
+        }
 
     load();
 }
@@ -282,8 +285,9 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
     get_file_action_exit()->setDisabled(false);
 
     get_edit_action_insert_coord_system()->setDisabled(simulation_resumed);
-    for (auto const& record_kind_and_action : get_edit_actions_of_records())
-        record_kind_and_action.second.first->setDisabled(simulation_resumed);
+    for (record_item_info const&  info : get_edit_actions_of_records())
+        if (!info.is_separator())
+            info.action_ptr->setDisabled(simulation_resumed);
     get_edit_action_erase_selected()->setDisabled(simulation_resumed);
     get_edit_action_duplicate_selected()->setDisabled(simulation_resumed);
     get_edit_action_change_parent_of_selected()->setDisabled(simulation_resumed);
@@ -439,26 +443,24 @@ void  make_menu_bar_content(menu_bar&  w)
 
     w.get_menu_edit()->addSeparator();
 
-    std::string  last_kind = "";
-    for (auto const&  record_kind_and_action : w.get_edit_actions_of_records())
-    {
-        if (!last_kind.empty() && last_kind != record_kind_and_action.first)
+    for (menu_bar::record_item_info const&  info : w.get_edit_actions_of_records())
+        if (info.is_separator())
             w.get_menu_edit()->addSeparator();
-        last_kind = record_kind_and_action.first;
-
-        w.get_menu_edit()->addAction(record_kind_and_action.second.first);
-        QObject::connect(
-                record_kind_and_action.second.first,
-                &QAction::triggered,
-                w.wnd(),
-                std::bind(
-                    &program_window::on_menu_edit_insert_record,
+        else
+        {
+            w.get_menu_edit()->addAction(info.action_ptr);
+            QObject::connect(
+                    info.action_ptr,
+                    &QAction::triggered,
                     w.wnd(),
-                    record_kind_and_action.first,
-                    record_kind_and_action.second.second
-                    )
-                );
-    }
+                    std::bind(
+                        &program_window::on_menu_edit_insert_record,
+                        w.wnd(),
+                        info.folder_name,
+                        info.mode
+                        )
+                    );
+        }
 
     w.get_menu_edit()->addSeparator();
 

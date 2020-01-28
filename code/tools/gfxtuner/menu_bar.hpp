@@ -8,7 +8,7 @@
 #   include <QAction>
 #   include <boost/filesystem.hpp>
 #   include <deque>
-#   include <map>
+#   include <vector>
 #   include <string>
 #   include <tuple>
 
@@ -17,6 +17,16 @@ struct  program_window;
 
 struct  menu_bar
 {
+    struct  record_item_info
+    {
+        bool  is_separator() const { return action_ptr == nullptr; }
+        record_item_info() : action_ptr(nullptr), folder_name(), mode() {}
+        record_item_info(QAction* const  a, std::string const&  f, std::string const&  m) : action_ptr(a), folder_name(f), mode(m) {}
+        QAction*  action_ptr;
+        std::string  folder_name;
+        std::string  mode;
+    };
+
     menu_bar(program_window* const  wnd);
 
     program_window*  wnd() const { return m_wnd; }
@@ -35,7 +45,7 @@ struct  menu_bar
 
     QMenu*  get_menu_edit() const { return m_menu_edit; }
     QAction*  get_edit_action_insert_coord_system() const { return m_edit_action_insert_coord_system; }
-    std::multimap<std::string, std::pair<QAction*, std::string> > const& get_edit_actions_of_records() const { return m_record_menu_items; }
+    std::vector<record_item_info> const&  get_edit_actions_of_records() const { return m_record_menu_items; }
     QAction*  get_edit_action_erase_selected() const { return m_edit_action_erase_selected; }
     QAction*  get_edit_action_duplicate_selected() const { return m_edit_action_duplicate_selected; }
     QAction*  get_edit_action_change_parent_of_selected() const { return m_edit_action_change_parent_of_selected; }
@@ -103,7 +113,7 @@ private:
 
     QMenu*  m_menu_edit;
     QAction*  m_edit_action_insert_coord_system;
-    std::multimap<std::string, std::pair<QAction*, std::string> >  m_record_menu_items;
+    std::vector<record_item_info>  m_record_menu_items;
     QAction*  m_edit_action_erase_selected;
     QAction*  m_edit_action_duplicate_selected;
     QAction*  m_edit_action_change_parent_of_selected;
