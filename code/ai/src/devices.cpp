@@ -26,7 +26,7 @@ device_id  devices::insert(
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(device_nid.valid() && !motion_templates.empty());
+    ASSUMPTION(device_nid.valid());
 
     device_id  id = 0U;
     for (; id != m_devices.size(); ++id)

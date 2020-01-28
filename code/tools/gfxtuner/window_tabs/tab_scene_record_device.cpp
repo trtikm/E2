@@ -96,30 +96,35 @@ void  register_record_handler_for_insert_scene_record(
                         }
 
                         boost::filesystem::path  skeleton_dir;
+                        //{
+                        //    QFileDialog  dialog(w->wnd());
+                        //    dialog.setDirectory(
+                        //        canonical_path(boost::filesystem::absolute(
+                        //            boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "animations" / "skeletal"
+                        //            )).string().c_str()
+                        //        );
+                        //    dialog.setFileMode(QFileDialog::Directory);
+                        //    if (dialog.exec())
+                        //    {
+                        //        QStringList const  selected_dirs = dialog.selectedFiles();
+                        //        if (selected_dirs.size() != 1)
+                        //        {
+                        //            w->wnd()->print_status_message("ERROR: Exactly one skeleton directory must be provided.", 10000);
+                        //            return{ "",{} };
+                        //        }
+                        //        skeleton_dir = qtgl::to_string(selected_dirs.front());
+                        //    }
+                        //}
+
+                        ai::skeletal_motion_templates  skeletal_motion_templates;
+                        if (!skeleton_dir.empty())
                         {
-                            QFileDialog  dialog(w->wnd());
-                            dialog.setDirectory(
-                                canonical_path(boost::filesystem::absolute(
-                                    boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "animations" / "skeletal"
-                                    )).string().c_str()
-                                );
-                            dialog.setFileMode(QFileDialog::Directory);
-                            if (!dialog.exec())
-                                return{ "",{} };
-                            QStringList const  selected_dirs = dialog.selectedFiles();
-                            if (selected_dirs.size() != 1)
+                            skeletal_motion_templates = ai::skeletal_motion_templates(skeleton_dir, 100U);
+                            if (!skeletal_motion_templates.wait_till_load_is_finished())
                             {
-                                w->wnd()->print_status_message("ERROR: Exactly one skeleton directory must be provided.", 10000);
+                                w->wnd()->print_status_message("ERROR: Load of skeletal_motion_templates '" + skeletal_motion_templates.key().get_unique_id() + "' has FAILED!", 10000);
                                 return{ "",{} };
                             }
-                            skeleton_dir = qtgl::to_string(selected_dirs.front());
-                        }
-
-                        ai::skeletal_motion_templates const  skeletal_motion_templates(skeleton_dir, 100U);
-                        if (!skeletal_motion_templates.wait_till_load_is_finished())
-                        {
-                            w->wnd()->print_status_message("ERROR: Load of skeletal_motion_templates '" + skeletal_motion_templates.key().get_unique_id() + "' has FAILED!", 10000);
-                            return{ "",{} };
                         }
 
                         return {
@@ -131,7 +136,8 @@ void  register_record_handler_for_insert_scene_record(
                                         ai::DEVICE_KIND::DEFAULT,
                                         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates)
                                     };
-                                    insert_skeleton_joint_nodes(record_id, props.m_skeleton_props, w);
+                                    if (!skeleton_dir.empty())
+                                        insert_skeleton_joint_nodes(record_id, props.m_skeleton_props, w);
                                     w->wnd()->glwindow().call_now(&simulator::insert_device, std::cref(record_id), std::cref(props));
                                     w->get_scene_history()->insert<scn::scene_history_device_insert>(record_id, props, false);
                                 }

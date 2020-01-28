@@ -38,7 +38,7 @@ device_props_dialog::device_props_dialog(program_window* const  wnd, scn::device
     {
         QHBoxLayout* const kind_layout = new QHBoxLayout;
         {
-            QLabel* const  kind_label = new QLabel("device/cortex kind");
+            QLabel* const  kind_label = new QLabel("Device kind");
             std::string  descriptions_of_kinds = "Defines a kind of the cortex, i.e. device's behaviour. These kinds are available:\n";
             for (natural_8_bit i = 0U; i != ai::num_device_kinds(); ++i)
             {
