@@ -32,6 +32,10 @@ add_executable(${THIS_TARGET_NAME}
     menu_bar_record_rigid_body.cpp
     menu_bar_record_agent.hpp
     menu_bar_record_agent.cpp
+    menu_bar_record_device.hpp
+    menu_bar_record_device.cpp
+    menu_bar_record_sensor.hpp
+    menu_bar_record_sensor.cpp
     
     window_tabs/tab_draw.hpp
     window_tabs/tab_draw.cpp

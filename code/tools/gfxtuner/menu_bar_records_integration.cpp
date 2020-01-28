@@ -3,6 +3,8 @@
 #include <gfxtuner/menu_bar_record_collider.hpp>
 #include <gfxtuner/menu_bar_record_rigid_body.hpp>
 #include <gfxtuner/menu_bar_record_agent.hpp>
+#include <gfxtuner/menu_bar_record_device.hpp>
+#include <gfxtuner/menu_bar_record_sensor.hpp>
 
 namespace record_menu_items {
 
@@ -13,6 +15,8 @@ void  register_record_menu_items(std::multimap<std::string, std::pair<std::strin
     record_collider::register_record_menu_items(record_menu_items);
     record_rigid_body::register_record_menu_items(record_menu_items);
     record_agent::register_record_menu_items(record_menu_items);
+    record_device::register_record_menu_items(record_menu_items);
+    record_sensor::register_record_menu_items(record_menu_items);
 }
 
 
