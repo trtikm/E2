@@ -2810,10 +2810,27 @@ void  simulator::insert_sensor(scn::scene_record_id const&  id, scn::sensor_prop
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
+    ai::object_id  owner_id = ai::object_id::make_invalid();
+    for (scn::scene_node_ptr  owner_node_ptr = node_ptr; owner_node_ptr != nullptr; owner_node_ptr = owner_node_ptr->get_parent())
+    {
+        if (scn::agent const* const  agent_ptr = scn::get_agent(*owner_node_ptr))
+        {
+            owner_id = ai::object_id(ai::OBJECT_KIND::AGENT, agent_ptr->id());
+            break;
+        }
+        if (scn::device const* const  device_ptr = scn::get_device(*owner_node_ptr))
+        {
+            owner_id = ai::object_id(ai::OBJECT_KIND::DEVICE, device_ptr->id());
+            break;
+        }
+    }
+    ASSUMPTION(owner_id.valid());
     ai::sensor_id const  sensor_id =
             get_ai_simulator()->insert_sensor(
                     id.get_node_id(),
-                    props.m_sensor_kind
+                    props.m_sensor_kind,
+                    owner_id,
+                    ai::sensor::default_configs().at(props.m_sensor_kind)
                     );
     scn::insert_sensor(*node_ptr, id.get_record_name(), sensor_id, props);
     m_binding_of_sensors_to_scene.insert({ sensor_id, id });

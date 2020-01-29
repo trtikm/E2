@@ -13,7 +13,7 @@ simulator::simulator(scene_ptr const  scene_)
     : m_scene(scene_)
     , m_agents(scene_)
     , m_devices(scene_)
-    , m_sensors(scene_)
+    , m_sensors(this, scene_)
 {
     ASSUMPTION(m_scene != nullptr);
 }
@@ -54,10 +54,12 @@ void  simulator::erase_device(device_id const  id)
 
 sensor_id  simulator::insert_sensor(
         scene::node_id const&  sensor_nid,
-        SENSOR_KIND const  sensor_kind
+        SENSOR_KIND const  sensor_kind,
+        object_id const& owner_id_,
+        sensor::config const& cfg_
         )
 {
-    return m_sensors.insert(sensor_nid, sensor_kind);
+    return m_sensors.insert(sensor_nid, sensor_kind, owner_id_, cfg_);
 }
 
 

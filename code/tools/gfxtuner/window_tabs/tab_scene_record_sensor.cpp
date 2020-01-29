@@ -93,7 +93,7 @@ void  register_record_handler_for_insert_scene_record(
                             "sensor",
                             [w](scn::scene_record_id const&  record_id) -> void {
                                     scn::sensor_props const  props {
-                                        ai::SENSOR_KIND::DEFAULT
+                                        ai::SENSOR_KIND::TIMER
                                     };
                                     w->wnd()->glwindow().call_now(&simulator::insert_sensor, std::cref(record_id), std::cref(props));
                                     w->get_scene_history()->insert<scn::scene_history_sensor_insert>(record_id, props, false);

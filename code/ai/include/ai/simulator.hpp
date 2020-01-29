@@ -34,7 +34,9 @@ struct simulator
 
     sensor_id  insert_sensor(
             scene::node_id const&  sensor_nid,
-            SENSOR_KIND const  sensor_kind
+            SENSOR_KIND const  sensor_kind,
+            object_id const& owner_id_,
+            sensor::config const& cfg_
             );
     void  erase_sensor(sensor_id const  id);
 

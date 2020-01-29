@@ -24,7 +24,17 @@ struct  object_id
         , index(index_)
     {}
 
-    static inline object_id  make_invalid(OBJECT_KIND const  kind_ = OBJECT_KIND::AGENT) { return object_id(kind_, std::numeric_limits<index_type>::max()); }
+    // Makes an invalid id of the passed kind
+    object_id(OBJECT_KIND const  kind_)
+        : object_id(kind_, std::numeric_limits<index_type>::max())
+    {}
+
+    // Makes an invalid id of the agent kind
+    object_id()
+        : object_id(OBJECT_KIND::AGENT)
+    {}
+
+    static inline object_id  make_invalid() { return {}; }
 
     bool  valid() const { return index != std::numeric_limits<index_type>::max(); }
 
