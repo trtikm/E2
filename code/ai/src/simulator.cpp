@@ -133,14 +133,4 @@ void  simulator::on_sensor_event(sensor const&  s)
 }
 
 
-void  simulator::on_simulator_event_insert(scene::node_id const&  where_nid, scene::node_id const&  what_nid)
-{
-}
-
-
-void  simulator::on_simulator_event_erase(object_id const&  oid)
-{
-}
-
-
 }

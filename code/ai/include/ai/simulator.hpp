@@ -65,9 +65,6 @@ struct simulator
 
     void  on_sensor_event(sensor const&  s);
 
-    void  on_simulator_event_insert(scene::node_id const&  where_nid, scene::node_id const&  what_nid);
-    void  on_simulator_event_erase(object_id const&  oid);
-
     agents const&  get_agents() const { return m_agents; }
     devices const&  get_devices() const { return m_devices; }
     sensors const&  get_sensors() const { return m_sensors; }

@@ -36,7 +36,70 @@ struct  scene
         float_32_bit  normal_force_magnitude;
     };
 
+    // A base class of all requests to the scene. A request defines any operation
+    // changing the set of ai objects in the ai module.
+    // INVARIANT: A request may only be resolved outside a time step of the ai module.
+    //            It in particular means that a request may NOT be resolved directly inside
+    //            the call to 'accept' method. The resolution must be postponed till the
+    //            current time step of ai module completes.
+    struct  request { virtual ~request() {} };
+    using  request_ptr = std::shared_ptr<request const>;
+    template<typename T>
+    static inline std::shared_ptr<T const>  cast(request_ptr const  req)
+    { return std::dynamic_pointer_cast<T const>(req); }
+
+    // A request of importing (merging) a template scene into the current one.
+    // The request MUST be resolved AFTER the current time step of the ai module and
+    // before the next time step of the ai module.
+    struct  request_merge_scene : public request
+    {
+        request_merge_scene(
+                std::string const& template_pathname_,
+                scn::scene_node_id const& parent_nid_,
+                angeo::coordinate_system const& frame_,
+                bool const  frame_is_in_parent_space_
+                )
+            : template_pathname(template_pathname_)
+            , parent_nid(parent_nid_)
+            , frame(frame_)
+            , frame_is_in_parent_space(frame_is_in_parent_space_)
+        {}
+
+        std::string  template_pathname;         // Path-name of scene to be imported (merged) into the current scene.
+                                                //      The imported scene must have exactly one root node (besides @pivot)
+                                                //      and it must represent either agent, device, or sensor.
+        node_id  parent_nid;                    // A scene node under which the scene will be merged.
+                                                //      For imported agent the parent_nid must be empty.
+                                                //      For imported sensor the parent_nid must reference a node under
+                                                //      nodes tree of an agent or a device.
+        angeo::coordinate_system  frame;        // A desired location of the root node of the merged scene.
+        bool  frame_is_in_parent_space;         // When false, then the frame is assumed in the world space
+    };
+    using  request_merge_scene_ptr = std::shared_ptr<request_merge_scene const>;
+    static inline request_merge_scene_ptr  create_request_merge_scene(
+            std::string const& template_pathname_,
+            scn::scene_node_id const& parent_nid_,
+            angeo::coordinate_system const& frame_,
+            bool const  frame_is_in_parent_space_
+            )
+    { return std::make_shared<request_merge_scene const>(template_pathname_, parent_nid_, frame_, frame_is_in_parent_space_); }
+
+    // A request of removal of a sub-tree in the scene.
+    struct  request_erase_nodes_tree : public request
+    {
+        request_erase_nodes_tree(scene::node_id const&  root_nid_) : root_nid(root_nid_) {}
+        scene::node_id  root_nid;               // A root node of scene sub-tree to be erased. The sub-tree MUST represent
+                                                // either agent, device, or a sensor.
+    };
+    using  request_erase_nodes_tree_ptr = std::shared_ptr<request_erase_nodes_tree const>;
+    static inline request_erase_nodes_tree_ptr  create_request_erase_nodes_tree(scene::node_id const& root_nid_)
+    { return std::make_shared<request_erase_nodes_tree const>(root_nid_); }
+
     virtual ~scene() = 0 {}
+
+    // Accepts a passed request. However, the request may NOT be resolved during any time step of the ai module.
+    // So, the implemtation must save the request and resolve it after the time step of the ai module completes.
+    virtual void  accept(request_ptr) = 0;
 
     // When an agent wants to create auxiliary scene nodes outside the subtree under its agent node,
     // then he should use this method to obtain a 'standard' auxiliary root node of the passed name

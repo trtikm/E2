@@ -374,6 +374,7 @@ simulator::simulator()
     , m_binding_of_agents_to_scene()
     , m_binding_of_devices_to_scene()
     , m_binding_of_sensors_to_scene()
+    , m_ai_requests()
 
     // Debugging
 
@@ -878,6 +879,7 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     //    max_computation_time_in_seconds -= duration_of_last_simulation_step_in_seconds;
     //}
 
+    process_ai_requests();
     get_ai_simulator()->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
 
     if (m_do_show_ai_action_controller_props)
@@ -1105,6 +1107,34 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 
         update_collider_locations_in_subtree(rb_node_ptr);
     }
+}
+
+
+void  simulator::process_ai_requests()
+{
+    TMPROF_BLOCK();
+
+    std::vector<ai::scene::request_ptr>  requests(m_ai_requests.rbegin(), m_ai_requests.rend());
+    m_ai_requests.clear();
+
+    while (!requests.empty())
+    {
+        if (auto const  request = ai::scene::cast<ai::scene::request_merge_scene>(requests.back()))
+        {
+            // TODO!
+        }
+        else if (auto const  request = ai::scene::cast<ai::scene::request_erase_nodes_tree>(requests.back()))
+        {
+            // TODO!
+        }
+        else
+        {
+            UNREACHABLE();
+        }
+        requests.pop_back();
+    }
+
+    INVARIANT(m_ai_requests.empty());
 }
 
 
@@ -2150,6 +2180,12 @@ void  simulator::render_ai_action_controller_props(
 }
 
 
+void  simulator::accept_ai_request(ai::scene::request_ptr const  request)
+{
+    m_ai_requests.push_back(request);
+}
+
+
 scn::scene_node_ptr simulator::insert_scene_simulation_node(scn::scene_node_id const&  id)
 {
     scn::scene_node_ptr const n = insert_scene_node(id);
@@ -3137,6 +3173,7 @@ void  simulator::clear_scene()
     m_binding_of_agents_to_scene.clear();
     m_binding_of_devices_to_scene.clear();
     m_binding_of_sensors_to_scene.clear();
+    m_ai_requests.clear();
 
     m_rigid_body_simulator_ptr->clear();
     m_binding_of_rigid_bodies.clear();

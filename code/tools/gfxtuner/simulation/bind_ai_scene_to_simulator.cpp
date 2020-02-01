@@ -37,6 +37,13 @@ void  relocate_node(scn::scene_node_ptr const  node_ptr, angeo::coordinate_syste
 }
 
 
+void  bind_ai_scene_to_simulator::accept(request_ptr const  req)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    m_simulator_ptr->accept_ai_request(req);
+}
+
+
 ai::scene::node_id  bind_ai_scene_to_simulator::get_aux_root_node(
         ai::OBJECT_KIND const  kind,
         node_id const&  nid,

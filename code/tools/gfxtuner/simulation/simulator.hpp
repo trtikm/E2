@@ -98,6 +98,8 @@ struct simulator : public qtgl::real_time_simulator
     scn::scene_node_ptr  get_scene_node(scn::scene_node_id const&  id) const
     { return get_scene().get_scene_node(id); }
 
+    void  accept_ai_request(ai::scene::request_ptr const  request);
+
     scn::scene_node_ptr  insert_scene_simulation_node(scn::scene_node_id const& id);
 
     scn::scene_node_ptr  insert_scene_node(scn::scene_node_id const&  id)
@@ -316,6 +318,7 @@ private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
+    void  process_ai_requests();
     void  update_retina_of_agents_from_offscreen_images(float_32_bit const  time_to_simulate_in_seconds);
     void  render_simulation_state(
             matrix44 const&  matrix_from_world_to_camera,
@@ -470,6 +473,7 @@ private:
     std::unordered_map<ai::agent_id, scn::scene_node_id>  m_binding_of_agents_to_scene;
     std::unordered_map<ai::device_id, scn::scene_node_id>  m_binding_of_devices_to_scene;
     std::unordered_map<ai::sensor_id, scn::scene_record_id>  m_binding_of_sensors_to_scene;
+    std::vector<ai::scene::request_ptr>  m_ai_requests;
 
     // Debugging
 

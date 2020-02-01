@@ -25,6 +25,8 @@ struct bind_ai_scene_to_simulator : public ai::scene
         m_simulator_ptr = nullptr;
     }
 
+    void  accept(request_ptr const  req);
+
     node_id  get_aux_root_node(ai::OBJECT_KIND const  kind, node_id const&  nid, std::string const&  aux_root_node_name) override;
 
     bool  has_scene_node(node_id const&  nid) const override;

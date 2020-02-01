@@ -154,7 +154,7 @@ void  agent::on_sensor_event(sensor const&  s)
         switch (action.kind)
         {
         case SENSOR_ACTION_KIND::END_OF_LIFE:
-            get_blackboard()->m_simulator_ptr->on_simulator_event_erase(get_blackboard()->m_self_id);
+            get_blackboard()->m_scene->accept(scene::create_request_erase_nodes_tree(get_blackboard()->m_self_nid));
             break;
         default: UNREACHABLE(); break;
         }
