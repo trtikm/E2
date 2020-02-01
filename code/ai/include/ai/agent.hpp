@@ -3,6 +3,7 @@
 
 #   include <ai/blackboard_agent.hpp>
 #   include <ai/input_devices.hpp>
+#   include <ai/sensor.hpp>
 #   include <utility/basic_numeric_types.hpp>
 
 namespace ai {
@@ -17,6 +18,8 @@ struct agent
     ~agent();
 
     void  next_round(float_32_bit const  time_step_in_seconds);
+
+    void  on_sensor_event(sensor const&  s);
 
     blackboard_agent_ptr  get_blackboard() { return m_blackboard; }
     blackboard_agent_const_ptr  get_blackboard() const { return m_blackboard; }

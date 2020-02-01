@@ -7,6 +7,7 @@
 #include <ai/sensory_controller_collision_contacts.hpp>
 #include <ai/sensory_controller_ray_cast_sight.hpp>
 #include <ai/action_controller.hpp>
+#include <ai/simulator.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -140,6 +141,23 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds)
     get_blackboard()->m_sensory_controller->next_round(time_step_in_seconds);
     get_blackboard()->m_cortex->next_round(time_step_in_seconds);
     get_blackboard()->m_action_controller->next_round(time_step_in_seconds);
+}
+
+
+void  agent::on_sensor_event(sensor const&  s)
+{
+    auto const  it = get_blackboard()->m_sensor_actions->find(s.get_kind());
+    ASSUMPTION(it != get_blackboard()->m_sensor_actions->end());
+    auto const  actions_it = it->second.find(s.get_self_nid());
+    ASSUMPTION(actions_it != it->second.end());
+    for (sensor_action&  action : actions_it->second)
+        switch (action.kind)
+        {
+        case SENSOR_ACTION_KIND::END_OF_LIFE:
+            get_blackboard()->m_simulator_ptr->on_simulator_event_erase(get_blackboard()->m_self_id);
+            break;
+        default: UNREACHABLE(); break;
+        }
 }
 
 

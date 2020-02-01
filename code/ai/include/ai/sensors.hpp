@@ -15,7 +15,7 @@ namespace ai {
 struct  simulator;
 
 
-struct sensors
+struct  sensors
 {
     explicit sensors(simulator* const  simulator_, scene_ptr const  scene_);
 
@@ -23,7 +23,7 @@ struct sensors
             scene::node_id const&  sensor_nid,
             SENSOR_KIND const  sensor_kind,
             object_id const& owner_id_,
-            sensor::config const& cfg_
+            property_map const&  cfg_
             );
     void  erase(sensor_id const  id) { m_sensors.at(id) = nullptr; }
 
@@ -53,7 +53,7 @@ private:
         scene::node_id  sensor_nid;
         SENSOR_KIND  sensor_kind;
         object_id  owner_id;
-        sensor::config  cfg;
+        std::shared_ptr<property_map>  cfg;
     };
 
     void  construct_sensor(sensor_id const  id, sensor_props&  props);

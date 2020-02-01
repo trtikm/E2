@@ -20,12 +20,9 @@ struct  retina;
 ///       Only the idea of a shared storage is used here.
 struct blackboard_agent : public blackboard
 {
-    virtual ~blackboard_agent();
-    bool are_all_modules_released() const;
+    ~blackboard_agent();
 
-    agent_id  m_agent_id;
     AGENT_KIND  m_agent_kind;
-    scene::node_id  m_agent_nid;
 
     std::shared_ptr<retina>  m_retina_ptr; // This should be moved somewhere else, e.g. to sensory_controller_sight_retina?
 

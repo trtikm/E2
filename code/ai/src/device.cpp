@@ -1,4 +1,5 @@
 #include <ai/device.hpp>
+#include <ai/simulator.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -63,6 +64,23 @@ void  device::next_round(float_32_bit const  time_step_in_seconds)
     TMPROF_BLOCK();
 
     // The update order of device's modules is important and mandatory.
+}
+
+
+void  device::on_sensor_event(sensor const&  s)
+{
+    auto const  it = get_blackboard()->m_sensor_actions->find(s.get_kind());
+    ASSUMPTION(it != get_blackboard()->m_sensor_actions->end());
+    auto const  actions_it = it->second.find(s.get_self_nid());
+    ASSUMPTION(actions_it != it->second.end());
+    for (sensor_action&  action : actions_it->second)
+        switch (action.kind)
+        {
+        case SENSOR_ACTION_KIND::END_OF_LIFE:
+            get_blackboard()->m_simulator_ptr->on_simulator_event_erase(get_blackboard()->m_self_id);
+            break;
+        default: UNREACHABLE(); break;
+        }
 }
 
 

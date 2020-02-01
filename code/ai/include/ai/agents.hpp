@@ -4,12 +4,15 @@
 #   include <ai/agent.hpp>
 #   include <ai/agent_id.hpp>
 #   include <ai/input_devices.hpp>
+#   include <ai/sensor.hpp>
+#   include <ai/sensor_id.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/blackboard_agent.hpp>
 #   include <ai/cortex.hpp>
 #   include <ai/sensory_controller.hpp>
 #   include <ai/action_controller.hpp>
+#   include <ai/sensor_action.hpp>
 #   include <ai/retina.hpp>
 #   include <memory>
 #   include <vector>
@@ -17,14 +20,18 @@
 namespace ai {
 
 
-struct agents
+struct  simulator;
+
+
+struct  agents
 {
-    explicit agents(scene_ptr const  scene_);
+    explicit agents(simulator* const  simulator_, scene_ptr const  scene_);
 
     agent_id  insert(
             scene::node_id const&  agent_nid,
             skeletal_motion_templates const  motion_templates,
             AGENT_KIND const  agent_kind,
+            from_sensor_event_to_sensor_action_map const&  sensor_actions,
             retina_ptr const  retina_or_null
             );
     void  erase(agent_id const  id) { m_agents.at(id) = nullptr; }
@@ -52,6 +59,8 @@ struct agents
             scene::node_id const&  other_collider_nid
             );
 
+    void  on_sensor_event(agent_id const  id, sensor const& s);
+
 private:
 
     struct  agent_props
@@ -60,12 +69,14 @@ private:
         scene::node_id  agent_nid;
         skeletal_motion_templates  motion_templates;
         AGENT_KIND  agent_kind;
+        std::shared_ptr<from_sensor_event_to_sensor_action_map>  m_sensor_actions;
         retina_ptr  retina_ptr;
     };
 
     void  construct_agent(agent_id const  id, agent_props&  props);
 
     std::vector<std::shared_ptr<agent_props> >  m_agents; // Should be 'std::vector<std::unique_ptr<agent_props> >', but does not compile :-(
+    simulator*  m_simulator;
     scene_ptr  m_scene;
     input_devices_ptr  m_input_devices;
 };

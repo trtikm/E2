@@ -10,18 +10,20 @@
 namespace ai {
 
 
-devices::devices(scene_ptr const  scene_)
+devices::devices(simulator* const  simulator_, scene_ptr const  scene_)
     : m_devices()
+    , m_simulator(simulator_)
     , m_scene(scene_)
 {
-    ASSUMPTION(m_scene != nullptr);
+    ASSUMPTION(m_simulator != nullptr && m_scene != nullptr);
 }
 
 
 device_id  devices::insert(
         scene::node_id const&  device_nid,
         skeletal_motion_templates const  motion_templates,
-        DEVICE_KIND const  device_kind
+        DEVICE_KIND const  device_kind,
+        from_sensor_event_to_sensor_action_map const&  sensor_actions
         )
 {
     TMPROF_BLOCK();
@@ -37,6 +39,7 @@ device_id  devices::insert(
     props->device_ptr = nullptr;
     props->device_nid = device_nid;
     props->motion_templates = motion_templates;
+    props->m_sensor_actions = std::make_shared<from_sensor_event_to_sensor_action_map>(sensor_actions);
     props->device_kind = device_kind;
 
     if (id == m_devices.size())
@@ -53,25 +56,18 @@ void  devices::construct_device(device_id const  id, device_props&  props)
 
     blackboard_device_ptr const  bb = device::create_blackboard(props.device_kind);
     {
+        // General blackboard setup
+        bb->m_self_id = device_to_object_id(id);
         bb->m_motion_templates = props.motion_templates;
-        bb->m_device_id = id;
-        bb->m_device_kind = props.device_kind;
         bb->m_scene = m_scene;
-        bb->m_device_nid = props.device_nid;
-        if (!props.motion_templates.empty())
-        {
-            bb->m_bone_nids.resize(props.motion_templates.pose_frames().size());
-            for (natural_32_bit bone = 0U; bone != bb->m_bone_nids.size(); ++bone)
-            {
-                scene::node_id::path_type  path;
-                for (integer_32_bit parent_bone = (integer_32_bit)bone;
-                        parent_bone >= 0;
-                        parent_bone = bb->m_motion_templates.hierarchy().parents().at(parent_bone))
-                    path.push_back(bb->m_motion_templates.names().at(parent_bone));
-                std::reverse(path.begin(), path.end());
-                bb->m_bone_nids.at(bone) = props.device_nid / scene::node_id(path);
-            }
-        }
+        bb->m_self_nid = props.device_nid;
+        bb->initialise_bone_nids();
+        bb->m_state = 0U;
+        bb->m_sensor_actions = props.m_sensor_actions;
+        bb->m_simulator_ptr = m_simulator;
+
+        // Device's blackboard setup
+        bb->m_device_kind = props.device_kind;
         device::create_modules(bb);
     }
     props.device_ptr = std::make_unique<device>(bb);
@@ -102,6 +98,12 @@ void  devices::on_collision_contact(
         scene::node_id const&  other_collider_nid
         )
 {}
+
+
+void  devices::on_sensor_event(device_id const  id, sensor const&  s)
+{
+    m_devices.at(id)->device_ptr->on_sensor_event(s);
+}
 
 
 }

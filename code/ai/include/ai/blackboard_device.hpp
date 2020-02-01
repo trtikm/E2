@@ -2,7 +2,6 @@
 #   define AI_BLACKBOARD_DEVICE_HPP_INCLUDED
 
 #   include <ai/blackboard.hpp>
-#   include <ai/device_id.hpp>
 #   include <ai/device_kind.hpp>
 #   include <memory>
 
@@ -14,12 +13,9 @@ namespace ai {
 ///       Only the idea of a shared storage is used here.
 struct blackboard_device : public blackboard
 {
-    virtual ~blackboard_device();
-    bool are_all_modules_released() const;
+    ~blackboard_device();
 
-    device_id  m_device_id;
     DEVICE_KIND  m_device_kind;
-    scene::node_id  m_device_nid;
 };
 
 

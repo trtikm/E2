@@ -129,17 +129,17 @@ action_controller::action_controller(blackboard_agent_weak_ptr const  blackboard
         angeo::coordinate_system  tmp;
         get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_bone_nids.front(), false, tmp);
         agent_frame.set_origin(tmp.origin());
-        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, tmp);
+        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_self_nid, false, tmp);
         agent_frame.set_orientation(tmp.orientation());
     }
-    scene::node_id  nid(detail::get_motion_object_nid(get_blackboard()->m_scene, OBJECT_KIND::AGENT, get_blackboard()->m_agent_nid));
+    scene::node_id  nid(detail::get_motion_object_nid(get_blackboard()->m_scene, OBJECT_KIND::AGENT, get_blackboard()->m_self_nid));
     if (!get_blackboard()->m_scene->has_scene_node(nid))
         nid = detail::create_motion_scene_node(get_blackboard()->m_scene, nid, agent_frame, collider, *mass_distribution);
 
     m_motion_object_motion = detail::rigid_body_motion(get_blackboard()->m_scene, nid, get_blackboard()->m_motion_templates.directions());
     m_gravity_acceleration = get_blackboard()->m_scene->get_gravity_acceleration_at_point(m_motion_object_motion.frame.origin());
 
-    get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, agent_to_object_id(get_blackboard()->m_agent_id));
+    get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
 
     angeo::coordinate_system  motion_object_frame;
     get_blackboard()->m_scene->get_frame_of_scene_node(m_motion_object_motion.nid, false, motion_object_frame);
@@ -164,7 +164,7 @@ action_controller::~action_controller()
 
     if (m_motion_object_motion.nid.valid())
     {
-        get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_motion.nid, agent_to_object_id(get_blackboard()->m_agent_id));
+        get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
         detail::destroy_motion_scene_node(get_blackboard()->m_scene, m_motion_object_motion.nid);
     }
 }
@@ -309,7 +309,7 @@ void  action_controller::synchronise_motion_object_motion_with_scene()
     m_motion_object_motion.set_angular_acceleration(vector3_zero());
 
     // Synchronise agent's position in the world space according to its motion object in the previous time step
-    m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
+    m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_self_nid);
 }
 
 
@@ -398,7 +398,7 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
             m_use_inverted_collider_center_offset_interpolation = true;
         }
 
-        get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_motion.nid, agent_to_object_id(get_blackboard()->m_agent_id));
+        get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
         detail::destroy_collider_and_rigid_bofy_of_motion_scene_node(get_blackboard()->m_scene, m_motion_object_motion.nid);
         detail::create_collider_and_rigid_body_of_motion_scene_node(
                 get_blackboard()->m_scene,
@@ -406,8 +406,8 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
                 m_current_intepolation_state.collider,
                 m_motion_object_motion
                 );
-        get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, agent_to_object_id(get_blackboard()->m_agent_id));
-        m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
+        get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
+        m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_self_nid);
     }
 
     m_current_intepolation_state.disjunction_of_guarded_actions =

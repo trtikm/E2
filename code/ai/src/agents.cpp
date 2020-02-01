@@ -10,12 +10,13 @@
 namespace ai {
 
 
-agents::agents(scene_ptr const  scene_)
+agents::agents(simulator* const  simulator_, scene_ptr const  scene_)
     : m_agents()
+    , m_simulator(simulator_)
     , m_scene(scene_)
     , m_input_devices(std::make_shared<input_devices>())
 {
-    ASSUMPTION(m_scene != nullptr);
+    ASSUMPTION(m_simulator != nullptr && m_scene != nullptr);
 }
 
 
@@ -23,6 +24,7 @@ agent_id  agents::insert(
         scene::node_id const&  agent_nid,
         skeletal_motion_templates const  motion_templates,
         AGENT_KIND const  agent_kind,
+        from_sensor_event_to_sensor_action_map const&  sensor_actions,
         retina_ptr const  retina_or_null
         )
 {
@@ -40,6 +42,7 @@ agent_id  agents::insert(
     props->agent_nid = agent_nid;
     props->motion_templates = motion_templates;
     props->agent_kind = agent_kind;
+    props->m_sensor_actions = std::make_shared<from_sensor_event_to_sensor_action_map>(sensor_actions);
     props->retina_ptr = retina_or_null;
 
     if (id == m_agents.size())
@@ -56,23 +59,19 @@ void  agents::construct_agent(agent_id const  id, agent_props&  props)
 
     blackboard_agent_ptr const  bb = agent::create_blackboard(props.agent_kind);
     {
+        // General blackboard setup
+        bb->m_self_id = agent_to_object_id(id);
         bb->m_motion_templates = props.motion_templates;
-        bb->m_agent_id = id;
+        bb->m_scene = m_scene;
+        bb->m_self_nid = props.agent_nid;
+        bb->initialise_bone_nids();
+        bb->m_state = 0U;
+        bb->m_sensor_actions = props.m_sensor_actions;
+        bb->m_simulator_ptr = m_simulator;
+
+        // Agent's blackboard setup
         bb->m_agent_kind = props.agent_kind;
         bb->m_retina_ptr = props.retina_ptr;
-        bb->m_scene = m_scene;
-        bb->m_agent_nid = props.agent_nid;
-        bb->m_bone_nids.resize(props.motion_templates.pose_frames().size());
-        for (natural_32_bit bone = 0U; bone != bb->m_bone_nids.size(); ++bone)
-        {
-            scene::node_id::path_type  path;
-            for (integer_32_bit parent_bone = (integer_32_bit)bone;
-                    parent_bone >= 0;
-                    parent_bone = bb->m_motion_templates.hierarchy().parents().at(parent_bone))
-                path.push_back(bb->m_motion_templates.names().at(parent_bone));
-            std::reverse(path.begin(), path.end());
-            bb->m_bone_nids.at(bone) = props.agent_nid / scene::node_id(path);
-        }
         agent::create_modules(bb, m_input_devices);
     }
     props.agent_ptr = std::make_unique<agent>(bb);
@@ -116,6 +115,12 @@ void  agents::on_collision_contact(
             collider_nid,
             contact_info
             );
+}
+
+
+void  agents::on_sensor_event(agent_id const  id, sensor const&  s)
+{
+    m_agents.at(id)->agent_ptr->on_sensor_event(s);
 }
 
 

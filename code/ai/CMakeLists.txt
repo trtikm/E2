@@ -62,6 +62,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/skeleton_utils.hpp
     ./src/skeleton_utils.cpp
 
+    ./include/ai/property_map.hpp
+    ./src/property_map.cpp
+
     ./include/ai/retina.hpp
 
     ./include/ai/env/snapshot.hpp
@@ -114,6 +117,9 @@ add_library(${THIS_TARGET_NAME}
     
     ./include/ai/sensors.hpp
     ./src/sensors.cpp
+
+    ./include/ai/sensor_action.hpp
+    ./src/sensor_action.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

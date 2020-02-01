@@ -11,6 +11,8 @@
 #include <angeo/tensor_std_specialisations.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <ai/sensory_controller_ray_cast_sight.hpp>
+#include <ai/property_map.hpp>
+#include <ai/sensor_action.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -2730,6 +2732,7 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::agent_props 
                     id.get_node_id(),
                     props.m_skeleton_props->skeletal_motion_templates,
                     props.m_agent_kind,
+                    ai::from_sensor_event_to_sensor_action_map{},
                     ai::make_retina(100U, 100U, true)
                     );
     scn::insert_agent(*node_ptr, agent_id, props);
@@ -2772,7 +2775,8 @@ void  simulator::insert_device(scn::scene_record_id const&  id, scn::device_prop
             get_ai_simulator()->insert_device(
                     id.get_node_id(),
                     props.m_skeleton_props->skeletal_motion_templates,
-                    props.m_device_kind
+                    props.m_device_kind,
+                    ai::from_sensor_event_to_sensor_action_map{}
                     );
     scn::insert_device(*node_ptr, device_id, props);
     m_binding_of_devices_to_scene[device_id] = id.get_node_id();

@@ -11,8 +11,8 @@ namespace ai {
 
 simulator::simulator(scene_ptr const  scene_)
     : m_scene(scene_)
-    , m_agents(scene_)
-    , m_devices(scene_)
+    , m_agents(this, scene_)
+    , m_devices(this, scene_)
     , m_sensors(this, scene_)
 {
     ASSUMPTION(m_scene != nullptr);
@@ -23,10 +23,11 @@ agent_id  simulator::insert_agent(
         scene::node_id const&  agent_nid,
         skeletal_motion_templates const  motion_templates,
         AGENT_KIND const  agent_kind,
+        from_sensor_event_to_sensor_action_map const&  sensor_actions,
         retina_ptr const  retina_or_null
         )
 {
-    return m_agents.insert(agent_nid, motion_templates, agent_kind, retina_or_null);
+    return m_agents.insert(agent_nid, motion_templates, agent_kind, sensor_actions, retina_or_null);
 }
 
 
@@ -39,10 +40,11 @@ void  simulator::erase_agent(agent_id const  id)
 device_id  simulator::insert_device(
         scene::node_id const&  device_nid,
         skeletal_motion_templates const  motion_templates,
-        DEVICE_KIND const  device_kind
+        DEVICE_KIND const  device_kind,
+        from_sensor_event_to_sensor_action_map const&  sensor_actions
         )
 {
-    return m_devices.insert(device_nid, motion_templates, device_kind);
+    return m_devices.insert(device_nid, motion_templates, device_kind, sensor_actions);
 }
 
 
@@ -56,7 +58,7 @@ sensor_id  simulator::insert_sensor(
         scene::node_id const&  sensor_nid,
         SENSOR_KIND const  sensor_kind,
         object_id const& owner_id_,
-        sensor::config const& cfg_
+        property_map const&  cfg_
         )
 {
     return m_sensors.insert(sensor_nid, sensor_kind, owner_id_, cfg_);
@@ -113,6 +115,31 @@ void  simulator::on_collision_contact(
         break;
     default: UNREACHABLE();
     }
+}
+
+
+void  simulator::on_sensor_event(sensor const&  s)
+{
+    switch (s.get_owner_id().kind)
+    {
+    case OBJECT_KIND::AGENT:
+        m_agents.on_sensor_event(s.get_owner_id().index, s);
+        break;
+    case OBJECT_KIND::DEVICE:
+        m_devices.on_sensor_event(s.get_owner_id().index, s);
+        break;
+    default: UNREACHABLE(); // Includes also OBJECT_KIND::SENSOR, because a sensor cannot send an event to a sensor.
+    }
+}
+
+
+void  simulator::on_simulator_event_insert(scene::node_id const&  where_nid, scene::node_id const&  what_nid)
+{
+}
+
+
+void  simulator::on_simulator_event_erase(object_id const&  oid)
+{
 }
 
 

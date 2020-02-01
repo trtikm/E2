@@ -14,7 +14,7 @@ sensors::sensors(simulator* const  simulator_, scene_ptr const  scene_)
     , m_simulator(simulator_)
     , m_scene(scene_)
 {
-    ASSUMPTION(m_scene != nullptr);
+    ASSUMPTION(m_simulator != nullptr && m_scene != nullptr);
 }
 
 
@@ -22,7 +22,7 @@ sensor_id  sensors::insert(
         scene::node_id const&  sensor_nid,
         SENSOR_KIND const  sensor_kind,
         object_id const&  owner_id_,
-        sensor::config const&  cfg_)
+        property_map const&  cfg_)
 {
     TMPROF_BLOCK();
 
@@ -38,7 +38,7 @@ sensor_id  sensors::insert(
     props->sensor_nid = sensor_nid;
     props->sensor_kind = sensor_kind;
     props->owner_id = owner_id_;
-    props->cfg = cfg_;
+    props->cfg = std::make_shared<property_map>(cfg_);
 
     if (id == m_sensors.size())
         m_sensors.resize(m_sensors.size() + 1U, nullptr);
@@ -52,7 +52,7 @@ void  sensors::construct_sensor(sensor_id const  id, sensor_props&  props)
 {
     TMPROF_BLOCK();
 
-    props.sensor_ptr = std::make_unique<sensor>(m_simulator, props.sensor_kind, props.owner_id, props.cfg);
+    props.sensor_ptr = std::make_unique<sensor>(m_simulator, props.sensor_kind, props.sensor_nid, props.owner_id, props.cfg);
 }
 
 

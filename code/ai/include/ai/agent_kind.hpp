@@ -31,7 +31,7 @@ inline AGENT_KIND  as_agent_kind(natural_8_bit const  index)
 }
 
 
-inline constexpr natural_8_bit  num_agent_kinds() { return (natural_8_bit)AGENT_KIND::ROBOT + 1; }
+inline constexpr natural_32_bit  num_agent_kinds() { return (natural_32_bit)AGENT_KIND::ROBOT + 1U; }
 
 
 std::string const&  as_string(AGENT_KIND const  kind);
