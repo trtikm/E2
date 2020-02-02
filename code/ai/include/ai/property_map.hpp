@@ -2,6 +2,7 @@
 #   define AI_PROPERTY_MAP_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <unordered_map>
 #   include <string>
 
@@ -15,8 +16,8 @@ struct property_map
     enum struct  PROPERTY_TYPE
     {
         INT = 0,
-        FLOAT = 0,
-        STRING = 0,
+        FLOAT = 1,
+        STRING = 2,
     };
 
     struct  property_type_and_value
@@ -68,6 +69,10 @@ struct property_map
 private:
     map_type  m_map;
 };
+
+
+boost::property_tree::ptree  as_ptree(property_map const&  map);
+property_map  as_property_map(boost::property_tree::ptree const&  tree);
 
 
 }

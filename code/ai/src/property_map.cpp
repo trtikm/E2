@@ -68,4 +68,50 @@ void  property_map::property_type_and_value::set_string(std::string const&  valu
 }
 
 
+boost::property_tree::ptree  as_ptree(property_map const&  map)
+{
+    boost::property_tree::ptree  result;
+    for (auto const& elem : map)
+    {
+        boost::property_tree::ptree  prop;
+        switch (elem.second.get_type())
+        {
+        case property_map::PROPERTY_TYPE::INT:
+            prop.put("type", "INT");
+            prop.put("value", std::to_string(elem.second.get_int()));
+            break;
+        case property_map::PROPERTY_TYPE::FLOAT:
+            prop.put("type", "FLOAT");
+            prop.put("value", std::to_string(elem.second.get_float()));
+            break;
+        case property_map::PROPERTY_TYPE::STRING:
+            prop.put("type", "STRING");
+            prop.put("value", elem.second.get_string());
+            break;
+        default: UNREACHABLE(); break;
+        }
+        result.put_child(elem.first, prop);
+    }
+    return result;
+}
+
+
+property_map  as_property_map(boost::property_tree::ptree const&  tree)
+{
+    property_map::map_type  result;
+    for (auto it = tree.begin(); it != tree.end(); ++it)
+    {
+        std::string const  type = it->second.get<std::string>("type");
+        if (type == "INT")
+            result.insert({ it->first, property_map::property_type_and_value(it->second.get<integer_32_bit>("value")) });
+        if (type == "FLOAT")
+            result.insert({ it->first, property_map::property_type_and_value(it->second.get<float_32_bit>("value")) });
+        if (type == "STRING")
+            result.insert({ it->first, property_map::property_type_and_value(it->second.get<std::string>("value")) });
+        else { UNREACHABLE(); }
+    }
+    return result;
+}
+
+
 }

@@ -24,7 +24,7 @@ agent_id  agents::insert(
         scene::node_id const&  agent_nid,
         skeletal_motion_templates const  motion_templates,
         AGENT_KIND const  agent_kind,
-        from_sensor_event_to_sensor_action_map const&  sensor_actions,
+        from_sensor_node_to_sensor_action_map const&  sensor_actions,
         retina_ptr const  retina_or_null
         )
 {
@@ -42,7 +42,7 @@ agent_id  agents::insert(
     props->agent_nid = agent_nid;
     props->motion_templates = motion_templates;
     props->agent_kind = agent_kind;
-    props->m_sensor_actions = std::make_shared<from_sensor_event_to_sensor_action_map>(sensor_actions);
+    props->m_sensor_actions = std::make_shared<from_sensor_node_to_sensor_action_map>(sensor_actions);
     props->retina_ptr = retina_or_null;
 
     if (id == m_agents.size())

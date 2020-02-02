@@ -31,7 +31,7 @@ struct  agents
             scene::node_id const&  agent_nid,
             skeletal_motion_templates const  motion_templates,
             AGENT_KIND const  agent_kind,
-            from_sensor_event_to_sensor_action_map const&  sensor_actions,
+            from_sensor_node_to_sensor_action_map const&  sensor_actions,
             retina_ptr const  retina_or_null
             );
     void  erase(agent_id const  id) { m_agents.at(id) = nullptr; }
@@ -69,7 +69,7 @@ private:
         scene::node_id  agent_nid;
         skeletal_motion_templates  motion_templates;
         AGENT_KIND  agent_kind;
-        std::shared_ptr<from_sensor_event_to_sensor_action_map>  m_sensor_actions;
+        std::shared_ptr<from_sensor_node_to_sensor_action_map>  m_sensor_actions;
         retina_ptr  retina_ptr;
     };
 

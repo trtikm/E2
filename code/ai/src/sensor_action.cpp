@@ -45,4 +45,43 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_acti
 }
 
 
+boost::property_tree::ptree  as_ptree(from_sensor_node_to_sensor_action_map const&  map)
+{
+    boost::property_tree::ptree  result;
+    for (auto const&  elem : map)
+    {
+        boost::property_tree::ptree  actions;
+        for (auto const& action : elem.second)
+        {
+            boost::property_tree::ptree  prop;
+            prop.put("kind", as_string(action.kind));
+            prop.put_child("props", as_ptree(action.props));
+            actions.push_back({"", prop});
+        }
+        result.put_child(::as_string(elem.first), actions);
+    }
+    return result;
+}
+
+
+from_sensor_node_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree)
+{
+    from_sensor_node_to_sensor_action_map  result;
+    for (auto  it = tree.begin(); it != tree.end(); ++it)
+    {
+        scene::node_id const  id = ::as_scene_node_id(it->first);
+        std::vector<sensor_action>  actions;
+        for (auto  action_it = it->second.begin(); action_it != it->second.end(); ++action_it)
+        {
+            actions.push_back({
+                as_sensor_action_kind(action_it->second.get<std::string>("kind")),
+                as_property_map(action_it->second.get_child("props"))
+                });
+        }
+        result.insert({ id, actions });
+    }
+    return result;
+}
+
+
 }

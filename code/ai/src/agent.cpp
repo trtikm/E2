@@ -146,10 +146,8 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds)
 
 void  agent::on_sensor_event(sensor const&  s)
 {
-    auto const  it = get_blackboard()->m_sensor_actions->find(s.get_kind());
-    ASSUMPTION(it != get_blackboard()->m_sensor_actions->end());
-    auto const  actions_it = it->second.find(s.get_self_nid());
-    ASSUMPTION(actions_it != it->second.end());
+    auto const  actions_it = get_blackboard()->m_sensor_actions->find(s.get_self_nid());
+    ASSUMPTION(actions_it != get_blackboard()->m_sensor_actions->end());
     for (sensor_action&  action : actions_it->second)
         switch (action.kind)
         {

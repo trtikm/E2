@@ -4,6 +4,7 @@
 #   include <scene/records/skeleton_props.hpp>
 #   include <ai/agent_id.hpp>
 #   include <ai/agent_kind.hpp>
+#   include <ai/sensor_action.hpp>
 #   include <vector>
 
 namespace scn {
@@ -13,6 +14,7 @@ struct  agent_props
 {
     ai::AGENT_KIND  m_agent_kind;
     skeleton_props_const_ptr  m_skeleton_props;
+    ai::from_sensor_node_to_sensor_action_map  m_sensor_action_map;
 };
 
 

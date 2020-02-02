@@ -87,6 +87,17 @@ inline bool operator>=(scene_node_id const&  left, scene_node_id const&  right)
 
 }
 
+
+std::string  join(scn::scene_node_id::path_type const&  path, char const  sep = '/');
+scn::scene_node_id::path_type&  split(scn::scene_node_id::path_type&  output, std::string const& path, char const  sep = '/');
+
+inline std::string  as_string(scn::scene_node_id const&  id)
+{  return join(id.path()); }
+
+inline scn::scene_node_id  as_scene_node_id(std::string const&  path)
+{ scn::scene_node_id::path_type p; return scn::scene_node_id(split(p, path)); }
+
+
 namespace std {
 
 

@@ -4,6 +4,7 @@
 #   include <scene/records/skeleton_props.hpp>
 #   include <ai/device_id.hpp>
 #   include <ai/device_kind.hpp>
+#   include <ai/sensor_action.hpp>
 #   include <vector>
 
 namespace scn {
@@ -13,6 +14,7 @@ struct  device_props
 {
     ai::DEVICE_KIND  m_device_kind;
     skeleton_props_const_ptr  m_skeleton_props;
+    ai::from_sensor_node_to_sensor_action_map  m_sensor_action_map;
 };
 
 

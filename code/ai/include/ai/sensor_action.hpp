@@ -1,10 +1,10 @@
 #ifndef AI_SENSOR_ACTION_HPP_INCLUDED
 #   define AI_SENSOR_ACTION_HPP_INCLUDED
 
-#   include <ai/sensor_kind.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/property_map.hpp>
 #   include <utility/basic_numeric_types.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <unordered_map>
 #   include <string>
 #   include <vector>
@@ -41,15 +41,13 @@ struct  sensor_action
     property_map  props;
 };
 
-using  from_sensor_event_to_sensor_action_map = std::unordered_map<
-        SENSOR_KIND,
-        std::unordered_map<
-                scene::node_id,     // Of the sensor sending an event to this device.
-                std::vector<sensor_action>
-                >
-        >;
+using  from_sensor_node_to_sensor_action_map = std::unordered_map<scene::node_id, std::vector<sensor_action> >;
 
 std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_action_props();
+
+
+boost::property_tree::ptree  as_ptree(from_sensor_node_to_sensor_action_map const&  map);
+from_sensor_node_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree);
 
 
 }

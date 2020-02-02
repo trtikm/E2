@@ -30,7 +30,7 @@ struct  blackboard
     scene::node_id  m_self_nid;
     std::vector<scene::node_id>  m_bone_nids;
     natural_32_bit  m_state;
-    std::shared_ptr<from_sensor_event_to_sensor_action_map>  m_sensor_actions;
+    std::shared_ptr<from_sensor_node_to_sensor_action_map>  m_sensor_actions;
     simulator*  m_simulator_ptr;
 };
 

@@ -2768,7 +2768,7 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::agent_props 
                     id.get_node_id(),
                     props.m_skeleton_props->skeletal_motion_templates,
                     props.m_agent_kind,
-                    ai::from_sensor_event_to_sensor_action_map{},
+                    props.m_sensor_action_map,
                     ai::make_retina(100U, 100U, true)
                     );
     scn::insert_agent(*node_ptr, agent_id, props);
@@ -2812,7 +2812,7 @@ void  simulator::insert_device(scn::scene_record_id const&  id, scn::device_prop
                     id.get_node_id(),
                     props.m_skeleton_props->skeletal_motion_templates,
                     props.m_device_kind,
-                    ai::from_sensor_event_to_sensor_action_map{}
+                    props.m_sensor_action_map
                     );
     scn::insert_device(*node_ptr, device_id, props);
     m_binding_of_devices_to_scene[device_id] = id.get_node_id();
@@ -2870,7 +2870,7 @@ void  simulator::insert_sensor(scn::scene_record_id const&  id, scn::sensor_prop
                     id.get_node_id(),
                     props.m_sensor_kind,
                     owner_id,
-                    ai::sensor::default_configs().at(props.m_sensor_kind)
+                    props.m_sensor_props
                     );
     scn::insert_sensor(*node_ptr, id.get_record_name(), sensor_id, props);
     m_binding_of_sensors_to_scene.insert({ sensor_id, id });
@@ -3090,7 +3090,8 @@ void  simulator::load_agent(boost::property_tree::ptree const&  data, scn::scene
     ai::skeletal_motion_templates const skeletal_motion_templates(skeleton_dir, 75U);
     scn::agent_props const  props{
         ai::as_agent_kind(data.get<std::string>("kind")),
-        scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates)
+        scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates),
+        ai::from_sensor_node_to_sensor_action_map{} //ai::as_sensor_action_map(data.get_child("sensor_action_map"))
     };
     insert_agent(id, props);
 }
@@ -3104,6 +3105,7 @@ void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property
     ASSUMPTION(agent_ptr != nullptr);
     data.put("kind", ai::as_string(agent_ptr->get_props().m_agent_kind));
     data.put("skeleton_dir", agent_ptr->get_props().m_skeleton_props->skeleton_directory.string());
+    data.put_child("sensor_action_map", ai::as_ptree(agent_ptr->get_props().m_sensor_action_map));
 }
 
 
@@ -3117,7 +3119,8 @@ void  simulator::load_device(boost::property_tree::ptree const&  data, scn::scen
         scn::create_skeleton_props(
                 skeleton_dir,
                 skeleton_dir.empty() ? ai::skeletal_motion_templates() : ai::skeletal_motion_templates(skeleton_dir, 75U)
-                )
+                ),
+        ai::from_sensor_node_to_sensor_action_map{} //ai::as_sensor_action_map(data.get_child("sensor_action_map"))
     };
     insert_device(id, props);
 }
@@ -3131,6 +3134,7 @@ void  simulator::save_device(scn::scene_node_ptr const  node_ptr, boost::propert
     ASSUMPTION(device_ptr != nullptr);
     data.put("kind", ai::as_string(device_ptr->get_props().m_device_kind));
     data.put("skeleton_dir", device_ptr->get_props().m_skeleton_props->skeleton_directory.string());
+    data.put_child("sensor_action_map", ai::as_ptree(device_ptr->get_props().m_sensor_action_map));
 }
 
 
@@ -3139,7 +3143,8 @@ void  simulator::load_sensor(boost::property_tree::ptree const&  data, scn::scen
     TMPROF_BLOCK();
 
     scn::sensor_props const  props{
-        ai::as_sensor_kind(data.get<std::string>("kind"))
+        ai::as_sensor_kind(data.get<std::string>("kind")),
+        ai::property_map{} //ai::as_property_map(data.get_child("property_map"))
     };
     insert_sensor(id, props);
 }
@@ -3152,6 +3157,7 @@ void  simulator::save_sensor(scn::scene_node_ptr const  node_ptr, scn::scene_nod
     scn::sensor const* const  sensor_ptr = scn::get_sensor(*node_ptr, id.get_record_name());
     ASSUMPTION(sensor_ptr != nullptr);
     data.put("kind", ai::as_string(sensor_ptr->get_props().m_sensor_kind));
+    data.put_child("property_map", ai::as_ptree(sensor_ptr->get_props().m_sensor_props));
 }
 
 

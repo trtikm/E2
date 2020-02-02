@@ -4,6 +4,7 @@
 #   include <scene/scene_node_id.hpp>
 #   include <ai/sensor_id.hpp>
 #   include <ai/sensor_kind.hpp>
+#   include <ai/property_map.hpp>
 #   include <memory>
 
 namespace scn {
@@ -12,6 +13,7 @@ namespace scn {
 struct  sensor_props
 {
     ai::SENSOR_KIND  m_sensor_kind;
+    ai::property_map  m_sensor_props;
 };
 
 

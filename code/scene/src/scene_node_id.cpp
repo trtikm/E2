@@ -1,4 +1,5 @@
 #include <scene/scene_node_id.hpp>
+#include <sstream>
 
 namespace scn {
 
@@ -44,6 +45,38 @@ bool operator<(scene_node_id const&  left, scene_node_id const&  right)
 
 
 }
+
+
+std::string  join(scn::scene_node_id::path_type const& path, char const  sep)
+{
+    std::stringstream  sstr;
+    std::string  xsep;
+    for (auto const&  elem : path)
+    {
+        sstr << xsep << elem;
+        xsep = sep;
+    }
+    return sstr.str();
+}
+
+
+scn::scene_node_id::path_type&  split(scn::scene_node_id::path_type&  output, std::string const&  path, char const  sep)
+{
+    std::string  buffer;
+    for (auto c : path)
+        if (c == sep)
+        {
+            if (!buffer.empty())
+                output.push_back(buffer);
+            buffer.clear();
+        }
+        else
+            buffer.push_back(c);
+    if (!buffer.empty())
+        output.push_back(buffer);
+    return output;
+}
+
 
 namespace std {
 
