@@ -68,6 +68,36 @@ void  property_map::property_type_and_value::set_string(std::string const&  valu
 }
 
 
+std::string  as_string(property_map::property_type_and_value const&  prop)
+{
+    switch (prop.get_type())
+    {
+    case ai::property_map::PROPERTY_TYPE::INT: return std::to_string(prop.get_int());
+    case ai::property_map::PROPERTY_TYPE::FLOAT: return std::to_string(prop.get_float());
+    case ai::property_map::PROPERTY_TYPE::STRING: return prop.get_string();
+    default: UNREACHABLE(); break;
+    }
+}
+
+
+property_map::property_type_and_value  as_property_type_and_value(
+        property_map::PROPERTY_TYPE const  type,
+        std::string const&  value_text
+        )
+{
+    switch (type)
+    {
+    case ai::property_map::PROPERTY_TYPE::INT:
+        return property_map::property_type_and_value((integer_32_bit)std::atoi(value_text.c_str()));
+    case ai::property_map::PROPERTY_TYPE::FLOAT:
+        return property_map::property_type_and_value((float_32_bit)std::atof(value_text.c_str()));
+    case ai::property_map::PROPERTY_TYPE::STRING:
+        return property_map::property_type_and_value(value_text);
+    default: UNREACHABLE(); break;
+    }
+}
+
+
 boost::property_tree::ptree  as_ptree(property_map const&  map)
 {
     boost::property_tree::ptree  result;

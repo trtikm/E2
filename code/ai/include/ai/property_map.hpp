@@ -71,6 +71,12 @@ private:
 };
 
 
+std::string  as_string(property_map::property_type_and_value const&  prop);
+property_map::property_type_and_value  as_property_type_and_value(
+        property_map::PROPERTY_TYPE const  type,
+        std::string const&  value_text
+        );
+
 boost::property_tree::ptree  as_ptree(property_map const&  map);
 property_map  as_property_map(boost::property_tree::ptree const&  tree);
 
