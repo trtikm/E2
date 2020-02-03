@@ -14,7 +14,11 @@
 namespace dialog_windows {
 
 
-agent_props_dialog::agent_props_dialog(program_window* const  wnd, scn::agent_props const&  current_props)
+agent_props_dialog::agent_props_dialog(
+        program_window* const  wnd,
+        scn::agent_props const&  current_props,
+        std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> > const&  sensor_nodes_and_kinds
+        )
     : QDialog(wnd)
     , m_wnd(wnd)
     , m_ok(false)
@@ -33,6 +37,7 @@ agent_props_dialog::agent_props_dialog(program_window* const  wnd, scn::agent_pr
 
     , m_current_props(current_props)
     , m_new_props(current_props)
+    , m_sensor_nodes_and_kinds(sensor_nodes_and_kinds)
 {
     QVBoxLayout* const dlg_layout = new QVBoxLayout;
     {

@@ -26,7 +26,7 @@ struct  devices
             scene::node_id const&  device_nid,
             skeletal_motion_templates const  motion_templates, // can be empty, when the device does not use skeletal animations.
             DEVICE_KIND const  device_kind,
-            from_sensor_node_to_sensor_action_map const&  sensor_actions
+            from_sensor_record_to_sensor_action_map const&  sensor_actions
             );
     void  erase(device_id const  id) { m_devices.at(id) = nullptr; }
 
@@ -58,7 +58,7 @@ private:
         scene::node_id  device_nid;
         skeletal_motion_templates  motion_templates;
         DEVICE_KIND  device_kind;
-        std::shared_ptr<from_sensor_node_to_sensor_action_map>  m_sensor_actions;
+        std::shared_ptr<from_sensor_record_to_sensor_action_map>  m_sensor_actions;
     };
 
     void  construct_device(device_id const  id, device_props&  props);

@@ -20,7 +20,7 @@ struct  sensors
     explicit sensors(simulator* const  simulator_, scene_ptr const  scene_);
 
     sensor_id  insert(
-            scene::node_id const&  sensor_nid,
+            scene::record_id const&  sensor_rid,
             SENSOR_KIND const  sensor_kind,
             object_id const& owner_id_,
             property_map const&  cfg_
@@ -50,7 +50,7 @@ private:
     struct  sensor_props
     {
         std::unique_ptr<sensor>  sensor_ptr;
-        scene::node_id  sensor_nid;
+        scene::record_id  sensor_rid;
         SENSOR_KIND  sensor_kind;
         object_id  owner_id;
         std::shared_ptr<property_map>  cfg;

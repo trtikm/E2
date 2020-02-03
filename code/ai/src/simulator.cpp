@@ -23,7 +23,7 @@ agent_id  simulator::insert_agent(
         scene::node_id const&  agent_nid,
         skeletal_motion_templates const  motion_templates,
         AGENT_KIND const  agent_kind,
-        from_sensor_node_to_sensor_action_map const&  sensor_actions,
+        from_sensor_record_to_sensor_action_map const&  sensor_actions,
         retina_ptr const  retina_or_null
         )
 {
@@ -41,7 +41,7 @@ device_id  simulator::insert_device(
         scene::node_id const&  device_nid,
         skeletal_motion_templates const  motion_templates,
         DEVICE_KIND const  device_kind,
-        from_sensor_node_to_sensor_action_map const&  sensor_actions
+        from_sensor_record_to_sensor_action_map const&  sensor_actions
         )
 {
     return m_devices.insert(device_nid, motion_templates, device_kind, sensor_actions);
@@ -55,13 +55,13 @@ void  simulator::erase_device(device_id const  id)
 
 
 sensor_id  simulator::insert_sensor(
-        scene::node_id const&  sensor_nid,
+        scene::record_id const&  sensor_rid,
         SENSOR_KIND const  sensor_kind,
         object_id const& owner_id_,
         property_map const&  cfg_
         )
 {
-    return m_sensors.insert(sensor_nid, sensor_kind, owner_id_, cfg_);
+    return m_sensors.insert(sensor_rid, sensor_kind, owner_id_, cfg_);
 }
 
 

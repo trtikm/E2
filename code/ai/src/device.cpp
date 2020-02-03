@@ -69,7 +69,7 @@ void  device::next_round(float_32_bit const  time_step_in_seconds)
 
 void  device::on_sensor_event(sensor const&  s)
 {
-    auto const  actions_it = get_blackboard()->m_sensor_actions->find(s.get_self_nid());
+    auto const  actions_it = get_blackboard()->m_sensor_actions->find(s.get_self_rid());
     ASSUMPTION(actions_it != get_blackboard()->m_sensor_actions->end());
     for (sensor_action&  action : actions_it->second)
         switch (action.kind)

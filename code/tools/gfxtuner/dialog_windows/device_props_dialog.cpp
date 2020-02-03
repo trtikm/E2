@@ -10,11 +10,16 @@
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QGroupBox>
+#include <map>
 
 namespace dialog_windows {
 
 
-device_props_dialog::device_props_dialog(program_window* const  wnd, scn::device_props const&  current_props)
+device_props_dialog::device_props_dialog(
+        program_window* const  wnd,
+        scn::device_props const&  current_props,
+        std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> > const&  sensor_nodes_and_kinds
+        )
     : QDialog(wnd)
     , m_wnd(wnd)
     , m_ok(false)
@@ -29,10 +34,57 @@ device_props_dialog::device_props_dialog(program_window* const  wnd, scn::device
                     return new OK(wnd);
                 }(this)
             )
-    , m_device_kind_combobox(new QComboBox)
+    , m_device_kind_combobox(
+            [](device_props_dialog* wnd) {
+                    struct s : public QComboBox {
+                        s(device_props_dialog* wnd) : QComboBox()
+                        {
+                            QObject::connect(this, SIGNAL(currentIndexChanged(int)), wnd, SLOT(on_device_kind_combo_changed(int)));
+                        }
+                    };
+                    return new s(wnd);
+                }(this)
+            )
+    , m_sensor_record_id_list(
+            [](device_props_dialog* wnd) {
+                    struct s : public QListWidget {
+                        s(device_props_dialog* wnd) : QListWidget()
+                        {
+                            QObject::connect(this, SIGNAL(currentRowChanged(int)),
+                                             wnd, SLOT(on_sensor_record_id_list_selection_changed(int)));
+                        }
+                    };
+                    return new s(wnd);
+                }(this)
+            )
+    , m_sensor_action_kind_list(
+            [](device_props_dialog* wnd) {
+                    struct s : public QListWidget {
+                        s(device_props_dialog* wnd) : QListWidget()
+                        {
+                            QObject::connect(this, SIGNAL(currentRowChanged(int)),
+                                             wnd, SLOT(on_sensor_action_kind_list_selection_changed(int)));
+                        }
+                    };
+                    return new s(wnd);
+                }(this)
+            )
+    , m_sensor_action_props_table(
+            [](device_props_dialog* wnd) {
+                    struct s : public QTableWidget {
+                        s(device_props_dialog* wnd) : QTableWidget(1,2)
+                        {
+                            QObject::connect(this, SIGNAL(currentItemChanged(QTableWidgetItem*, QTableWidgetItem*)),
+                                             wnd, SLOT(on_sensor_action_props_table_changed(QTableWidgetItem*, QTableWidgetItem*)));
+                        }
+                    };
+                    return new s(wnd);
+                }(this)
+            )
 
     , m_current_props(current_props)
     , m_new_props(current_props)
+    , m_sensor_nodes_and_kinds(sensor_nodes_and_kinds)
 {
     QVBoxLayout* const dlg_layout = new QVBoxLayout;
     {
@@ -60,6 +112,25 @@ device_props_dialog::device_props_dialog(program_window* const  wnd, scn::device
             kind_layout->addStretch(1);
         }
         dlg_layout->addLayout(kind_layout);
+
+        QHBoxLayout* const sensor_action_layout = new QHBoxLayout;
+        {
+            m_sensor_record_id_list->setSortingEnabled(false);
+            for (auto const&  node_and_kind : sensor_nodes_and_kinds)
+            {
+                std::string const  text = msgstream() << ::as_string(node_and_kind.first)
+                                                      << " [" << ai::as_string(node_and_kind.second) << "]";
+                m_sensor_record_id_list->addItem(new QListWidgetItem(text.c_str()));
+            }
+            m_sensor_record_id_list->setCurrentRow(0);
+            sensor_action_layout->addWidget(m_sensor_record_id_list);
+            sensor_action_layout->addWidget(m_sensor_action_kind_list);
+            sensor_action_layout->addWidget(m_sensor_action_props_table);
+            on_sensor_record_id_list_selection_changed(0);
+
+            sensor_action_layout->addStretch(1);
+        }
+        dlg_layout->addLayout(sensor_action_layout);
 
         QHBoxLayout* const buttons_layout = new QHBoxLayout;
         {
@@ -97,6 +168,71 @@ void  device_props_dialog::accept()
 void  device_props_dialog::reject()
 {
     QDialog::reject();
+}
+
+
+void  device_props_dialog::on_device_kind_combo_changed(int)
+{
+}
+
+
+void  device_props_dialog::on_sensor_record_id_list_selection_changed(int)
+{
+    m_sensor_action_kind_list->clear();
+    m_sensor_action_props_table->clear();
+    if (m_sensor_record_id_list->count() == 0)
+        return;
+    scn::scene_record_id const&  id = m_sensor_nodes_and_kinds.at(m_sensor_record_id_list->currentRow()).first;
+    auto const  it = m_new_props.m_sensor_action_map.find(id);
+    if (it == m_new_props.m_sensor_action_map.end())
+        return;
+    for (ai::sensor_action  action : it->second)
+    {
+        std::string const  text = ai::as_string(action.kind);
+        m_sensor_record_id_list->addItem(new QListWidgetItem(text.c_str()));
+    }
+    if (m_sensor_action_kind_list->count() > 0)
+        m_sensor_action_kind_list->setCurrentRow(0);
+}
+
+
+void  device_props_dialog::on_sensor_action_kind_list_selection_changed(int)
+{
+    m_sensor_action_props_table->clear();
+    if (m_sensor_record_id_list->count() == 0 || m_sensor_action_kind_list->count() == 0)
+        return;
+    scn::scene_record_id const&  id = m_sensor_nodes_and_kinds.at(m_sensor_record_id_list->currentRow()).first;
+    ai::sensor_action const&  action = m_new_props.m_sensor_action_map.at(id).at(m_sensor_action_kind_list->currentRow());
+    auto const& _ = action.props;
+    std::map<ai::property_map::property_name, ai::property_map::property_type_and_value> const  props(_.begin(), _.end());
+    m_sensor_action_props_table->setRowCount((int)props.size());
+    int  row = 0;
+    for (auto const& elem : props)
+    {
+        QTableWidgetItem* name_item = m_sensor_action_props_table->item(row, 0);
+        if (name_item == nullptr)
+        {
+            m_sensor_action_props_table->setItem(row, 0, new QTableWidgetItem);
+            name_item = m_sensor_action_props_table->item(row, 0);
+        }
+        QTableWidgetItem* value_item = m_sensor_action_props_table->item(row, 1);
+        if (value_item == nullptr)
+        {
+            m_sensor_action_props_table->setItem(row, 1, new QTableWidgetItem);
+            value_item = m_sensor_action_props_table->item(row, 1);
+        }
+
+        name_item->setText(elem.first.c_str());
+        std::string const  value_text = ai::as_string(elem.second);
+        value_item->setText(value_text.c_str());
+
+        ++row;
+    }
+}
+
+
+void  device_props_dialog::on_sensor_action_props_table_changed(QTableWidgetItem*, QTableWidgetItem*)
+{
 }
 
 

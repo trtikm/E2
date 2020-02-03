@@ -157,7 +157,13 @@ void  register_record_handler_for_update_scene_record(
             [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
                     scn::device_props  old_props;
                     w->wnd()->glwindow().call_now(&simulator::get_device_info, std::cref(record_id.get_node_id()), std::ref(old_props));
-                    dialog_windows::device_props_dialog  dlg(w->wnd(), old_props);
+                    std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >  sensor_nodes_and_kinds;
+                    w->wnd()->glwindow().call_now(
+                            &simulator::get_sensor_nodes_and_kinds_under_scene_node,
+                            std::cref(record_id.get_node_id()),
+                            std::ref(sensor_nodes_and_kinds)
+                            );
+                    dialog_windows::device_props_dialog  dlg(w->wnd(), old_props, sensor_nodes_and_kinds);
                     dlg.exec();
                     if (!dlg.ok())
                         return;

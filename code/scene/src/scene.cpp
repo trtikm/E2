@@ -78,6 +78,23 @@ bool  scene_node::foreach_child(std::function<bool(scene_node_ptr)> const&  acti
 }
 
 
+bool  scene_node::foreach_child(
+        std::function<bool(scene_node_ptr)> const&  action,
+        std::function<bool(scene_node_ptr)> const&  iterate_children_of
+        ) const
+{
+    for (auto name_child : get_children())
+    {
+        if (iterate_children_of(name_child.second))
+            if (name_child.second->foreach_child(action, iterate_children_of) == false)
+                return false;
+        if (action(name_child.second) == false)
+            return false;
+    }
+    return true;
+}
+
+
 scene_node_ptr  scene_node::find_child(scene_node_id const&  id, scene_node_ptr const  ret_value_on_failure) const
 {
     auto const  it = find_child(id.path().front());

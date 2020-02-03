@@ -15,6 +15,7 @@ namespace ai {
 struct  scene
 {
     using  node_id = scn::scene_node_id;
+    using  record_id = scn::scene_record_id;
     using  collision_object_id = angeo::collision_object_id;
 
     struct  collicion_contant_info

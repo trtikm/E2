@@ -45,7 +45,7 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_acti
 }
 
 
-boost::property_tree::ptree  as_ptree(from_sensor_node_to_sensor_action_map const&  map)
+boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map const&  map)
 {
     boost::property_tree::ptree  result;
     for (auto const&  elem : map)
@@ -64,12 +64,12 @@ boost::property_tree::ptree  as_ptree(from_sensor_node_to_sensor_action_map cons
 }
 
 
-from_sensor_node_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree)
+from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree)
 {
-    from_sensor_node_to_sensor_action_map  result;
+    from_sensor_record_to_sensor_action_map  result;
     for (auto  it = tree.begin(); it != tree.end(); ++it)
     {
-        scene::node_id const  id = ::as_scene_node_id(it->first);
+        scene::record_id const  id = ::as_scene_record_id(it->first);
         std::vector<sensor_action>  actions;
         for (auto  action_it = it->second.begin(); action_it != it->second.end(); ++action_it)
         {

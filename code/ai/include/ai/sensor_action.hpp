@@ -41,13 +41,13 @@ struct  sensor_action
     property_map  props;
 };
 
-using  from_sensor_node_to_sensor_action_map = std::unordered_map<scene::node_id, std::vector<sensor_action> >;
+using  from_sensor_record_to_sensor_action_map = std::unordered_map<scene::record_id, std::vector<sensor_action> >;
 
 std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_action_props();
 
 
-boost::property_tree::ptree  as_ptree(from_sensor_node_to_sensor_action_map const&  map);
-from_sensor_node_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree);
+boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map const&  map);
+from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree);
 
 
 }

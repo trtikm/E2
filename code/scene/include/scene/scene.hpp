@@ -144,6 +144,8 @@ struct scene_node final
     scene_node_id  get_id() const;
 
     bool  foreach_child(std::function<bool(scene_node_ptr)> const&  action, bool const  recursively) const;
+    bool  foreach_child(std::function<bool(scene_node_ptr)> const&  action,
+                        std::function<bool(scene_node_ptr)> const&  iterate_children_of) const;
 
     children_map const&  get_children() const { return m_children; }
     children_map::const_iterator  find_child(node_name const&  name) const { return get_children().find(name); }

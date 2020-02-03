@@ -60,13 +60,18 @@ std::string  join(scn::scene_node_id::path_type const& path, char const  sep)
 }
 
 
-scn::scene_node_id::path_type&  split(scn::scene_node_id::path_type&  output, std::string const&  path, char const  sep)
+scn::scene_node_id::path_type&  split(
+        scn::scene_node_id::path_type&  output,
+        std::string const&  path,
+        bool const  ignore_empty_path_elements,
+        char const  sep
+        )
 {
     std::string  buffer;
     for (auto c : path)
         if (c == sep)
         {
-            if (!buffer.empty())
+            if (!ignore_empty_path_elements || !buffer.empty())
                 output.push_back(buffer);
             buffer.clear();
         }

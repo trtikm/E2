@@ -12,6 +12,12 @@ namespace scn {
 
 struct  scene_record_id
 {
+    scene_record_id()
+        : m_node_id()
+        , m_folder_name()
+        , m_record_name()
+    {}
+
     scene_record_id(
             scene_node_id const&  node_id,
             scene_node::folder_name const&  folder_name,
@@ -34,6 +40,14 @@ struct  scene_record_id
         , m_record_name()
     {}
 
+    // ASSUMPTION(path.size() >= 2U);
+    explicit scene_record_id(scene_node_id::path_type const&  path)
+        : m_node_id(path.cbegin(), std::next(path.cbegin(), path.size() - 2UL))
+        , m_folder_name(path.at(path.size() - 2UL))
+        , m_record_name(path.at(path.size() - 1UL))
+    {}
+
+    bool  valid() const { return get_node_id().valid(); }
     scene_node_id const&  get_node_id() const { return m_node_id; }
     scene_node::folder_name const&  get_folder_name() const { return m_folder_name; }
     scene_node::record_name const&  get_record_name() const { return m_record_name; }
@@ -98,6 +112,15 @@ inline bool operator>=(scene_record_id const&  left, scene_record_id const&  rig
 
 
 }
+
+
+inline std::string  as_string(scn::scene_record_id const&  id)
+{ return msgstream() << as_string(id.get_node_id()) << '/' << id.get_folder_name() << '/' << id.get_record_name(); }
+
+inline scn::scene_record_id  as_scene_record_id(std::string const& path)
+{ scn::scene_node_id::path_type p; split(p, path, false); ASSUMPTION(p.size() >= 2UL); return scn::scene_record_id(p); }
+
+
 
 namespace std {
 

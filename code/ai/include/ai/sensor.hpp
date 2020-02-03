@@ -18,13 +18,13 @@ struct  sensor
 
     sensor(simulator* const  simulator_,
            SENSOR_KIND const  kind_,
-           scene::node_id const&  self_nid_,
+           scene::record_id const&  self_rid_,
            object_id const&  owner_id_,
            std::shared_ptr<property_map> const  cfg_
            );
 
     SENSOR_KIND  get_kind() const { return m_kind; }
-    scene::node_id const&  get_self_nid() const { return m_self_nid; }
+    scene::record_id const&  get_self_rid() const { return m_self_rid; }
     object_id const&  get_owner_id() const { return m_owner_id; }
     property_map const&  get_config() const { return *m_cfg; }
 
@@ -33,7 +33,7 @@ struct  sensor
 private:
     simulator*  m_simulator;
     SENSOR_KIND  m_kind;
-    scene::node_id  m_self_nid;
+    scene::record_id  m_self_rid;
     object_id  m_owner_id;
     std::shared_ptr<property_map>  m_cfg;
 };

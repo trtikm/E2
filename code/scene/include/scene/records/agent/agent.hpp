@@ -14,7 +14,7 @@ struct  agent_props
 {
     ai::AGENT_KIND  m_agent_kind;
     skeleton_props_const_ptr  m_skeleton_props;
-    ai::from_sensor_node_to_sensor_action_map  m_sensor_action_map;
+    ai::from_sensor_record_to_sensor_action_map  m_sensor_action_map;
 };
 
 

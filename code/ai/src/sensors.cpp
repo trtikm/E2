@@ -19,14 +19,19 @@ sensors::sensors(simulator* const  simulator_, scene_ptr const  scene_)
 
 
 sensor_id  sensors::insert(
-        scene::node_id const&  sensor_nid,
+        scene::record_id const&  sensor_rid,
         SENSOR_KIND const  sensor_kind,
         object_id const&  owner_id_,
         property_map const&  cfg_)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(sensor_nid.valid() && owner_id_.valid());
+    ASSUMPTION(
+        sensor_rid.valid() &&
+        !sensor_rid.is_node_reference() &&
+        !sensor_rid.is_folder_reference() &&
+        owner_id_.valid()
+        );
 
     sensor_id  id = 0U;
     for (; id != m_sensors.size(); ++id)
@@ -35,7 +40,7 @@ sensor_id  sensors::insert(
 
     auto const  props = std::make_shared<sensor_props>();
     props->sensor_ptr = nullptr;
-    props->sensor_nid = sensor_nid;
+    props->sensor_rid = sensor_rid;
     props->sensor_kind = sensor_kind;
     props->owner_id = owner_id_;
     props->cfg = std::make_shared<property_map>(cfg_);
@@ -52,7 +57,7 @@ void  sensors::construct_sensor(sensor_id const  id, sensor_props&  props)
 {
     TMPROF_BLOCK();
 
-    props.sensor_ptr = std::make_unique<sensor>(m_simulator, props.sensor_kind, props.sensor_nid, props.owner_id, props.cfg);
+    props.sensor_ptr = std::make_unique<sensor>(m_simulator, props.sensor_kind, props.sensor_rid, props.owner_id, props.cfg);
 }
 
 

@@ -23,7 +23,7 @@ device_id  devices::insert(
         scene::node_id const&  device_nid,
         skeletal_motion_templates const  motion_templates,
         DEVICE_KIND const  device_kind,
-        from_sensor_node_to_sensor_action_map const&  sensor_actions
+        from_sensor_record_to_sensor_action_map const&  sensor_actions
         )
 {
     TMPROF_BLOCK();
@@ -39,7 +39,7 @@ device_id  devices::insert(
     props->device_ptr = nullptr;
     props->device_nid = device_nid;
     props->motion_templates = motion_templates;
-    props->m_sensor_actions = std::make_shared<from_sensor_node_to_sensor_action_map>(sensor_actions);
+    props->m_sensor_actions = std::make_shared<from_sensor_record_to_sensor_action_map>(sensor_actions);
     props->device_kind = device_kind;
 
     if (id == m_devices.size())

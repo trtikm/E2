@@ -35,7 +35,7 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
                     struct s : public QComboBox {
                         s(sensor_props_dialog* wnd) : QComboBox()
                         {
-                            QObject::connect(this, SIGNAL(currentIndexChanged()), wnd, SLOT(on_kind_combo_changed(int)));
+                            QObject::connect(this, SIGNAL(currentIndexChanged(int)), wnd, SLOT(on_kind_combo_changed(int)));
                         }
                     };
                     return new s(wnd);
@@ -43,6 +43,7 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
             )
     , m_property_map_table(new QTableWidget(1, 2))
 
+    , m_initialised(false)
     , m_current_props(current_props)
     , m_new_props(current_props)
     , m_all_props(ai::sensor::default_configs())
@@ -103,6 +104,8 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
     }
     this->setLayout(dlg_layout);
     this->setWindowTitle("sensor");
+
+    m_initialised = true;
 }
 
 
@@ -170,6 +173,8 @@ void  sensor_props_dialog::load_property_map_table()
 
 void  sensor_props_dialog::save_property_map_table()
 {
+    if (!m_initialised)
+        return;
     auto&  props = m_all_props.at(m_new_props.m_sensor_kind);
     INVARIANT(m_property_map_table->rowCount() == props.size());
     for (int  row = 0; row != m_property_map_table->rowCount(); ++row)

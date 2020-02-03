@@ -25,13 +25,13 @@ std::unordered_map<SENSOR_KIND, property_map> const&  sensor::default_configs()
 
 sensor::sensor(simulator* const  simulator_,
                SENSOR_KIND const  kind_,
-               scene::node_id const&  self_nid_,
+               scene::record_id const&  self_rid_,
                object_id const&  owner_id_,
                std::shared_ptr<property_map> const  cfg_
                )
     : m_simulator(simulator_)
     , m_kind(kind_)
-    , m_self_nid(self_nid_)
+    , m_self_rid(self_rid_)
     , m_owner_id(owner_id_)
     , m_cfg(cfg_)
 {

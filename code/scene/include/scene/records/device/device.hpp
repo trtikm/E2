@@ -14,7 +14,7 @@ struct  device_props
 {
     ai::DEVICE_KIND  m_device_kind;
     skeleton_props_const_ptr  m_skeleton_props;
-    ai::from_sensor_node_to_sensor_action_map  m_sensor_action_map;
+    ai::from_sensor_record_to_sensor_action_map  m_sensor_action_map;
 };
 
 

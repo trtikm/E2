@@ -23,6 +23,10 @@ struct  scene_node_id
         : m_path(path)
     {}
 
+    explicit scene_node_id(path_type::const_iterator const  begin, path_type::const_iterator const  end)
+        : m_path(begin, end)
+    {}
+
     explicit scene_node_id(path_element_type const&  element)
         : scene_node_id(path_type{ element })
     {}
@@ -89,7 +93,12 @@ inline bool operator>=(scene_node_id const&  left, scene_node_id const&  right)
 
 
 std::string  join(scn::scene_node_id::path_type const&  path, char const  sep = '/');
-scn::scene_node_id::path_type&  split(scn::scene_node_id::path_type&  output, std::string const& path, char const  sep = '/');
+scn::scene_node_id::path_type&  split(
+        scn::scene_node_id::path_type&  output,
+        std::string const& path,
+        bool const  ignore_empty_path_elements = true,
+        char const  sep = '/'
+        );
 
 inline std::string  as_string(scn::scene_node_id const&  id)
 {  return join(id.path()); }

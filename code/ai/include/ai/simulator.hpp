@@ -23,7 +23,7 @@ struct simulator
             scene::node_id const&  agent_nid,
             skeletal_motion_templates const  motion_templates,
             AGENT_KIND const  agent_kind,
-            from_sensor_node_to_sensor_action_map const&  sensor_actions,
+            from_sensor_record_to_sensor_action_map const&  sensor_actions,
             retina_ptr const  retina_or_null
             );
     void  erase_agent(agent_id const  id);
@@ -32,12 +32,12 @@ struct simulator
             scene::node_id const&  device_nid,
             skeletal_motion_templates const  motion_templates,  // can be empty, when the device does not use skeletal animations.
             DEVICE_KIND const  device_kind,
-            from_sensor_node_to_sensor_action_map const&  sensor_actions
+            from_sensor_record_to_sensor_action_map const&  sensor_actions
             );
     void  erase_device(device_id const  id);
 
     sensor_id  insert_sensor(
-            scene::node_id const&  sensor_nid,
+            scene::record_id const&  sensor_rid,
             SENSOR_KIND const  sensor_kind,
             object_id const& owner_id_,
             property_map const&  cfg_

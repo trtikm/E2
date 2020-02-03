@@ -75,10 +75,10 @@ inline bool operator>=(scene_node_record_id const&  left, scene_node_record_id c
 
 
 inline std::string  as_string(scn::scene_node_record_id const& id)
-{ return (msgstream() << id.get_folder_name() << '/' << id.get_record_name()).get(); }
+{ return msgstream() << id.get_folder_name() << '/' << id.get_record_name(); }
 
 inline scn::scene_node_record_id  as_scene_node_record_id(std::string const& path)
-{ scn::scene_node_id::path_type p; split(p, path); ASSUMPTION(p.size() == 2UL); return scn::scene_node_record_id(p.front(), p.back()); }
+{ scn::scene_node_id::path_type p; split(p, path); ASSUMPTION(p.size() == 2UL); return {p.front(), p.back()}; }
 
 
 namespace std {
