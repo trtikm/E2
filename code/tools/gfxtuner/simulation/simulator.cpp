@@ -1125,7 +1125,15 @@ void  simulator::process_ai_requests()
         }
         else if (auto const  request = ai::scene::cast<ai::scene::request_erase_nodes_tree>(requests.back()))
         {
-            // TODO!
+            ASSUMPTION(
+                [](scn::scene_node_ptr const  node_ptr) -> bool {
+                    return node_ptr == nullptr ||
+                            scn::has_agent(*node_ptr) ||
+                            scn::has_device(*node_ptr) ||
+                            !scn::get_sensor_holders(*node_ptr).empty();
+                    }(get_scene_node(request->root_nid))
+                );
+            erase_scene_node(request->root_nid);
         }
         else
         {
@@ -2206,8 +2214,23 @@ void  simulator::erase_scene_node(scn::scene_node_id const&  id)
     TMPROF_BLOCK();
 
     auto const  node_ptr = get_scene().get_scene_node(id);
+    if (node_ptr == nullptr)
+        return;
+
     for (auto const&  elem : node_ptr->get_children())
         erase_scene_node(elem.second->get_id());
+
+    if (scn::has_agent(*node_ptr))
+        erase_agent(scn::make_agent_record_id(id));
+    if (scn::has_device(*node_ptr))
+        erase_device(scn::make_device_record_id(id));
+    {
+        std::vector<std::string>  sensor_names;
+        for (auto const&  name_holder : scn::get_sensor_holders(*node_ptr))
+            sensor_names.push_back(name_holder.first);
+        for (auto const&  sensor_name : sensor_names)
+            erase_sensor(scn::make_sensor_record_id(node_ptr->get_id(), sensor_name));
+    }
 
     if (scn::has_rigid_body(*node_ptr))
         erase_rigid_body_from_scene_node(id);
