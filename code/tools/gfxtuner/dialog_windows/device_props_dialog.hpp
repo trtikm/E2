@@ -38,10 +38,13 @@ public slots:
     void  accept();
     void  reject();
 
-    void  on_device_kind_combo_changed(int);
-    void  on_sensor_record_id_list_selection_changed(int);
-    void  on_sensor_action_kind_list_selection_changed(int);
-    void  on_sensor_action_props_table_changed(QTableWidgetItem*, QTableWidgetItem*);
+    void  on_device_kind_combo_changed(int = 0);
+    void  on_sensor_record_id_list_selection_changed(int = 0);
+    void  on_sensor_action_kind_list_selection_changed(int = 0);
+    void  on_sensor_action_kind_combo_changed(int = 0);
+    void  on_sensor_action_kind_insert_button_pressed();
+    void  on_sensor_action_kind_delete_button_pressed();
+    void  on_sensor_action_props_table_changed(QTableWidgetItem* = nullptr, QTableWidgetItem* = nullptr);
 
 private:
 
@@ -53,7 +56,11 @@ private:
     QComboBox*  m_device_kind_combobox;
     QListWidget*  m_sensor_record_id_list;
     QListWidget*  m_sensor_action_kind_list;
+    QComboBox*  m_sensor_action_kind_combobox;
+    QPushButton*  m_sensor_action_kind_insert_button;
+    QPushButton*  m_sensor_action_kind_delete_button;
     QTableWidget*  m_sensor_action_props_table;
+    bool  m_locked;
 
     scn::device_props  m_current_props;
     scn::device_props  m_new_props;

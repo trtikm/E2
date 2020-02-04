@@ -1,7 +1,5 @@
-#ifndef E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_BOOL_LOCK_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_BOOL_LOCK_HPP_INCLUDED
-
-namespace window_tabs { namespace tab_scene {
+#ifndef UTILITY_LOCK_BOOL_HPP_INCLUDED
+#   define UTILITY_LOCK_BOOL_HPP_INCLUDED
 
 
 struct  lock_bool
@@ -28,6 +26,8 @@ private:
 };
 
 
-}}
+#   define LOCK_BOOL_BLOCK_BEGIN(BOOL_VAR) if (!(BOOL_VAR)) { lock_bool const ____lock_of_lock_bool_variable__(&(BOOL_VAR));
+#   define LOCK_BOOL_BLOCK_END() }
+
 
 #endif

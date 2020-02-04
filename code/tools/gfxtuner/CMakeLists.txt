@@ -44,7 +44,6 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_scene.cpp
     window_tabs/skeleton_utils.hpp
     window_tabs/skeleton_utils.cpp
-    window_tabs/tab_scene_bool_lock.hpp
     window_tabs/tab_scene_record_id_reverse_builder.hpp
     window_tabs/tab_scene_record_id_reverse_builder.cpp
     window_tabs/tab_scene_records_integration.hpp

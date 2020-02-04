@@ -69,6 +69,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/utility/read_line.hpp
     ./src/read_line.cpp
+
+    ./include/utility/lock_bool.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

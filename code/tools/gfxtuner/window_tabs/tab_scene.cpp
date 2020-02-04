@@ -1,5 +1,4 @@
 #include <gfxtuner/window_tabs/tab_scene.hpp>
-#include <gfxtuner/window_tabs/tab_scene_bool_lock.hpp>
 #include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
 #include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
 #include <gfxtuner/window_tabs/tab_scene_record_agent.hpp>
@@ -18,6 +17,7 @@
 #include <utility/std_pair_hash.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/canonical_path.hpp>
+#include <utility/lock_bool.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <boost/property_tree/info_parser.hpp>
