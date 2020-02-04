@@ -11,6 +11,15 @@ scene_node_id  scene_node_id::get_direct_parent_id() const
     return scene_node_id(path);
 }
 
+scene_node_id  scene_node_id::copy(natural_32_bit  start_index) const
+{
+    path_type  path;
+    for ( ; start_index < depth(); ++start_index)
+        path.push_back(path_element(start_index));
+    return scene_node_id(path);
+}
+
+
 scene_node_id  operator/(scene_node_id const&  parents, scene_node_id const&  children)
 {
     scene_node_id::path_type  path(parents.path());
@@ -44,6 +53,15 @@ bool operator<(scene_node_id const&  left, scene_node_id const&  right)
 }
 
 
+}
+
+
+natural_32_bit  common_prefix_size(scn::scene_node_id const&  left, scn::scene_node_id const&  right)
+{
+    natural_32_bit  i = 0U;
+    while (i < left.depth() && i < right.depth() && left.path_element(i) == right.path_element(i))
+        ++i;
+    return i;
 }
 
 

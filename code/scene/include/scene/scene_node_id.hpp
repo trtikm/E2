@@ -39,6 +39,8 @@ struct  scene_node_id
     path_element_type const&  path_last_element() const { return m_path.back(); }
     scene_node_id  get_direct_parent_id() const;
 
+    scene_node_id  copy(natural_32_bit  start_index = 0U) const;
+
 private:
     path_type  m_path;
 };
@@ -91,6 +93,8 @@ inline bool operator>=(scene_node_id const&  left, scene_node_id const&  right)
 
 }
 
+
+natural_32_bit  common_prefix_size(scn::scene_node_id const&  left, scn::scene_node_id const&  right);
 
 std::string  join(scn::scene_node_id::path_type const&  path, char const  sep = '/');
 scn::scene_node_id::path_type&  split(

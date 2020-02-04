@@ -46,8 +46,8 @@ using  from_sensor_record_to_sensor_action_map = std::unordered_map<scene::recor
 std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_action_props();
 
 
-boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map const&  map);
-from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree);
+boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map const&  map, scene::node_id const&  root);
+from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree, scene::node_id const&  root);
 
 
 }

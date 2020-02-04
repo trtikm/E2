@@ -45,7 +45,7 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_acti
 }
 
 
-boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map const&  map)
+boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map const&  map, scene::node_id const&  root)
 {
     boost::property_tree::ptree  result;
     for (auto const&  elem : map)
@@ -58,18 +58,28 @@ boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map co
             prop.put_child("props", as_ptree(action.props));
             actions.push_back({"", prop});
         }
-        result.put_child(::as_string(elem.first), actions);
+        result.put_child(
+                ::as_string({
+                        elem.first.get_node_id().copy(common_prefix_size(elem.first.get_node_id(), root)),
+                        elem.first.get_folder_name(),
+                        elem.first.get_record_name()
+                        }),
+                actions);
     }
     return result;
 }
 
 
-from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree)
+from_sensor_record_to_sensor_action_map  as_sensor_action_map(
+        boost::property_tree::ptree const&  tree,
+        scene::node_id const&  root
+        )
 {
     from_sensor_record_to_sensor_action_map  result;
     for (auto  it = tree.begin(); it != tree.end(); ++it)
     {
-        scene::record_id const  id = ::as_scene_record_id(it->first);
+        scene::record_id const  relative_id = ::as_scene_record_id(it->first);
+        scene::record_id const  id(root / relative_id.get_node_id(), relative_id.get_folder_name(), relative_id.get_record_name());
         std::vector<sensor_action>  actions;
         for (auto  action_it = it->second.begin(); action_it != it->second.end(); ++action_it)
         {

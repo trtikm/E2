@@ -134,9 +134,9 @@ property_map  as_property_map(boost::property_tree::ptree const&  tree)
         std::string const  type = it->second.get<std::string>("type");
         if (type == "INT")
             result.insert({ it->first, property_map::property_type_and_value(it->second.get<integer_32_bit>("value")) });
-        if (type == "FLOAT")
+        else if (type == "FLOAT")
             result.insert({ it->first, property_map::property_type_and_value(it->second.get<float_32_bit>("value")) });
-        if (type == "STRING")
+        else if (type == "STRING")
             result.insert({ it->first, property_map::property_type_and_value(it->second.get<std::string>("value")) });
         else { UNREACHABLE(); }
     }
