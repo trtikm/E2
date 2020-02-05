@@ -44,7 +44,7 @@ public slots:
     void  on_sensor_action_kind_combo_changed(int = 0);
     void  on_sensor_action_kind_insert_button_pressed();
     void  on_sensor_action_kind_delete_button_pressed();
-    void  on_sensor_action_props_table_changed(QTableWidgetItem* = nullptr, QTableWidgetItem* = nullptr);
+    void  on_sensor_action_props_table_changed(QTableWidgetItem* = nullptr);
 
 private:
 

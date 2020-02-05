@@ -7,6 +7,7 @@ namespace ai {
 
 
 static std::unordered_map<natural_8_bit, std::pair<std::string, std::string> > const  from_index_to_name_and_description = {
+    { as_number(SENSOR_ACTION_KIND::BEGIN_OF_LIFE), { "BEGIN_OF_LIFE", "Imports a template scene with agent, device, or sensor into the current one." } },
     { as_number(SENSOR_ACTION_KIND::END_OF_LIFE), { "END_OF_LIFE", "Erase self from the scene." } },
 };
 
@@ -39,6 +40,11 @@ SENSOR_ACTION_KIND  as_sensor_action_kind(std::string const&  name)
 std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_action_props()
 {
     static std::unordered_map<SENSOR_ACTION_KIND, property_map>  props {
+        { SENSOR_ACTION_KIND::BEGIN_OF_LIFE, property_map({
+                { "scene_id", property_map::property_type_and_value("shared/import/TODO") },
+                { "parent_nid", property_map::property_type_and_value("TODO") },
+                { "frame_reference_nid", property_map::property_type_and_value("TODO") },
+                })},
         { SENSOR_ACTION_KIND::END_OF_LIFE, property_map{} },
     };
     return props;

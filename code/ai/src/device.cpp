@@ -74,6 +74,13 @@ void  device::on_sensor_event(sensor const&  s)
     for (sensor_action&  action : actions_it->second)
         switch (action.kind)
         {
+        case SENSOR_ACTION_KIND::BEGIN_OF_LIFE:
+            get_blackboard()->m_scene->accept(scene::create_request_merge_scene(
+                    action.props.at("scene_id").get_string(),
+                    ::as_scene_node_id(action.props.at("parent_nid").get_string()),
+                    ::as_scene_node_id(action.props.at("frame_reference_nid").get_string())
+                    ));
+            break;
         case SENSOR_ACTION_KIND::END_OF_LIFE:
             get_blackboard()->m_scene->accept(scene::create_request_erase_nodes_tree(get_blackboard()->m_self_nid));
             break;

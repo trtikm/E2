@@ -110,8 +110,8 @@ device_props_dialog::device_props_dialog(
                     struct s : public QTableWidget {
                         s(device_props_dialog* wnd) : QTableWidget(1,2)
                         {
-                            QObject::connect(this, SIGNAL(currentItemChanged(QTableWidgetItem*, QTableWidgetItem*)),
-                                             wnd, SLOT(on_sensor_action_props_table_changed(QTableWidgetItem*, QTableWidgetItem*)));
+                            QObject::connect(this, SIGNAL(itemChanged(QTableWidgetItem*)),
+                                             wnd, SLOT(on_sensor_action_props_table_changed(QTableWidgetItem*)));
                         }
                     };
                     return new s(wnd);
@@ -257,6 +257,7 @@ void  device_props_dialog::on_sensor_record_id_list_selection_changed(int)
         if (m_sensor_action_kind_list->count() > 0)
             m_sensor_action_kind_list->setCurrentRow(0);
     LOCK_BOOL_BLOCK_END();
+    on_sensor_action_kind_list_selection_changed();
 }
 
 
@@ -334,10 +335,25 @@ void  device_props_dialog::on_sensor_action_kind_delete_button_pressed()
 
 
 
-void  device_props_dialog::on_sensor_action_props_table_changed(QTableWidgetItem*, QTableWidgetItem*)
+void  device_props_dialog::on_sensor_action_props_table_changed(QTableWidgetItem*)
 {
     LOCK_BOOL_BLOCK_BEGIN(m_locked);
-        // TODO!
+        if (m_sensor_record_id_list->count() == 0 || m_sensor_action_kind_list->count() == 0)
+            return;
+        scn::scene_record_id const&  id = m_sensor_nodes_and_kinds.at(m_sensor_record_id_list->currentRow()).first;
+        auto const  it = m_new_props.m_sensor_action_map.find(id);
+        if (it == m_new_props.m_sensor_action_map.end())
+            return;
+        int const  row = m_sensor_action_props_table->currentRow();
+        int const  column = m_sensor_action_props_table->currentColumn();
+        if (column != 1)
+            return;
+        QTableWidgetItem* const  name_item = m_sensor_action_props_table->item(row, 0);
+        QTableWidgetItem* const  value_item = m_sensor_action_props_table->item(row, 1);
+        std::string const  name = qtgl::to_string(name_item->text());
+        int const kind_row = m_sensor_action_kind_list->currentRow();
+        auto&  type_and_value = it->second.at(kind_row).props.at(name);
+        type_and_value = ai::as_property_type_and_value(type_and_value.get_type(), qtgl::to_string(value_item->text()));
     LOCK_BOOL_BLOCK_END();
 }
 

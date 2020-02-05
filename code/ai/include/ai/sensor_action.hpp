@@ -14,7 +14,8 @@ namespace ai {
 
 enum struct  SENSOR_ACTION_KIND : natural_8_bit
 {
-    END_OF_LIFE = 0,
+    BEGIN_OF_LIFE       = 0,
+    END_OF_LIFE         = 1,
 };
 
 std::string const&  description(SENSOR_ACTION_KIND const  kind);
