@@ -19,8 +19,9 @@
                                   throw invariant_failure(FAIL_MSG("Unreachable location reached."));\
                                 } while (false)
 #   else
+#       include <cassert>
 #       define INVARIANT(C)
-#       define UNREACHABLE()
+#       define UNREACHABLE() do { assert(0); } while (false)
 #   endif
 
 #endif
