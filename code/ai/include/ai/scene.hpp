@@ -50,40 +50,44 @@ struct  scene
     { return std::dynamic_pointer_cast<T const>(req); }
 
     // A request of importing (merging) a template scene into the current one.
+    // The imported scene must have exactly one root node (nodes strating with
+    // @ are ignored) and it must represent either agent, device, or sensor.
     // The request MUST be resolved AFTER the current time step of the ai module and
     // before the next time step of the ai module.
     struct  request_merge_scene : public request
     {
         request_merge_scene(
-                std::string const& template_pathname_,
-                scn::scene_node_id const& parent_nid_,
-                angeo::coordinate_system const& frame_,
-                bool const  frame_is_in_parent_space_
+                std::string const&  scene_id_,
+                node_id const&  parent_nid_,
+                node_id const&  frame_reference_nid_
                 )
-            : template_pathname(template_pathname_)
+            : scene_id(scene_id_)
             , parent_nid(parent_nid_)
-            , frame(frame_)
-            , frame_is_in_parent_space(frame_is_in_parent_space_)
+            , frame_reference_nid(frame_reference_nid_)
         {}
 
-        std::string  template_pathname;         // Path-name of scene to be imported (merged) into the current scene.
-                                                //      The imported scene must have exactly one root node (besides @pivot)
-                                                //      and it must represent either agent, device, or sensor.
-        node_id  parent_nid;                    // A scene node under which the scene will be merged.
-                                                //      For imported agent the parent_nid must be empty.
-                                                //      For imported sensor the parent_nid must reference a node under
+        std::string  scene_id;                  // A unique id of scene to be imported (merged) into the current scene.
+                                                // Typically, an id is a scene directory (relative to the data root directory).
+        node_id  parent_nid;                    // A scene node under which the scene will be merged. If the 'parent_nid' node
+                                                // already contains a node of the same name as the root node of the imported
+                                                // scene, then the name of the name of the impoted root node is extended by
+                                                // a suffix making the resulting name unique under the 'parent_nid' node.
+                                                //      For imported agent the 'parent_nid' must be empty.
+                                                //      For imported sensor the 'parent_nid' must reference a node under
                                                 //      nodes tree of an agent or a device.
-        angeo::coordinate_system  frame;        // A desired location of the root node of the merged scene.
-        bool  frame_is_in_parent_space;         // When false, then the frame is assumed in the world space
+                                                // NOTE: When 'parent_nid' is empty (i.e. not valid), then the root node of the
+                                                //       impored scene will be put at the root level of the current scene.
+        node_id  frame_reference_nid;           // The root node of the imported scene will be put at such location under
+                                                // 'parent_nid' node, so that its world matrix will be the same as the one
+                                                // of the 'frame_reference_nid' node.
     };
     using  request_merge_scene_ptr = std::shared_ptr<request_merge_scene const>;
     static inline request_merge_scene_ptr  create_request_merge_scene(
-            std::string const& template_pathname_,
-            scn::scene_node_id const& parent_nid_,
-            angeo::coordinate_system const& frame_,
-            bool const  frame_is_in_parent_space_
+            std::string const&  scene_id_,
+            node_id const&  parent_nid_,
+            node_id const&  frame_reference_nid_
             )
-    { return std::make_shared<request_merge_scene const>(template_pathname_, parent_nid_, frame_, frame_is_in_parent_space_); }
+    { return std::make_shared<request_merge_scene const>(scene_id_, parent_nid_, frame_reference_nid_); }
 
     // A request of removal of a sub-tree in the scene.
     struct  request_erase_nodes_tree : public request

@@ -26,6 +26,7 @@
 #include <utility/msgstream.hpp>
 #include <utility/development.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/info_parser.hpp>
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -1120,9 +1121,7 @@ void  simulator::process_ai_requests()
     while (!requests.empty())
     {
         if (auto const  request = ai::scene::cast<ai::scene::request_merge_scene>(requests.back()))
-        {
-            // TODO!
-        }
+            import_scene(request->scene_id, request->parent_nid, request->frame_reference_nid);
         else if (auto const  request = ai::scene::cast<ai::scene::request_erase_nodes_tree>(requests.back()))
         {
             ASSUMPTION(
@@ -1143,6 +1142,118 @@ void  simulator::process_ai_requests()
     }
 
     INVARIANT(m_ai_requests.empty());
+}
+
+
+void  simulator::import_scene(
+        std::string const&  scene_id,
+        scn::scene_node_id const&  parent_id,
+        scn::scene_node_id const&  frame_id
+        )
+{
+    TMPROF_BLOCK();
+
+    boost::filesystem::path const  scene_pathname =
+            boost::filesystem::path(get_program_options()->dataRoot()) / scene_id / "hierarchy.info"
+            ;
+    ASSUMPTION(boost::filesystem::is_regular_file(scene_pathname));
+    boost::property_tree::ptree  impored_scene_ptree;
+    boost::property_tree::read_info(scene_pathname.string(), impored_scene_ptree);
+
+    scn::scene_node_ptr  root_node_ptr = nullptr;
+    for (auto it = impored_scene_ptree.begin(); it != impored_scene_ptree.end(); ++it)
+    {
+        if (it->first.empty() || it->first.front() == '@')
+            continue;
+        scn::scene_node_id  node_id = parent_id / it->first;
+        natural_32_bit  id_counter = 0U;
+        while (get_scene_node(node_id) != nullptr)
+        {
+            node_id = parent_id / scn::scene_node_id{ msgstream() << it->first << id_counter };
+            ++id_counter;
+        }
+        ASSUMPTION(root_node_ptr == nullptr);
+        root_node_ptr = import_scene_node(node_id, it->second, get_scene_node(frame_id));
+    }
+    ASSUMPTION(root_node_ptr != nullptr);
+}
+
+
+scn::scene_node_ptr  simulator::import_scene_node(
+        scn::scene_node_id const&  id,
+        boost::property_tree::ptree const&  node_tree,
+        scn::scene_node_ptr const  relocation_node_ptr
+        )
+{
+    vector3  origin;
+    quaternion  orientation;
+    if (relocation_node_ptr == nullptr)
+    {
+        boost::property_tree::ptree const&  origin_tree = node_tree.find("origin")->second;
+        origin = vector3(
+                origin_tree.get<scalar>("x"),
+                origin_tree.get<scalar>("y"),
+                origin_tree.get<scalar>("z")
+                );
+
+        boost::property_tree::ptree const&  orientation_tree = node_tree.find("orientation")->second;
+        orientation = make_quaternion_xyzw(
+                orientation_tree.get<scalar>("x"),
+                orientation_tree.get<scalar>("y"),
+                orientation_tree.get<scalar>("z"),
+                orientation_tree.get<scalar>("w")
+                );
+    }
+    else
+    {
+        matrix44  node_from_base_matrix;
+        matrix33  R;
+        {
+            if (id.is_root())
+                node_from_base_matrix = relocation_node_ptr->get_world_matrix();
+            else
+            {
+                vector3  u;
+                decompose_matrix44(get_scene_node(id.get_direct_parent_id())->get_world_matrix(), u, R);
+                matrix44  to_parent_space_matrix;
+                compose_to_base_matrix(u, R, to_parent_space_matrix);
+                node_from_base_matrix = to_parent_space_matrix * relocation_node_ptr->get_world_matrix();
+            }
+        }
+        decompose_matrix44(node_from_base_matrix, origin, R);
+        orientation = rotation_matrix_to_quaternion(R);
+    }
+
+    scn::scene_node_ptr const  node_ptr = insert_scene_node_at(id, origin, orientation);
+
+    boost::property_tree::ptree const&  children = node_tree.find("children")->second;
+    for (auto  it = children.begin(); it != children.end(); ++it)
+        import_scene_node(id / it->first, it->second, nullptr);
+
+    boost::property_tree::ptree const&  folders = node_tree.find("folders")->second;
+    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
+        for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
+            if (folder_it->first == scn::get_agent_folder_name())
+                load_agent(record_it->second, { id, folder_it->first, record_it->first });
+            else if (folder_it->first == scn::get_device_folder_name())
+                load_device(record_it->second, { id, folder_it->first, record_it->first });
+            else if (folder_it->first == scn::get_sensors_folder_name())
+                load_sensor(record_it->second, { id, folder_it->first, record_it->first });
+            else if (folder_it->first == scn::get_collider_folder_name())
+                load_collider(record_it->second, id);
+            else if (folder_it->first == scn::get_rigid_body_folder_name())
+                load_rigid_body(record_it->second, id);
+            else if (folder_it->first == scn::get_batches_folder_name())
+                insert_batch_to_scene_node(
+                        record_it->first,
+                        record_it->second.get<std::string>("pathname"),
+                        record_it->second.get<std::string>("skin"),
+                        get_effects_config(),
+                        id
+                        );
+            else UNREACHABLE();
+
+    return node_ptr;
 }
 
 

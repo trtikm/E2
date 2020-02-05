@@ -324,6 +324,12 @@ private:
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
     void  process_ai_requests();
+    void  import_scene(std::string const&  scene_id, scn::scene_node_id const&  parent_id, scn::scene_node_id const&  frame_id);
+    scn::scene_node_ptr  import_scene_node(
+            scn::scene_node_id const&  id,
+            boost::property_tree::ptree const&  node_tree,
+            scn::scene_node_ptr const  relocation_node_ptr = nullptr
+            );
     void  update_retina_of_agents_from_offscreen_images(float_32_bit const  time_to_simulate_in_seconds);
     void  render_simulation_state(
             matrix44 const&  matrix_from_world_to_camera,
