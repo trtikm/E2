@@ -44,6 +44,12 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_acti
                 { "scene_id", property_map::property_type_and_value("shared/import/TODO") },
                 { "parent_nid", property_map::property_type_and_value("TODO") },
                 { "frame_reference_nid", property_map::property_type_and_value("TODO") },
+                { "linear_velocity_x", property_map::property_type_and_value(0.0f) },
+                { "linear_velocity_y", property_map::property_type_and_value(0.0f) },
+                { "linear_velocity_z", property_map::property_type_and_value(0.0f) },
+                { "angular_velocity_x", property_map::property_type_and_value(0.0f) },
+                { "angular_velocity_y", property_map::property_type_and_value(0.0f) },
+                { "angular_velocity_z", property_map::property_type_and_value(0.0f) },
                 })},
         { SENSOR_ACTION_KIND::END_OF_LIFE, property_map{} },
     };
@@ -89,10 +95,18 @@ from_sensor_record_to_sensor_action_map  as_sensor_action_map(
         std::vector<sensor_action>  actions;
         for (auto  action_it = it->second.begin(); action_it != it->second.end(); ++action_it)
         {
-            actions.push_back({
-                as_sensor_action_kind(action_it->second.get<std::string>("kind")),
-                as_property_map(action_it->second.get_child("props"))
-                });
+            SENSOR_ACTION_KIND action_kind = as_sensor_action_kind(action_it->second.get<std::string>("kind"));
+            property_map const&  loaded_props = as_property_map(action_it->second.get_child("props"));
+            property_map  action_props;
+            for (auto const&  name_and_value : default_sensor_action_props().at(action_kind))
+            {
+                auto const  it = loaded_props.find(name_and_value.first);
+                if (it == loaded_props.end())
+                    action_props.insert(name_and_value);
+                else
+                    action_props.insert(*it);
+            }
+            actions.push_back({ action_kind, action_props });
         }
         result.insert({ id, actions });
     }

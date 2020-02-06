@@ -63,6 +63,9 @@ struct property_map
     map_type::const_iterator  begin() const { return get_map().cbegin(); }
     map_type::const_iterator  end() const { return get_map().cend(); }
 
+    std::pair<map_type::const_iterator, bool>  insert(map_type::value_type const&  name_and_value)
+    { return get_map().insert(name_and_value); }
+
     map_type const&  get_map() const { return m_map; }
     map_type&  get_map() { return m_map; }
 

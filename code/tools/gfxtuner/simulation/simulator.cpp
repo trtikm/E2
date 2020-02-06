@@ -1121,7 +1121,21 @@ void  simulator::process_ai_requests()
     while (!requests.empty())
     {
         if (auto const  request = ai::scene::cast<ai::scene::request_merge_scene>(requests.back()))
-            import_scene(request->scene_id, request->parent_nid, request->frame_reference_nid);
+        {
+            scn::scene_node_ptr const  root_node_ptr =
+                    import_scene(request->scene_id, request->parent_nid, request->frame_reference_nid);
+            if (scn::rigid_body const* const  rb = scn::get_rigid_body(*root_node_ptr))
+            {
+                m_rigid_body_simulator_ptr->set_linear_velocity(
+                        rb->id(),
+                        transform_vector(request->linear_velocity, root_node_ptr->get_world_matrix())
+                        );
+                m_rigid_body_simulator_ptr->set_angular_velocity(
+                        rb->id(),
+                        transform_vector(request->angular_velocity, root_node_ptr->get_world_matrix())
+                        );
+            }
+        }
         else if (auto const  request = ai::scene::cast<ai::scene::request_erase_nodes_tree>(requests.back()))
         {
             ASSUMPTION(
@@ -1145,7 +1159,7 @@ void  simulator::process_ai_requests()
 }
 
 
-void  simulator::import_scene(
+scn::scene_node_ptr  simulator::import_scene(
         std::string const&  scene_id,
         scn::scene_node_id const&  parent_id,
         scn::scene_node_id const&  frame_id
@@ -1176,6 +1190,7 @@ void  simulator::import_scene(
         root_node_ptr = import_scene_node(node_id, it->second, get_scene_node(frame_id));
     }
     ASSUMPTION(root_node_ptr != nullptr);
+    return root_node_ptr;
 }
 
 

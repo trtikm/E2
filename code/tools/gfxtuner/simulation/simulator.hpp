@@ -324,7 +324,11 @@ private:
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
     void  process_ai_requests();
-    void  import_scene(std::string const&  scene_id, scn::scene_node_id const&  parent_id, scn::scene_node_id const&  frame_id);
+    scn::scene_node_ptr  import_scene(
+            std::string const&  scene_id,
+            scn::scene_node_id const&  parent_id,
+            scn::scene_node_id const&  frame_id
+            );
     scn::scene_node_ptr  import_scene_node(
             scn::scene_node_id const&  id,
             boost::property_tree::ptree const&  node_tree,

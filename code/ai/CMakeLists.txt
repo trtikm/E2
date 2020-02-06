@@ -62,6 +62,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/skeleton_utils.hpp
     ./src/skeleton_utils.cpp
 
+    ./include/ai/sensor_event_utils.hpp
+    ./src/sensor_event_utils.cpp
+
     ./include/ai/property_map.hpp
     ./src/property_map.cpp
 

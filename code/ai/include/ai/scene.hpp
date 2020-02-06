@@ -59,11 +59,15 @@ struct  scene
         request_merge_scene(
                 std::string const&  scene_id_,
                 node_id const&  parent_nid_,
-                node_id const&  frame_reference_nid_
+                node_id const&  frame_reference_nid_,
+                vector3 const&  linear_velocity_,
+                vector3 const&  angular_velocity_
                 )
             : scene_id(scene_id_)
             , parent_nid(parent_nid_)
             , frame_reference_nid(frame_reference_nid_)
+            , linear_velocity(linear_velocity_)
+            , angular_velocity(angular_velocity_)
         {}
 
         std::string  scene_id;                  // A unique id of scene to be imported (merged) into the current scene.
@@ -80,14 +84,12 @@ struct  scene
         node_id  frame_reference_nid;           // The root node of the imported scene will be put at such location under
                                                 // 'parent_nid' node, so that its world matrix will be the same as the one
                                                 // of the 'frame_reference_nid' node.
+        vector3  linear_velocity;               // If the root node of the impored scene has a rigid body record, then its
+                                                // its linear velocity is initialised to this vector.
+        vector3  angular_velocity;              // If the root node of the impored scene has a rigid body record, then its
+                                                // its angular velocity is initialised to this vector.
     };
     using  request_merge_scene_ptr = std::shared_ptr<request_merge_scene const>;
-    static inline request_merge_scene_ptr  create_request_merge_scene(
-            std::string const&  scene_id_,
-            node_id const&  parent_nid_,
-            node_id const&  frame_reference_nid_
-            )
-    { return std::make_shared<request_merge_scene const>(scene_id_, parent_nid_, frame_reference_nid_); }
 
     // A request of removal of a sub-tree in the scene.
     struct  request_erase_nodes_tree : public request
@@ -97,8 +99,6 @@ struct  scene
                                                 // either agent, device, or a sensor.
     };
     using  request_erase_nodes_tree_ptr = std::shared_ptr<request_erase_nodes_tree const>;
-    static inline request_erase_nodes_tree_ptr  create_request_erase_nodes_tree(scene::node_id const& root_nid_)
-    { return std::make_shared<request_erase_nodes_tree const>(root_nid_); }
 
     virtual ~scene() = 0 {}
 
