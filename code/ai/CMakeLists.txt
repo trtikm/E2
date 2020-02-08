@@ -54,6 +54,7 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/blackboard_device.hpp
     ./src/blackboard_device.cpp
 
+    ./include/ai/scene_basic_types_binding.hpp
     ./include/ai/scene.hpp
 
     ./include/ai/skeletal_motion_templates.hpp
@@ -61,9 +62,6 @@ add_library(${THIS_TARGET_NAME}
     
     ./include/ai/skeleton_utils.hpp
     ./src/skeleton_utils.cpp
-
-    ./include/ai/sensor_event_utils.hpp
-    ./src/sensor_event_utils.cpp
 
     ./include/ai/property_map.hpp
     ./src/property_map.cpp

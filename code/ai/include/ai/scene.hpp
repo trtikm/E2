@@ -1,12 +1,10 @@
 #ifndef AI_SCENE_HPP_INCLUDED
 #   define AI_SCENE_HPP_INCLUDED
 
+#   include <ai/scene_basic_types_binding.hpp>
 #   include <ai/object_id.hpp>
+#   include <ai/property_map.hpp>
 #   include <angeo/coordinate_system.hpp>
-#   include <scene/scene_node_id.hpp>
-#   include <scene/scene_record_id.hpp>
-#   include <angeo/collision_scene.hpp>
-#   include <angeo/rigid_body_simulator.hpp>
 #   include <memory>
 
 namespace ai {
@@ -14,9 +12,9 @@ namespace ai {
 
 struct  scene
 {
-    using  node_id = scn::scene_node_id;
-    using  record_id = scn::scene_record_id;
-    using  collision_object_id = angeo::collision_object_id;
+    using  node_id = scene_node_id;
+    using  record_id = scene_record_id;
+    using  collision_object_id = scene_collision_object_id;
 
     struct  collicion_contant_info
     {
@@ -45,6 +43,11 @@ struct  scene
     //            current time step of ai module completes.
     struct  request { virtual ~request() {} };
     using  request_ptr = std::shared_ptr<request const>;
+
+    template<typename request_type, typename... arg_types>
+    static inline request_ptr  create_request(arg_types... args_for_constructor_of_the_request)
+    { return std::make_shared<request_type>(args_for_constructor_of_the_request...); }
+
     template<typename T>
     static inline std::shared_ptr<T const>  cast(request_ptr const  req)
     { return std::dynamic_pointer_cast<T const>(req); }
@@ -56,53 +59,18 @@ struct  scene
     // before the next time step of the ai module.
     struct  request_merge_scene : public request
     {
-        request_merge_scene(
-                std::string const&  scene_id_,
-                node_id const&  parent_nid_,
-                node_id const&  frame_nid_,
-                vector3 const&  linear_velocity_,
-                vector3 const&  angular_velocity_,
-                node_id const&  velocities_frame_nid_
-                )
-            : scene_id(scene_id_)
-            , parent_nid(parent_nid_)
-            , frame_nid(frame_nid_)
-            , linear_velocity(linear_velocity_)
-            , angular_velocity(angular_velocity_)
-            , velocities_frame_nid(velocities_frame_nid_)
-        {}
-
-        std::string  scene_id;                  // A unique id of scene to be imported (merged) into the current scene.
-                                                // Typically, an id is a scene directory (relative to the data root directory).
-        node_id  parent_nid;                    // A scene node under which the scene will be merged. If the 'parent_nid' node
-                                                // already contains a node of the same name as the root node of the imported
-                                                // scene, then the name of the name of the impoted root node is extended by
-                                                // a suffix making the resulting name unique under the 'parent_nid' node.
-                                                //      For imported agent the 'parent_nid' must be empty.
-                                                //      For imported sensor the 'parent_nid' must reference a node under
-                                                //      nodes tree of an agent or a device.
-                                                // NOTE: When 'parent_nid' is empty (i.e. not valid), then the root node of the
-                                                //       impored scene will be put at the root level of the current scene.
-        node_id  frame_nid;                     // The root node of the imported scene will be put at such location under
-                                                // 'parent_nid' node, so that its world matrix will be the same as the one
-                                                // of the 'frame_nid' node.
-        vector3  linear_velocity;               // If the root node of the impored scene has a rigid body record, then its
-                                                // its linear velocity is initialised to this vector.
-        vector3  angular_velocity;              // If the root node of the impored scene has a rigid body record, then its
-                                                // its angular velocity is initialised to this vector.
-
-        node_id  velocities_frame_nid;          // When represents a valid scene node, then both linear/angular_velocity
-                                                // will be transformed from the space of the referenced frame to the world space.
-                                                // Otherwise, both vectors are used not-transformed.
+        // The passed property map must be the one of the sensor action kind BEGIN_OF_LIFE.
+        request_merge_scene(property_map const&  begin_of_life_props) : props(begin_of_life_props.clone()) {}
+        property_map  props;
     };
     using  request_merge_scene_ptr = std::shared_ptr<request_merge_scene const>;
 
     // A request of removal of a sub-tree in the scene.
     struct  request_erase_nodes_tree : public request
     {
+        // Pass a root node of scene sub-tree to be erased. The sub-tree MUST represent either agent, device, or a sensor.
         request_erase_nodes_tree(scene::node_id const&  root_nid_) : root_nid(root_nid_) {}
-        scene::node_id  root_nid;               // A root node of scene sub-tree to be erased. The sub-tree MUST represent
-                                                // either agent, device, or a sensor.
+        scene::node_id  root_nid;
     };
     using  request_erase_nodes_tree_ptr = std::shared_ptr<request_erase_nodes_tree const>;
 

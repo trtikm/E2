@@ -1,5 +1,6 @@
 #include <gfxtuner/simulation/bind_ai_scene_to_simulator.hpp>
 #include <gfxtuner/simulation/simulator.hpp>
+#include <angeo/rigid_body_simulator.hpp>
 #include <scene/scene_utils_specialised.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>

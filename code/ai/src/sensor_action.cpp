@@ -29,16 +29,47 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_acti
 {
     static std::unordered_map<SENSOR_ACTION_KIND, property_map> const  props {
         { SENSOR_ACTION_KIND::BEGIN_OF_LIFE, property_map({
+                // A unique id of scene to be imported (merged) into the current scene.
+                // Typically, an id is a scene directory (relative to the data root directory).
                 { "scene_id", property_map::make_string("shared/import/TODO") },
+                // A scene node under which the scene will be merged. If the 'parent_nid' node
+                // already contains a node of the same name as the root node of the imported
+                // scene, then the name of the name of the impoted root node is extended by
+                // a suffix making the resulting name unique under the 'parent_nid' node.
+                //      For imported agent the 'parent_nid' must be empty.
+                //      For imported sensor the 'parent_nid' must reference a node under
+                //      nodes tree of an agent or a device.
+                // NOTE: When 'parent_nid' is empty (i.e. not valid), then the root node of the
+                //       impored scene will be put at the root level of the current scene.
                 { "parent_nid", property_map::make_string("TODO") },
+                // The root node of the imported scene will be put at such location under
+                // 'parent_nid' node, so that its world matrix will be the same as the one
+                // of the 'frame_nid' node.
                 { "frame_nid", property_map::make_string("TODO") },
+                // If the root node of the impored scene has a rigid body record, then its
+                // its motion vectors are initialised to this vector below (if they are present).
                 { "linear_velocity_x", property_map::make_float(0.0f) },
                 { "linear_velocity_y", property_map::make_float(0.0f) },
                 { "linear_velocity_z", property_map::make_float(0.0f) },
                 { "angular_velocity_x", property_map::make_float(0.0f) },
                 { "angular_velocity_y", property_map::make_float(0.0f) },
                 { "angular_velocity_z", property_map::make_float(0.0f) },
+                // When represents a valid scene node, then both velocity vectors above will be
+                // transformed from the space of the referenced frame to the world space before
+                // they are applied to the rigid body. Otherwise, the velocity vectors are used
+                // not-transformed.
                 { "velocities_frame_nid", property_map::make_string("TODO") },
+                { "linear_acceleration_x", property_map::make_float(0.0f) },
+                { "linear_acceleration_y", property_map::make_float(0.0f) },
+                { "linear_acceleration_z", property_map::make_float(-9.81f) },
+                { "angular_acceleration_x", property_map::make_float(0.0f) },
+                { "angular_acceleration_y", property_map::make_float(0.0f) },
+                { "angular_acceleration_z", property_map::make_float(0.0f) },
+                // When represents a valid scene node, then both acceleration vectors above will be
+                // transformed from the space of the referenced frame to the world space before
+                // they are applied to the rigid body. Otherwise, the acceleration vectors are used
+                // not-transformed.
+                { "accelerations_frame_nid", property_map::make_string("TODO") },
                 })},
         { SENSOR_ACTION_KIND::END_OF_LIFE, property_map{} },
     };

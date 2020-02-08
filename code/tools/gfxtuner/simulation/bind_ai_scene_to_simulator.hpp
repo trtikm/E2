@@ -5,7 +5,6 @@
 #   include <scene/scene_node_id.hpp>
 #   include <scene/scene_record_id.hpp>
 #   include <angeo/collision_scene.hpp>
-#   include <angeo/rigid_body_simulator.hpp>
 #   include <unordered_map>
 
 

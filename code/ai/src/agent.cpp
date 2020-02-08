@@ -8,7 +8,6 @@
 #include <ai/sensory_controller_ray_cast_sight.hpp>
 #include <ai/action_controller.hpp>
 #include <ai/simulator.hpp>
-#include <ai/sensor_event_utils.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -153,10 +152,10 @@ void  agent::on_sensor_event(sensor const&  s)
         switch (action.kind)
         {
         case SENSOR_ACTION_KIND::BEGIN_OF_LIFE:
-            get_blackboard()->m_scene->accept(create_request_merge_scene(action.props));
+            get_blackboard()->m_scene->accept(scene::create_request<scene::request_merge_scene>(action.props));
             break;
         case SENSOR_ACTION_KIND::END_OF_LIFE:
-            get_blackboard()->m_scene->accept(create_request_erase_nodes_tree(get_blackboard()->m_self_nid));
+            get_blackboard()->m_scene->accept(scene::create_request<scene::request_erase_nodes_tree>(get_blackboard()->m_self_nid));
             break;
         default: UNREACHABLE(); break;
         }

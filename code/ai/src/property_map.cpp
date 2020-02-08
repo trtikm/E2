@@ -7,6 +7,15 @@
 namespace ai {
 
 
+property_map  property_map::clone() const
+{
+    property_map  result;
+    for (auto const&  elem : get_map())
+        result.set(elem);
+    return result;
+}
+
+
 void  property_map::set(property_name const&  name, property_type_and_value const&  value)
 {
     switch (value.get_type())

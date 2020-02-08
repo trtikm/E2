@@ -1149,21 +1149,59 @@ void  simulator::process_ai_requests()
     {
         if (auto const  request = ai::scene::cast<ai::scene::request_merge_scene>(requests.back()))
         {
-            scn::scene_node_ptr const  root_node_ptr = import_scene(request->scene_id, request->parent_nid, request->frame_nid);
+            scn::scene_node_ptr const  root_node_ptr =
+                    import_scene(
+                            request->props.get_string("scene_id"),
+                            request->props.get_scene_node_id("parent_nid"),
+                            request->props.get_scene_node_id("frame_nid")
+                            );
             if (scn::rigid_body const* const  rb = scn::get_rigid_body(*root_node_ptr))
             {
                 matrix44  W;
+
+                W = matrix44_identity();
+                if (request->props.has("velocities_frame_nid"))
                 {
-                    W = matrix44_identity();
-                    if (request->velocities_frame_nid.valid())
+                    scn::scene_node_id const  motion_frame_id = request->props.get_scene_node_id("velocities_frame_nid");
+                    if (motion_frame_id.valid())
                     {
-                        scn::scene_node_ptr const  transform_node_ptr = get_scene_node(request->velocities_frame_nid);
+                        scn::scene_node_ptr const  transform_node_ptr = get_scene_node(motion_frame_id);
                         if (transform_node_ptr != nullptr)
                             W = transform_node_ptr->get_world_matrix();
                     }
                 }
-                m_rigid_body_simulator_ptr->set_linear_velocity(rb->id(), transform_vector(request->linear_velocity, W));
-                m_rigid_body_simulator_ptr->set_angular_velocity(rb->id(), transform_vector(request->angular_velocity, W));
+                if (request->props.has_vector3("linear_velocity"))
+                    m_rigid_body_simulator_ptr->set_linear_velocity(
+                            rb->id(),
+                            transform_vector(request->props.get_vector3("linear_velocity"), W)
+                            );
+                if (request->props.has_vector3("angular_velocity"))
+                    m_rigid_body_simulator_ptr->set_angular_velocity(
+                            rb->id(),
+                            transform_vector(request->props.get_vector3("angular_velocity"), W)
+                            );
+
+                W = matrix44_identity();
+                if (request->props.has("accelerations_frame_nid"))
+                {
+                    scn::scene_node_id const  motion_frame_id = request->props.get_scene_node_id("accelerations_frame_nid");
+                    if (motion_frame_id.valid())
+                    {
+                        scn::scene_node_ptr const  transform_node_ptr = get_scene_node(motion_frame_id);
+                        if (transform_node_ptr != nullptr)
+                            W = transform_node_ptr->get_world_matrix();
+                    }
+                }
+                if (request->props.has_vector3("linear_acceleration"))
+                    m_rigid_body_simulator_ptr->set_external_linear_acceleration(
+                            rb->id(),
+                            transform_vector(request->props.get_vector3("linear_acceleration"), W)
+                            );
+                if (request->props.has_vector3("angular_acceleration"))
+                    m_rigid_body_simulator_ptr->set_external_angular_acceleration(
+                            rb->id(),
+                            transform_vector(request->props.get_vector3("angular_acceleration"), W)
+                            );
             }
         }
         else if (auto const  request = ai::scene::cast<ai::scene::request_erase_nodes_tree>(requests.back()))

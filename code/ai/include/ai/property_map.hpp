@@ -1,6 +1,7 @@
 #ifndef AI_PROPERTY_MAP_HPP_INCLUDED
 #   define AI_PROPERTY_MAP_HPP_INCLUDED
 
+#   include <ai/scene_basic_types_binding.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <utility/invariants.hpp>
@@ -94,7 +95,6 @@ struct property_map
     map_type::const_iterator  end() const { return get_map().cend(); }
 
     bool  has(property_name const&  name) const { return find(name) != end(); }
-
     bool  has_vector3(property_name const& name) const { return has(name + "_x") && has(name + "_y") && has(name + "_z"); }
 
     template<typename T> static inline T const&  as(property_type_and_value const&  value) { return *dynamic_cast<T const*>(&value); }
@@ -105,6 +105,8 @@ struct property_map
     static inline property_value_ptr  make_float(float_32_bit const  value) { return std::make_shared<float_value>(value); }
     static inline property_value_ptr  make_string(std::string const&  value) { return std::make_shared<string_value>(value); }
 
+    property_map  clone() const;
+
     PROPERTY_TYPE  get_type(property_name const&  name) const { return at(name).get_type(); }
 
     bool  get_bool(property_name const&  name) const { return as<bool_value>(at(name)).value(); }
@@ -114,6 +116,9 @@ struct property_map
 
     vector3  get_vector3(property_name const&  name) const
     { return vector3(get_float(name + "_x"), get_float(name + "_y"), get_float(name + "_z")); }
+
+    scene_node_id  get_scene_node_id(property_name const&  name) const { return as_scene_node_id(get_string(name)); }
+    scene_record_id  get_scene_record_id(property_name const& name) const { return as_scene_record_id(get_string(name)); }
 
     bool&  get_bool_ref(property_name const&  name) { return as<bool_value>(at(name)).value_ref(); }
     integer_32_bit&  get_int_ref(property_name const&  name) { return as<int_value>(at(name)).value_ref(); }
