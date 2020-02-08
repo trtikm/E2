@@ -307,6 +307,8 @@ void  device_props_dialog::on_sensor_action_kind_combo_changed(int)
 void  device_props_dialog::on_sensor_action_kind_insert_button_pressed()
 {
     LOCK_BOOL_BLOCK_BEGIN(m_locked);
+        if (m_sensor_record_id_list->count() == 0)
+            return;
         scn::scene_record_id const&  id = m_sensor_nodes_and_kinds.at(m_sensor_record_id_list->currentRow()).first;
         auto  it = m_new_props.m_sensor_action_map.find(id);
         if (it == m_new_props.m_sensor_action_map.end())

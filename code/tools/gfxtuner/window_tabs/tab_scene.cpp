@@ -617,6 +617,13 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
         scn::scene_node_id const  node_id = scene_record_id_reverse_builder::run(tree_item).get_node_id();
         if (node_id == scn::get_pivot_node_id())
             continue;
+
+        if (scn::is_under_simulation_node(node_id))
+        {
+            wnd()->print_status_message(msgstream() << "ERROR: Cannot insert a record under a simulation node: " << as_string(node_id), 10000);
+            return;
+        }
+
         tree_widget_item* const  folder_item = m_scene_tree->find(node_id, record_kind);
         if (folder_item != nullptr)
             for (int j = 0, m = folder_item->childCount(); j != m; ++j)
@@ -628,60 +635,60 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
             }
         nodes.insert(tree_item);
     }
-    if (nodes.empty())
+    if (nodes.size() != 1UL)
     {
-        wnd()->print_status_message("ERROR: No coordinate system is selected ('@pivot' is ignored).", 10000);
+        wnd()->print_status_message("ERROR: Exactly 1 coordinate system must be selected ('@pivot' is ignored).", 10000);
         return;
     }
 
-    bool allow_multiple_records_in_folder = m_insert_record_handlers.at(record_kind).first;
-    if (!allow_multiple_records_in_folder && !used_names.empty())
+    tree_widget_item* const  tree_item = *nodes.begin();
+
+    auto const&  insert_props = m_insert_record_handlers.at(record_kind);
+    if (!insert_props.first && !used_names.empty())
     {
         wnd()->print_status_message("ERROR: Record of the kind '" + record_kind + "' is aready present.", 10000);
         return;
     }
 
-    std::pair<std::string, std::function<void(scn::scene_record_id const&)> > const  record_name_and_system_inserted =
-            m_insert_record_handlers.at(record_kind).second(this, mode, used_names);
-    if (record_name_and_system_inserted.first.empty() || !record_name_and_system_inserted.second)
-        return;
-    std::string  record_name = record_name_and_system_inserted.first;
-    if (allow_multiple_records_in_folder)
+    auto const&  candidate_name_and_inserter = insert_props.second(this, mode, used_names); // obtain candidate name for the record.
+    if (candidate_name_and_inserter.first.empty() || !candidate_name_and_inserter.second)
+        return; // The operation either failed or the user cancelled the operation.
+
+    std::string  record_name = candidate_name_and_inserter.first;
+    if (insert_props.first) // Is it allowed to have multiple records in the folder?
     {
         natural_64_bit  counter = 0ULL;
         while (used_names.count(record_name) != 0UL)
         {
-            record_name = msgstream() << record_name_and_system_inserted.first << "_" << counter;
+            record_name = msgstream() << insert_props.first << "_" << counter;
             ++counter;
         }
         dialog_windows::insert_name_dialog  dlg(wnd(), record_name,
             [&used_names](std::string const&  name) {
             return !dialog_windows::is_scene_forbidden_name(name) && used_names.count(name) == 0UL;
         });
-        dlg.exec();
+        if (dlg.exec() == 0)
+            return;
         record_name = dlg.get_name();
     }
     if (!record_name.empty())
     {
+        scn::scene_node_id const  coord_system_id = scene_record_id_reverse_builder::run(tree_item).get_node_id();
+        scn::scene_record_id const  record_id{ coord_system_id, record_kind, record_name };
+        if (!candidate_name_and_inserter.second(record_id)) // Call actual record insertion procedure (updates scene via the simulator).
+            return; // The insert operation was cancelled (NOTE: not failed!, just cancelled by the user).
+
         QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
         m_scene_tree->clearSelection();
 
-        for (auto const& tree_item : nodes)
-        {
-            scn::scene_node_id const  coord_system_id = scene_record_id_reverse_builder::run(tree_item).get_node_id();
-            scn::scene_record_id const  record_id{ coord_system_id, record_kind, record_name };
+        auto const  record_item =
+                insert_record_to_tree_widget(m_scene_tree, record_id, m_icons_of_records.at(record_kind), m_folder_icon);
 
-            auto const  record_item =
-                    insert_record_to_tree_widget(m_scene_tree, record_id, m_icons_of_records.at(record_kind), m_folder_icon);
+        std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
+        std::unordered_set<scn::scene_record_id>  selected_records{ record_id };
+        m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
 
-            record_name_and_system_inserted.second(record_id);
-
-            std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
-            std::unordered_set<scn::scene_record_id>  selected_records{ record_id };
-            m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
-
-            add_tree_item_to_selection(record_item);
-        }
+        add_tree_item_to_selection(record_item);
 
         QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
         update_history_according_to_change_in_selection(old_selection, new_selection, get_scene_history(), false);
@@ -709,14 +716,15 @@ void  widgets::on_scene_erase_selected()
     std::unordered_set<tree_widget_item*>  to_erase_items;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
-        if (scene_record_id_reverse_builder::run(item).get_node_id() == scn::get_pivot_node_id())
+        scn::scene_record_id const  recor_id = scene_record_id_reverse_builder::run(item).get_record_id();
+        if (recor_id.get_node_id() == scn::get_pivot_node_id())
         {
             wnd()->print_status_message("ERROR: Cannot erase '@pivot' coordinate system.", 10000);
             return;
         }
-        if (scene_record_id_reverse_builder::run(item).get_node_id().path().front().front() == '@')
+        if (scn::is_under_simulation_node(recor_id.get_node_id()))
         {
-            wnd()->print_status_message("ERROR: Cannot erase simulation node (starting with '@') nor any of its children.", 10000);
+            wnd()->print_status_message("ERROR: Cannot erase/modify a simulation node (starting with '@') nor any of its children.", 10000);
             return;
         }
         to_erase_items.insert(as_tree_widget_item(item));

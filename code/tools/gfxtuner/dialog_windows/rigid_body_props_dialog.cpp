@@ -18,13 +18,20 @@ namespace dialog_windows {
 rigid_body_props_dialog::rigid_body_props_dialog(
         program_window* const  wnd,
         bool* const  auto_compute_mass_and_inertia_tensor,
-        scn::rigid_body_props* const  props
+        scn::rigid_body_props* const  props,
+        matrix44 const&  rigid_body_world_matrix,
+        matrix44 const&  pivot_world_matrix
         )
     : QDialog(wnd)
     , m_wnd(wnd)
     , m_auto_compute_mass_and_inertia_tensor(auto_compute_mass_and_inertia_tensor)
     , m_props(props)
     , m_ok(false)
+
+    , m_world_frame_radio_button(new QRadioButton("World"))
+    , m_local_frame_radio_button(new QRadioButton("Local"))
+    , m_pivot_frame_radio_button(new QRadioButton("Pivot"))
+    , m_checked_frame_radio_button(nullptr)
 
     , m_widget_linear_velocity_x(new QLineEdit)
     , m_widget_linear_velocity_y(new QLineEdit)
@@ -60,6 +67,8 @@ rigid_body_props_dialog::rigid_body_props_dialog(
     , m_widget_inverted_mass(new QLineEdit)
 
     , m_widget_inverted_inertia_tensor()
+    , m_rigid_body_world_matrix(rigid_body_world_matrix)
+    , m_pivot_world_matrix(pivot_world_matrix)
 {
     ASSUMPTION(m_auto_compute_mass_and_inertia_tensor != nullptr);
     ASSUMPTION(m_props != nullptr);
@@ -67,6 +76,14 @@ rigid_body_props_dialog::rigid_body_props_dialog(
     for (int i = 0; i != 3; ++i)
         for (int j = 0; j != 3; ++j)
             m_widget_inverted_inertia_tensor[i][j] = new QLineEdit;
+
+    m_world_frame_radio_button->setChecked(true);
+    m_local_frame_radio_button->setChecked(false);
+    m_pivot_frame_radio_button->setChecked(false);
+    m_checked_frame_radio_button = m_world_frame_radio_button;
+    QObject::connect(m_world_frame_radio_button, SIGNAL(toggled(bool)), this, SLOT(on_world_frame_radio_button_use_changed(bool)));
+    QObject::connect(m_local_frame_radio_button, SIGNAL(toggled(bool)), this, SLOT(on_local_frame_radio_button_use_changed(bool)));
+    QObject::connect(m_pivot_frame_radio_button, SIGNAL(toggled(bool)), this, SLOT(on_pivot_frame_radio_button_use_changed(bool)));
 
     m_widget_linear_velocity_x->setText(QString::number(m_props->m_linear_velocity(0)));
     m_widget_linear_velocity_y->setText(QString::number(m_props->m_linear_velocity(1)));
@@ -92,21 +109,21 @@ rigid_body_props_dialog::rigid_body_props_dialog(
         for (int j = 0; j != 3; ++j)
             m_widget_inverted_inertia_tensor[i][j]->setText(QString::number(m_props->m_inertia_tensor_inverted(i, j)));
 
-    m_widget_linear_velocity_x->setToolTip("x coordinate in world space.");
-    m_widget_linear_velocity_y->setToolTip("y coordinate in world space.");
-    m_widget_linear_velocity_z->setToolTip("z coordinate in world space.");
+    m_widget_linear_velocity_x->setToolTip("x coordinate in selected frame of reference.");
+    m_widget_linear_velocity_y->setToolTip("y coordinate in selected frame of reference.");
+    m_widget_linear_velocity_z->setToolTip("z coordinate in selected frame of reference.");
 
-    m_widget_angular_velocity_x->setToolTip("x coordinate in world space.");
-    m_widget_angular_velocity_y->setToolTip("y coordinate in world space.");
-    m_widget_angular_velocity_z->setToolTip("z coordinate in world space.");
+    m_widget_angular_velocity_x->setToolTip("x coordinate in selected frame of reference.");
+    m_widget_angular_velocity_y->setToolTip("y coordinate in selected frame of reference.");
+    m_widget_angular_velocity_z->setToolTip("z coordinate in selected frame of reference.");
 
-    m_widget_external_linear_acceleration_x->setToolTip("x coordinate in world space.");
-    m_widget_external_linear_acceleration_y->setToolTip("y coordinate in world space.");
-    m_widget_external_linear_acceleration_z->setToolTip("z coordinate in world space.");
+    m_widget_external_linear_acceleration_x->setToolTip("x coordinate in selected frame of reference.");
+    m_widget_external_linear_acceleration_y->setToolTip("y coordinate in selected frame of reference.");
+    m_widget_external_linear_acceleration_z->setToolTip("z coordinate in selected frame of reference.");
 
-    m_widget_external_angular_acceleration_x->setToolTip("x coordinate in world space.");
-    m_widget_external_angular_acceleration_y->setToolTip("y coordinate in world space.");
-    m_widget_external_angular_acceleration_z->setToolTip("z coordinate in world space.");
+    m_widget_external_angular_acceleration_x->setToolTip("x coordinate in selected frame of reference.");
+    m_widget_external_angular_acceleration_y->setToolTip("y coordinate in selected frame of reference.");
+    m_widget_external_angular_acceleration_z->setToolTip("z coordinate in selected frame of reference.");
 
     m_widget_auto_compute_mass_and_inertia_tensor->setToolTip(
             "Whether to automatically compute inverted mass and inverted innertia tensor\n"
@@ -126,6 +143,29 @@ rigid_body_props_dialog::rigid_body_props_dialog(
 
     QVBoxLayout* const dlg_layout = new QVBoxLayout;
     {
+        QWidget* const  reference_frame_group = new QGroupBox("Reference frame");
+        {
+            reference_frame_group->setToolTip(
+                "These radio buttons allow you to choose a reference coord. system for velocity and acceleration\n"
+                "vectors below. However, after you press OK button, the vectors are always automatically transformed\n"
+                "to world coord. system.\n"
+                "NOTE: the innertia tesor is always in the local coord. system."
+                );
+            QHBoxLayout* const  radio_buttons_layout = new QHBoxLayout;
+            {
+                m_world_frame_radio_button->setToolTip("Vectors below are in WORLD coord. system.");
+                radio_buttons_layout->addWidget(m_world_frame_radio_button);
+
+                m_local_frame_radio_button->setToolTip("Vectors below are in LOCAL coord. system.");
+                radio_buttons_layout->addWidget(m_local_frame_radio_button);
+
+                m_pivot_frame_radio_button->setToolTip("Vectors below are in @pivot's coord. system.");
+                radio_buttons_layout->addWidget(m_pivot_frame_radio_button);
+            }
+            reference_frame_group->setLayout(radio_buttons_layout);
+        }
+        dlg_layout->addWidget(reference_frame_group);
+
         auto const  insert_vector_group =
             [](std::string const&  group_name, QLineEdit* const  x_edit, QLineEdit* const  y_edit, QLineEdit* const  z_edit)
                 -> QWidget*
@@ -260,6 +300,28 @@ void rigid_body_props_dialog::on_auto_compute_mass_and_inertia_tensor_changed(in
 {
     *m_auto_compute_mass_and_inertia_tensor = (state != 0);
     set_enable_state_of_mass_and_inertia_tensor(!*m_auto_compute_mass_and_inertia_tensor);
+}
+
+
+void  rigid_body_props_dialog::on_world_frame_radio_button_use_changed(bool const  is_checked)
+{
+}
+
+
+void  rigid_body_props_dialog::on_local_frame_radio_button_use_changed(bool const  is_checked)
+{
+    if (is_checked)
+    {
+    }
+    else
+    {
+
+    }
+}
+
+
+void  rigid_body_props_dialog::on_pivot_frame_radio_button_use_changed(bool const  is_checked)
+{
 }
 
 

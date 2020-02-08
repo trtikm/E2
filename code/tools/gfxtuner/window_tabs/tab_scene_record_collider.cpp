@@ -230,8 +230,8 @@ void  register_record_undo_redo_processors(widgets* const  w)
 
 void  register_record_handler_for_insert_scene_record(
         std::unordered_map<std::string, std::pair<bool,
-                           std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
-                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)>> >&
+                           std::function<std::pair<std::string, std::function<bool(scn::scene_record_id const&)> >
+                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)> > >&
                 insert_record_handlers
         )
 {
@@ -240,7 +240,7 @@ void  register_record_handler_for_insert_scene_record(
             {
                 false, // there cannot be multiple records in the folder.
                 [](widgets* const  w, std::string const&  shape_type, std::unordered_set<std::string> const&  used_names)
-                    -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
+                    -> std::pair<std::string, std::function<bool(scn::scene_record_id const&)>> {
                         if (used_names.size() != 0UL)
                         {
                             w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one collider.", 10000);
@@ -254,9 +254,10 @@ void  register_record_handler_for_insert_scene_record(
                             return{ "",{} };
                         return {
                             props->m_shape_type,
-                            [w, props](scn::scene_record_id const&  record_id) -> void {
+                            [w, props](scn::scene_record_id const&  record_id) -> bool {
                                     detail::insert_collider_to_simulator(w, *props, record_id);
                                     w->get_scene_history()->insert<scn::scene_history_collider_insert>(record_id, *props, false);
+                                    return true;
                                 }
                             };
                     }
@@ -305,7 +306,7 @@ void  register_record_handler_for_duplicate_scene_record(
 
 
 void  register_record_handler_for_erase_scene_record(
-        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >&
                 erase_record_handlers
         )
 {
@@ -329,7 +330,7 @@ void  register_record_handler_for_load_scene_record(
                                                            scn::scene_record_id const&,
                                                            boost::property_tree::ptree const&,
                                                            std::unordered_map<std::string, boost::property_tree::ptree> const&,
-                                                           bool)>>&
+                                                           bool)> >&
                 load_record_handlers
         )
 {
@@ -368,7 +369,7 @@ void  register_record_handler_for_save_scene_record(
                                                            scn::scene_node_ptr,
                                                            scn::scene_node_record_id const&,
                                                            boost::property_tree::ptree&,
-                                                           std::unordered_map<std::string, boost::property_tree::ptree>&)>>&
+                                                           std::unordered_map<std::string, boost::property_tree::ptree>&)> >&
                 save_record_handlers
         )
 {

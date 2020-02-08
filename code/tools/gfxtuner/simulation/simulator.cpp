@@ -1101,11 +1101,38 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
             continue;
         scn::scene_node_ptr const  rb_node_ptr = rb_id_and_node_ptr.second;
 
-        rb_node_ptr->relocate(
-                m_rigid_body_simulator_ptr->get_position_of_mass_centre(rb_id),
-                m_rigid_body_simulator_ptr->get_orientation(rb_id)
-                );
-
+        vector3  origin;
+        quaternion  orientation;
+        {
+            if (rb_node_ptr->has_parent())
+            {
+                matrix44  from_node_to_patent_node_matrix;
+                matrix33  R;
+                {
+                    matrix44  from_rigid_body_matrix;
+                    compose_from_base_matrix(
+                            m_rigid_body_simulator_ptr->get_position_of_mass_centre(rb_id),
+                            quaternion_to_rotation_matrix(m_rigid_body_simulator_ptr->get_orientation(rb_id)),
+                            from_rigid_body_matrix
+                            );
+                    matrix44  to_parent_node_matrix;
+                    {
+                        vector3  u;
+                        decompose_matrix44(rb_node_ptr->get_parent()->get_world_matrix(), u, R);
+                        compose_to_base_matrix(u, R, to_parent_node_matrix);
+                    }
+                    from_node_to_patent_node_matrix = to_parent_node_matrix * from_rigid_body_matrix;
+                }
+                decompose_matrix44(from_node_to_patent_node_matrix, origin, R);
+                orientation = rotation_matrix_to_quaternion(R);
+            }
+            else
+            {
+                origin = m_rigid_body_simulator_ptr->get_position_of_mass_centre(rb_id);
+                orientation = m_rigid_body_simulator_ptr->get_orientation(rb_id);
+            }
+        }
+        rb_node_ptr->relocate(origin, orientation);
         update_collider_locations_in_subtree(rb_node_ptr);
     }
 }
@@ -2346,10 +2373,6 @@ void  simulator::erase_scene_node(scn::scene_node_id const&  id)
     for (auto const&  elem : node_ptr->get_children())
         erase_scene_node(elem.second->get_id());
 
-    if (scn::has_agent(*node_ptr))
-        erase_agent(scn::make_agent_record_id(id));
-    if (scn::has_device(*node_ptr))
-        erase_device(scn::make_device_record_id(id));
     {
         std::vector<std::string>  sensor_names;
         for (auto const&  name_holder : scn::get_sensor_holders(*node_ptr))
@@ -2357,6 +2380,10 @@ void  simulator::erase_scene_node(scn::scene_node_id const&  id)
         for (auto const&  sensor_name : sensor_names)
             erase_sensor(scn::make_sensor_record_id(node_ptr->get_id(), sensor_name));
     }
+    if (scn::has_device(*node_ptr))
+        erase_device(scn::make_device_record_id(id));
+    if (scn::has_agent(*node_ptr))
+        erase_agent(scn::make_agent_record_id(id));
 
     if (scn::has_rigid_body(*node_ptr))
         erase_rigid_body_from_scene_node(id);
@@ -2675,7 +2702,7 @@ void  simulator::insert_rigid_body_to_scene_node(
     TMPROF_BLOCK();
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id);
-    ASSUMPTION(node_ptr != nullptr && !node_ptr->has_parent());
+    ASSUMPTION(node_ptr != nullptr && find_nearest_rigid_body_node(node_ptr) == nullptr);
 
     std::vector<angeo::collision_object_id>  coids;
     std::vector<scn::scene_node_ptr>  coid_nodes;
@@ -2746,10 +2773,13 @@ void  simulator::insert_rigid_body_to_scene_node(
                 );
     }
 
+    vector3  origin;
+    matrix33  R;
+    decompose_matrix44(node_ptr->get_world_matrix(), origin, R);
     angeo::rigid_body_id const  rb_id =
             m_rigid_body_simulator_ptr->insert_rigid_body(
-                    node_ptr->get_coord_system()->origin(),
-                    node_ptr->get_coord_system()->orientation(),
+                    origin,
+                    rotation_matrix_to_quaternion(R),
                     inverted_mass,
                     inverted_inertia_tensor_in_local_space,
                     has_static_collider ? vector3_zero() : linear_velocity,
@@ -2778,7 +2808,7 @@ void  simulator::insert_rigid_body_to_scene_node_ex(
     TMPROF_BLOCK();
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id);
-    ASSUMPTION(node_ptr != nullptr && !node_ptr->has_parent());
+    ASSUMPTION(node_ptr != nullptr && find_nearest_rigid_body_node(node_ptr) == nullptr);
 
     std::vector<angeo::collision_object_id>  coids;
     bool  has_static_collider;
@@ -2798,10 +2828,13 @@ void  simulator::insert_rigid_body_to_scene_node_ex(
                     m_collision_scene_ptr->disable_colliding(coids.at(i), coids.at(j));
     }
 
+    vector3  origin;
+    matrix33  R;
+    decompose_matrix44(node_ptr->get_world_matrix(), origin, R);
     angeo::rigid_body_id const  rb_id =
             m_rigid_body_simulator_ptr->insert_rigid_body(
-                    node_ptr->get_coord_system()->origin(),
-                    node_ptr->get_coord_system()->orientation(),
+                    origin,
+                    rotation_matrix_to_quaternion(R),
                     mass_inverted,
                     inertia_tensor_inverted,
                     linear_velocity,
@@ -2934,6 +2967,20 @@ void  simulator::erase_agent(scn::scene_record_id const&  id)
     scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
     ASSUMPTION(agent_ptr != nullptr);
 
+    ASSUMPTION(
+        !scn::has_any_sensor(*node_ptr) && !scn::has_device(*node_ptr) &&
+        [node_ptr]() -> bool {
+            bool result = true;
+            node_ptr->foreach_child(
+                [&result](scn::scene_node_ptr const  node_ptr) -> bool {
+                    if (scn::has_any_sensor(*node_ptr) || scn::has_device(*node_ptr))
+                        result = false;
+                    return result;
+                },
+                true);
+            return result;
+        }());
+
     get_ai_simulator()->erase_agent(agent_ptr->id());
     m_binding_of_agents_to_scene.erase(agent_ptr->id());
 
@@ -2976,6 +3023,20 @@ void  simulator::erase_device(scn::scene_record_id const&  id)
     ASSUMPTION(node_ptr != nullptr);
     scn::device const* const  device_ptr = scn::get_device(*node_ptr);
     ASSUMPTION(device_ptr != nullptr);
+
+    ASSUMPTION(
+        !scn::has_any_sensor(*node_ptr) && !scn::has_agent(*node_ptr) &&
+        [node_ptr]() -> bool {
+            bool result = true;
+            node_ptr->foreach_child(
+                [&result](scn::scene_node_ptr const  node_ptr) -> bool {
+                    if (scn::has_any_sensor(*node_ptr) || scn::has_device(*node_ptr))
+                        result = false;
+                    return result;
+                },
+                true);
+            return result;
+        }());
 
     get_ai_simulator()->erase_device(device_ptr->id());
     m_binding_of_devices_to_scene.erase(device_ptr->id());
@@ -3390,29 +3451,30 @@ void  simulator::relocate_scene_node(scn::scene_node_id const&  id, vector3 cons
 
 void  simulator::on_relocation_of_scene_node(scn::scene_node_ptr const  node_ptr)
 {
+    ASSUMPTION(node_ptr != nullptr);
+
     std::vector<angeo::collision_object_id>  coids;
     std::vector<scn::scene_node_ptr>  coid_nodes;
     collect_colliders_in_subtree(node_ptr, coids, &coid_nodes);
     for (std::size_t i = 0UL; i != coids.size(); ++i)
         m_collision_scene_ptr->on_position_changed(coids.at(i), coid_nodes.at(i)->get_world_matrix());
 
-    if (coids.empty())
-        return;
+    auto const  relocate_rigid_body = [this](scn::rigid_body&  rb, scn::scene_node_ptr const  rb_node_ptr) -> void {
+        vector3  origin;
+        matrix33  R;
+        decompose_matrix44(rb_node_ptr->get_world_matrix(), origin, R);
+        m_rigid_body_simulator_ptr->set_position_of_mass_centre(rb.id(), origin);
+        m_rigid_body_simulator_ptr->set_orientation(rb.id(), rotation_matrix_to_quaternion(R));
+    };
 
-    scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr);
-    if (phs_node == nullptr)
-        return;
+    foreach_rigid_body_in_subtree(node_ptr, relocate_rigid_body);
 
-    if (phs_node == node_ptr)
+    if (!coids.empty())
     {
-        INVARIANT(!phs_node->has_parent());
-        auto  rb_ptr = scn::get_rigid_body(*node_ptr);
-        INVARIANT(rb_ptr != nullptr);
-        m_rigid_body_simulator_ptr->set_position_of_mass_centre(rb_ptr->id(), phs_node->get_coord_system()->origin());
-        m_rigid_body_simulator_ptr->set_orientation(rb_ptr->id(), phs_node->get_coord_system()->orientation());
+        scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr);
+        if (phs_node != nullptr && phs_node != node_ptr)
+            rebuild_rigid_body_due_to_change_in_subtree(phs_node);
     }
-    else
-        rebuild_rigid_body_due_to_change_in_subtree(phs_node);
 }
 
 

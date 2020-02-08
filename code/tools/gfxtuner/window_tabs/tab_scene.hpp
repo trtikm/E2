@@ -207,7 +207,7 @@ private:
     std::unordered_map<std::string, QIcon> m_icons_of_records;
 
     std::unordered_map<std::string, std::pair<bool,
-                       std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
+                       std::function<std::pair<std::string, std::function<bool(scn::scene_record_id const&)>>
                                      (widgets*, std::string const&, std::unordered_set<std::string> const&)> > >
             m_insert_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >

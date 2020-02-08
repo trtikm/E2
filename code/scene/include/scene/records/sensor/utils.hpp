@@ -40,6 +40,11 @@ inline sensor*  get_sensor(scene_node&  node, scene_node::record_name const&  se
     return const_cast<sensor*>(&get_record<sensor>(node, make_sensor_node_record_id(sensor_name)));
 }
 
+inline bool  has_any_sensor(scene_node const&  n)
+{
+    return !get_folder_records_map(n, get_sensors_folder_name()).empty();
+}
+
 inline bool  has_sensor(scene_node const&  n, scene_node::record_name const&  sensor_name)
 {
     return has_record(n, make_sensor_node_record_id(sensor_name));

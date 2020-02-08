@@ -379,6 +379,12 @@ void  collect_nearest_scene_objects_on_line_within_parameter_range(
         );
 
 
+inline bool  is_under_simulation_node(scene_node_id const&  id)
+{
+    return id.valid() && id.path().front().front() == '@';
+}
+
+
 }
 
 #endif

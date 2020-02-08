@@ -157,8 +157,8 @@ void  register_record_undo_redo_processors(widgets* const  w)
 
 void  register_record_handler_for_insert_scene_record(
         std::unordered_map<std::string, std::pair<bool,
-                           std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
-                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)>> >&
+                           std::function<std::pair<std::string, std::function<bool(scn::scene_record_id const&)> >
+                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)> > >&
                 insert_record_handlers
         )
 {
@@ -166,28 +166,36 @@ void  register_record_handler_for_insert_scene_record(
             scn::get_rigid_body_folder_name(),
             {
                 false, // There cannot be mutiple records in one folder.
-                [](widgets* const  w, std::string const&, std::unordered_set<std::string> const&  used_names)
-                    -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
+                [](widgets* const  w, std::string const&  mode, std::unordered_set<std::string> const&  used_names)
+                    -> std::pair<std::string, std::function<bool(scn::scene_record_id const&)>> {
                         if (used_names.size() != 0UL)
                         {
                             w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one rigid body.", 10000);
                             return{ "",{} };
                         }
-                        std::shared_ptr<scn::rigid_body_props>  rb_props = std::make_shared<scn::rigid_body_props>();
-                        rb_props->m_linear_velocity = { 0.0f, 0.0f, 0.0f };
-                        rb_props->m_angular_velocity ={ 0.0f, 0.0f, 0.0f };
-                        rb_props->m_external_linear_acceleration = { 0.0f, 0.0f, -9.81f };
-                        rb_props->m_external_angular_acceleration ={ 0.0f, 0.0f, 0.0f };
-                        rb_props->m_mass_inverted = 0.0f;
-                        rb_props->m_inertia_tensor_inverted = matrix33_zero();
-                        bool  auto_compute_mass_and_inertia_tensor = true;
-                        dialog_windows::rigid_body_props_dialog  dlg(w->wnd(), &auto_compute_mass_and_inertia_tensor, rb_props.get());
-                        dlg.exec();
-                        if (!dlg.ok())
-                            return{ "",{} };
                         return {
                             scn::get_rigid_body_record_name(),
-                            [w, auto_compute_mass_and_inertia_tensor, rb_props](scn::scene_record_id const&  record_id) -> void {
+                            [w](scn::scene_record_id const&  record_id) -> bool {
+                                    std::shared_ptr<scn::rigid_body_props>  rb_props = std::make_shared<scn::rigid_body_props>();
+                                    rb_props->m_linear_velocity = { 0.0f, 0.0f, 0.0f };
+                                    rb_props->m_angular_velocity ={ 0.0f, 0.0f, 0.0f };
+                                    rb_props->m_external_linear_acceleration = { 0.0f, 0.0f, -9.81f };
+                                    rb_props->m_external_angular_acceleration ={ 0.0f, 0.0f, 0.0f };
+                                    rb_props->m_mass_inverted = 0.0f;
+                                    rb_props->m_inertia_tensor_inverted = matrix33_zero();
+                                    bool  auto_compute_mass_and_inertia_tensor = true;
+                                    dialog_windows::rigid_body_props_dialog  dlg(
+                                            w->wnd(),
+                                            &auto_compute_mass_and_inertia_tensor,
+                                            rb_props.get(),
+                                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(record_id.get_node_id()))
+                                                                ->get_world_matrix(),
+                                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, scn::get_pivot_node_id())
+                                                                ->get_world_matrix()
+                                            );
+                                    dlg.exec();
+                                    if (!dlg.ok())
+                                        return false;
                                     if (auto_compute_mass_and_inertia_tensor)
                                         w->wnd()->glwindow().call_now(
                                                 &simulator::insert_rigid_body_to_scene_node,
@@ -214,6 +222,7 @@ void  register_record_handler_for_insert_scene_record(
                                             *rb_props,
                                             false
                                             );
+                                    return true;
                                 }
                             };
                     }
@@ -237,9 +246,19 @@ void  register_record_handler_for_update_scene_record(
                             std::ref(auto_compute_mass_and_inertia_tensor),
                             std::ref(rb_props)
                             );
+                    w->wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(record_id.get_node_id()))->get_world_matrix();
+
                     bool const  old_auto_compute_mass_and_inertia_tensor = auto_compute_mass_and_inertia_tensor;
                     scn::rigid_body_props  rb_old_props = rb_props;
-                    dialog_windows::rigid_body_props_dialog  dlg(w->wnd(), &auto_compute_mass_and_inertia_tensor, &rb_props);
+                    dialog_windows::rigid_body_props_dialog  dlg(
+                            w->wnd(),
+                            &auto_compute_mass_and_inertia_tensor,
+                            &rb_props,
+                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(record_id.get_node_id()))
+                                                ->get_world_matrix(),
+                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, scn::get_pivot_node_id())
+                                                ->get_world_matrix()
+                            );
                     dlg.exec();
                     if (!dlg.ok())
                         return;
@@ -327,7 +346,7 @@ void  register_record_handler_for_duplicate_scene_record(
 
 
 void  register_record_handler_for_erase_scene_record(
-        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >&
                 erase_record_handlers
         )
 {
@@ -362,7 +381,7 @@ void  register_record_handler_for_load_scene_record(
                                                            scn::scene_record_id const&,
                                                            boost::property_tree::ptree const&,
                                                            std::unordered_map<std::string, boost::property_tree::ptree> const&,
-                                                           bool)>>&
+                                                           bool)> >&
                 load_record_handlers
         )
 {
@@ -411,7 +430,7 @@ void  register_record_handler_for_save_scene_record(
                                                            scn::scene_node_ptr,
                                                            scn::scene_node_record_id const&,
                                                            boost::property_tree::ptree&,
-                                                           std::unordered_map<std::string, boost::property_tree::ptree>&)>>&
+                                                           std::unordered_map<std::string, boost::property_tree::ptree>&)> >&
                 save_record_handlers
         )
 {

@@ -78,8 +78,8 @@ void  register_record_undo_redo_processors(widgets* const  w)
 
 void  register_record_handler_for_insert_scene_record(
         std::unordered_map<std::string, std::pair<bool,
-                           std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
-                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)>> >&
+                           std::function<std::pair<std::string, std::function<bool(scn::scene_record_id const&)> >
+                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)> > >&
                 insert_record_handlers
         )
 {
@@ -88,7 +88,7 @@ void  register_record_handler_for_insert_scene_record(
             {
                 false, // There cannot be mutiple records in one folder.
                 [](widgets* const  w, std::string const&, std::unordered_set<std::string> const&  used_names)
-                    -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
+                    -> std::pair<std::string, std::function<bool(scn::scene_record_id const&)> > {
                         if (used_names.size() != 0UL)
                         {
                             w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one agent entity.", 10000);
@@ -125,15 +125,21 @@ void  register_record_handler_for_insert_scene_record(
                         return {
                             scn::get_agent_record_name(),
                             [w, skeleton_dir, skeletal_motion_templates](
-                                scn::scene_record_id const&  record_id) -> void
+                                scn::scene_record_id const&  record_id) -> bool
                                 {
                                     scn::agent_props const  props {
                                         ai::AGENT_KIND::STATIONARY,
                                         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates)
                                     };
-                                    insert_skeleton_joint_nodes(record_id, props.m_skeleton_props, w);
-                                    w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(record_id), std::cref(props));
-                                    w->get_scene_history()->insert<scn::scene_history_agent_insert>(record_id, props, false);
+                                    std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >  sensor_nodes_and_kinds;
+                                    dialog_windows::agent_props_dialog  dlg(w->wnd(), props, sensor_nodes_and_kinds);
+                                    dlg.exec();
+                                    if (!dlg.ok())
+                                        return false;
+                                    insert_skeleton_joint_nodes(record_id, dlg.get_new_props().m_skeleton_props, w);
+                                    w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(record_id), std::cref(dlg.get_new_props()));
+                                    w->get_scene_history()->insert<scn::scene_history_agent_insert>(record_id, dlg.get_new_props(), false);
+                                    return true;
                                 }
                             };
                     }
@@ -191,7 +197,7 @@ void  register_record_handler_for_duplicate_scene_record(
 
 
 void  register_record_handler_for_erase_scene_record(
-        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >&
                 erase_record_handlers
         )
 {
@@ -212,7 +218,7 @@ void  register_record_handler_for_load_scene_record(
                                                            scn::scene_record_id const&,
                                                            boost::property_tree::ptree const&,
                                                            std::unordered_map<std::string, boost::property_tree::ptree> const&,
-                                                           bool)>>&
+                                                           bool)> >&
                 load_record_handlers
         )
 {
@@ -250,7 +256,7 @@ void  register_record_handler_for_save_scene_record(
                                                            scn::scene_node_ptr,
                                                            scn::scene_node_record_id const&,
                                                            boost::property_tree::ptree&,
-                                                           std::unordered_map<std::string, boost::property_tree::ptree>&)>>&
+                                                           std::unordered_map<std::string, boost::property_tree::ptree>&)> >&
                 save_record_handlers
         )
 {
