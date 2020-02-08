@@ -13,7 +13,8 @@ scene::request_merge_scene_ptr  create_request_merge_scene(
         scene::node_id const&  parent_nid_,
         scene::node_id const&  frame_reference_nid_,
         vector3 const&  linear_velocity_,
-        vector3 const&  angular_velocity_
+        vector3 const&  angular_velocity_,
+        scene::node_id const&  velocities_frame_nid_
         )
 {
     return std::make_shared<scene::request_merge_scene const>(
@@ -21,7 +22,8 @@ scene::request_merge_scene_ptr  create_request_merge_scene(
             parent_nid_,
             frame_reference_nid_,
             linear_velocity_,
-            angular_velocity_
+            angular_velocity_,
+            velocities_frame_nid_
             );
 }
 
@@ -29,17 +31,12 @@ scene::request_merge_scene_ptr  create_request_merge_scene(
 scene::request_merge_scene_ptr  create_request_merge_scene(property_map const&  props)
 {
     return  create_request_merge_scene(
-                props.at("scene_id").get_string(),
-                ::as_scene_node_id(props.at("parent_nid").get_string()),
-                ::as_scene_node_id(props.at("frame_reference_nid").get_string()),
-                vector3(props.at("linear_velocity_x").get_float(),
-                        props.at("linear_velocity_y").get_float(),
-                        props.at("linear_velocity_z").get_float()
-                        ),
-                vector3(props.at("angular_velocity_x").get_float(),
-                        props.at("angular_velocity_y").get_float(),
-                        props.at("angular_velocity_z").get_float()
-                        )
+                props.get_string("scene_id"),
+                as_scene_node_id(props.get_string("parent_nid")),
+                as_scene_node_id(props.get_string("frame_nid")),
+                props.has_vector3("linear_velocity") ? props.get_vector3("linear_velocity") : vector3_zero(),
+                props.has_vector3("angular_velocity") ? props.get_vector3("angular_velocity") : vector3_zero(),
+                props.has("velocities_frame_nid") ? as_scene_node_id(props.get_string("velocities_frame_nid")) : scene::node_id()
                 );
 }
 

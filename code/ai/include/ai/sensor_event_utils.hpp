@@ -14,7 +14,8 @@ scene::request_merge_scene_ptr  create_request_merge_scene(
         scene::node_id const&  parent_nid_,
         scene::node_id const&  frame_reference_nid_,
         vector3 const&  linear_velocity_,
-        vector3 const&  angular_velocity_
+        vector3 const&  angular_velocity_,
+        scene::node_id const&  velocities_frame_nid_
         );
 
 

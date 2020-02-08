@@ -1149,18 +1149,21 @@ void  simulator::process_ai_requests()
     {
         if (auto const  request = ai::scene::cast<ai::scene::request_merge_scene>(requests.back()))
         {
-            scn::scene_node_ptr const  root_node_ptr =
-                    import_scene(request->scene_id, request->parent_nid, request->frame_reference_nid);
+            scn::scene_node_ptr const  root_node_ptr = import_scene(request->scene_id, request->parent_nid, request->frame_nid);
             if (scn::rigid_body const* const  rb = scn::get_rigid_body(*root_node_ptr))
             {
-                m_rigid_body_simulator_ptr->set_linear_velocity(
-                        rb->id(),
-                        transform_vector(request->linear_velocity, root_node_ptr->get_world_matrix())
-                        );
-                m_rigid_body_simulator_ptr->set_angular_velocity(
-                        rb->id(),
-                        transform_vector(request->angular_velocity, root_node_ptr->get_world_matrix())
-                        );
+                matrix44  W;
+                {
+                    W = matrix44_identity();
+                    if (request->velocities_frame_nid.valid())
+                    {
+                        scn::scene_node_ptr const  transform_node_ptr = get_scene_node(request->velocities_frame_nid);
+                        if (transform_node_ptr != nullptr)
+                            W = transform_node_ptr->get_world_matrix();
+                    }
+                }
+                m_rigid_body_simulator_ptr->set_linear_velocity(rb->id(), transform_vector(request->linear_velocity, W));
+                m_rigid_body_simulator_ptr->set_angular_velocity(rb->id(), transform_vector(request->angular_velocity, W));
             }
         }
         else if (auto const  request = ai::scene::cast<ai::scene::request_erase_nodes_tree>(requests.back()))
@@ -2967,19 +2970,19 @@ void  simulator::erase_agent(scn::scene_record_id const&  id)
     scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
     ASSUMPTION(agent_ptr != nullptr);
 
-    ASSUMPTION(
-        !scn::has_any_sensor(*node_ptr) && !scn::has_device(*node_ptr) &&
-        [node_ptr]() -> bool {
-            bool result = true;
-            node_ptr->foreach_child(
-                [&result](scn::scene_node_ptr const  node_ptr) -> bool {
-                    if (scn::has_any_sensor(*node_ptr) || scn::has_device(*node_ptr))
-                        result = false;
-                    return result;
-                },
-                true);
-            return result;
-        }());
+    //ASSUMPTION(
+    //    !scn::has_any_sensor(*node_ptr) && !scn::has_device(*node_ptr) &&
+    //    [node_ptr]() -> bool {
+    //        bool result = true;
+    //        node_ptr->foreach_child(
+    //            [&result](scn::scene_node_ptr const  node_ptr) -> bool {
+    //                if (scn::has_any_sensor(*node_ptr) || scn::has_device(*node_ptr))
+    //                    result = false;
+    //                return result;
+    //            },
+    //            true);
+    //        return result;
+    //    }());
 
     get_ai_simulator()->erase_agent(agent_ptr->id());
     m_binding_of_agents_to_scene.erase(agent_ptr->id());
@@ -3024,19 +3027,19 @@ void  simulator::erase_device(scn::scene_record_id const&  id)
     scn::device const* const  device_ptr = scn::get_device(*node_ptr);
     ASSUMPTION(device_ptr != nullptr);
 
-    ASSUMPTION(
-        !scn::has_any_sensor(*node_ptr) && !scn::has_agent(*node_ptr) &&
-        [node_ptr]() -> bool {
-            bool result = true;
-            node_ptr->foreach_child(
-                [&result](scn::scene_node_ptr const  node_ptr) -> bool {
-                    if (scn::has_any_sensor(*node_ptr) || scn::has_device(*node_ptr))
-                        result = false;
-                    return result;
-                },
-                true);
-            return result;
-        }());
+    //ASSUMPTION(
+    //    !scn::has_any_sensor(*node_ptr) && !scn::has_agent(*node_ptr) &&
+    //    [node_ptr]() -> bool {
+    //        bool result = true;
+    //        node_ptr->foreach_child(
+    //            [&result](scn::scene_node_ptr const  node_ptr) -> bool {
+    //                if (scn::has_any_sensor(*node_ptr) || scn::has_device(*node_ptr))
+    //                    result = false;
+    //                return result;
+    //            },
+    //            true);
+    //        return result;
+    //    }());
 
     get_ai_simulator()->erase_device(device_ptr->id());
     m_binding_of_devices_to_scene.erase(device_ptr->id());
@@ -3324,7 +3327,7 @@ void  simulator::load_agent(boost::property_tree::ptree const&  data, scn::scene
     scn::agent_props const  props{
         ai::as_agent_kind(data.get<std::string>("kind")),
         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates),
-        ai::as_sensor_action_map(data.get_child("sensor_action_map"), id.get_node_id())
+        as_sensor_action_map(data.get_child("sensor_action_map"), id.get_node_id())
     };
     insert_agent(id, props);
 }
@@ -3338,7 +3341,7 @@ void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property
     ASSUMPTION(agent_ptr != nullptr);
     data.put("kind", ai::as_string(agent_ptr->get_props().m_agent_kind));
     data.put("skeleton_dir", agent_ptr->get_props().m_skeleton_props->skeleton_directory.string());
-    data.put_child("sensor_action_map", ai::as_ptree(agent_ptr->get_props().m_sensor_action_map, node_ptr->get_id()));
+    data.put_child("sensor_action_map", as_ptree(agent_ptr->get_props().m_sensor_action_map, node_ptr->get_id()));
 }
 
 
@@ -3353,7 +3356,7 @@ void  simulator::load_device(boost::property_tree::ptree const&  data, scn::scen
                 skeleton_dir,
                 skeleton_dir.empty() ? ai::skeletal_motion_templates() : ai::skeletal_motion_templates(skeleton_dir, 75U)
                 ),
-        ai::as_sensor_action_map(data.get_child("sensor_action_map"), id.get_node_id())
+        as_sensor_action_map(data.get_child("sensor_action_map"), id.get_node_id())
     };
     insert_device(id, props);
 }
@@ -3367,7 +3370,7 @@ void  simulator::save_device(scn::scene_node_ptr const  node_ptr, boost::propert
     ASSUMPTION(device_ptr != nullptr);
     data.put("kind", ai::as_string(device_ptr->get_props().m_device_kind));
     data.put("skeleton_dir", device_ptr->get_props().m_skeleton_props->skeleton_directory.string());
-    data.put_child("sensor_action_map", ai::as_ptree(device_ptr->get_props().m_sensor_action_map, node_ptr->get_id()));
+    data.put_child("sensor_action_map", as_ptree(device_ptr->get_props().m_sensor_action_map, node_ptr->get_id()));
 }
 
 
@@ -3376,8 +3379,8 @@ void  simulator::load_sensor(boost::property_tree::ptree const&  data, scn::scen
     TMPROF_BLOCK();
 
     scn::sensor_props const  props{
-        ai::as_sensor_kind(data.get<std::string>("kind")),
-        ai::as_property_map(data.get_child("property_map"))
+        as_sensor_kind(data.get<std::string>("kind")),
+        as_property_map(data.get_child("property_map"))
     };
     insert_sensor(id, props);
 }
@@ -3389,8 +3392,8 @@ void  simulator::save_sensor(scn::scene_node_ptr const  node_ptr, scn::scene_nod
 
     scn::sensor const* const  sensor_ptr = scn::get_sensor(*node_ptr, id.get_record_name());
     ASSUMPTION(sensor_ptr != nullptr);
-    data.put("kind", ai::as_string(sensor_ptr->get_props().m_sensor_kind));
-    data.put_child("property_map", ai::as_ptree(sensor_ptr->get_props().m_sensor_props));
+    data.put("kind", as_string(sensor_ptr->get_props().m_sensor_kind));
+    data.put_child("property_map", as_ptree(sensor_ptr->get_props().m_sensor_props));
 }
 
 

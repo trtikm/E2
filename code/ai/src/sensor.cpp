@@ -14,8 +14,8 @@ std::unordered_map<SENSOR_KIND, property_map> const&  sensor::default_configs()
     static std::unordered_map<SENSOR_KIND, property_map> const  cfg{
         {
             SENSOR_KIND::TIMER, property_map({
-                { "period_in_seconds", property_map::property_type_and_value(1.0f) },
-                { "consumed_in_seconds", property_map::property_type_and_value(0.0f) }
+                { "period_in_seconds", property_map::make_float(1.0f) },
+                { "consumed_in_seconds", property_map::make_float(0.0f) }
                 })
         }
     };
@@ -45,7 +45,7 @@ sensor::sensor(simulator* const  simulator_,
                 auto const  it = cfg.find(elem.first);
                 if (it == cfg.end())
                     return false;
-                if (it->second.get_type() != elem.second.get_type())
+                if (it->second->get_type() != elem.second->get_type())
                     return false;
             }
             return true;
@@ -57,12 +57,12 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
 {
     if (get_kind() == SENSOR_KIND::TIMER)
     {
-        property_map::property_type_and_value const&  period = m_cfg->at("period_in_seconds");
-        property_map::property_type_and_value&  consumed = m_cfg->at("consumed_in_seconds");
-        consumed.set_float(consumed.get_float() + time_step_in_seconds);
-        while (consumed.get_float() >= period.get_float())
+        float_32_bit const  period = m_cfg->get_float("period_in_seconds");
+        float_32_bit&  consumed = m_cfg->get_float_ref("consumed_in_seconds");
+        consumed += time_step_in_seconds;
+        while (consumed >= period)
         {
-            consumed.set_float(consumed.get_float() - period.get_float());
+            consumed -= period;
             m_simulator->on_sensor_event(*this);
         }
     }

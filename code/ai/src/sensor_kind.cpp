@@ -24,16 +24,16 @@ std::string const& description(SENSOR_KIND const  kind)
 }
 
 
-std::string const&  as_string(SENSOR_KIND const  kind)
-{
-    return from_index_to_name_and_description.at(as_number(kind)).first;
 }
 
 
-SENSOR_KIND  as_sensor_kind(std::string const&  name)
+std::string const&  as_string(ai::SENSOR_KIND const  kind)
 {
-    return from_name_to_kind.at(name);
+    return ai::from_index_to_name_and_description.at(as_number(kind)).first;
 }
 
 
+ai::SENSOR_KIND  as_sensor_kind(std::string const&  name)
+{
+    return ai::from_name_to_kind.at(name);
 }

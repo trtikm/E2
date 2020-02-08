@@ -31,10 +31,11 @@ inline SENSOR_KIND  as_sensor_kind(natural_8_bit const  index)
 inline constexpr natural_8_bit  num_sensor_kinds() { return (natural_8_bit)SENSOR_KIND::TIMER + 1; }
 
 
-std::string const&  as_string(SENSOR_KIND const  kind);
-SENSOR_KIND  as_sensor_kind(std::string const&  name);
-
-
 }
+
+
+std::string const&  as_string(ai::SENSOR_KIND const  kind);
+ai::SENSOR_KIND  as_sensor_kind(std::string const&  name);
+
 
 #endif

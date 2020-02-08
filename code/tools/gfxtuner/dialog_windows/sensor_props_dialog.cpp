@@ -51,7 +51,7 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
     {
         auto&  props = m_all_props.at(m_current_props.m_sensor_kind);
         for (auto const&  elem : m_current_props.m_sensor_props)
-            props.at(elem.first) = elem.second;
+            props.set(elem);
     }
 
     QVBoxLayout* const dlg_layout = new QVBoxLayout;
@@ -63,17 +63,17 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
             for (natural_8_bit i = 0U; i != ai::num_sensor_kinds(); ++i)
             {
                 ai::SENSOR_KIND const  kind = ai::as_sensor_kind(i);
-                descriptions_of_kinds += "    " + ai::as_string(kind) + ": " + ai::description(kind) + "\n";
+                descriptions_of_kinds += "    " + as_string(kind) + ": " + ai::description(kind) + "\n";
             }
             kind_label->setToolTip(descriptions_of_kinds.c_str());
             kind_layout->addWidget(kind_label);
 
             for (natural_8_bit i = 0U; i != ai::num_sensor_kinds(); ++i)
             {
-                std::string const  kind_name = ai::as_string(ai::as_sensor_kind(i));
+                std::string const  kind_name = as_string(ai::as_sensor_kind(i));
                 m_sensor_kind_combobox->addItem(kind_name.c_str());
             }
-            std::string const  current_kind_name = ai::as_string(m_current_props.m_sensor_kind);
+            std::string const  current_kind_name = as_string(m_current_props.m_sensor_kind);
             m_sensor_kind_combobox->setCurrentText(current_kind_name.c_str());
             kind_layout->addWidget(m_sensor_kind_combobox);
 
@@ -128,7 +128,7 @@ void  sensor_props_dialog::reject()
 
 ai::SENSOR_KIND  sensor_props_dialog::read_kind_combo() const
 {
-    return ai::as_sensor_kind(qtgl::to_string(m_sensor_kind_combobox->currentText()));
+    return as_sensor_kind(qtgl::to_string(m_sensor_kind_combobox->currentText()));
 }
 
 
@@ -143,7 +143,7 @@ void  sensor_props_dialog::on_kind_combo_changed(int)
 void  sensor_props_dialog::load_property_map_table()
 {
     auto const&  _ = m_all_props.at(m_new_props.m_sensor_kind);
-    std::map<ai::property_map::property_name, ai::property_map::property_type_and_value> const  props(_.begin(), _.end());
+    std::map<ai::property_map::property_name, ai::property_map::property_value_ptr> const  props(_.begin(), _.end());
     m_property_map_table->clear();
     m_property_map_table->setRowCount((int)props.size());
     int  row = 0;
@@ -163,7 +163,7 @@ void  sensor_props_dialog::load_property_map_table()
         }
 
         name_item->setText(elem.first.c_str());
-        std::string const  value_text = ai::as_string(elem.second);
+        std::string const  value_text = as_string(*elem.second);
         value_item->setText(value_text.c_str());
 
         ++row;
@@ -181,8 +181,12 @@ void  sensor_props_dialog::save_property_map_table()
     {
         QTableWidgetItem* const  name_item = m_property_map_table->item(row, 0);
         QTableWidgetItem* const  value_item = m_property_map_table->item(row, 1);
-        auto&  type_and_value = props.at(qtgl::to_string(name_item->text()));
-        type_and_value = ai::as_property_type_and_value(type_and_value.get_type(), qtgl::to_string(value_item->text()));
+        props.set(qtgl::to_string(name_item->text()),
+                  as_property_map_value(
+                        props.get_type(qtgl::to_string(name_item->text())),
+                        qtgl::to_string(value_item->text())
+                        )
+                  );
     }
 }
 

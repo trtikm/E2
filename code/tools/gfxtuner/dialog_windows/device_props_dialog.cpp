@@ -156,7 +156,7 @@ device_props_dialog::device_props_dialog(
             for (auto const&  node_and_kind : sensor_nodes_and_kinds)
             {
                 std::string const  text = msgstream() << ::as_string(node_and_kind.first)
-                                                      << " [" << ai::as_string(node_and_kind.second) << "]";
+                                                      << " [" << as_string(node_and_kind.second) << "]";
                 m_sensor_record_id_list->addItem(new QListWidgetItem(text.c_str()));
             }
             m_sensor_record_id_list->setCurrentRow(0);
@@ -169,7 +169,7 @@ device_props_dialog::device_props_dialog(
                 {
                     std::vector<std::string>  sensor_kind_names;
                     for (auto const&  elem : ai::default_sensor_action_props())
-                        sensor_kind_names.push_back(ai::as_string(elem.first));
+                        sensor_kind_names.push_back(as_string(elem.first));
                     std::sort(sensor_kind_names.begin(), sensor_kind_names.end());
                     for (auto const&  sensor_kind_name : sensor_kind_names)
                         m_sensor_action_kind_combobox->addItem(sensor_kind_name.c_str());
@@ -251,7 +251,7 @@ void  device_props_dialog::on_sensor_record_id_list_selection_changed(int)
             return;
         for (ai::sensor_action  action : it->second)
         {
-            std::string const  text = ai::as_string(action.kind);
+            std::string const  text = as_string(action.kind);
             m_sensor_action_kind_list->addItem(new QListWidgetItem(text.c_str()));
         }
         if (m_sensor_action_kind_list->count() > 0)
@@ -270,7 +270,7 @@ void  device_props_dialog::on_sensor_action_kind_list_selection_changed(int)
         scn::scene_record_id const&  id = m_sensor_nodes_and_kinds.at(m_sensor_record_id_list->currentRow()).first;
         ai::sensor_action const&  action = m_new_props.m_sensor_action_map.at(id).at(m_sensor_action_kind_list->currentRow());
         auto const& _ = action.props;
-        std::map<ai::property_map::property_name, ai::property_map::property_type_and_value> const  props(_.begin(), _.end());
+        std::map<ai::property_map::property_name, ai::property_map::property_value_ptr> const  props(_.begin(), _.end());
         m_sensor_action_props_table->setRowCount((int)props.size());
         int  row = 0;
         for (auto const& elem : props)
@@ -289,7 +289,7 @@ void  device_props_dialog::on_sensor_action_kind_list_selection_changed(int)
             }
 
             name_item->setText(elem.first.c_str());
-            std::string const  value_text = ai::as_string(elem.second);
+            std::string const  value_text = as_string(*elem.second);
             value_item->setText(value_text.c_str());
 
             ++row;
@@ -314,7 +314,7 @@ void  device_props_dialog::on_sensor_action_kind_insert_button_pressed()
         if (it == m_new_props.m_sensor_action_map.end())
             it = m_new_props.m_sensor_action_map.insert({ id, {} }).first;
         std::string const  action_kind_name = qtgl::to_string(m_sensor_action_kind_combobox->currentText());
-        ai::SENSOR_ACTION_KIND  action_kind = ai::as_sensor_action_kind(action_kind_name);
+        ai::SENSOR_ACTION_KIND  action_kind = as_sensor_action_kind(action_kind_name);
         it->second.push_back({ action_kind, ai::default_sensor_action_props().at(action_kind) });
     LOCK_BOOL_BLOCK_END();
     on_sensor_record_id_list_selection_changed();
@@ -354,8 +354,13 @@ void  device_props_dialog::on_sensor_action_props_table_changed(QTableWidgetItem
         QTableWidgetItem* const  value_item = m_sensor_action_props_table->item(row, 1);
         std::string const  name = qtgl::to_string(name_item->text());
         int const kind_row = m_sensor_action_kind_list->currentRow();
-        auto&  type_and_value = it->second.at(kind_row).props.at(name);
-        type_and_value = ai::as_property_type_and_value(type_and_value.get_type(), qtgl::to_string(value_item->text()));
+        ai::property_map&  props = it->second.at(kind_row).props;
+        props.set(qtgl::to_string(name_item->text()),
+                  as_property_map_value(
+                        props.get_type(qtgl::to_string(name_item->text())),
+                        qtgl::to_string(value_item->text())
+                        )
+                  );
     LOCK_BOOL_BLOCK_END();
 }
 

@@ -25,31 +25,20 @@ std::string const&  description(SENSOR_ACTION_KIND const  kind)
 }
 
 
-std::string const&  as_string(SENSOR_ACTION_KIND const  kind)
-{
-    return from_index_to_name_and_description.at(as_number(kind)).first;
-}
-
-
-SENSOR_ACTION_KIND  as_sensor_action_kind(std::string const&  name)
-{
-    return from_name_to_kind.at(name);
-}
-
-
 std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_action_props()
 {
-    static std::unordered_map<SENSOR_ACTION_KIND, property_map>  props {
+    static std::unordered_map<SENSOR_ACTION_KIND, property_map> const  props {
         { SENSOR_ACTION_KIND::BEGIN_OF_LIFE, property_map({
-                { "scene_id", property_map::property_type_and_value("shared/import/TODO") },
-                { "parent_nid", property_map::property_type_and_value("TODO") },
-                { "frame_reference_nid", property_map::property_type_and_value("TODO") },
-                { "linear_velocity_x", property_map::property_type_and_value(0.0f) },
-                { "linear_velocity_y", property_map::property_type_and_value(0.0f) },
-                { "linear_velocity_z", property_map::property_type_and_value(0.0f) },
-                { "angular_velocity_x", property_map::property_type_and_value(0.0f) },
-                { "angular_velocity_y", property_map::property_type_and_value(0.0f) },
-                { "angular_velocity_z", property_map::property_type_and_value(0.0f) },
+                { "scene_id", property_map::make_string("shared/import/TODO") },
+                { "parent_nid", property_map::make_string("TODO") },
+                { "frame_nid", property_map::make_string("TODO") },
+                { "linear_velocity_x", property_map::make_float(0.0f) },
+                { "linear_velocity_y", property_map::make_float(0.0f) },
+                { "linear_velocity_z", property_map::make_float(0.0f) },
+                { "angular_velocity_x", property_map::make_float(0.0f) },
+                { "angular_velocity_y", property_map::make_float(0.0f) },
+                { "angular_velocity_z", property_map::make_float(0.0f) },
+                { "velocities_frame_nid", property_map::make_string("TODO") },
                 })},
         { SENSOR_ACTION_KIND::END_OF_LIFE, property_map{} },
     };
@@ -57,7 +46,36 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_acti
 }
 
 
-boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map const&  map, scene::node_id const&  root)
+std::unordered_map<SENSOR_ACTION_KIND, std::unordered_set<property_map::property_name> > const&  mandatory_sensor_action_names()
+{
+    static std::unordered_map<SENSOR_ACTION_KIND, std::unordered_set<property_map::property_name> > const  names {
+        { SENSOR_ACTION_KIND::BEGIN_OF_LIFE, {
+                "scene_id",
+                "parent_nid",
+                "frame_nid"
+                }},
+        { SENSOR_ACTION_KIND::END_OF_LIFE, {} },
+    };
+    return names;
+}
+
+
+}
+
+
+std::string const&  as_string(ai::SENSOR_ACTION_KIND const  kind)
+{
+    return ai::from_index_to_name_and_description.at(as_number(kind)).first;
+}
+
+
+ai::SENSOR_ACTION_KIND  as_sensor_action_kind(std::string const&  name)
+{
+    return ai::from_name_to_kind.at(name);
+}
+
+
+boost::property_tree::ptree  as_ptree(ai::from_sensor_record_to_sensor_action_map const&  map, ai::scene::node_id const&  root)
 {
     boost::property_tree::ptree  result;
     for (auto const&  elem : map)
@@ -82,36 +100,33 @@ boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map co
 }
 
 
-from_sensor_record_to_sensor_action_map  as_sensor_action_map(
+ai::from_sensor_record_to_sensor_action_map  as_sensor_action_map(
         boost::property_tree::ptree const&  tree,
-        scene::node_id const&  root
+        ai::scene::node_id const&  root
         )
 {
-    from_sensor_record_to_sensor_action_map  result;
+    ai::from_sensor_record_to_sensor_action_map  result;
     for (auto  it = tree.begin(); it != tree.end(); ++it)
     {
-        scene::record_id const  relative_id = ::as_scene_record_id(it->first);
-        scene::record_id const  id(root / relative_id.get_node_id(), relative_id.get_folder_name(), relative_id.get_record_name());
-        std::vector<sensor_action>  actions;
+        ai::scene::record_id const  relative_id = as_scene_record_id(it->first);
+        ai::scene::record_id const  id(root / relative_id.get_node_id(), relative_id.get_folder_name(), relative_id.get_record_name());
+        std::vector<ai::sensor_action>  actions;
         for (auto  action_it = it->second.begin(); action_it != it->second.end(); ++action_it)
         {
-            SENSOR_ACTION_KIND action_kind = as_sensor_action_kind(action_it->second.get<std::string>("kind"));
-            property_map const&  loaded_props = as_property_map(action_it->second.get_child("props"));
-            property_map  action_props;
-            for (auto const&  name_and_value : default_sensor_action_props().at(action_kind))
+            ai::SENSOR_ACTION_KIND action_kind = as_sensor_action_kind(action_it->second.get<std::string>("kind"));
+            ai::property_map const&  loaded_props = as_property_map(action_it->second.get_child("props"));
+            ai::property_map  action_props;
+            for (auto const&  name_and_value : ai::default_sensor_action_props().at(action_kind))
             {
                 auto const  it = loaded_props.find(name_and_value.first);
                 if (it == loaded_props.end())
-                    action_props.insert(name_and_value);
+                    action_props.set(name_and_value);
                 else
-                    action_props.insert(*it);
+                    action_props.set(*it);
             }
             actions.push_back({ action_kind, action_props });
         }
         result.insert({ id, actions });
     }
     return result;
-}
-
-
 }

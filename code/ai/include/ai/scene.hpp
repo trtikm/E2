@@ -59,15 +59,17 @@ struct  scene
         request_merge_scene(
                 std::string const&  scene_id_,
                 node_id const&  parent_nid_,
-                node_id const&  frame_reference_nid_,
+                node_id const&  frame_nid_,
                 vector3 const&  linear_velocity_,
-                vector3 const&  angular_velocity_
+                vector3 const&  angular_velocity_,
+                node_id const&  velocities_frame_nid_
                 )
             : scene_id(scene_id_)
             , parent_nid(parent_nid_)
-            , frame_reference_nid(frame_reference_nid_)
+            , frame_nid(frame_nid_)
             , linear_velocity(linear_velocity_)
             , angular_velocity(angular_velocity_)
+            , velocities_frame_nid(velocities_frame_nid_)
         {}
 
         std::string  scene_id;                  // A unique id of scene to be imported (merged) into the current scene.
@@ -81,13 +83,17 @@ struct  scene
                                                 //      nodes tree of an agent or a device.
                                                 // NOTE: When 'parent_nid' is empty (i.e. not valid), then the root node of the
                                                 //       impored scene will be put at the root level of the current scene.
-        node_id  frame_reference_nid;           // The root node of the imported scene will be put at such location under
+        node_id  frame_nid;                     // The root node of the imported scene will be put at such location under
                                                 // 'parent_nid' node, so that its world matrix will be the same as the one
-                                                // of the 'frame_reference_nid' node.
+                                                // of the 'frame_nid' node.
         vector3  linear_velocity;               // If the root node of the impored scene has a rigid body record, then its
                                                 // its linear velocity is initialised to this vector.
         vector3  angular_velocity;              // If the root node of the impored scene has a rigid body record, then its
                                                 // its angular velocity is initialised to this vector.
+
+        node_id  velocities_frame_nid;          // When represents a valid scene node, then both linear/angular_velocity
+                                                // will be transformed from the space of the referenced frame to the world space.
+                                                // Otherwise, both vectors are used not-transformed.
     };
     using  request_merge_scene_ptr = std::shared_ptr<request_merge_scene const>;
 

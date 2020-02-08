@@ -6,6 +6,7 @@
 #   include <utility/basic_numeric_types.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <unordered_map>
+#   include <unordered_set>
 #   include <string>
 #   include <vector>
 
@@ -32,9 +33,6 @@ inline SENSOR_ACTION_KIND  as_sensor_action_kind(natural_8_bit const  index)
 
 inline constexpr natural_32_bit  num_sensor_action_kinds() { return (natural_32_bit)SENSOR_ACTION_KIND::END_OF_LIFE + 1U; }
 
-std::string const&  as_string(SENSOR_ACTION_KIND const  kind);
-SENSOR_ACTION_KIND  as_sensor_action_kind(std::string const&  name);
-
 
 struct  sensor_action
 {
@@ -45,12 +43,18 @@ struct  sensor_action
 using  from_sensor_record_to_sensor_action_map = std::unordered_map<scene::record_id, std::vector<sensor_action> >;
 
 std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_action_props();
-
-
-boost::property_tree::ptree  as_ptree(from_sensor_record_to_sensor_action_map const&  map, scene::node_id const&  root);
-from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree, scene::node_id const&  root);
+std::unordered_map<SENSOR_ACTION_KIND, std::unordered_set<property_map::property_name> > const&  mandatory_sensor_action_names();
 
 
 }
+
+
+std::string const&  as_string(ai::SENSOR_ACTION_KIND const  kind);
+ai::SENSOR_ACTION_KIND  as_sensor_action_kind(std::string const& name);
+
+
+boost::property_tree::ptree  as_ptree(ai::from_sensor_record_to_sensor_action_map const& map, ai::scene::node_id const& root);
+ai::from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const& tree, ai::scene::node_id const& root);
+
 
 #endif

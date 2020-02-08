@@ -1,6 +1,5 @@
 #include <ai/property_map.hpp>
 #include <utility/assumptions.hpp>
-#include <utility/invariants.hpp>
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
@@ -8,140 +7,111 @@
 namespace ai {
 
 
-property_map::property_type_and_value::property_type_and_value(integer_32_bit const  value)
-    : type(PROPERTY_TYPE::INT)
-    , value_int(value)
-    , value_float(0.0f)
-    , value_string()
-{}
-
-property_map::property_type_and_value::property_type_and_value(float_32_bit const  value)
-    : type(PROPERTY_TYPE::FLOAT)
-    , value_int(0)
-    , value_float(value)
-    , value_string()
-{}
-
-property_map::property_type_and_value::property_type_and_value(std::string const&  value)
-    : type(PROPERTY_TYPE::STRING)
-    , value_int(0)
-    , value_float(0.0f)
-    , value_string(value)
-{}
-
-
-integer_32_bit  property_map::property_type_and_value::get_int() const
+void  property_map::set(property_name const&  name, property_type_and_value const&  value)
 {
-    ASSUMPTION(get_type() == PROPERTY_TYPE::INT);
-    return value_int;
-}
-
-float_32_bit  property_map::property_type_and_value::get_float() const
-{
-    ASSUMPTION(get_type() == PROPERTY_TYPE::FLOAT);
-    return value_float;
-}
-
-std::string const&  property_map::property_type_and_value::get_string() const
-{
-    ASSUMPTION(get_type() == PROPERTY_TYPE::STRING);
-    return value_string;
-}
-
-
-void  property_map::property_type_and_value::set_int(integer_32_bit const  value)
-{
-    ASSUMPTION(get_type() == PROPERTY_TYPE::INT);
-    value_int = value;
-}
-
-void  property_map::property_type_and_value::set_float(float_32_bit const  value)
-{
-    ASSUMPTION(get_type() == PROPERTY_TYPE::FLOAT);
-    value_float = value;
-}
-
-void  property_map::property_type_and_value::set_string(std::string const&  value)
-{
-    ASSUMPTION(get_type() == PROPERTY_TYPE::STRING);
-    value_string = value;
-}
-
-
-std::string  as_string(property_map::property_type_and_value const&  prop)
-{
-    switch (prop.get_type())
+    switch (value.get_type())
     {
-    case ai::property_map::PROPERTY_TYPE::INT: return std::to_string(prop.get_int());
-    case ai::property_map::PROPERTY_TYPE::FLOAT: return std::to_string(prop.get_float());
-    case ai::property_map::PROPERTY_TYPE::STRING: return prop.get_string();
+    case PROPERTY_TYPE::BOOL: set_bool(name, as<bool_value>(value).value()); break;
+    case PROPERTY_TYPE::INT: set_int(name, as<int_value>(value).value()); break;
+    case PROPERTY_TYPE::FLOAT: set_float(name, as<float_value>(value).value()); break;
+    case PROPERTY_TYPE::STRING: set_string(name, as<string_value>(value).value()); break;
     default: UNREACHABLE(); break;
     }
 }
 
 
-property_map::property_type_and_value  as_property_type_and_value(
-        property_map::PROPERTY_TYPE const  type,
+}
+
+
+std::string  as_string(ai::property_map::property_type_and_value const&  prop)
+{
+    switch (prop.get_type())
+    {
+    case ai::property_map::PROPERTY_TYPE::BOOL:
+        return std::to_string(ai::property_map::as<ai::property_map::bool_value>(prop).value());
+    case ai::property_map::PROPERTY_TYPE::INT:
+        return std::to_string(ai::property_map::as<ai::property_map::int_value>(prop).value());
+    case ai::property_map::PROPERTY_TYPE::FLOAT:
+        return std::to_string(ai::property_map::as<ai::property_map::float_value>(prop).value());
+    case ai::property_map::PROPERTY_TYPE::STRING:
+        return ai::property_map::as<ai::property_map::string_value>(prop).value();
+    default: UNREACHABLE(); break;
+    }
+}
+
+
+ai::property_map::property_value_ptr  as_property_map_value(
+        ai::property_map::PROPERTY_TYPE const  type,
         std::string const&  value_text
         )
 {
     switch (type)
     {
+    case ai::property_map::PROPERTY_TYPE::BOOL:
+        return ai::property_map::make_bool(
+                    value_text == "true" ||
+                    value_text == "TRUE" ||
+                    value_text == "True" ||
+                    value_text == "tt" ||
+                    (integer_32_bit)std::atoi(value_text.c_str()) != 0
+                    );
     case ai::property_map::PROPERTY_TYPE::INT:
-        return property_map::property_type_and_value((integer_32_bit)std::atoi(value_text.c_str()));
+        return ai::property_map::make_int((integer_32_bit)std::atoi(value_text.c_str()));
     case ai::property_map::PROPERTY_TYPE::FLOAT:
-        return property_map::property_type_and_value((float_32_bit)std::atof(value_text.c_str()));
+        return ai::property_map::make_float((float_32_bit)std::atof(value_text.c_str()));
     case ai::property_map::PROPERTY_TYPE::STRING:
-        return property_map::property_type_and_value(value_text);
+        return ai::property_map::make_string(value_text);
     default: UNREACHABLE(); break;
     }
 }
 
 
-boost::property_tree::ptree  as_ptree(property_map const&  map)
+boost::property_tree::ptree  as_ptree(ai::property_map const&  map)
 {
     boost::property_tree::ptree  result;
     for (auto const& elem : map)
     {
         boost::property_tree::ptree  prop;
-        switch (elem.second.get_type())
+        switch (elem.second->get_type())
         {
-        case property_map::PROPERTY_TYPE::INT:
-            prop.put("type", "INT");
-            prop.put("value", std::to_string(elem.second.get_int()));
-            break;
-        case property_map::PROPERTY_TYPE::FLOAT:
-            prop.put("type", "FLOAT");
-            prop.put("value", std::to_string(elem.second.get_float()));
-            break;
-        case property_map::PROPERTY_TYPE::STRING:
-            prop.put("type", "STRING");
-            prop.put("value", elem.second.get_string());
-            break;
+        case ai::property_map::PROPERTY_TYPE::BOOL: prop.put("type", "BOOL"); break;
+        case ai::property_map::PROPERTY_TYPE::INT: prop.put("type", "INT"); break;
+        case ai::property_map::PROPERTY_TYPE::FLOAT: prop.put("type", "FLOAT"); break;
+        case ai::property_map::PROPERTY_TYPE::STRING: prop.put("type", "STRING"); break;
         default: UNREACHABLE(); break;
         }
+        prop.put("value", as_string(*elem.second));
         result.put_child(elem.first, prop);
     }
     return result;
 }
 
 
-property_map  as_property_map(boost::property_tree::ptree const&  tree)
+ai::property_map  as_property_map(boost::property_tree::ptree const&  tree)
 {
-    property_map::map_type  result;
+    ai::property_map  result;
     for (auto it = tree.begin(); it != tree.end(); ++it)
     {
         std::string const  type = it->second.get<std::string>("type");
-        if (type == "INT")
-            result.insert({ it->first, property_map::property_type_and_value(it->second.get<integer_32_bit>("value")) });
+        if (type == "BOOL")
+        {
+            std::string const  value_text = it->second.get<std::string>("value");
+            result.set_bool(
+                    it->first,
+                    value_text == "true"
+                        || value_text == "TRUE"
+                        || value_text == "True"
+                        || value_text == "tt"
+                        || (integer_32_bit)std::atoi(value_text.c_str()) != 0
+                    );
+        }
+        else if (type == "INT")
+            result.set_int(it->first, it->second.get<integer_32_bit>("value"));
         else if (type == "FLOAT")
-            result.insert({ it->first, property_map::property_type_and_value(it->second.get<float_32_bit>("value")) });
+            result.set_float(it->first, it->second.get<float_32_bit>("value"));
         else if (type == "STRING")
-            result.insert({ it->first, property_map::property_type_and_value(it->second.get<std::string>("value")) });
+            result.set_string(it->first, it->second.get<std::string>("value"));
         else { UNREACHABLE(); }
     }
     return result;
-}
-
-
 }
