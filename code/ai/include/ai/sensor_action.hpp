@@ -42,8 +42,7 @@ struct  sensor_action
 
 using  from_sensor_record_to_sensor_action_map = std::unordered_map<scene::record_id, std::vector<sensor_action> >;
 
-std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_action_props();
-std::unordered_map<SENSOR_ACTION_KIND, std::unordered_set<property_map::property_name> > const&  mandatory_sensor_action_names();
+std::unordered_map<SENSOR_ACTION_KIND, property_map::default_config_records_map> const&  default_sensor_action_configs();
 
 
 }

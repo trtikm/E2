@@ -7,6 +7,14 @@
 namespace ai {
 
 
+void  property_map::reset(default_config_records_map const&  cfg)
+{
+    clear();
+    for (auto const&  name_and_record : cfg)
+        set(name_and_record.first, name_and_record.second.value);
+}
+
+
 property_map  property_map::clone() const
 {
     property_map  result;

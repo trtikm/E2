@@ -7,7 +7,9 @@ namespace ai {
 
 
 static std::unordered_map<natural_8_bit, std::pair<std::string, std::string> > const  from_index_to_name_and_description = {
-    { as_number(SENSOR_KIND::TIMER), { "TIMER", "A default sensor." } },
+    { as_number(SENSOR_KIND::TIMER), { "TIMER",
+            "Sends an event to the owner in the end of each passed fixed time period."
+            } },
 };
 
 static std::unordered_map<std::string, SENSOR_KIND> const  from_name_to_kind = []() {

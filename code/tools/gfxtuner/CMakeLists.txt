@@ -97,6 +97,8 @@ add_executable(${THIS_TARGET_NAME}
     dialog_windows/insert_number_dialog.cpp
     dialog_windows/rigid_body_props_dialog.hpp
     dialog_windows/rigid_body_props_dialog.cpp
+    dialog_windows/property_map_widget_utils.hpp
+    dialog_windows/property_map_widget_utils.cpp
 
     simulation/simulator.hpp
     simulation/simulator.cpp

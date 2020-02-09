@@ -30,26 +30,24 @@ public slots:
     void  accept();
     void  reject();
 
-    void  on_kind_combo_changed(int);
+    void  on_kind_combo_changed(int = 0);
+    void  on_props_table_changed(QTableWidgetItem* = nullptr);
 
 private:
 
     Q_OBJECT
 
     ai::SENSOR_KIND  read_kind_combo() const;
-    void  load_property_map_table();
-    void  save_property_map_table();
 
     program_window*  m_wnd;
     bool  m_ok;
     QPushButton* m_widget_ok;
     QComboBox*  m_sensor_kind_combobox;
     QTableWidget*  m_property_map_table;
+    bool  m_locked;
 
-    bool  m_initialised;
     scn::sensor_props  m_current_props;
     scn::sensor_props  m_new_props;
-    std::unordered_map<ai::SENSOR_KIND, ai::property_map>  m_all_props;
 };
 
 

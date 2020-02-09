@@ -2,6 +2,7 @@
 #   define E2_TOOL_GFXTUNER_DIALOG_WINDOWS_DEVICE_PROPS_DIALOG_HPP_INCLUDED
 
 #   include <gfxtuner/program_window.hpp>
+#   include <gfxtuner/dialog_windows/property_map_widget_utils.hpp>
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/records/device/device.hpp>
@@ -13,10 +14,6 @@
 #   include <QDialog>
 #   include <QPushButton>
 #   include <QComboBox>
-#   include <QListWidget>
-#   include <QTableWidget>
-#   include <unordered_map>
-#   include <vector>
 
 namespace dialog_windows {
 
@@ -39,12 +36,6 @@ public slots:
     void  reject();
 
     void  on_device_kind_combo_changed(int = 0);
-    void  on_sensor_record_id_list_selection_changed(int = 0);
-    void  on_sensor_action_kind_list_selection_changed(int = 0);
-    void  on_sensor_action_kind_combo_changed(int = 0);
-    void  on_sensor_action_kind_insert_button_pressed();
-    void  on_sensor_action_kind_delete_button_pressed();
-    void  on_sensor_action_props_table_changed(QTableWidgetItem* = nullptr);
 
 private:
 
@@ -54,17 +45,11 @@ private:
     bool  m_ok;
     QPushButton* m_widget_ok;
     QComboBox*  m_device_kind_combobox;
-    QListWidget*  m_sensor_record_id_list;
-    QListWidget*  m_sensor_action_kind_list;
-    QComboBox*  m_sensor_action_kind_combobox;
-    QPushButton*  m_sensor_action_kind_insert_button;
-    QPushButton*  m_sensor_action_kind_delete_button;
-    QTableWidget*  m_sensor_action_props_table;
-    bool  m_locked;
 
     scn::device_props  m_current_props;
     scn::device_props  m_new_props;
-    std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >  m_sensor_nodes_and_kinds;
+
+    sensor_action_editor  m_sensor_action_editor;
 };
 
 

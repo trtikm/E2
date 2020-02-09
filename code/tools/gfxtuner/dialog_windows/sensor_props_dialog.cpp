@@ -1,5 +1,7 @@
 #include <gfxtuner/dialog_windows/sensor_props_dialog.hpp>
+#include <gfxtuner/dialog_windows/property_map_widget_utils.hpp>
 #include <qtgl/gui_utils.hpp>
+#include <utility/lock_bool.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/canonical_path.hpp>
@@ -41,25 +43,30 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
                     return new s(wnd);
                 }(this)
             )
-    , m_property_map_table(new QTableWidget(1, 2))
+    , m_property_map_table(
+            [](sensor_props_dialog* wnd) {
+                    struct s : public QTableWidget {
+                        s(sensor_props_dialog* wnd) : QTableWidget(1, 2)
+                        {
+                            QObject::connect(this, SIGNAL(itemChanged(QTableWidgetItem*)),
+                                             wnd, SLOT(on_props_table_changed(QTableWidgetItem*)));
+                        }
+                    };
+                    return new s(wnd);
+                }(this)
+            )
+    , m_locked(false)
 
-    , m_initialised(false)
     , m_current_props(current_props)
     , m_new_props(current_props)
-    , m_all_props(ai::sensor::default_configs())
 {
-    {
-        auto&  props = m_all_props.at(m_current_props.m_sensor_kind);
-        for (auto const&  elem : m_current_props.m_sensor_props)
-            props.set(elem);
-    }
-
     QVBoxLayout* const dlg_layout = new QVBoxLayout;
     {
         QHBoxLayout* const kind_layout = new QHBoxLayout;
         {
             QLabel* const  kind_label = new QLabel("Sensor kind");
-            std::string  descriptions_of_kinds = "Defines a kind of the cortex, i.e. sensor's behaviour. These kinds are available:\n";
+            std::string  descriptions_of_kinds =
+                "Defines what the sensor senses and/or what events it sends to the owner. These kinds are available:\n";
             for (natural_8_bit i = 0U; i != ai::num_sensor_kinds(); ++i)
             {
                 ai::SENSOR_KIND const  kind = ai::as_sensor_kind(i);
@@ -72,6 +79,7 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
             {
                 std::string const  kind_name = as_string(ai::as_sensor_kind(i));
                 m_sensor_kind_combobox->addItem(kind_name.c_str());
+
             }
             std::string const  current_kind_name = as_string(m_current_props.m_sensor_kind);
             m_sensor_kind_combobox->setCurrentText(current_kind_name.c_str());
@@ -81,7 +89,7 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
         }
         dlg_layout->addLayout(kind_layout);
 
-        load_property_map_table();
+        rebuild_sensor_property_map_table(m_property_map_table, m_new_props.m_sensor_props, m_new_props.m_sensor_kind, false);
         dlg_layout->addWidget(m_property_map_table);
 
         QHBoxLayout* const buttons_layout = new QHBoxLayout;
@@ -104,17 +112,11 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
     }
     this->setLayout(dlg_layout);
     this->setWindowTitle("sensor");
-
-    m_initialised = true;
 }
 
 
 void  sensor_props_dialog::accept()
 {
-    m_new_props.m_sensor_kind = read_kind_combo();
-    save_property_map_table();
-    m_new_props.m_sensor_props = m_all_props.at(m_new_props.m_sensor_kind);
-
     m_ok = true;
     QDialog::accept();
 }
@@ -126,68 +128,30 @@ void  sensor_props_dialog::reject()
 }
 
 
+void  sensor_props_dialog::on_kind_combo_changed(int)
+{
+    LOCK_BOOL_BLOCK_BEGIN(m_locked);
+        ai::SENSOR_KIND const  new_kind = read_kind_combo();
+        if (new_kind != m_new_props.m_sensor_kind)
+        {
+            m_new_props.m_sensor_kind = new_kind;
+            rebuild_sensor_property_map_table(m_property_map_table, m_new_props.m_sensor_props, new_kind, true);
+        }
+    LOCK_BOOL_BLOCK_END();
+}
+
+
+void  sensor_props_dialog::on_props_table_changed(QTableWidgetItem*)
+{
+    LOCK_BOOL_BLOCK_BEGIN(m_locked);
+        on_property_map_table_changed(m_property_map_table, m_new_props.m_sensor_props);
+    LOCK_BOOL_BLOCK_END();
+}
+
+
 ai::SENSOR_KIND  sensor_props_dialog::read_kind_combo() const
 {
     return as_sensor_kind(qtgl::to_string(m_sensor_kind_combobox->currentText()));
-}
-
-
-void  sensor_props_dialog::on_kind_combo_changed(int)
-{
-    save_property_map_table();
-    m_new_props.m_sensor_kind = read_kind_combo();
-    load_property_map_table();
-}
-
-
-void  sensor_props_dialog::load_property_map_table()
-{
-    auto const&  _ = m_all_props.at(m_new_props.m_sensor_kind);
-    std::map<ai::property_map::property_name, ai::property_map::property_value_ptr> const  props(_.begin(), _.end());
-    m_property_map_table->clear();
-    m_property_map_table->setRowCount((int)props.size());
-    int  row = 0;
-    for (auto const&  elem : props)
-    {
-        QTableWidgetItem*  name_item = m_property_map_table->item(row, 0);
-        if (name_item == nullptr)
-        {
-            m_property_map_table->setItem(row, 0, new QTableWidgetItem);
-            name_item = m_property_map_table->item(row, 0);
-        }
-        QTableWidgetItem*  value_item = m_property_map_table->item(row, 1);
-        if (value_item == nullptr)
-        {
-            m_property_map_table->setItem(row, 1, new QTableWidgetItem);
-            value_item = m_property_map_table->item(row, 1);
-        }
-
-        name_item->setText(elem.first.c_str());
-        std::string const  value_text = as_string(*elem.second);
-        value_item->setText(value_text.c_str());
-
-        ++row;
-    }
-}
-
-
-void  sensor_props_dialog::save_property_map_table()
-{
-    if (!m_initialised)
-        return;
-    auto&  props = m_all_props.at(m_new_props.m_sensor_kind);
-    INVARIANT(m_property_map_table->rowCount() == props.size());
-    for (int  row = 0; row != m_property_map_table->rowCount(); ++row)
-    {
-        QTableWidgetItem* const  name_item = m_property_map_table->item(row, 0);
-        QTableWidgetItem* const  value_item = m_property_map_table->item(row, 1);
-        props.set(qtgl::to_string(name_item->text()),
-                  as_property_map_value(
-                        props.get_type(qtgl::to_string(name_item->text())),
-                        qtgl::to_string(value_item->text())
-                        )
-                  );
-    }
 }
 
 

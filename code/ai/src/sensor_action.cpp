@@ -7,8 +7,12 @@ namespace ai {
 
 
 static std::unordered_map<natural_8_bit, std::pair<std::string, std::string> > const  from_index_to_name_and_description = {
-    { as_number(SENSOR_ACTION_KIND::BEGIN_OF_LIFE), { "BEGIN_OF_LIFE", "Imports a template scene with agent, device, or sensor into the current one." } },
-    { as_number(SENSOR_ACTION_KIND::END_OF_LIFE), { "END_OF_LIFE", "Erase self from the scene." } },
+    { as_number(SENSOR_ACTION_KIND::BEGIN_OF_LIFE), { "BEGIN_OF_LIFE",
+            "Imports a template scene with agent, device, or sensor into the current one."
+            } },
+    { as_number(SENSOR_ACTION_KIND::END_OF_LIFE), { "END_OF_LIFE",
+            "Erase self from the scene."
+            } },
 };
 
 static std::unordered_map<std::string, SENSOR_ACTION_KIND> const  from_name_to_kind = []() {
@@ -25,69 +29,87 @@ std::string const&  description(SENSOR_ACTION_KIND const  kind)
 }
 
 
-std::unordered_map<SENSOR_ACTION_KIND, property_map> const&  default_sensor_action_props()
+std::unordered_map<SENSOR_ACTION_KIND, property_map::default_config_records_map> const&  default_sensor_action_configs()
 {
-    static std::unordered_map<SENSOR_ACTION_KIND, property_map> const  props {
-        { SENSOR_ACTION_KIND::BEGIN_OF_LIFE, property_map({
-                // A unique id of scene to be imported (merged) into the current scene.
-                // Typically, an id is a scene directory (relative to the data root directory).
-                { "scene_id", property_map::make_string("shared/import/TODO") },
-                // A scene node under which the scene will be merged. If the 'parent_nid' node
-                // already contains a node of the same name as the root node of the imported
-                // scene, then the name of the name of the impoted root node is extended by
-                // a suffix making the resulting name unique under the 'parent_nid' node.
-                //      For imported agent the 'parent_nid' must be empty.
-                //      For imported sensor the 'parent_nid' must reference a node under
-                //      nodes tree of an agent or a device.
-                // NOTE: When 'parent_nid' is empty (i.e. not valid), then the root node of the
-                //       impored scene will be put at the root level of the current scene.
-                { "parent_nid", property_map::make_string("TODO") },
-                // The root node of the imported scene will be put at such location under
-                // 'parent_nid' node, so that its world matrix will be the same as the one
-                // of the 'frame_nid' node.
-                { "frame_nid", property_map::make_string("TODO") },
-                // If the root node of the impored scene has a rigid body record, then its
-                // its motion vectors are initialised to this vector below (if they are present).
-                { "linear_velocity_x", property_map::make_float(0.0f) },
-                { "linear_velocity_y", property_map::make_float(0.0f) },
-                { "linear_velocity_z", property_map::make_float(0.0f) },
-                { "angular_velocity_x", property_map::make_float(0.0f) },
-                { "angular_velocity_y", property_map::make_float(0.0f) },
-                { "angular_velocity_z", property_map::make_float(0.0f) },
-                // When represents a valid scene node, then both velocity vectors above will be
-                // transformed from the space of the referenced frame to the world space before
-                // they are applied to the rigid body. Otherwise, the velocity vectors are used
-                // not-transformed.
-                { "velocities_frame_nid", property_map::make_string("TODO") },
-                { "linear_acceleration_x", property_map::make_float(0.0f) },
-                { "linear_acceleration_y", property_map::make_float(0.0f) },
-                { "linear_acceleration_z", property_map::make_float(-9.81f) },
-                { "angular_acceleration_x", property_map::make_float(0.0f) },
-                { "angular_acceleration_y", property_map::make_float(0.0f) },
-                { "angular_acceleration_z", property_map::make_float(0.0f) },
-                // When represents a valid scene node, then both acceleration vectors above will be
-                // transformed from the space of the referenced frame to the world space before
-                // they are applied to the rigid body. Otherwise, the acceleration vectors are used
-                // not-transformed.
-                { "accelerations_frame_nid", property_map::make_string("TODO") },
-                })},
-        { SENSOR_ACTION_KIND::END_OF_LIFE, property_map{} },
+    static natural_32_bit  edit_order = 0U;
+    static std::unordered_map<SENSOR_ACTION_KIND, property_map::default_config_records_map> const  props {
+        { SENSOR_ACTION_KIND::BEGIN_OF_LIFE, {
+                { "scene_id", { property_map::make_string("shared/import/TODO"), true,
+                        "A unique id of scene to be imported (merged) into the current scene.\n"
+                        "Typically, an id is a scene directory (relative to the data root directory).",
+                        edit_order++} },
+                { "parent_nid", { property_map::make_string("TODO"), true,
+                        "A scene node under which the scene will be merged. If the 'parent_nid' node\n"
+                        "already contains a node of the same name as the root node of the imported\n"
+                        "scene, then the name of the name of the impoted root node is extended by\n"
+                        "a suffix making the resulting name unique under the 'parent_nid' node.\n"
+                        "     For imported agent the 'parent_nid' must be empty.\n"
+                        "     For imported sensor the 'parent_nid' must reference a node under\n"
+                        "     nodes tree of an agent or a device.\n"
+                        "NOTE: When 'parent_nid' is empty (i.e. not valid), then the root node of the\n"
+                        "      impored scene will be put at the root level of the current scene.",
+                        edit_order++} },
+                { "frame_nid", { property_map::make_string("TODO"), true,
+                        "The root node of the imported scene will be put at such location under\n"
+                        "'parent_nid' node, so that its world matrix will be the same as the one\n"
+                        "of the 'frame_nid' node.",
+                        edit_order++} },
+                { "linear_velocity_x", { property_map::make_float(0.0f), false,
+                        "x coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "linear_velocity_y", { property_map::make_float(0.0f), false,
+                        "y coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "linear_velocity_z", { property_map::make_float(0.0f), false,
+                        "z coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "angular_velocity_x", { property_map::make_float(0.0f), false,
+                        "x coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "angular_velocity_y", { property_map::make_float(0.0f), false,
+                        "y coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "angular_velocity_z", { property_map::make_float(0.0f), false,
+                        "z coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "velocities_frame_nid", { property_map::make_string(""), false,
+                        "When represents a valid scene node, then both velocity vectors above will be\n"
+                        "transformed from the space of the referenced frame to the world space before\n"
+                        "they are applied to the rigid body. Otherwise, the velocity vectors are used\n"
+                        "not-transformed. NOTE: Used only if the root node of the impored scene has a\n"
+                        "rigid body record.",
+                        edit_order++} },
+                { "linear_acceleration_x", { property_map::make_float(0.0f), false,
+                        "x coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "linear_acceleration_y", { property_map::make_float(0.0f), false,
+                        "y coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "linear_acceleration_z", { property_map::make_float(-9.81f), false,
+                        "z coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "angular_acceleration_x", { property_map::make_float(0.0f), false,
+                        "x coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "angular_acceleration_y", { property_map::make_float(0.0f), false,
+                        "y coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "angular_acceleration_z", { property_map::make_float(0.0f), false,
+                        "z coordinate. NOTE: Used only if the root node of the impored scene has a rigid body record.",
+                        edit_order++} },
+                { "accelerations_frame_nid", { property_map::make_string(""), false,
+                        "When represents a valid scene node, then both acceleration vectors above will be\n"
+                        "transformed from the space of the referenced frame to the world space before\n"
+                        "they are applied to the rigid body. Otherwise, the acceleration vectors are used\n"
+                        "not-transformed. NOTE: Used only if the root node of the impored scene has a rigid\n"
+                        "body record.",
+                        edit_order++
+                        } },
+                } },
+        { SENSOR_ACTION_KIND::END_OF_LIFE, {
+                } }
     };
     return props;
-}
-
-
-std::unordered_map<SENSOR_ACTION_KIND, std::unordered_set<property_map::property_name> > const&  mandatory_sensor_action_names()
-{
-    static std::unordered_map<SENSOR_ACTION_KIND, std::unordered_set<property_map::property_name> > const  names {
-        { SENSOR_ACTION_KIND::BEGIN_OF_LIFE, {
-                "scene_id",
-                "parent_nid",
-                "frame_nid"
-                }},
-        { SENSOR_ACTION_KIND::END_OF_LIFE, {} },
-    };
-    return names;
 }
 
 
@@ -147,11 +169,14 @@ ai::from_sensor_record_to_sensor_action_map  as_sensor_action_map(
             ai::SENSOR_ACTION_KIND action_kind = as_sensor_action_kind(action_it->second.get<std::string>("kind"));
             ai::property_map const&  loaded_props = as_property_map(action_it->second.get_child("props"));
             ai::property_map  action_props;
-            for (auto const&  name_and_value : ai::default_sensor_action_props().at(action_kind))
+            for (auto const&  name_and_record : ai::default_sensor_action_configs().at(action_kind))
             {
-                auto const  it = loaded_props.find(name_and_value.first);
+                auto const  it = loaded_props.find(name_and_record.first);
                 if (it == loaded_props.end())
-                    action_props.set(name_and_value);
+                {
+                    if (name_and_record.second.is_mandatory)
+                        action_props.set(name_and_record.first, name_and_record.second.value);
+                }
                 else
                     action_props.set(*it);
             }

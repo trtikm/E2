@@ -9,15 +9,19 @@
 namespace ai {
 
 
-std::unordered_map<SENSOR_KIND, property_map> const&  sensor::default_configs()
+std::unordered_map<SENSOR_KIND, property_map::default_config_records_map> const&  default_sensor_configs()
 {
-    static std::unordered_map<SENSOR_KIND, property_map> const  cfg{
-        {
-            SENSOR_KIND::TIMER, property_map({
-                { "period_in_seconds", property_map::make_float(1.0f) },
-                { "consumed_in_seconds", property_map::make_float(0.0f) }
-                })
-        }
+    static natural_32_bit  edit_order = 0U;
+    static std::unordered_map<SENSOR_KIND, property_map::default_config_records_map> const  cfg {
+        { SENSOR_KIND::TIMER, {
+                { "period_in_seconds", { property_map::make_float(1.0f), true,
+                        "A time period for repetitive sending the TIMER event to the owner.\n"
+                        "If the period is <= 0.0001f, then the event is sent every time step.",
+                        edit_order++} },
+                { "consumed_in_seconds", { property_map::make_float(0.0f), true,
+                        "Time already consumed from the current period.",
+                        edit_order++} }
+                } }
     };
     return cfg;
 }
@@ -35,17 +39,21 @@ sensor::sensor(simulator* const  simulator_,
     , m_owner_id(owner_id_)
     , m_cfg(cfg_)
 {
-    ASSUMPTION(m_simulator != nullptr && m_owner_id.valid() &&
+    ASSUMPTION(
+        m_simulator != nullptr && m_owner_id.valid() &&
         [](SENSOR_KIND const  kind, property_map const&  cfg) -> bool {
-            auto const&  default_cfg = sensor::default_configs().at(kind);
+            auto const&  default_cfg = default_sensor_configs().at(kind);
             if (cfg.size() != default_cfg.size())
                 return false;
             for (auto const&  elem : default_cfg)
             {
                 auto const  it = cfg.find(elem.first);
                 if (it == cfg.end())
-                    return false;
-                if (it->second->get_type() != elem.second->get_type())
+                {
+                    if (elem.second.is_mandatory)
+                        return false;
+                }
+                else if (it->second->get_type() != elem.second.value->get_type())
                     return false;
             }
             return true;
@@ -58,12 +66,17 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
     if (get_kind() == SENSOR_KIND::TIMER)
     {
         float_32_bit const  period = m_cfg->get_float("period_in_seconds");
-        float_32_bit&  consumed = m_cfg->get_float_ref("consumed_in_seconds");
-        consumed += time_step_in_seconds;
-        while (consumed >= period)
-        {
-            consumed -= period;
+        if (period <= 0.0001f)
             m_simulator->on_sensor_event(*this);
+        else
+        {
+            float_32_bit&  consumed = m_cfg->get_float_ref("consumed_in_seconds");
+            consumed += time_step_in_seconds;
+            while (consumed >= period)
+            {
+                consumed -= period;
+                m_simulator->on_sensor_event(*this);
+            }
         }
     }
 }

@@ -77,6 +77,16 @@ struct property_map
 
     using  map_type = std::unordered_map<property_name, property_value_ptr>;
 
+    struct  default_config_record
+    {
+        property_value_ptr  value;
+        bool  is_mandatory;
+        std::string  description;
+        natural_32_bit  edit_order;
+    };
+    using  default_config_records_map = std::unordered_map<property_map::property_name, default_config_record>;
+
+
     property_map()
         : m_map()
     {}
@@ -85,8 +95,15 @@ struct property_map
         : m_map(props)
     {}
 
+    explicit property_map(default_config_records_map const&  cfg)
+        : m_map()
+    { reset(cfg); }
+
     bool  empty() const { return get_map().empty(); }
     std::size_t  size() const { return get_map().size(); }
+
+    void  clear() { get_map().clear(); }
+    void  reset(default_config_records_map const&  cfg);
 
     property_type_and_value const&  at(property_name const&  name) const { return *get_map().at(name); }
 
@@ -132,7 +149,8 @@ struct property_map
 
     void  set(property_name const&  name, property_type_and_value const&  value);
     void  set(map_type::value_type const&  name_and_value) { set(name_and_value.first, *name_and_value.second); }
-    void  set(property_name const& name, property_value_ptr const  value) { get_map()[name] = value; }
+    void  set(property_name const& name, property_value_ptr const  value) { set(name, *value); }
+    void  set_shared(property_name const& name, property_value_ptr const  value) { get_map()[name] = value; }
 
 private:
     map_type const&  get_map() const { return m_map; }

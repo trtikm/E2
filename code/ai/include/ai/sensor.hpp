@@ -5,6 +5,7 @@
 #   include <ai/object_id.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/property_map.hpp>
+#   include <unordered_map>
 
 namespace ai {
 
@@ -14,8 +15,6 @@ struct  simulator;
 
 struct  sensor
 {
-    static std::unordered_map<SENSOR_KIND, property_map> const&  default_configs();
-
     sensor(simulator* const  simulator_,
            SENSOR_KIND const  kind_,
            scene::record_id const&  self_rid_,
@@ -37,6 +36,9 @@ private:
     object_id  m_owner_id;
     std::shared_ptr<property_map>  m_cfg;
 };
+
+
+std::unordered_map<SENSOR_KIND, property_map::default_config_records_map> const&  default_sensor_configs();
 
 
 }
