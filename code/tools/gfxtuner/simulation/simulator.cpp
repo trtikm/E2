@@ -2411,8 +2411,8 @@ void  simulator::erase_scene_node(scn::scene_node_id const&  id)
     if (node_ptr == nullptr)
         return;
 
-    for (auto const&  elem : node_ptr->get_children())
-        erase_scene_node(elem.second->get_id());
+    while (!node_ptr->get_children().empty())
+        erase_scene_node(node_ptr->get_children().begin()->second->get_id());
 
     {
         std::vector<std::string>  sensor_names;
