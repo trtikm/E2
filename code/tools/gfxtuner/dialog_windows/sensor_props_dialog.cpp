@@ -75,14 +75,15 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
             kind_label->setToolTip(descriptions_of_kinds.c_str());
             kind_layout->addWidget(kind_label);
 
-            for (natural_8_bit i = 0U; i != ai::num_sensor_kinds(); ++i)
-            {
-                std::string const  kind_name = as_string(ai::as_sensor_kind(i));
-                m_sensor_kind_combobox->addItem(kind_name.c_str());
-
-            }
-            std::string const  current_kind_name = as_string(m_current_props.m_sensor_kind);
-            m_sensor_kind_combobox->setCurrentText(current_kind_name.c_str());
+            LOCK_BOOL_BLOCK_BEGIN(m_locked);
+                for (natural_8_bit i = 0U; i != ai::num_sensor_kinds(); ++i)
+                {
+                    std::string const  kind_name = as_string(ai::as_sensor_kind(i));
+                    m_sensor_kind_combobox->addItem(kind_name.c_str());
+                }
+                std::string const  current_kind_name = as_string(m_current_props.m_sensor_kind);
+                m_sensor_kind_combobox->setCurrentText(current_kind_name.c_str());
+            LOCK_BOOL_BLOCK_END();
             kind_layout->addWidget(m_sensor_kind_combobox);
 
             kind_layout->addStretch(1);
