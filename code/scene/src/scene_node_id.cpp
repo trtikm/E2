@@ -11,6 +11,18 @@ scene_node_id  scene_node_id::get_direct_parent_id() const
     return scene_node_id(path);
 }
 
+
+bool  scene_node_id::is_prefix_of(scene_node_id const&  other) const
+{
+    if (other.depth() < depth())
+        return false;
+    for (natural_32_bit  i = 0U; i != depth(); ++i)
+        if (path_element(i) != other.path_element(i))
+            return false;
+    return true;
+}
+
+
 scene_node_id  scene_node_id::copy(natural_32_bit  start_index) const
 {
     path_type  path;

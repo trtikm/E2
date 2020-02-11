@@ -39,6 +39,8 @@ struct  scene_node_id
     path_element_type const&  path_last_element() const { return m_path.back(); }
     scene_node_id  get_direct_parent_id() const;
 
+    bool  is_prefix_of(scene_node_id const&  other) const;
+
     scene_node_id  copy(natural_32_bit  start_index = 0U) const;
 
 private:
