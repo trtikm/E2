@@ -201,7 +201,8 @@ std::string  menu_bar::on_file_action_reload_scene()
 std::string  menu_bar::on_file_action_import_scene()
 {
     QFileDialog  dialog(wnd());
-    dialog.setDirectory(get_default_scene_root_dir().string().c_str());
+    auto const  import_root_dir = (canonical_path(get_program_options()->dataRoot()) / "shared" / "import").string();
+    dialog.setDirectory(import_root_dir.c_str());
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     dialog.setWindowTitle("Import scene");
     if (!dialog.exec())
