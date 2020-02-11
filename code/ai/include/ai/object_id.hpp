@@ -2,6 +2,7 @@
 #   define AI_OBJECT_ID_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
+#   include <utility/hash_combine.hpp>
 #   include <limits>
 
 namespace ai {
@@ -40,6 +41,67 @@ struct  object_id
 
     OBJECT_KIND  kind;
     index_type  index;
+};
+
+
+inline natural_32_bit  as_number(OBJECT_KIND const  kind) noexcept
+{
+    return *reinterpret_cast<natural_32_bit const*>(&kind);
+}
+
+
+inline bool operator==(object_id const&  left, object_id const&  right) noexcept
+{
+    return left.kind == right.kind && left.index == right.index;
+}
+
+
+inline bool operator!=(object_id const&  left, object_id const&  right) noexcept
+{
+    return !(left == right);
+}
+
+
+inline bool operator<(object_id const&  left, object_id const&  right) noexcept
+{
+    return as_number(left.kind) < as_number(right.kind) ||
+            (as_number(left.kind) == as_number(right.kind) && left.index < right.index);
+}
+
+
+inline bool operator>(object_id const&  left, object_id const&  right) noexcept
+{
+    return right < left;
+}
+
+
+inline bool operator<=(object_id const&  left, object_id const&  right) noexcept
+{
+    return left == right || left < right;
+}
+
+
+inline bool operator>=(object_id const&  left, object_id const&  right) noexcept
+{
+    return left == right || left > right;
+}
+
+
+}
+
+namespace std {
+
+
+template<>
+struct hash<ai::object_id>
+{
+    size_t operator()(ai::object_id const&  id) const
+    {
+        std::size_t seed = 0;
+        ::hash_combine(seed, ai::as_number(id.kind));
+        ::hash_combine(seed, id.index);
+        return seed;
+    }
 };
 
 
