@@ -9,7 +9,10 @@ namespace ai {
 
 enum struct  SENSOR_KIND : natural_8_bit
 {
-    TIMER = 0,
+    TOUCH_BEGIN,
+    TOUCHING,
+    TOUCH_END,
+    TIMER
 };
 
 

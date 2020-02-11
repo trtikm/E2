@@ -149,7 +149,7 @@ struct  scene
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
             object_id const&  oid           // Identifies an ai object which will receive the contancts of the collider to its blackboard.
             ) = 0;
-    virtual void  unregister_to_collision_contacts_stream(
+    virtual void  unregister_from_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
             object_id const&  oid           // Identifies an ai object which will stop receiving the contancts of the collider to its blackboard.
             ) = 0;

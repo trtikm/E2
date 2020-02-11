@@ -164,7 +164,7 @@ action_controller::~action_controller()
 
     if (m_motion_object_motion.nid.valid())
     {
-        get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
+        get_blackboard()->m_scene->unregister_from_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
         detail::destroy_motion_scene_node(get_blackboard()->m_scene, m_motion_object_motion.nid);
     }
 }
@@ -398,7 +398,7 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
             m_use_inverted_collider_center_offset_interpolation = true;
         }
 
-        get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
+        get_blackboard()->m_scene->unregister_from_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
         detail::destroy_collider_and_rigid_bofy_of_motion_scene_node(get_blackboard()->m_scene, m_motion_object_motion.nid);
         detail::create_collider_and_rigid_body_of_motion_scene_node(
                 get_blackboard()->m_scene,

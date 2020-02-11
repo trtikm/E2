@@ -23,7 +23,8 @@ struct  sensors
             scene::record_id const&  sensor_rid,
             SENSOR_KIND const  sensor_kind,
             object_id const& owner_id_,
-            property_map const&  cfg_
+            property_map const&  cfg_,
+            std::vector<scene::node_id> const&  collider_nids_
             );
     void  erase(sensor_id const  id) { m_sensors.at(id) = nullptr; }
 
@@ -34,6 +35,9 @@ struct  sensors
     sensor const&  at(sensor_id const  id) const { return *m_sensors.at(id)->sensor_ptr; }
 
     scene_ptr  get_scene_ptr() const { return m_scene; }
+
+    object_id const&  get_owner(sensor_id const  id_);
+    void  set_owner(sensor_id const  id_, object_id const&  owner_id_);
 
     void  next_round(float_32_bit const  time_step_in_seconds);
 
@@ -54,6 +58,7 @@ private:
         SENSOR_KIND  sensor_kind;
         object_id  owner_id;
         std::shared_ptr<property_map>  cfg;
+        std::shared_ptr<std::vector<scene::node_id> >  collider_nids;
     };
 
     void  construct_sensor(sensor_id const  id, sensor_props&  props);

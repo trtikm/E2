@@ -39,10 +39,13 @@ struct simulator
     sensor_id  insert_sensor(
             scene::record_id const&  sensor_rid,
             SENSOR_KIND const  sensor_kind,
-            object_id const& owner_id_,
-            property_map const&  cfg_
+            object_id const&  owner_id_,
+            property_map const&  cfg_,
+            std::vector<scene::node_id> const&  collider_nids_
             );
     void  erase_sensor(sensor_id const  id);
+    object_id const&  get_owner_of_sensor(sensor_id const  id_);
+    void  set_owner_of_sensor(sensor_id const  id_, object_id const&  owner_id_);
 
     void  clear();
 

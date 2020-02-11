@@ -88,7 +88,7 @@ struct bind_ai_scene_to_simulator : public ai::scene
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
             ai::object_id const&  oid       // Identifies an ai object which will receive the contancts of the collider to its blackboard.
             ) override;
-    void  unregister_to_collision_contacts_stream(
+    void  unregister_from_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
             ai::object_id const&  oid       // Identifies an ai object which will stop receiving the contancts of the collider to its blackboard.
             ) override;

@@ -57,17 +57,30 @@ void  simulator::erase_device(device_id const  id)
 sensor_id  simulator::insert_sensor(
         scene::record_id const&  sensor_rid,
         SENSOR_KIND const  sensor_kind,
-        object_id const& owner_id_,
-        property_map const&  cfg_
+        object_id const&  owner_id_,
+        property_map const&  cfg_,
+        std::vector<scene::node_id> const&  collider_nids_
         )
 {
-    return m_sensors.insert(sensor_rid, sensor_kind, owner_id_, cfg_);
+    return m_sensors.insert(sensor_rid, sensor_kind, owner_id_, cfg_, collider_nids_);
 }
 
 
 void  simulator::erase_sensor(sensor_id const  id)
 {
     m_sensors.erase(id);
+}
+
+
+object_id const& simulator::get_owner_of_sensor(sensor_id const  id_)
+{
+    return m_sensors.get_owner(id_);
+}
+
+
+void  simulator::set_owner_of_sensor(sensor_id const  id_, object_id const&  owner_id_)
+{
+    m_sensors.set_owner(id_, owner_id_);
 }
 
 

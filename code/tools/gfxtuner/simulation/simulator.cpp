@@ -1021,9 +1021,9 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     if (rb_1_it == m_binding_of_collision_objects.cend() || rb_2_it == m_binding_of_collision_objects.cend())
                     {
                         if (track_coid_1)
-                            ai_scene_binding->on_collision_contact(coid_1, contact_point, unit_normal, material_2, 0.0f, nullptr);
+                            ai_scene_binding->on_collision_contact(coid_1, contact_point, unit_normal, material_2, 0.0f, &coid_2);
                         if (track_coid_2)
-                            ai_scene_binding->on_collision_contact(coid_2, contact_point, -unit_normal, material_1, 0.0f, nullptr);
+                            ai_scene_binding->on_collision_contact(coid_2, contact_point, -unit_normal, material_1, 0.0f, &coid_1);
                         return true;
                     }
 
@@ -2996,6 +2996,15 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::agent_props 
                     );
     scn::insert_agent(*node_ptr, agent_id, props);
     m_binding_of_agents_to_scene[agent_id] = id.get_node_id();
+
+    ai::object_id const  agent_oid{ ai::OBJECT_KIND::AGENT, agent_id };
+    auto const  set_owner_of_sensor = [this, &agent_oid](scn::scene_node_ptr const  node_ptr) -> bool {
+        for (auto const& name_holder : scn::get_sensor_holders(*node_ptr))
+            get_ai_simulator()->set_owner_of_sensor(scn::as_sensor(name_holder.second)->id(), agent_oid);
+        return true;
+    };
+    set_owner_of_sensor(node_ptr);
+    node_ptr->foreach_child(set_owner_of_sensor, true);
 }
 
 
@@ -3053,6 +3062,15 @@ void  simulator::insert_device(scn::scene_record_id const&  id, scn::device_prop
                     );
     scn::insert_device(*node_ptr, device_id, props);
     m_binding_of_devices_to_scene[device_id] = id.get_node_id();
+
+    ai::object_id const  device_oid{ ai::OBJECT_KIND::DEVICE, device_id };
+    auto const  set_owner_of_sensor = [this, &device_oid](scn::scene_node_ptr const  node_ptr) -> bool {
+        for (auto const&  name_holder : scn::get_sensor_holders(*node_ptr))
+            get_ai_simulator()->set_owner_of_sensor(scn::as_sensor(name_holder.second)->id(), device_oid);
+            return true;
+    };
+    set_owner_of_sensor(node_ptr);
+    node_ptr->foreach_child(set_owner_of_sensor, true);
 }
 
 
@@ -3115,13 +3133,19 @@ void  simulator::insert_sensor(scn::scene_record_id const&  id, scn::sensor_prop
             break;
         }
     }
-    ASSUMPTION(owner_id.valid());
+    std::vector<scn::scene_node_id>  collider_nids;
+    foreach_collider_in_subtree(
+            node_ptr,
+            [&collider_nids](scn::collider&, scn::scene_node_ptr const  ptr) -> void {
+                collider_nids.push_back(ptr->get_id());
+            });
     ai::sensor_id const  sensor_id =
             get_ai_simulator()->insert_sensor(
                     id,
                     props.m_sensor_kind,
                     owner_id,
-                    props.m_sensor_props
+                    props.m_sensor_props,
+                    collider_nids
                     );
     scn::insert_sensor(*node_ptr, id.get_record_name(), sensor_id, props);
     m_binding_of_sensors_to_scene.insert({ sensor_id, id });
@@ -3281,8 +3305,8 @@ void  simulator::load_rigid_body(
     auto const  load_matrix33 = [&data](std::string const&  key, matrix33&  M) -> void {
         boost::property_tree::path const  key_path(key, '/');
         M(0,0) = data.get<float_32_bit>(key_path / "00");
-        M(0,1) = data.get<float_32_bit>(key_path / "00");
-        M(0,2) = data.get<float_32_bit>(key_path / "00");
+        M(0,1) = data.get<float_32_bit>(key_path / "01");
+        M(0,2) = data.get<float_32_bit>(key_path / "02");
         M(1,0) = data.get<float_32_bit>(key_path / "10");
         M(1,1) = data.get<float_32_bit>(key_path / "11");
         M(1,2) = data.get<float_32_bit>(key_path / "12");
@@ -3333,8 +3357,8 @@ void  simulator::save_rigid_body(scn::scene_node_id const&  id, boost::property_
     auto const  save_matrix33 = [&data](std::string const&  key, matrix33 const&  M) -> void {
         boost::property_tree::path const  key_path(key, '/');
         data.put(key_path / "00", M(0,0));
-        data.put(key_path / "00", M(0,1));
-        data.put(key_path / "00", M(0,2));
+        data.put(key_path / "01", M(0,1));
+        data.put(key_path / "02", M(0,2));
         data.put(key_path / "10", M(1,0));
         data.put(key_path / "11", M(1,1));
         data.put(key_path / "12", M(1,2));

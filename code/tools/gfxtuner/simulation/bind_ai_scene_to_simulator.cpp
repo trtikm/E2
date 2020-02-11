@@ -403,16 +403,19 @@ void  bind_ai_scene_to_simulator::register_to_collision_contacts_stream(
 }
 
 
-void  bind_ai_scene_to_simulator::unregister_to_collision_contacts_stream(
+void  bind_ai_scene_to_simulator::unregister_from_collision_contacts_stream(
         node_id const&  collider_nid,
         ai::object_id const&  oid
         )
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
     auto const  node_ptr = m_simulator_ptr->get_scene_node(collider_nid);
-    ASSUMPTION(node_ptr != nullptr);
+    if (node_ptr == nullptr)
+        return;
     auto const  collider_ptr = scn::get_collider(*node_ptr);
-    ASSUMPTION(collider_ptr != nullptr && collider_ptr->ids().size() == 1UL);
+    if (collider_ptr == nullptr)
+        return;
+    ASSUMPTION(collider_ptr->ids().size() == 1UL);
     ASSUMPTION(m_collision_contacts_stream.count(collider_ptr->id()) != 0UL);
     m_collision_contacts_stream.erase(collider_ptr->id());
 }

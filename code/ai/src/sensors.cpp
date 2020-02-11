@@ -22,15 +22,16 @@ sensor_id  sensors::insert(
         scene::record_id const&  sensor_rid,
         SENSOR_KIND const  sensor_kind,
         object_id const&  owner_id_,
-        property_map const&  cfg_)
+        property_map const&  cfg_,
+        std::vector<scene::node_id> const&  collider_nids_
+        )
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(
         sensor_rid.valid() &&
         !sensor_rid.is_node_reference() &&
-        !sensor_rid.is_folder_reference() &&
-        owner_id_.valid()
+        !sensor_rid.is_folder_reference()
         );
 
     sensor_id  id = 0U;
@@ -44,6 +45,7 @@ sensor_id  sensors::insert(
     props->sensor_kind = sensor_kind;
     props->owner_id = owner_id_;
     props->cfg = std::make_shared<property_map>(cfg_);
+    props->collider_nids = std::make_shared<std::vector<scene::node_id> >(collider_nids_);
 
     if (id == m_sensors.size())
         m_sensors.resize(m_sensors.size() + 1U, nullptr);
@@ -57,7 +59,35 @@ void  sensors::construct_sensor(sensor_id const  id, sensor_props&  props)
 {
     TMPROF_BLOCK();
 
-    props.sensor_ptr = std::make_unique<sensor>(m_simulator, props.sensor_kind, props.sensor_rid, props.owner_id, props.cfg);
+    props.sensor_ptr = std::make_unique<sensor>(
+                            m_simulator,
+                            props.sensor_kind,
+                            object_id{ OBJECT_KIND::SENSOR, id },
+                            props.sensor_rid,
+                            props.owner_id,
+                            props.cfg,
+                            props.collider_nids
+                            );
+}
+
+
+object_id const& sensors::get_owner(sensor_id const  id_)
+{
+    ASSUMPTION(id_ < m_sensors.size());
+    if (m_sensors.at(id_)->sensor_ptr == nullptr)
+        return m_sensors.at(id_)->owner_id;
+    else
+        return m_sensors.at(id_)->sensor_ptr->get_owner_id();
+}
+
+
+void  sensors::set_owner(sensor_id const  id_, object_id const&  owner_id_)
+{
+    ASSUMPTION(id_ < m_sensors.size());
+    if (m_sensors.at(id_)->sensor_ptr == nullptr)
+        m_sensors.at(id_)->owner_id = owner_id_;
+    else
+        m_sensors.at(id_)->sensor_ptr->set_owner_id(owner_id_);
 }
 
 
@@ -85,6 +115,8 @@ void  sensors::on_collision_contact(
         scene::node_id const&  other_collider_nid
         )
 {
+    ASSUMPTION(id < m_sensors.size() && m_sensors.at(id)->sensor_ptr != nullptr);
+    m_sensors.at(id)->sensor_ptr->on_collision_contact(collider_nid, contact_info, other_id, other_collider_nid);
 }
 
 
