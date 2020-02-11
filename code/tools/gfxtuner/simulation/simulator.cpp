@@ -1097,8 +1097,13 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
     for (auto const&  rb_id_and_node_ptr : m_binding_of_rigid_bodies)
     {
         angeo::rigid_body_id const  rb_id = rb_id_and_node_ptr.first;
-        if (m_rigid_body_simulator_ptr->get_inverted_mass(rb_id) < 0.0001f)
+        if (m_rigid_body_simulator_ptr->get_inverted_mass(rb_id) < 0.0001f &&
+            length_squared(m_rigid_body_simulator_ptr->get_linear_velocity(rb_id)) < 1e-5f &&
+            length_squared(m_rigid_body_simulator_ptr->get_angular_velocity(rb_id)) < 1e-5f)
+        {
             continue;
+        }
+
         scn::scene_node_ptr const  rb_node_ptr = rb_id_and_node_ptr.second;
 
         vector3  origin;
