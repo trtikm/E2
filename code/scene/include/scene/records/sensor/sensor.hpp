@@ -13,6 +13,7 @@ namespace scn {
 struct  sensor_props
 {
     ai::SENSOR_KIND  m_sensor_kind;
+    bool  m_enabled;
     ai::property_map  m_sensor_props;
 };
 

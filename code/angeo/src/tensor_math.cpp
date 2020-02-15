@@ -188,6 +188,26 @@ quaternion  interpolate_spherical(quaternion const& u, quaternion const& v, floa
 }
 
 
+matrix33  row_vectors_to_matrix(vector3 const&  row_0, vector3 const&  row_1, vector3 const&  row_2)
+{
+    matrix33  R;
+    R(0, 0) = row_0(0);  R(0, 1) = row_0(1);  R(0, 2) = row_0(2);
+    R(1, 0) = row_1(0);  R(1, 1) = row_1(1);  R(1, 2) = row_1(2);
+    R(2, 0) = row_2(0);  R(2, 1) = row_2(1);  R(2, 2) = row_2(2);
+    return R;
+}
+
+
+matrix33  column_vectors_to_matrix(vector3 const&  col_0, vector3 const&  col_1, vector3 const&  col_2)
+{
+    matrix33  R;
+    R(0, 0) = col_0(0);  R(0, 1) = col_1(0);  R(0, 2) = col_2(0);
+    R(1, 0) = col_0(1);  R(1, 1) = col_1(1);  R(1, 2) = col_2(1);
+    R(2, 0) = col_0(2);  R(2, 1) = col_1(2);  R(2, 2) = col_2(2);
+    return R;
+}
+
+
 void  rotation_matrix_to_basis(
         matrix33 const&  R,
         vector3&  x_axis_unit_vector,

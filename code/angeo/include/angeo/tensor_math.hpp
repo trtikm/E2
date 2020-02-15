@@ -157,6 +157,9 @@ inline matrix33 matrix33_zero() { return matrix33::Zero(); }
 inline matrix43 matrix43_zero() { return matrix43::Zero(); }
 inline matrix44 matrix44_zero() { return matrix44::Zero(); }
 
+matrix33  row_vectors_to_matrix(vector3 const&  row_0, vector3 const&  row_1, vector3 const&  row_2);
+matrix33  column_vectors_to_matrix(vector3 const&  col_0, vector3 const&  col_1, vector3 const&  col_2);
+
 inline matrix22  transpose22(matrix22 const&  M) { return M.transpose(); }
 inline matrix33  transpose33(matrix33 const&  M) { return M.transpose(); }
 inline matrix44  transpose44(matrix44 const&  M) { return M.transpose(); }

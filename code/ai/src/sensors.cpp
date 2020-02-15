@@ -22,6 +22,7 @@ sensor_id  sensors::insert(
         scene::record_id const&  sensor_rid,
         SENSOR_KIND const  sensor_kind,
         object_id const&  owner_id_,
+        bool const  enabled_,
         property_map const&  cfg_,
         std::vector<scene::node_id> const&  collider_nids_
         )
@@ -44,6 +45,7 @@ sensor_id  sensors::insert(
     props->sensor_rid = sensor_rid;
     props->sensor_kind = sensor_kind;
     props->owner_id = owner_id_;
+    props->enabled = enabled_;
     props->cfg = std::make_shared<property_map>(cfg_);
     props->collider_nids = std::make_shared<std::vector<scene::node_id> >(collider_nids_);
 
@@ -51,7 +53,16 @@ sensor_id  sensors::insert(
         m_sensors.resize(m_sensors.size() + 1U, nullptr);
     m_sensors.at(id) = props;
 
+    m_from_rid_to_id[sensor_rid] = id;
+
     return id;
+}
+
+
+void  sensors::erase(sensor_id const  id)
+{
+    m_from_rid_to_id.erase(m_sensors.at(id)->sensor_rid);
+    m_sensors.at(id) = nullptr;
 }
 
 
@@ -65,6 +76,7 @@ void  sensors::construct_sensor(sensor_id const  id, sensor_props&  props)
                             object_id{ OBJECT_KIND::SENSOR, id },
                             props.sensor_rid,
                             props.owner_id,
+                            props.enabled,
                             props.cfg,
                             props.collider_nids
                             );
@@ -88,6 +100,26 @@ void  sensors::set_owner(sensor_id const  id_, object_id const&  owner_id_)
         m_sensors.at(id_)->owner_id = owner_id_;
     else
         m_sensors.at(id_)->sensor_ptr->set_owner_id(owner_id_);
+}
+
+
+bool  sensors::is_enabled(sensor_id const  id_)
+{
+    ASSUMPTION(id_ < m_sensors.size());
+    if (m_sensors.at(id_)->sensor_ptr == nullptr)
+        return m_sensors.at(id_)->enabled;
+    else
+        return m_sensors.at(id_)->sensor_ptr->is_enabled();
+}
+
+
+void  sensors::set_enabled(sensor_id const  id_, bool const  state_)
+{
+    ASSUMPTION(id_ < m_sensors.size());
+    if (m_sensors.at(id_)->sensor_ptr == nullptr)
+        m_sensors.at(id_)->enabled = state_;
+    else
+        m_sensors.at(id_)->sensor_ptr->set_enabled(state_);
 }
 
 

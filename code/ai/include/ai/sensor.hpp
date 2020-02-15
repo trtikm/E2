@@ -37,6 +37,7 @@ struct  sensor
            object_id const&  self_id_,
            scene::record_id const&  self_rid_,
            object_id const&  owner_id_,
+           bool const  enabled_,
            std::shared_ptr<property_map> const  cfg_,
            std::shared_ptr<std::vector<scene::node_id> > const  collider_nids_
            );
@@ -45,6 +46,8 @@ struct  sensor
     SENSOR_KIND  get_kind() const { return m_kind; }
     scene::record_id const&  get_self_rid() const { return m_self_rid; }
     object_id const&  get_owner_id() const { return m_owner_id; }
+    bool  is_enabled() const { return m_enabled; }
+    void  set_enabled(bool const  state) { m_enabled = state; m_collision_contacts_buffer.clear(); }
     property_map const&  get_config() const { return *m_cfg; }
     std::vector<collision_contact_record> const&  get_collision_contacts() const { return m_collision_contacts_buffer; }
     std::unordered_set<object_id> const&  get_touch_begin_ids() const { return m_touch_begin_ids; }
@@ -68,6 +71,7 @@ private:
     object_id  m_self_id;
     scene::record_id  m_self_rid;
     object_id  m_owner_id;
+    bool  m_enabled;
 
     std::shared_ptr<property_map>  m_cfg;
 

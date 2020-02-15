@@ -51,6 +51,7 @@ sensor::sensor(simulator* const  simulator_,
                object_id const&  self_id_,
                scene::record_id const&  self_rid_,
                object_id const&  owner_id_,
+               bool const  enabled_,
                std::shared_ptr<property_map> const  cfg_,
                std::shared_ptr<std::vector<scene::node_id> > const  collider_nids_
                )
@@ -59,6 +60,7 @@ sensor::sensor(simulator* const  simulator_,
     , m_self_id(self_id_)
     , m_self_rid(self_rid_)
     , m_owner_id(owner_id_)
+    , m_enabled(enabled_)
 
     , m_cfg(cfg_)
 
@@ -116,6 +118,9 @@ void  sensor::set_owner_id(object_id const&  id)
 
 void  sensor::next_round(float_32_bit const  time_step_in_seconds)
 {
+    if (!is_enabled())
+        return;
+
     if (!m_owner_id.valid())
         return;
 
@@ -180,6 +185,9 @@ void  sensor::on_collision_contact(
         scene::node_id const&  other_collider_nid
         )
 {
+    if (!is_enabled())
+        return;
+
     if (!m_owner_id.valid())
         return;
 

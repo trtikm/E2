@@ -58,11 +58,12 @@ sensor_id  simulator::insert_sensor(
         scene::record_id const&  sensor_rid,
         SENSOR_KIND const  sensor_kind,
         object_id const&  owner_id_,
+        bool const  enabled_,
         property_map const&  cfg_,
         std::vector<scene::node_id> const&  collider_nids_
         )
 {
-    return m_sensors.insert(sensor_rid, sensor_kind, owner_id_, cfg_, collider_nids_);
+    return m_sensors.insert(sensor_rid, sensor_kind, owner_id_, enabled_, cfg_, collider_nids_);
 }
 
 
@@ -81,6 +82,24 @@ object_id const& simulator::get_owner_of_sensor(sensor_id const  id_)
 void  simulator::set_owner_of_sensor(sensor_id const  id_, object_id const&  owner_id_)
 {
     m_sensors.set_owner(id_, owner_id_);
+}
+
+
+bool  simulator::is_sensor_enabled(sensor_id const  id_)
+{
+    return m_sensors.is_enabled(id_);
+}
+
+
+void  simulator::set_sensor_enabled(sensor_id const  id_, bool const  state_)
+{
+    m_sensors.set_enabled(id_, state_);
+}
+
+
+void  simulator::set_sensor_enabled(scene::record_id const&  sensor_rid, bool const  state_)
+{
+    set_sensor_enabled(m_sensors.to_id(sensor_rid), state_);
 }
 
 

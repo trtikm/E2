@@ -154,6 +154,52 @@ void  agent::on_sensor_event(sensor const&  s)
         case SENSOR_ACTION_KIND::BEGIN_OF_LIFE:
             get_blackboard()->m_scene->accept(scene::create_request<scene::request_merge_scene>(action.props));
             break;
+
+        case SENSOR_ACTION_KIND::ENABLE_SENSOR:
+            get_blackboard()->m_simulator_ptr->set_sensor_enabled(action.props.get_scene_record_id("sensor_rid"), true);
+            break;
+        case SENSOR_ACTION_KIND::DISABLE_SENSOR:
+            get_blackboard()->m_simulator_ptr->set_sensor_enabled(action.props.get_scene_record_id("sensor_rid"), false);
+            break;
+
+        case SENSOR_ACTION_KIND::SET_LINEAR_VELOCITY:
+            get_blackboard()->m_scene->set_linear_velocity_of_rigid_body_of_scene_node(
+                    action.props.get_scene_node_id("rigid_body_nid"),
+                    action.props.get_vector3()
+                    );
+            break;
+        case SENSOR_ACTION_KIND::SET_ANGULAR_VELOCITY:
+            get_blackboard()->m_scene->set_angular_velocity_of_rigid_body_of_scene_node(
+                    action.props.get_scene_node_id("rigid_body_nid"),
+                    action.props.get_vector3()
+                    );
+            break;
+        case SENSOR_ACTION_KIND::SET_LINEAR_ACCELERATION:
+            get_blackboard()->m_scene->set_linear_acceleration_of_rigid_body_of_scene_node(
+                    action.props.get_scene_node_id("rigid_body_nid"),
+                    action.props.get_vector3()
+                    );
+            break;
+        case SENSOR_ACTION_KIND::SET_ANGULAR_ACCELERATION:
+            get_blackboard()->m_scene->set_angular_acceleration_of_rigid_body_of_scene_node(
+                    action.props.get_scene_node_id("rigid_body_nid"),
+                    action.props.get_vector3()
+                    );
+            break;
+
+        case SENSOR_ACTION_KIND::SET_MASS_INVERTED:
+            get_blackboard()->m_scene->set_inverted_mass_of_rigid_body_of_scene_node(
+                    action.props.get_scene_node_id("rigid_body_nid"),
+                    action.props.get_float("inverted_mass")
+                    );
+            break;
+        case SENSOR_ACTION_KIND::SET_INERTIA_TENSOR_INVERTED:
+            get_blackboard()->m_scene->set_inverted_inertia_tensor_of_rigid_body_of_scene_node(
+                    action.props.get_scene_node_id("rigid_body_nid"),
+                    action.props.get_matrix33()
+                    );
+            break;
+
         case SENSOR_ACTION_KIND::END_OF_LIFE:
             get_blackboard()->m_scene->accept(scene::create_request<scene::request_erase_nodes_tree>(get_blackboard()->m_self_nid));
             break;

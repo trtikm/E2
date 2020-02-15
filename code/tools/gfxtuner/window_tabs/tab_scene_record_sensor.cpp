@@ -94,6 +94,7 @@ void  register_record_handler_for_insert_scene_record(
                             [w](scn::scene_record_id const&  record_id) -> bool {
                                     scn::sensor_props const  props {
                                         ai::SENSOR_KIND::TIMER,
+                                        true,
                                         ai::property_map(ai::default_sensor_configs().at(ai::SENSOR_KIND::TIMER))
                                     };
                                     dialog_windows::sensor_props_dialog  dlg(w->wnd(), props);

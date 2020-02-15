@@ -3149,6 +3149,7 @@ void  simulator::insert_sensor(scn::scene_record_id const&  id, scn::sensor_prop
                     id,
                     props.m_sensor_kind,
                     owner_id,
+                    props.m_enabled,
                     props.m_sensor_props,
                     collider_nids
                     );
@@ -3447,6 +3448,7 @@ void  simulator::load_sensor(boost::property_tree::ptree const&  data, scn::scen
 
     scn::sensor_props const  props{
         as_sensor_kind(data.get<std::string>("kind")),
+        data.get<bool>("enabled", true),
         as_property_map(data.get_child("property_map"))
     };
     insert_sensor(id, props);
@@ -3460,6 +3462,7 @@ void  simulator::save_sensor(scn::scene_node_ptr const  node_ptr, scn::scene_nod
     scn::sensor const* const  sensor_ptr = scn::get_sensor(*node_ptr, id.get_record_name());
     ASSUMPTION(sensor_ptr != nullptr);
     data.put("kind", as_string(sensor_ptr->get_props().m_sensor_kind));
+    data.put("enabled", sensor_ptr->get_props().m_enabled);
     data.put_child("property_map", as_ptree(sensor_ptr->get_props().m_sensor_props));
 }
 

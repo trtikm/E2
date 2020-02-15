@@ -15,8 +15,20 @@ namespace ai {
 
 enum struct  SENSOR_ACTION_KIND : natural_8_bit
 {
-    BEGIN_OF_LIFE       = 0,
-    END_OF_LIFE         = 1,
+    BEGIN_OF_LIFE,
+
+    ENABLE_SENSOR,
+    DISABLE_SENSOR,
+
+    SET_LINEAR_VELOCITY,
+    SET_ANGULAR_VELOCITY,
+    SET_LINEAR_ACCELERATION,
+    SET_ANGULAR_ACCELERATION,
+
+    SET_MASS_INVERTED,
+    SET_INERTIA_TENSOR_INVERTED,
+
+    END_OF_LIFE
 };
 
 std::string const&  description(SENSOR_ACTION_KIND const  kind);

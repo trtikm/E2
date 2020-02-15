@@ -10,6 +10,34 @@ static std::unordered_map<natural_8_bit, std::pair<std::string, std::string> > c
     { as_number(SENSOR_ACTION_KIND::BEGIN_OF_LIFE), { "BEGIN_OF_LIFE",
             "Imports a template scene with agent, device, or sensor into the current one."
             } },
+
+    { as_number(SENSOR_ACTION_KIND::ENABLE_SENSOR), { "ENABLE_SENSOR",
+            "Enable the sensor, i.e. the sensor will start to sense and send corresponding events to the owner."
+            } },
+    { as_number(SENSOR_ACTION_KIND::DISABLE_SENSOR), { "DISABLE_SENSOR",
+            "Disable the sensor, i.e. the sensor will stop to sense and send corresponding events to the owner."
+            } },
+
+    { as_number(SENSOR_ACTION_KIND::SET_LINEAR_VELOCITY), { "SET_LINEAR_VELOCITY",
+            "Set linear velocity of a rigid body scene node under an agent or device node."
+            } },
+    { as_number(SENSOR_ACTION_KIND::SET_ANGULAR_VELOCITY), { "SET_ANGULAR_VELOCITY",
+            "Set angular velocity of a rigid body scene node under an agent or device node."
+            } },
+    { as_number(SENSOR_ACTION_KIND::SET_LINEAR_ACCELERATION), { "SET_LINEAR_ACCELERATION",
+            "Set linear acceleration of a rigid body scene node under an agent or device node."
+            } },
+    { as_number(SENSOR_ACTION_KIND::SET_ANGULAR_ACCELERATION), { "SET_ANGULAR_ACCELERATION",
+            "Set angular acceleration of a rigid body scene node under an agent or device node."
+            } },
+
+    { as_number(SENSOR_ACTION_KIND::SET_MASS_INVERTED), { "SET_MASS_INVERTED",
+            "Set inverted mass of a rigid body scene node under an agent or device node."
+            } },
+    { as_number(SENSOR_ACTION_KIND::SET_INERTIA_TENSOR_INVERTED), { "SET_INERTIA_TENSOR_INVERTED",
+            "Set inverted inertia tensor of a rigid body scene node under an agent or device node."
+            } },
+
     { as_number(SENSOR_ACTION_KIND::END_OF_LIFE), { "END_OF_LIFE",
             "Erase self from the scene."
             } },
@@ -106,6 +134,129 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map::default_config_records_map>
                         edit_order++
                         } },
                 } },
+
+        { SENSOR_ACTION_KIND::ENABLE_SENSOR, {
+                { "sensor_rid", { property_map::make_string("TODO"), true,
+                        "Identifies a scene sensor which will be enabled (i.e. sensing\n"
+                        "and sensing corresponding events to its owner).",
+                        edit_order++} },
+                } },
+        { SENSOR_ACTION_KIND::DISABLE_SENSOR, {
+                { "sensor_rid", { property_map::make_string("TODO"), true,
+                        "Identifies a scene sensor which will be disabled (i.e. not sensing).",
+                        edit_order++} },
+                } },
+
+        { SENSOR_ACTION_KIND::SET_LINEAR_VELOCITY, {
+                { "rigid_body_nid", { property_map::make_string("TODO"), true,
+                        "A scene node under an agent or device scene node. The node must contain a rigid\n"
+                        "body record whose linear velocity to set.",
+                        edit_order++} },
+                { "x", { property_map::make_float(0.0f), true,
+                        "x coordinate of the velocity vector in world space.",
+                        edit_order++} },
+                { "y", { property_map::make_float(0.0f), true,
+                        "y coordinate of the velocity vector in world space.",
+                        edit_order++} },
+                { "z", { property_map::make_float(0.0f), true,
+                        "z coordinate of the velocity vector in world space.",
+                        edit_order++} },
+                } },
+        { SENSOR_ACTION_KIND::SET_ANGULAR_VELOCITY, {
+                { "rigid_body_nid", { property_map::make_string("TODO"), true,
+                        "A scene node under an agent or device scene. The node must contain a rigid\n"
+                        "body record whose angulat velocity to set.",
+                        edit_order++} },
+                { "x", { property_map::make_float(0.0f), true,
+                        "x coordinate of the velocity vector in world space.",
+                        edit_order++} },
+                { "y", { property_map::make_float(0.0f), true,
+                        "y coordinate of the velocity vector in world space.",
+                        edit_order++} },
+                { "z", { property_map::make_float(0.0f), true,
+                        "z coordinate of the velocity vector in world space.",
+                        edit_order++} },
+                } },
+        { SENSOR_ACTION_KIND::SET_LINEAR_ACCELERATION, {
+                { "rigid_body_nid", { property_map::make_string("TODO"), true,
+                        "A scene node under an agent or device scene. The node must contain a rigid\n"
+                        "body record whose linear acceleration to set.",
+                        edit_order++} },
+                { "x", { property_map::make_float(0.0f), true,
+                        "x coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                { "y", { property_map::make_float(0.0f), true,
+                        "y coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                { "z", { property_map::make_float(0.0f), true,
+                        "z coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                } },
+        { SENSOR_ACTION_KIND::SET_ANGULAR_ACCELERATION, {
+                { "rigid_body_nid", { property_map::make_string("TODO"), true,
+                        "A scene node under an agent or device scene. The node must contain a rigid\n"
+                        "body record whose angular acceleration to set.",
+                        edit_order++} },
+                { "x", { property_map::make_float(0.0f), true,
+                        "x coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                { "y", { property_map::make_float(0.0f), true,
+                        "y coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                { "z", { property_map::make_float(0.0f), true,
+                        "z coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                } },
+
+        { SENSOR_ACTION_KIND::SET_MASS_INVERTED, {
+                { "rigid_body_nid", { property_map::make_string("TODO"), true,
+                        "A scene node under an agent or device scene. The node must contain a rigid\n"
+                        "body record whose inverted mass to set.",
+                        edit_order++} },
+                { "inverted_mass", { property_map::make_float(0.0f), true,
+                        "An inverted mass to be set to the rigid body. The value 0.0 would make the rigid\n"
+                        "body special in the sense that no other rigid body can affect its translation motion.\n"
+                        "NOTE: That implies that collision forces of two rigid bodies with zero inverted weights\n"
+                        "      can NOT prevent their penetration via translation.",
+                        edit_order++} },
+                } },
+        { SENSOR_ACTION_KIND::SET_INERTIA_TENSOR_INVERTED, {
+                { "rigid_body_nid", { property_map::make_string("TODO"), true,
+                        "A scene node under an agent or device scene. The node must contain a rigid\n"
+                        "body record whose inverted inertia tensor to set. The zero matrix would make the rigid\n"
+                        "body special in the sense that no other rigid body can affect its rotation motion.\n"
+                        "NOTE: That implies that collision forces of two rigid bodies with zero inverted inertial\n"
+                        "      tensors can NOT prevent their penetration via rotation.",
+                        edit_order++} },
+                { "0_0", { property_map::make_float(0.0f), true,
+                        "Element (0,0) of the inverted inertia tensor.",
+                        edit_order++} },
+                { "0_1", { property_map::make_float(0.0f), true,
+                        "Element (0,1) of the inverted inertia tensor.",
+                        edit_order++} },
+                { "0_2", { property_map::make_float(0.0f), true,
+                        "Element (0,2) of the inverted inertia tensor.",
+                        edit_order++} },
+                { "1_0", { property_map::make_float(0.0f), true,
+                        "Element (1,0) of the inverted inertia tensor.",
+                        edit_order++} },
+                { "1_1", { property_map::make_float(0.0f), true,
+                        "Element (1,1) of the inverted inertia tensor.",
+                        edit_order++} },
+                { "1_2", { property_map::make_float(0.0f), true,
+                        "Element (1,2) of the inverted inertia tensor.",
+                        edit_order++} },
+                { "2_0", { property_map::make_float(0.0f), true,
+                        "Element (2,0) of the inverted inertia tensor.",
+                        edit_order++} },
+                { "2_1", { property_map::make_float(0.0f), true,
+                        "Element (2,1) of the inverted inertia tensor.",
+                        edit_order++} },
+                { "2_2", { property_map::make_float(0.0f), true,
+                        "Element (2,2) of the inverted inertia tensor.",
+                        edit_order++} },
+                } },
+
         { SENSOR_ACTION_KIND::END_OF_LIFE, {
                 } }
     };

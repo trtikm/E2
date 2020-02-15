@@ -131,8 +131,13 @@ struct property_map
     float_32_bit  get_float(property_name const&  name) const { return as<float_value>(at(name)).value(); }
     std::string const&  get_string(property_name const&  name) const { return as<string_value>(at(name)).value(); }
 
+    vector3  get_vector3() const { return vector3(get_float("x"), get_float("y"), get_float("z")); }
     vector3  get_vector3(property_name const&  name) const
     { return vector3(get_float(name + "_x"), get_float(name + "_y"), get_float(name + "_z")); }
+
+    matrix33  get_matrix33() const { return row_vectors_to_matrix(get_vector3("0"), get_vector3("1"), get_vector3("2")); }
+    matrix33  get_matrix33(property_name const&  name) const
+    { return row_vectors_to_matrix(get_vector3(name + "_0"), get_vector3(name + "_1"), get_vector3(name + "_2")); }
 
     scene_node_id  get_scene_node_id(property_name const&  name) const { return as_scene_node_id(get_string(name)); }
     scene_record_id  get_scene_record_id(property_name const& name) const { return as_scene_record_id(get_string(name)); }
