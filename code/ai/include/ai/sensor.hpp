@@ -21,13 +21,13 @@ struct  sensor
     {
         collision_contact_record(
                 scene::node_id const&  collider_nid_,
-                scene::collicion_contant_info const&  contact_info_,
+                scene::collicion_contant_info_ptr const  contact_info_,
                 object_id const&  other_id_,
                 scene::node_id const&  other_collider_nid_
                 );
 
         scene::node_id  collider_nid;
-        scene::collicion_contant_info  contact_info;
+        scene::collicion_contant_info_ptr  contact_info;
         object_id  other_id;
         scene::node_id  other_collider_nid;
     };
@@ -60,7 +60,7 @@ struct  sensor
 
     void  on_collision_contact(
             scene::node_id const&  collider_nid,
-            scene::collicion_contant_info const&  contact_info,
+            scene::collicion_contant_info_ptr const  contact_info,
             object_id const&  other_id,
             scene::node_id const&  other_collider_nid
             );

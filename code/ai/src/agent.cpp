@@ -144,7 +144,7 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  agent::on_sensor_event(sensor const&  s)
+void  agent::on_sensor_event(sensor const&  s, sensor const* const  other)
 {
     auto const  actions_it = get_blackboard()->m_sensor_actions->find(s.get_self_rid());
     ASSUMPTION(actions_it != get_blackboard()->m_sensor_actions->end());
@@ -200,8 +200,34 @@ void  agent::on_sensor_event(sensor const&  s)
                     );
             break;
 
+        case SENSOR_ACTION_KIND::UPDATE_RADIAL_FORCE_FIELD:
+            ASSUMPTION(other != nullptr);
+            get_blackboard()->m_scene->accept(scene::create_request<scene::request_update_radial_force_field>(
+                    other->get_self_rid(),
+                    get_blackboard()->m_self_rid,
+                    action.props
+                    ));
+            break;
+        case SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD:
+            ASSUMPTION(other != nullptr);
+            get_blackboard()->m_scene->accept(scene::create_request<scene::request_update_linear_force_field>(
+                    other->get_self_rid(),
+                    get_blackboard()->m_self_rid,
+                    action.props
+                    ));
+            break;
+        case SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD:
+            ASSUMPTION(other != nullptr);
+            get_blackboard()->m_scene->accept(scene::create_request<scene::request_leave_force_field>(
+                    other->get_self_rid(),
+                    get_blackboard()->m_self_rid
+                    ));
+            break;
+
         case SENSOR_ACTION_KIND::END_OF_LIFE:
-            get_blackboard()->m_scene->accept(scene::create_request<scene::request_erase_nodes_tree>(get_blackboard()->m_self_nid));
+            get_blackboard()->m_scene->accept(scene::create_request<scene::request_erase_nodes_tree>(
+                    get_blackboard()->m_self_rid.get_node_id())
+                    );
             break;
         default: UNREACHABLE(); break;
         }

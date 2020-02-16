@@ -20,7 +20,7 @@ devices::devices(simulator* const  simulator_, scene_ptr const  scene_)
 
 
 device_id  devices::insert(
-        scene::node_id const&  device_nid,
+        scene::record_id const&  device_rid,
         skeletal_motion_templates const  motion_templates,
         DEVICE_KIND const  device_kind,
         from_sensor_record_to_sensor_action_map const&  sensor_actions
@@ -28,7 +28,7 @@ device_id  devices::insert(
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(device_nid.valid());
+    ASSUMPTION(device_rid.valid());
 
     device_id  id = 0U;
     for (; id != m_devices.size(); ++id)
@@ -37,7 +37,7 @@ device_id  devices::insert(
 
     auto const  props = std::make_shared<device_props>();
     props->device_ptr = nullptr;
-    props->device_nid = device_nid;
+    props->device_rid = device_rid;
     props->motion_templates = motion_templates;
     props->m_sensor_actions = std::make_shared<from_sensor_record_to_sensor_action_map>(sensor_actions);
     props->device_kind = device_kind;
@@ -60,7 +60,7 @@ void  devices::construct_device(device_id const  id, device_props&  props)
         bb->m_self_id = device_to_object_id(id);
         bb->m_motion_templates = props.motion_templates;
         bb->m_scene = m_scene;
-        bb->m_self_nid = props.device_nid;
+        bb->m_self_rid = props.device_rid;
         bb->initialise_bone_nids();
         bb->m_state = 0U;
         bb->m_sensor_actions = props.m_sensor_actions;
@@ -93,16 +93,16 @@ void  devices::next_round(float_32_bit const  time_step_in_seconds)
 void  devices::on_collision_contact(
         device_id const  id,
         scene::node_id const&  collider_nid,
-        scene::collicion_contant_info const&  contact_info,
+        scene::collicion_contant_info_ptr const  contact_info,
         object_id const&  other_id,
         scene::node_id const&  other_collider_nid
         )
 {}
 
 
-void  devices::on_sensor_event(device_id const  id, sensor const&  s)
+void  devices::on_sensor_event(device_id const  id, sensor const&  s, sensor const* const  other)
 {
-    m_devices.at(id)->device_ptr->on_sensor_event(s);
+    m_devices.at(id)->device_ptr->on_sensor_event(s, other);
 }
 
 

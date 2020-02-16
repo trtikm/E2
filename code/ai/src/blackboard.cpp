@@ -7,7 +7,7 @@ namespace ai {
 blackboard::blackboard()
     : m_motion_templates()
     , m_scene()
-    , m_self_nid()
+    , m_self_rid()
     , m_bone_nids()
     , m_state(0U)
     , m_sensor_actions()
@@ -36,7 +36,7 @@ void  blackboard::initialise_bone_nids()
                 parent_bone = m_motion_templates.hierarchy().parents().at(parent_bone))
             path.push_back(m_motion_templates.names().at(parent_bone));
         std::reverse(path.begin(), path.end());
-        m_bone_nids.at(bone) = m_self_nid / scene::node_id(path);
+        m_bone_nids.at(bone) = m_self_rid.get_node_id() / scene::node_id(path);
     }
 }
 

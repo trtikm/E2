@@ -26,7 +26,7 @@ struct  snapshot
     vector3  linear_acceleration;
     vector3  angular_acceleration;
 
-    vector3  gravity;
+    vector3  external_linear_acceleration;
 
     vector3  ideal_linear_velocity;
     vector3  ideal_angular_velocity;

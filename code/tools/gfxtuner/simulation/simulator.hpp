@@ -294,14 +294,13 @@ struct simulator : public qtgl::real_time_simulator
     qtgl::effects_config  get_effects_config() const { return m_effects_config; }
     void  set_effects_config(qtgl::effects_config const  config) { m_effects_config = config; }
 
-    scn::scene_node_id const&  get_scene_node_of_agent(ai::agent_id const  id) const { return m_binding_of_agents_to_scene.at(id); }
-    scn::scene_node_id const&  get_scene_node_of_device(ai::device_id const  id) const { return m_binding_of_devices_to_scene.at(id); }
-    scn::scene_record_id const&  get_scene_node_of_sensor(ai::sensor_id const  id) const { return m_binding_of_sensors_to_scene.at(id); }
-
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_id const&  id)
     { return find_nearest_rigid_body_node(get_scene().get_scene_node(id)); }
     void  find_nearest_rigid_body_nodes_in_subtree(scn::scene_node_ptr  node_ptr, std::vector<scn::scene_node_ptr>&  output);
+
+    vector3  get_rigid_body_external_linear_acceleration(scn::scene_node_id const&  id) const;
+    vector3  get_rigid_body_external_angular_acceleration(scn::scene_node_id const&  id) const;
 
     void  on_simulation_paused();
     void  on_simulation_resumed();
@@ -484,10 +483,9 @@ private:
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
+    std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> >  m_rigid_bodies_external_linear_accelerations;
+    std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> >  m_rigid_bodies_external_angular_accelerations;
     std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
-    std::unordered_map<ai::agent_id, scn::scene_node_id>  m_binding_of_agents_to_scene;
-    std::unordered_map<ai::device_id, scn::scene_node_id>  m_binding_of_devices_to_scene;
-    std::unordered_map<ai::sensor_id, scn::scene_record_id>  m_binding_of_sensors_to_scene;
     std::vector<ai::scene::request_ptr>  m_ai_requests;
 
     // Debugging

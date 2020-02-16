@@ -121,6 +121,65 @@ scn::scene_node_id  skeleton_build_scene_node_id_of_bones(
 }
 
 
+vector3  get_rigid_body_external_acceleration(
+        std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> > const&  external_accelerations,
+        scn::scene_node_id const&  id
+        )
+{
+    vector3  result = vector3_zero();
+    auto const  it = external_accelerations.find(id);
+    if (it != external_accelerations.end())
+        for (auto const&  field_id_and_accel : it->second)
+            result += field_id_and_accel.second;
+    return result;
+}
+
+
+void  update_rigid_body_external_acceleration(
+        std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> >&  external_accelerations,
+        angeo::rigid_body_simulator&  rb_simulator,
+        scn::scene_node_id const&  affected_object_nid,
+        angeo::rigid_body_id const  affected_rb_id,
+        scn::scene_node_id const&  accel_source_nid,
+        vector3 const&  accel
+        )
+{
+    auto  obj_it = external_accelerations.find(affected_object_nid);
+    if (obj_it == external_accelerations.end())
+        obj_it = external_accelerations.insert({ affected_object_nid, {} }).first;
+    auto  field_it = obj_it->second.find(accel_source_nid);
+    if (field_it == obj_it->second.end())
+        field_it = obj_it->second.insert({ accel_source_nid, vector3_zero() }).first;
+    vector3 const  old_total_accel = rb_simulator.get_external_linear_acceleration(affected_rb_id);
+    rb_simulator.set_external_linear_acceleration(affected_rb_id, old_total_accel - field_it->second + accel);
+    field_it->second = accel;
+}
+
+
+void  erase_rigid_body_external_acceleration(
+        std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> >&  external_accelerations,
+        angeo::rigid_body_simulator&  rb_simulator,
+        scn::scene_node_id const&  affected_object_nid,
+        angeo::rigid_body_id const  affected_rb_id,
+        scn::scene_node_id const&  accel_source_nid
+        )
+{
+    auto const  obj_it = external_accelerations.find(affected_object_nid);
+    if (obj_it != external_accelerations.end())
+    {
+        auto const  field_it = obj_it->second.find(accel_source_nid);
+        if (field_it != obj_it->second.end())
+        {
+            vector3 const  old_total_accel = rb_simulator.get_external_linear_acceleration(affected_rb_id);
+            rb_simulator.set_external_linear_acceleration(affected_rb_id, old_total_accel - field_it->second);
+            obj_it->second.erase(field_it);
+            if (obj_it->second.empty())
+                external_accelerations.erase(obj_it);
+        }
+    }
+}
+
+
 }
 
 
@@ -371,10 +430,9 @@ simulator::simulator()
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
+    , m_rigid_bodies_external_linear_accelerations()
+    , m_rigid_bodies_external_angular_accelerations()
     , m_ai_simulator_ptr(std::make_shared<ai::simulator>(std::make_shared<bind_ai_scene_to_simulator>(this)))
-    , m_binding_of_agents_to_scene()
-    , m_binding_of_devices_to_scene()
-    , m_binding_of_sensors_to_scene()
     , m_ai_requests()
 
     // Debugging
@@ -673,17 +731,18 @@ if (keyboard_props().was_just_released(qtgl::KEY_F3()))
     render_retinas = !render_retinas;
 
 if (render_retinas)
-    for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
+{
+    ai::agents const&  agents = get_ai_simulator()->get_agents();
+    for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
     {
-        ai::agents const&  agents = get_ai_simulator()->get_agents();
-        if (!agents.ready(agent_id_and_node_id.first))
+        if (!agents.ready(agent_id))
             continue;
 
-        ai::retina_ptr const  retina_ptr = agents.at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
+        ai::retina_ptr const  retina_ptr = agents.at(agent_id).get_blackboard()->m_retina_ptr;
         if (retina_ptr == nullptr)
             continue;
 
-        auto  offscreen_it = m_offscreens.find(agent_id_and_node_id.first);
+        auto  offscreen_it = m_offscreens.find(agent_id);
         if (offscreen_it == m_offscreens.cend())
             continue;
 
@@ -707,7 +766,7 @@ if (render_retinas)
                 scale
                 );
     }
-
+}
 static bool  render_text = false;
 if (keyboard_props().was_just_released(qtgl::KEY_F4()))
 render_text = !render_text;
@@ -886,10 +945,10 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     if (m_do_show_ai_action_controller_props)
     {
         ai::agents const&  agents = get_ai_simulator()->get_agents();
-        for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
-            if (agents.ready(agent_id_and_node_id.first))
+        for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
+            if (agents.ready(agent_id))
             {
-                ai::blackboard_agent_const_ptr const  blackboard = agents.at(agent_id_and_node_id.first).get_blackboard();
+                ai::blackboard_agent_const_ptr const  blackboard = agents.at(agent_id).get_blackboard();
 
                 scn::scene_node_ptr const  node_ptr = get_scene_node(blackboard->m_action_controller->get_motion_object_node_id());
 
@@ -962,7 +1021,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                             blackboard->m_motion_templates.hierarchy().parents(),
                             blackboard->m_motion_templates.names()
                             );
-                    scn::scene_node_id const  bone_id = agent_id_and_node_id.second / raw_bone_id;
+                    scn::scene_node_id const  bone_id =
+                            get_ai_simulator()->get_record_id({ ai::OBJECT_KIND::AGENT, agent_id })->get_node_id() / raw_bone_id;
                     scn::scene_node_ptr const  bone_node_ptr = get_scene_node(bone_id);
                     if (bone_node_ptr != nullptr)
                     {
@@ -1221,6 +1281,66 @@ void  simulator::process_ai_requests()
                 );
             erase_scene_node(request->root_nid);
         }
+        else if (auto const  request = ai::scene::cast<ai::scene::request_update_radial_force_field>(requests.back()))
+        {
+            scn::scene_node_ptr const  affected_node_ptr = find_nearest_rigid_body_node(request->affected_object_rid.get_node_id());
+            scn::scene_node_ptr const  field_node_ptr = get_scene_node(request->force_field_rid.get_node_id());
+            scn::scene_node_ptr const  origin_node_ptr = get_scene_node(request->props.get_scene_node_id("origin_nid"));
+            if (affected_node_ptr != nullptr && field_node_ptr != nullptr && origin_node_ptr != nullptr)
+            {
+                vector3  accel;
+                {
+                    vector3 const  origin_delta =
+                            transform_point(vector3_zero(), origin_node_ptr->get_world_matrix()) -
+                            transform_point(vector3_zero(), affected_node_ptr->get_world_matrix());
+                    float_32_bit const  distance = length(origin_delta);
+                    if (distance < 1e-4f)
+                        accel = vector3_zero();
+                    else
+                    {
+                        float_32_bit const  magnitude =
+                                request->props.get_float("multiplier") * std::powf(distance, request->props.get_float("exponent"));
+                        accel = (magnitude / distance) * origin_delta;
+                    }
+                }
+                detail::update_rigid_body_external_acceleration(
+                        m_rigid_bodies_external_linear_accelerations,
+                        *m_rigid_body_simulator_ptr,
+                        affected_node_ptr->get_id(),
+                        scn::get_rigid_body(*affected_node_ptr)->id(),
+                        field_node_ptr->get_id(),
+                        accel
+                        );
+            }
+        }
+        else if (auto const  request = ai::scene::cast<ai::scene::request_update_linear_force_field>(requests.back()))
+        {
+            scn::scene_node_ptr const  affected_node_ptr = get_scene_node(request->affected_object_rid.get_node_id());
+            if (affected_node_ptr != nullptr)
+            {
+                vector3 const  accel = request->props.get_vector3();
+                detail::update_rigid_body_external_acceleration(
+                        m_rigid_bodies_external_linear_accelerations,
+                        *m_rigid_body_simulator_ptr,
+                        affected_node_ptr->get_id(),
+                        scn::get_rigid_body(*affected_node_ptr)->id(),
+                        request->force_field_rid.get_node_id(),
+                        accel
+                        );
+            }
+        }
+        else if (auto const  request = ai::scene::cast<ai::scene::request_leave_force_field>(requests.back()))
+        {
+            scn::scene_node_ptr const  affected_node_ptr = find_nearest_rigid_body_node(request->affected_object_rid.get_node_id());
+            if (affected_node_ptr != nullptr)
+                detail::erase_rigid_body_external_acceleration(
+                        m_rigid_bodies_external_linear_accelerations,
+                        *m_rigid_body_simulator_ptr,
+                        affected_node_ptr->get_id(),
+                        scn::get_rigid_body(*affected_node_ptr)->id(),
+                        request->force_field_rid.get_node_id()
+                        );
+        }
         else
         {
             UNREACHABLE();
@@ -1353,37 +1473,37 @@ void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit cons
     float_32_bit const  camera_proj_dist = 0.05f;
     float_32_bit const  camera_origin_z_shift = 0.0f;
 
-    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
+    ai::agents const&  agents = get_ai_simulator()->get_agents();
+    for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
     {
         ai::agents const&  agents = get_ai_simulator()->get_agents();
-        if (!agents.ready(agent_id_and_node_id.first))
+        if (!agents.ready(agent_id))
             continue;
 
-        ai::retina_ptr const  retina_ptr = agents.at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
+        ai::retina_ptr const  retina_ptr = agents.at(agent_id).get_blackboard()->m_retina_ptr;
         if (retina_ptr == nullptr)
             continue;
 
-        auto  recovery_time_it = m_offscreen_recovery_times.find(agent_id_and_node_id.first);
+        auto  recovery_time_it = m_offscreen_recovery_times.find(agent_id);
         if (recovery_time_it == m_offscreen_recovery_times.end())
-            recovery_time_it = m_offscreen_recovery_times.insert({ agent_id_and_node_id.first, 0.0f }).first;
+            recovery_time_it = m_offscreen_recovery_times.insert({ agent_id, 0.0f }).first;
         recovery_time_it->second += time_to_simulate_in_seconds;
         static float_32_bit  RECOVERY_PERIOD_IN_SECONDS = 0.0f;// 1.0f / 30.0f;
         if (recovery_time_it->second < RECOVERY_PERIOD_IN_SECONDS)
             continue;
         m_offscreen_recovery_times.erase(recovery_time_it);
 
-        ai::sensory_controller_sight_ptr const  sight_ptr =
-                agents.at(agent_id_and_node_id.first).get_sensory_controller().get_sight();
+        ai::sensory_controller_sight_ptr const  sight_ptr = agents.at(agent_id).get_sensory_controller().get_sight();
         if (sight_ptr == nullptr)
             continue;
         ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
         if (camera_ptr == nullptr)
             continue;
 
-        auto  offscreen_it = m_offscreens.find(agent_id_and_node_id.first);
+        auto  offscreen_it = m_offscreens.find(agent_id);
         if (offscreen_it == m_offscreens.cend())
             offscreen_it = m_offscreens.insert({
-                    agent_id_and_node_id.first,
+                    agent_id,
                     {
                         qtgl::make_offscreen(
                             retina_ptr->get_width_in_pixels(),
@@ -2244,17 +2364,17 @@ void  simulator::render_ai_action_controller_props(
 
     ai::agents const&  agents = get_ai_simulator()->get_agents();
 
-    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
+    for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
     {
-        if (!agents.ready(agent_id_and_node_id.first))
+        if (!agents.ready(agent_id))
             continue;
-        ai::sensory_controller_sight_ptr const  sight_ptr = agents.at(agent_id_and_node_id.first).get_sensory_controller().get_sight();
+        ai::sensory_controller_sight_ptr const  sight_ptr = agents.at(agent_id).get_sensory_controller().get_sight();
         if (sight_ptr == nullptr)
             continue;
         ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
         if (camera_ptr == nullptr)
         {
-            m_cache_of_batches_of_ai_agents.sight_frustum_batches.erase(agent_id_and_node_id.first);
+            m_cache_of_batches_of_ai_agents.sight_frustum_batches.erase(agent_id);
             continue;
         }
 
@@ -2275,10 +2395,10 @@ void  simulator::render_ai_action_controller_props(
             draw_state = m_batch_coord_system.get_draw_state();
         }
 
-        auto  frustum_batch_it = m_cache_of_batches_of_ai_agents.sight_frustum_batches.find(agent_id_and_node_id.first);
+        auto  frustum_batch_it = m_cache_of_batches_of_ai_agents.sight_frustum_batches.find(agent_id);
         if (frustum_batch_it == m_cache_of_batches_of_ai_agents.sight_frustum_batches.end())
             frustum_batch_it = m_cache_of_batches_of_ai_agents.sight_frustum_batches.insert({
-                    agent_id_and_node_id.first,
+                    agent_id,
                     qtgl::create_wireframe_perspective_frustum(
                             -camera_ptr->near_plane(),
                             -camera_ptr->far_plane(),
@@ -2306,14 +2426,15 @@ void  simulator::render_ai_action_controller_props(
             __dbg_batch_coord_cross.get_available_resources().skeletal() == nullptr &&
             __dbg_batch_coord_cross.has_instancing_data()
             ;
-    for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
+
+    for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
     {
-        if (!agents.ready(agent_id_and_node_id.first))
+        if (!agents.ready(agent_id))
             continue;
 
         ai::sensory_controller_ray_cast_sight_ptr const  sight_ptr =
                 std::dynamic_pointer_cast<ai::sensory_controller_ray_cast_sight>(
-                        agents.at(agent_id_and_node_id.first).get_sensory_controller().get_sight()
+                        agents.at(agent_id).get_sensory_controller().get_sight()
                         );
         if (sight_ptr == nullptr)
             continue;
@@ -2465,6 +2586,18 @@ void  simulator::find_nearest_rigid_body_nodes_in_subtree(scn::scene_node_ptr  n
     else
         for (auto const&  name_and_node : node_ptr->get_children())
             find_nearest_rigid_body_nodes_in_subtree(name_and_node.second, output);
+}
+
+
+vector3  simulator::get_rigid_body_external_linear_acceleration(scn::scene_node_id const&  id) const
+{
+    return detail::get_rigid_body_external_acceleration(m_rigid_bodies_external_linear_accelerations, id);
+}
+
+
+vector3  simulator::get_rigid_body_external_angular_acceleration(scn::scene_node_id const&  id) const
+{
+    return detail::get_rigid_body_external_acceleration(m_rigid_bodies_external_angular_accelerations, id);
 }
 
 
@@ -2837,6 +2970,11 @@ void  simulator::insert_rigid_body_to_scene_node(
     scn::insert_rigid_body(*node_ptr, rb_id, true);
     m_binding_of_rigid_bodies[rb_id] = node_ptr;
 
+    if (!has_static_collider && !are_equal_3d(external_linear_acceleration, vector3_zero(), 1e-5f))
+        m_rigid_bodies_external_linear_accelerations[id][{}] = external_linear_acceleration;
+    if (!has_static_collider && !are_equal_3d(external_angular_acceleration, vector3_zero(), 1e-5f))
+        m_rigid_bodies_external_angular_accelerations[id][{}] = external_angular_acceleration;
+
     for (angeo::collision_object_id coid : coids)
         m_binding_of_collision_objects[coid] = rb_id;
 }
@@ -2892,6 +3030,11 @@ void  simulator::insert_rigid_body_to_scene_node_ex(
     scn::insert_rigid_body(*node_ptr, rb_id, false);
     m_binding_of_rigid_bodies[rb_id] = node_ptr;
 
+    if (!has_static_collider && !are_equal_3d(external_linear_acceleration, vector3_zero(), 1e-5f))
+        m_rigid_bodies_external_linear_accelerations[id][{}] = external_linear_acceleration;
+    if (!has_static_collider && !are_equal_3d(external_angular_acceleration, vector3_zero(), 1e-5f))
+        m_rigid_bodies_external_angular_accelerations[id][{}] = external_angular_acceleration;
+
     for (angeo::collision_object_id coid : coids)
         m_binding_of_collision_objects[coid] = rb_id;
 }
@@ -2925,6 +3068,9 @@ void  simulator::erase_rigid_body_from_scene_node(
 
         m_rigid_body_simulator_ptr->erase_rigid_body(rb_ptr->id());
         m_binding_of_rigid_bodies.erase(rb_ptr->id());
+
+        m_rigid_bodies_external_linear_accelerations.erase(id);
+        m_rigid_bodies_external_angular_accelerations.erase(id);
 
         m_scene_selection.erase_record(scn::make_rigid_body_record_id(id));
         scn::erase_rigid_body(*node_ptr);
@@ -2993,14 +3139,13 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::agent_props 
     ASSUMPTION(node_ptr != nullptr && !node_ptr->has_parent());
     ai::agent_id const  agent_id =
             get_ai_simulator()->insert_agent(
-                    id.get_node_id(),
+                    id,
                     props.m_skeleton_props->skeletal_motion_templates,
                     props.m_agent_kind,
                     props.m_sensor_action_map,
                     ai::make_retina(100U, 100U, true)
                     );
     scn::insert_agent(*node_ptr, agent_id, props);
-    m_binding_of_agents_to_scene[agent_id] = id.get_node_id();
 
     ai::object_id const  agent_oid{ ai::OBJECT_KIND::AGENT, agent_id };
     auto const  set_owner_of_sensor = [this, &agent_oid](scn::scene_node_ptr const  node_ptr) -> bool {
@@ -3037,7 +3182,6 @@ void  simulator::erase_agent(scn::scene_record_id const&  id)
     //    }());
 
     get_ai_simulator()->erase_agent(agent_ptr->id());
-    m_binding_of_agents_to_scene.erase(agent_ptr->id());
 
     m_scene_selection.erase_record(id);
     scn::erase_agent(*node_ptr);
@@ -3060,13 +3204,12 @@ void  simulator::insert_device(scn::scene_record_id const&  id, scn::device_prop
     ASSUMPTION(node_ptr != nullptr);
     ai::device_id const  device_id =
             get_ai_simulator()->insert_device(
-                    id.get_node_id(),
+                    id,
                     props.m_skeleton_props->skeletal_motion_templates,
                     props.m_device_kind,
                     props.m_sensor_action_map
                     );
     scn::insert_device(*node_ptr, device_id, props);
-    m_binding_of_devices_to_scene[device_id] = id.get_node_id();
 
     ai::object_id const  device_oid{ ai::OBJECT_KIND::DEVICE, device_id };
     auto const  set_owner_of_sensor = [this, &device_oid](scn::scene_node_ptr const  node_ptr) -> bool {
@@ -3103,7 +3246,6 @@ void  simulator::erase_device(scn::scene_record_id const&  id)
     //    }());
 
     get_ai_simulator()->erase_device(device_ptr->id());
-    m_binding_of_devices_to_scene.erase(device_ptr->id());
 
     m_scene_selection.erase_record(id);
     scn::erase_device(*node_ptr);
@@ -3154,7 +3296,6 @@ void  simulator::insert_sensor(scn::scene_record_id const&  id, scn::sensor_prop
                     collider_nids
                     );
     scn::insert_sensor(*node_ptr, id.get_record_name(), sensor_id, props);
-    m_binding_of_sensors_to_scene.insert({ sensor_id, id });
 }
 
 
@@ -3168,7 +3309,6 @@ void  simulator::erase_sensor(scn::scene_record_id const&  id)
     ASSUMPTION(sensor_ptr != nullptr);
 
     get_ai_simulator()->erase_sensor(sensor_ptr->id());
-    m_binding_of_sensors_to_scene.erase(sensor_ptr->id());
 
     m_scene_selection.erase_record(id);
     scn::erase_sensor(*node_ptr, id.get_record_name());
@@ -3482,13 +3622,13 @@ void  simulator::clear_scene()
     m_cache_of_batches_of_ai_agents.sight_frustum_batches.clear();
 
     get_ai_simulator()->clear();
-    m_binding_of_agents_to_scene.clear();
-    m_binding_of_devices_to_scene.clear();
-    m_binding_of_sensors_to_scene.clear();
     m_ai_requests.clear();
 
     m_rigid_body_simulator_ptr->clear();
     m_binding_of_rigid_bodies.clear();
+
+    m_rigid_bodies_external_linear_accelerations.clear();
+    m_rigid_bodies_external_angular_accelerations.clear();
 
     m_collision_scene_ptr->clear();
     m_binding_of_collision_objects.clear();

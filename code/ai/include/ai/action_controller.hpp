@@ -42,7 +42,8 @@ struct  action_controller
 
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
     detail::rigid_body_motion const&  get_motion_object_motion() const { return m_motion_object_motion; }
-    vector3 const&  get_gravity_acceleration() const { return m_gravity_acceleration; }
+    vector3 const&  get_external_linear_acceleration() const { return m_external_linear_acceleration; }
+    vector3 const&  get_external_angular_acceleration() const { return m_external_angular_acceleration; }
     float_32_bit  get_total_time_till_destination_cursor_in_seconds() const { return m_total_interpolation_time_in_seconds; }
     float_32_bit  get_consumed_time_till_destination_cursor_in_seconds() const { return m_consumed_time_in_seconds; }
     skeletal_motion_templates::motion_template_cursor const&  get_destination_cursor() const { return m_dst_cursor; }
@@ -57,7 +58,8 @@ struct  action_controller
 protected:
 
     detail::rigid_body_motion  m_motion_object_motion;
-    vector3  m_gravity_acceleration;
+    vector3  m_external_linear_acceleration;
+    vector3  m_external_angular_acceleration;
 
 private:
 

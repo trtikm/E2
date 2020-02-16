@@ -53,15 +53,12 @@ sensor_id  sensors::insert(
         m_sensors.resize(m_sensors.size() + 1U, nullptr);
     m_sensors.at(id) = props;
 
-    m_from_rid_to_id[sensor_rid] = id;
-
     return id;
 }
 
 
 void  sensors::erase(sensor_id const  id)
 {
-    m_from_rid_to_id.erase(m_sensors.at(id)->sensor_rid);
     m_sensors.at(id) = nullptr;
 }
 
@@ -85,7 +82,7 @@ void  sensors::construct_sensor(sensor_id const  id, sensor_props&  props)
 
 object_id const& sensors::get_owner(sensor_id const  id_)
 {
-    ASSUMPTION(id_ < m_sensors.size());
+    ASSUMPTION(id_ < m_sensors.size() && m_sensors.at(id_) != nullptr);
     if (m_sensors.at(id_)->sensor_ptr == nullptr)
         return m_sensors.at(id_)->owner_id;
     else
@@ -95,7 +92,7 @@ object_id const& sensors::get_owner(sensor_id const  id_)
 
 void  sensors::set_owner(sensor_id const  id_, object_id const&  owner_id_)
 {
-    ASSUMPTION(id_ < m_sensors.size());
+    ASSUMPTION(id_ < m_sensors.size() && m_sensors.at(id_) != nullptr);
     if (m_sensors.at(id_)->sensor_ptr == nullptr)
         m_sensors.at(id_)->owner_id = owner_id_;
     else
@@ -105,7 +102,7 @@ void  sensors::set_owner(sensor_id const  id_, object_id const&  owner_id_)
 
 bool  sensors::is_enabled(sensor_id const  id_)
 {
-    ASSUMPTION(id_ < m_sensors.size());
+    ASSUMPTION(id_ < m_sensors.size() && m_sensors.at(id_) != nullptr);
     if (m_sensors.at(id_)->sensor_ptr == nullptr)
         return m_sensors.at(id_)->enabled;
     else
@@ -115,7 +112,7 @@ bool  sensors::is_enabled(sensor_id const  id_)
 
 void  sensors::set_enabled(sensor_id const  id_, bool const  state_)
 {
-    ASSUMPTION(id_ < m_sensors.size());
+    ASSUMPTION(id_ < m_sensors.size() && m_sensors.at(id_) != nullptr);
     if (m_sensors.at(id_)->sensor_ptr == nullptr)
         m_sensors.at(id_)->enabled = state_;
     else
@@ -127,14 +124,24 @@ void  sensors::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    for (natural_32_bit  id = 0U; id != m_sensors.size(); ++id)
+    std::vector<std::pair<SENSOR_KIND, sensor_id> >  update_order;
     {
-        auto const  props = m_sensors.at(id);
-        if (props != nullptr)
-            if (props->sensor_ptr != nullptr)
-                props->sensor_ptr->next_round(time_step_in_seconds);
-            else
-                construct_sensor(id, *props);
+        update_order.reserve(m_sensors.size());
+        for (natural_32_bit  id = 0U; id != m_sensors.size(); ++id)
+            if (m_sensors.at(id) != nullptr)
+                update_order.push_back({ m_sensors.at(id)->sensor_kind, id });
+        std::sort(update_order.begin(), update_order.end(),
+                [](std::pair<SENSOR_KIND, sensor_id> const&  left, std::pair<SENSOR_KIND, sensor_id> const&  right) -> bool {
+                    return as_number(left.first) < as_number(right.first);
+                });
+    }
+    for (auto const&  kind_and_id : update_order)
+    {
+        auto const  props = m_sensors.at(kind_and_id.second);
+        if (props->sensor_ptr != nullptr)
+            props->sensor_ptr->next_round(time_step_in_seconds);
+        else
+            construct_sensor(kind_and_id.second, *props);
     }
 }
 
@@ -142,12 +149,12 @@ void  sensors::next_round(float_32_bit const  time_step_in_seconds)
 void  sensors::on_collision_contact(
         sensor_id const  id,
         scene::node_id const&  collider_nid,
-        scene::collicion_contant_info const&  contact_info,
+        scene::collicion_contant_info_ptr const  contact_info,
         object_id const&  other_id,
         scene::node_id const&  other_collider_nid
         )
 {
-    ASSUMPTION(id < m_sensors.size() && m_sensors.at(id)->sensor_ptr != nullptr);
+    ASSUMPTION(id < m_sensors.size() && m_sensors.at(id) != nullptr && m_sensors.at(id)->sensor_ptr != nullptr);
     m_sensors.at(id)->sensor_ptr->on_collision_contact(collider_nid, contact_info, other_id, other_collider_nid);
 }
 

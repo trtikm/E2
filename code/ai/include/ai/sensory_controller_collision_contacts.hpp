@@ -49,13 +49,13 @@ struct  sensory_controller_collision_contacts final
         natural_32_bit  cell_x;
         natural_32_bit  cell_y;
         vector3  contact_point_in_local_space;
-        scene::collicion_contant_info  data;
+        scene::collicion_contant_info_ptr  data;
 
         collicion_contact_info(
                 natural_32_bit const  cell_x_,
                 natural_32_bit const  cell_y_,
                 vector3 const&  contact_point_in_local_space_,
-                scene::collicion_contant_info const&  data_
+                scene::collicion_contant_info_ptr const  data_
                 );
     };
 
@@ -70,7 +70,7 @@ struct  sensory_controller_collision_contacts final
     void  next_round();
     void  on_collision_contact(
             scene::node_id const&  collider_nid,
-            scene::collicion_contant_info const&  contact_info
+            scene::collicion_contant_info_ptr const  contact_info
             );
 
 private:

@@ -41,7 +41,8 @@ natural_32_bit  choose_next_motion_action(
                         bb->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map(),
                         bb->m_action_controller->get_motion_object_motion(),
                         *ctx.desire_props_ptr,
-                        bb->m_action_controller->get_gravity_acceleration(),
+                        bb->m_action_controller->get_external_linear_acceleration(),
+                        bb->m_action_controller->get_external_angular_acceleration(),
                         nullptr
                         )
                 ? guard_valid_cost_addon : guard_invalid_cost_addon;
@@ -86,7 +87,8 @@ action_controller::intepolation_state::intepolation_state()
 
 action_controller::action_controller(blackboard_agent_weak_ptr const  blackboard_)
     : m_motion_object_motion()
-    , m_gravity_acceleration(vector3_zero())
+    , m_external_linear_acceleration(vector3_zero())
+    , m_external_angular_acceleration(vector3_zero())
 
     , m_blackboard(blackboard_)
     , m_regulator(this)
@@ -129,15 +131,20 @@ action_controller::action_controller(blackboard_agent_weak_ptr const  blackboard
         angeo::coordinate_system  tmp;
         get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_bone_nids.front(), false, tmp);
         agent_frame.set_origin(tmp.origin());
-        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_self_nid, false, tmp);
+        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_self_rid.get_node_id(), false, tmp);
         agent_frame.set_orientation(tmp.orientation());
     }
-    scene::node_id  nid(detail::get_motion_object_nid(get_blackboard()->m_scene, OBJECT_KIND::AGENT, get_blackboard()->m_self_nid));
+    scene::node_id  nid(
+            detail::get_motion_object_nid(get_blackboard()->m_scene, OBJECT_KIND::AGENT, get_blackboard()->m_self_rid.get_node_id())
+            );
     if (!get_blackboard()->m_scene->has_scene_node(nid))
         nid = detail::create_motion_scene_node(get_blackboard()->m_scene, nid, agent_frame, collider, *mass_distribution);
 
     m_motion_object_motion = detail::rigid_body_motion(get_blackboard()->m_scene, nid, get_blackboard()->m_motion_templates.directions());
-    m_gravity_acceleration = get_blackboard()->m_scene->get_gravity_acceleration_at_point(m_motion_object_motion.frame.origin());
+    m_external_linear_acceleration =
+        get_blackboard()->m_scene->get_external_linear_acceleration_of_rigid_body_of_scene_node(m_motion_object_motion.nid);
+    m_external_angular_acceleration =
+        get_blackboard()->m_scene->get_external_angular_acceleration_of_rigid_body_of_scene_node(m_motion_object_motion.nid);
 
     get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
 
@@ -274,7 +281,8 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
             get_blackboard()->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map(),
             m_motion_object_motion,
             get_regulated_motion_desire_props(),
-            m_gravity_acceleration,
+            m_external_linear_acceleration,
+            m_external_angular_acceleration,
             &satisfied_guarded_actions
             ))
     {
@@ -283,7 +291,8 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 time_step_in_seconds,
                 m_ideal_linear_velocity_in_world_space,
                 m_ideal_angular_velocity_in_world_space,
-                m_gravity_acceleration,
+                m_external_linear_acceleration,
+                m_external_angular_acceleration,
                 get_regulated_motion_desire_props(),
                 m_motion_action_data,
                 m_motion_object_motion,
@@ -302,14 +311,17 @@ void  action_controller::synchronise_motion_object_motion_with_scene()
     m_motion_object_motion.update_frame_with_forward_and_up_directions(get_blackboard()->m_scene, get_blackboard()->m_motion_templates.directions());
     m_motion_object_motion.update_linear_velocity(get_blackboard()->m_scene);
     m_motion_object_motion.update_angular_velocity(get_blackboard()->m_scene);
-    m_gravity_acceleration = get_blackboard()->m_scene->get_gravity_acceleration_at_point(m_motion_object_motion.frame.origin());
+    m_external_linear_acceleration =
+        get_blackboard()->m_scene->get_external_linear_acceleration_of_rigid_body_of_scene_node(m_motion_object_motion.nid);
+    m_external_angular_acceleration =
+        get_blackboard()->m_scene->get_external_angular_acceleration_of_rigid_body_of_scene_node(m_motion_object_motion.nid);
 
     // We clear all forces the agent introduced in the previous frame.
-    m_motion_object_motion.set_linear_acceleration(m_gravity_acceleration);
-    m_motion_object_motion.set_angular_acceleration(vector3_zero());
+    m_motion_object_motion.set_linear_acceleration(m_external_linear_acceleration);
+    m_motion_object_motion.set_angular_acceleration(m_external_angular_acceleration);
 
     // Synchronise agent's position in the world space according to its motion object in the previous time step
-    m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_self_nid);
+    m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_self_rid.get_node_id());
 }
 
 
@@ -407,7 +419,7 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
                 m_motion_object_motion
                 );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
-        m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_self_nid);
+        m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_self_rid.get_node_id());
     }
 
     m_current_intepolation_state.disjunction_of_guarded_actions =

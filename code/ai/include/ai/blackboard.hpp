@@ -27,7 +27,7 @@ struct  blackboard
     object_id  m_self_id;
     skeletal_motion_templates  m_motion_templates;
     scene_ptr  m_scene;
-    scene::node_id  m_self_nid;
+    scene::record_id  m_self_rid;
     std::vector<scene::node_id>  m_bone_nids;
     natural_32_bit  m_state;
     std::shared_ptr<from_sensor_record_to_sensor_action_map>  m_sensor_actions;

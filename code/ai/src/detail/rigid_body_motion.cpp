@@ -206,7 +206,8 @@ scene::node_id  create_motion_scene_node(
 {
     s->insert_scene_node(motion_object_nid, frame_in_world_space, false);
     rigid_body_motion  rb_motion(motion_object_nid, frame_in_world_space);
-    rb_motion.set_linear_acceleration(s->get_gravity_acceleration_at_point(frame_in_world_space.origin()));
+    rb_motion.set_linear_acceleration(s->get_initial_external_linear_acceleration_at_point(frame_in_world_space.origin()));
+    rb_motion.set_angular_acceleration(s->get_initial_external_angular_acceleration_at_point(frame_in_world_space.origin()));
     rb_motion.set_inverted_mass(mass_distribution);
     rb_motion.set_inverted_inertia_tensor(mass_distribution);
     create_collider_and_rigid_body_of_motion_scene_node(s, motion_object_nid, collider_props, rb_motion);

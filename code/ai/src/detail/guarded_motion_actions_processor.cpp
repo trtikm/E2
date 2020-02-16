@@ -64,7 +64,8 @@ bool  get_satisfied_motion_guarded_actions(
         sensory_controller_collision_contacts::collision_contacts_map const&  collision_contacts,
         detail::rigid_body_motion const&  motion_object_motion,
         motion_desire_props const&  desire,
-        vector3 const&  gravity_acceleration_in_world_space,
+        vector3 const&  external_linear_acceleration,
+        vector3 const&  external_angular_acceleration,
         std::vector<skeletal_motion_templates::guarded_actions_ptr>* const  output_satisfied_guarded_actions_ptr
         )
 {
@@ -72,7 +73,8 @@ bool  get_satisfied_motion_guarded_actions(
 
     matrix44 W;
     angeo::from_base_matrix(motion_object_motion.frame, W);
-    auto const  check_constraint = [&collision_contacts, &motion_object_motion, &desire, &gravity_acceleration_in_world_space, &W]
+    auto const  check_constraint =
+        [&collision_contacts, &motion_object_motion, &desire, &external_linear_acceleration, &external_angular_acceleration, &W]
         (skeletal_motion_templates::constraint_ptr const  any_constraint_ptr) -> bool {
             if (auto constraint_ptr =
                     std::dynamic_pointer_cast<skeletal_motion_templates::constraint_contact_normal_cone const>(any_constraint_ptr))
@@ -80,8 +82,8 @@ bool  get_satisfied_motion_guarded_actions(
                 vector3 const  cone_unit_axis_vector_in_world_space = transform_vector(constraint_ptr->unit_axis, W);
                 auto const  begin_and_end = collision_contacts.equal_range(motion_object_motion.nid);
                 for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
-                    if (it->second.data.normal_force_magnitude > 0.001f &&
-                        angle(it->second.data.unit_normal_in_world_space, cone_unit_axis_vector_in_world_space) < constraint_ptr->angle_in_radians)
+                    if (it->second.data->normal_force_magnitude > 0.001f &&
+                        angle(it->second.data->unit_normal_in_world_space, cone_unit_axis_vector_in_world_space) < constraint_ptr->angle_in_radians)
                     {
                         return true;
                     }
@@ -101,15 +103,15 @@ bool  get_satisfied_motion_guarded_actions(
                 float_32_bit const  linear_speed = length(motion_object_motion.velocity.m_linear);
                 if (linear_speed < constraint_ptr->min_linear_speed)
                     return false;
-                float_32_bit const  gravity_accel = length(gravity_acceleration_in_world_space);
+                float_32_bit const  gravity_accel = length(external_linear_acceleration);
                 if (gravity_accel < 0.001f)
                     return false;
-                return angle(motion_object_motion.velocity.m_linear, gravity_acceleration_in_world_space) <= constraint_ptr->cone_angle_in_radians;
+                return angle(motion_object_motion.velocity.m_linear, external_linear_acceleration) <= constraint_ptr->cone_angle_in_radians;
             }
             else if (auto constraint_ptr =
                     std::dynamic_pointer_cast<skeletal_motion_templates::constraint_is_falling_linear_velocity const>(any_constraint_ptr))
             {
-                vector3 const  falling_velocity = project_to_vector(motion_object_motion.velocity.m_linear, gravity_acceleration_in_world_space);
+                vector3 const  falling_velocity = project_to_vector(motion_object_motion.velocity.m_linear, external_linear_acceleration);
                 float_32_bit const  falling_speed = length(falling_velocity);
                 return falling_speed >= constraint_ptr->min_falling_speed;
             }
@@ -162,7 +164,8 @@ void  execute_satisfied_motion_guarded_actions(
         float_32_bit const  time_step_in_seconds,
         vector3 const&  ideal_linear_velocity_in_world_space,
         vector3 const&  ideal_angular_velocity_in_world_space,
-        vector3 const&  gravity_acceleration_in_world_space,
+        vector3 const&  external_linear_acceleration,
+        vector3 const&  external_angular_acceleration,
         motion_desire_props const&  desire,
         motion_action_persistent_data_map const&  motion_action_data,
         rigid_body_motion&  motion_object_motion,
@@ -302,7 +305,7 @@ void  execute_satisfied_motion_guarded_actions(
             else if (auto const  action_ptr =
                 std::dynamic_pointer_cast<skeletal_motion_templates::action_cancel_gravity_accel const>(action_props))
             {
-                motion_object_motion.acceleration.m_linear -= gravity_acceleration_in_world_space;
+                motion_object_motion.acceleration.m_linear -= external_linear_acceleration;
             }
             else
                 NOT_IMPLEMENTED_YET();

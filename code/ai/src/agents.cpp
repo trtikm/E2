@@ -21,7 +21,7 @@ agents::agents(simulator* const  simulator_, scene_ptr const  scene_)
 
 
 agent_id  agents::insert(
-        scene::node_id const&  agent_nid,
+        scene::record_id const&  agent_rid,
         skeletal_motion_templates const  motion_templates,
         AGENT_KIND const  agent_kind,
         from_sensor_record_to_sensor_action_map const&  sensor_actions,
@@ -30,7 +30,7 @@ agent_id  agents::insert(
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(agent_nid.valid() && !motion_templates.empty());
+    ASSUMPTION(agent_rid.valid() && !motion_templates.empty());
 
     agent_id  id = 0U;
     for (; id != m_agents.size(); ++id)
@@ -39,7 +39,7 @@ agent_id  agents::insert(
 
     auto const  props = std::make_shared<agent_props>();
     props->agent_ptr = nullptr;
-    props->agent_nid = agent_nid;
+    props->agent_rid = agent_rid;
     props->motion_templates = motion_templates;
     props->agent_kind = agent_kind;
     props->m_sensor_actions = std::make_shared<from_sensor_record_to_sensor_action_map>(sensor_actions);
@@ -63,7 +63,7 @@ void  agents::construct_agent(agent_id const  id, agent_props&  props)
         bb->m_self_id = agent_to_object_id(id);
         bb->m_motion_templates = props.motion_templates;
         bb->m_scene = m_scene;
-        bb->m_self_nid = props.agent_nid;
+        bb->m_self_rid = props.agent_rid;
         bb->initialise_bone_nids();
         bb->m_state = 0U;
         bb->m_sensor_actions = props.m_sensor_actions;
@@ -106,7 +106,7 @@ void  agents::next_round(
 void  agents::on_collision_contact(
         agent_id const  id,
         scene::node_id const&  collider_nid,
-        scene::collicion_contant_info const&  contact_info,
+        scene::collicion_contant_info_ptr const  contact_info,
         object_id const&  other_id,
         scene::node_id const&  other_collider_nid
         )
@@ -118,9 +118,9 @@ void  agents::on_collision_contact(
 }
 
 
-void  agents::on_sensor_event(agent_id const  id, sensor const&  s)
+void  agents::on_sensor_event(agent_id const  id, sensor const&  s, sensor const* const  other)
 {
-    m_agents.at(id)->agent_ptr->on_sensor_event(s);
+    m_agents.at(id)->agent_ptr->on_sensor_event(s, other);
 }
 
 

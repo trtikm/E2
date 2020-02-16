@@ -28,7 +28,7 @@ struct  agents
     explicit agents(simulator* const  simulator_, scene_ptr const  scene_);
 
     agent_id  insert(
-            scene::node_id const&  agent_nid,
+            scene::record_id const&  agent_rid,
             skeletal_motion_templates const  motion_templates,
             AGENT_KIND const  agent_kind,
             from_sensor_record_to_sensor_action_map const&  sensor_actions,
@@ -37,6 +37,8 @@ struct  agents
     void  erase(agent_id const  id) { m_agents.at(id) = nullptr; }
 
     void  clear() { m_agents.clear(); }
+
+    natural_32_bit  size() const { return (natural_32_bit)m_agents.size(); }
 
     bool  ready(agent_id const  id) const { return m_agents.at(id)->agent_ptr.operator bool(); }
     agent&  at(agent_id const  id) { return *m_agents.at(id)->agent_ptr; }
@@ -54,19 +56,19 @@ struct  agents
     void  on_collision_contact(
             agent_id const  id,
             scene::node_id const&  collider_nid,
-            scene::collicion_contant_info const&  contact_info,
+            scene::collicion_contant_info_ptr const  contact_info,
             object_id const&  other_id,
             scene::node_id const&  other_collider_nid
             );
 
-    void  on_sensor_event(agent_id const  id, sensor const& s);
+    void  on_sensor_event(agent_id const  id, sensor const& s, sensor const* const  other = nullptr);
 
 private:
 
     struct  agent_props
     {
         std::unique_ptr<agent>  agent_ptr;
-        scene::node_id  agent_nid;
+        scene::record_id  agent_rid;
         skeletal_motion_templates  motion_templates;
         AGENT_KIND  agent_kind;
         std::shared_ptr<from_sensor_record_to_sensor_action_map>  m_sensor_actions;

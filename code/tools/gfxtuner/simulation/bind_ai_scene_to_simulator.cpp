@@ -215,7 +215,7 @@ void  bind_ai_scene_to_simulator::insert_rigid_body_to_scene_node(
 }
 
 
-vector3  bind_ai_scene_to_simulator::get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid)
+vector3  bind_ai_scene_to_simulator::get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid) const
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
@@ -237,7 +237,7 @@ void  bind_ai_scene_to_simulator::set_linear_velocity_of_rigid_body_of_scene_nod
 }
 
 
-vector3  bind_ai_scene_to_simulator::get_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid)
+vector3  bind_ai_scene_to_simulator::get_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid) const
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
@@ -259,7 +259,7 @@ void  bind_ai_scene_to_simulator::set_angular_velocity_of_rigid_body_of_scene_no
 }
 
 
-vector3  bind_ai_scene_to_simulator::get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid)
+vector3  bind_ai_scene_to_simulator::get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
@@ -295,7 +295,7 @@ void  bind_ai_scene_to_simulator::add_to_linear_acceleration_of_rigid_body_of_sc
 }
 
 
-vector3  bind_ai_scene_to_simulator::get_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid)
+vector3  bind_ai_scene_to_simulator::get_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
@@ -331,7 +331,7 @@ void  bind_ai_scene_to_simulator::add_to_angular_acceleration_of_rigid_body_of_s
 }
 
 
-float_32_bit  bind_ai_scene_to_simulator::get_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid)
+float_32_bit  bind_ai_scene_to_simulator::get_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid) const
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
@@ -353,7 +353,7 @@ void  bind_ai_scene_to_simulator::set_inverted_mass_of_rigid_body_of_scene_node(
 }
 
 
-matrix33  bind_ai_scene_to_simulator::get_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid)
+matrix33  bind_ai_scene_to_simulator::get_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid) const
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
@@ -382,9 +382,29 @@ void  bind_ai_scene_to_simulator::erase_rigid_body_from_scene_node(node_id const
 }
 
 
-vector3  bind_ai_scene_to_simulator::get_gravity_acceleration_at_point(vector3 const&  position) const
+vector3  bind_ai_scene_to_simulator::get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const
 {
     return -9.81f * vector3_unit_z();
+}
+
+
+vector3  bind_ai_scene_to_simulator::get_initial_external_angular_acceleration_at_point(vector3 const&  position_in_world_space) const
+{
+    return vector3_zero();
+}
+
+
+vector3  bind_ai_scene_to_simulator::get_external_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_external_linear_acceleration(nid);
+}
+
+
+vector3  bind_ai_scene_to_simulator::get_external_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_external_angular_acceleration(nid);
 }
 
 
@@ -398,8 +418,11 @@ void  bind_ai_scene_to_simulator::register_to_collision_contacts_stream(
     ASSUMPTION(node_ptr != nullptr);
     auto const  collider_ptr = scn::get_collider(*node_ptr);
     ASSUMPTION(collider_ptr != nullptr && collider_ptr->ids().size() == 1UL);
-    ASSUMPTION(m_collision_contacts_stream.count(collider_ptr->id()) == 0UL);
-    m_collision_contacts_stream.insert({ collider_ptr->id() , {collider_nid, oid} });
+    auto  it = m_collision_contacts_stream.find(collider_ptr->id());
+    if (it == m_collision_contacts_stream.end())
+        it = m_collision_contacts_stream.insert({ collider_ptr->id() , {collider_nid, {}} }).first;
+    ASSUMPTION(it->second.second.count(oid) == 0UL);
+    it->second.second.insert(oid);
 }
 
 
@@ -416,8 +439,11 @@ void  bind_ai_scene_to_simulator::unregister_from_collision_contacts_stream(
     if (collider_ptr == nullptr)
         return;
     ASSUMPTION(collider_ptr->ids().size() == 1UL);
-    ASSUMPTION(m_collision_contacts_stream.count(collider_ptr->id()) != 0UL);
-    m_collision_contacts_stream.erase(collider_ptr->id());
+    auto  it = m_collision_contacts_stream.find(collider_ptr->id());
+    INVARIANT(it != m_collision_contacts_stream.end() && it->second.second.count(oid) != 0UL);
+    it->second.second.erase(oid);
+    if (it->second.second.empty())
+        m_collision_contacts_stream.erase(it);
 }
 
 
@@ -459,20 +485,37 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
 
     ASSUMPTION(m_simulator_ptr != nullptr && it != m_collision_contacts_stream.cend());
 
-    bool const  has_other = other_it != m_collision_contacts_stream.cend();
-
-    m_simulator_ptr->get_ai_simulator()->on_collision_contact(
-            it->second.second,
-            it->second.first,
-            ai::scene::collicion_contant_info(
+    auto const  collision_info =
+            std::make_shared<ai::scene::collicion_contant_info>(
                     contact_point_in_world_space,
                     unit_normal_in_world_space,
                     material,
                     normal_force_magnitude
-                    ),
-            has_other ? other_it->second.second : ai::object_id::make_invalid(),
-            has_other ? other_it->second.first : node_id{}
-            );
+                    );
+
+    if (other_it == m_collision_contacts_stream.cend())
+    {
+        for (auto const&  oid : it->second.second)
+            m_simulator_ptr->get_ai_simulator()->on_collision_contact(
+                    oid,
+                    it->second.first,
+                    collision_info,
+                    ai::object_id::make_invalid(),
+                    node_id{}
+                    );
+    }
+    else
+    {
+        for (auto const&  oid : it->second.second)
+            for (auto const& other_oid : other_it->second.second)
+                m_simulator_ptr->get_ai_simulator()->on_collision_contact(
+                        oid,
+                        it->second.first,
+                        collision_info,
+                        other_oid,
+                        other_it->second.first
+                        );
+    }
 }
 
 

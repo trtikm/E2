@@ -20,7 +20,7 @@ struct simulator
     explicit simulator(scene_ptr const  scene_);
 
     agent_id  insert_agent(
-            scene::node_id const&  agent_nid,
+            scene::record_id const&  agent_rid,
             skeletal_motion_templates const  motion_templates,
             AGENT_KIND const  agent_kind,
             from_sensor_record_to_sensor_action_map const&  sensor_actions,
@@ -29,7 +29,7 @@ struct simulator
     void  erase_agent(agent_id const  id);
 
     device_id  insert_device(
-            scene::node_id const&  device_nid,
+            scene::record_id const&  device_rid,
             skeletal_motion_templates const  motion_templates,  // can be empty, when the device does not use skeletal animations.
             DEVICE_KIND const  device_kind,
             from_sensor_record_to_sensor_action_map const&  sensor_actions
@@ -55,6 +55,9 @@ struct simulator
 
     scene_ptr  get_scene_ptr() const { return m_scene; }
 
+    scene::record_id const*  get_record_id(object_id const&  oid) const;
+    object_id const*  get_object_id(scene::record_id const&  rid) const;
+
     void  next_round(
             float_32_bit const  time_step_in_seconds,
             input_devices::keyboard_props const&  keyboard,
@@ -65,22 +68,28 @@ struct simulator
     void  on_collision_contact(
             object_id const&  id,
             scene::node_id const&  collider_nid,
-            scene::collicion_contant_info const&  contact_info,
+            scene::collicion_contant_info_ptr const  contact_info,
             object_id const&  other_id,
             scene::node_id const&  other_collider_nid
             );
 
-    void  on_sensor_event(sensor const&  s);
+    void  on_sensor_event(sensor const&  s, sensor const* const  other = nullptr);
 
     agents const&  get_agents() const { return m_agents; }
     devices const&  get_devices() const { return m_devices; }
     sensors const&  get_sensors() const { return m_sensors; }
 
 private:
+
+    void  on_insert_object(object_id const&  oid,  scene::record_id const&  rid);
+    void  on_erase_object(object_id const&  oid);
+
     scene_ptr  m_scene;
     agents  m_agents;
     devices  m_devices;
     sensors  m_sensors;
+    std::unordered_map<object_id, scene::record_id>  m_from_oid_to_rid;
+    std::unordered_map<scene::record_id, object_id>  m_from_rid_to_oid;
 };
 
 

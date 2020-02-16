@@ -25,7 +25,7 @@ sensory_controller_collision_contacts::collicion_contact_info::collicion_contact
         natural_32_bit const  cell_x_,
         natural_32_bit const  cell_y_,
         vector3 const&  contact_point_in_local_space_,
-        scene::collicion_contant_info const&  data_
+        scene::collicion_contant_info_ptr const  data_
         )
     : cell_x(cell_x_)
     , cell_y(cell_y_)
@@ -53,12 +53,12 @@ void  sensory_controller_collision_contacts::next_round()
 
 void  sensory_controller_collision_contacts::on_collision_contact(
         scene::node_id const&  collider_nid,
-        scene::collicion_contant_info const&  contact_info
+        scene::collicion_contant_info_ptr const  contact_info
         )
 {
     auto const&  motion_ref = get_blackboard()->m_action_controller->get_motion_object_motion();
     vector3 const  contact_vector = point3_to_orthonormal_base(
-            contact_info.contact_point_in_world_space,
+            contact_info->contact_point_in_world_space,
             motion_ref.frame.origin(),
             motion_ref.forward,
             cross_product(motion_ref.up, motion_ref.forward),

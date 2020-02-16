@@ -352,7 +352,7 @@ void  snapshot_encoder::next_round(
     updater.update_next(ss.angular_velocity);
     updater.update_next(ss.linear_acceleration);
     updater.update_next(ss.angular_acceleration);
-    updater.update_next(ss.gravity);
+    updater.update_next(ss.external_linear_acceleration);
     updater.update_next(ss.ideal_linear_velocity);
     updater.update_next(ss.ideal_angular_velocity);
     updater.update_next(ss.interpolation_param_till_destination_cursor);

@@ -35,7 +35,7 @@ std::unordered_map<SENSOR_KIND, property_map::default_config_records_map> const&
 
 sensor::collision_contact_record::collision_contact_record(
         scene::node_id const&  collider_nid_,
-        scene::collicion_contant_info const&  contact_info_,
+        scene::collicion_contant_info_ptr const  contact_info_,
         object_id const&  other_id_,
         scene::node_id const&  other_collider_nid_
         )
@@ -151,7 +151,13 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
                 if (m_old_touching_ids.count(id) == 0UL)
                     m_touch_begin_ids.insert(id);
             if (!m_touch_begin_ids.empty())
-                m_simulator->on_sensor_event(*this);
+            {
+                for (object_id const& other_oid : m_touch_begin_ids)
+                {
+                    INVARIANT(other_oid.kind == OBJECT_KIND::SENSOR);
+                    m_simulator->on_sensor_event(*this, &m_simulator->get_sensors().at(other_oid.index));
+                }
+            }
             m_touch_begin_ids.clear();
         }
         else if (get_kind() == SENSOR_KIND::TOUCH_END)
@@ -160,14 +166,23 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
                 if (m_touching_ids.count(id) == 0UL)
                     m_touch_end_ids.insert(id);
             if (!m_touch_end_ids.empty())
-                m_simulator->on_sensor_event(*this);
+            {
+                for (object_id const& other_oid : m_touch_end_ids)
+                {
+                    INVARIANT(other_oid.kind == OBJECT_KIND::SENSOR);
+                    m_simulator->on_sensor_event(*this, &m_simulator->get_sensors().at(other_oid.index));
+                }
+            }
             m_touch_end_ids.clear();
         }
         else
         {
             INVARIANT(get_kind() == SENSOR_KIND::TOUCHING);
-            if (!m_touching_ids.empty())
-                m_simulator->on_sensor_event(*this);
+            for (object_id const&  other_oid : m_touching_ids)
+            {
+                INVARIANT(other_oid.kind == OBJECT_KIND::SENSOR);
+                m_simulator->on_sensor_event(*this, &m_simulator->get_sensors().at(other_oid.index));
+            }
         }
 
         m_touching_ids.swap(m_old_touching_ids);
@@ -180,7 +195,7 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
 
 void  sensor::on_collision_contact(
         scene::node_id const&  collider_nid,
-        scene::collicion_contant_info const&  contact_info,
+        scene::collicion_contant_info_ptr const  contact_info,
         object_id const&  other_id,
         scene::node_id const&  other_collider_nid
         )
@@ -194,10 +209,12 @@ void  sensor::on_collision_contact(
     if (!other_id.valid())
         return;
 
+    INVARIANT(other_id.kind == OBJECT_KIND::SENSOR);
+
     m_collision_contacts_buffer.push_back({
             collider_nid,
             contact_info,
-            other_id.kind == OBJECT_KIND::SENSOR ? m_simulator->get_owner_of_sensor(other_id.index) : other_id,
+            other_id,
             other_collider_nid
             });
 }

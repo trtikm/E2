@@ -6,6 +6,7 @@
 #   include <scene/scene_record_id.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <unordered_map>
+#   include <unordered_set>
 
 
 struct  simulator;
@@ -66,23 +67,27 @@ struct bind_ai_scene_to_simulator : public ai::scene
             float_32_bit const  mass_inverted,
             matrix33 const&  inertia_tensor_inverted
             ) override;
-    vector3  get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    vector3  get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid) const override;
     void  set_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_velocity) override;
-    vector3  get_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    vector3  get_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid) const override;
     void  set_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_velocity) override;
-    vector3  get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    vector3  get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const override;
     void  set_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_acceleration) override;
     void  add_to_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_acceleration) override;
-    vector3  get_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    vector3  get_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const override;
     void  set_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  angular_acceleration) override;
     void  add_to_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  angular_acceleration) override;
-    float_32_bit  get_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    float_32_bit  get_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid) const override;
     void  set_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid, float_32_bit const  inverted_mass) override;
-    matrix33  get_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    matrix33  get_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid) const override;
     void  set_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid, matrix33 const&  inverted_inertia_tensor) override;
     void  erase_rigid_body_from_scene_node(node_id const&  nid) override;
 
-    vector3  get_gravity_acceleration_at_point(vector3 const&  position) const override; // Always in the world space.
+    vector3  get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const override;
+    vector3  get_initial_external_angular_acceleration_at_point(vector3 const&  position_in_world_space) const override;
+
+    vector3  get_external_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const override;
+    vector3  get_external_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const override;
 
     void  register_to_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
@@ -109,7 +114,8 @@ struct bind_ai_scene_to_simulator : public ai::scene
 
 private:
 
-    using collision_contacts_stream_type = std::unordered_map<angeo::collision_object_id, std::pair<node_id, ai::object_id> >;
+    using collision_contacts_stream_type =
+            std::unordered_map<angeo::collision_object_id, std::pair<node_id, std::unordered_set<ai::object_id> > >;
 
     void  on_collision_contact(
             collision_contacts_stream_type::const_iterator const  it,

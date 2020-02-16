@@ -34,7 +34,8 @@ bool  get_satisfied_motion_guarded_actions(
         sensory_controller_collision_contacts::collision_contacts_map const&  collision_contacts,
         detail::rigid_body_motion const&  motion_object_motion,
         motion_desire_props const&  desire,
-        vector3 const&  gravity_acceleration_in_world_space,
+        vector3 const&  external_linear_acceleration,
+        vector3 const&  external_angular_acceleration,
         std::vector<skeletal_motion_templates::guarded_actions_ptr>* const  output_satisfied_guarded_actions_ptr
         );
 
@@ -43,7 +44,8 @@ void  execute_satisfied_motion_guarded_actions(
         float_32_bit const  time_step_in_seconds,
         vector3 const&  ideal_linear_velocity_in_world_space,
         vector3 const&  ideal_angular_velocity_in_world_space,
-        vector3 const&  gravity_acceleration_in_world_space,
+        vector3 const&  external_linear_acceleration,
+        vector3 const&  external_angular_acceleration,
         motion_desire_props const&  desire,
         motion_action_persistent_data_map const&  motion_action_data,
         rigid_body_motion&  motion_object_motion,

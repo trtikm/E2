@@ -38,6 +38,25 @@ static std::unordered_map<natural_8_bit, std::pair<std::string, std::string> > c
             "Set inverted inertia tensor of a rigid body scene node under an agent or device node."
             } },
 
+    { as_number(SENSOR_ACTION_KIND::UPDATE_RADIAL_FORCE_FIELD), { "UPDATE_RADIAL_FORCE_FIELD",
+            "Updates force field linear acceleration of a rigid body under an agent or device\n"
+            "appearing in a force field region (i.e. colliding with a collider of a force\n"
+            "field device). At each point in the field, the acceleration vector always aims at\n"
+            "the center of the field, which is the origin of a given scene node under the device.\n"
+            "The magnitude of the acceleration vector is a function: A*x^E, where A and E\n"
+            "are custom numbers (constants) and x is the distance of the origin of the\n"
+            "rigid body's scene node from the center of the field."
+            } },
+    { as_number(SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD), { "UPDATE_LINEAR_FORCE_FIELD",
+            "Updates force field linear acceleration of a rigid body under an agent or device\n"
+            "appearing in a force field region (i.e. colliding with a collider of a force\n"
+            "field device). At each point in the field, the acceleration vector is the same."
+            } },
+    { as_number(SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD), { "LEAVE_FORCE_FIELD",
+            "Removes the linear acceleration applied by a force field to a rigid\n"
+            "body under an agent or device."
+            } },
+
     { as_number(SENSOR_ACTION_KIND::END_OF_LIFE), { "END_OF_LIFE",
             "Erase self from the scene."
             } },
@@ -255,6 +274,32 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map::default_config_records_map>
                 { "2_2", { property_map::make_float(0.0f), true,
                         "Element (2,2) of the inverted inertia tensor.",
                         edit_order++} },
+                } },
+
+        { SENSOR_ACTION_KIND::UPDATE_RADIAL_FORCE_FIELD, {
+                { "origin_nid", { property_map::make_string("TODO"), true,
+                        "An id of scene node whose origin represents the center of the radial force field.\n"
+                        "The magnitude of the ",
+                        edit_order++} },
+                { "multiplier", { property_map::make_float(1.0f), true,
+                        "A multiplier of the distance powered to the 'distance_exponent'.",
+                        edit_order++} },
+                { "exponent", { property_map::make_float(1.0f), true,
+                        "An exponent of the distance of the rigid body from the center of the force field.",
+                        edit_order++} },
+                } },
+        { SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD, {
+                { "x", { property_map::make_float(0.0f), true,
+                        "x coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                { "y", { property_map::make_float(0.0f), true,
+                        "y coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                { "z", { property_map::make_float(0.0f), true,
+                        "z coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                } },
+        { SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD, {
                 } },
 
         { SENSOR_ACTION_KIND::END_OF_LIFE, {

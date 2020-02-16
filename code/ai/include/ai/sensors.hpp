@@ -36,8 +36,6 @@ struct  sensors
     sensor&  at(sensor_id const  id) { return *m_sensors.at(id)->sensor_ptr; }
     sensor const&  at(sensor_id const  id) const { return *m_sensors.at(id)->sensor_ptr; }
 
-    sensor_id  to_id(scene::record_id const&  sensor_rid_) const { return m_from_rid_to_id.at(sensor_rid_); }
-
     scene_ptr  get_scene_ptr() const { return m_scene; }
 
     object_id const&  get_owner(sensor_id const  id_);
@@ -51,7 +49,7 @@ struct  sensors
     void  on_collision_contact(
             sensor_id const  id,
             scene::node_id const&  collider_nid,
-            scene::collicion_contant_info const&  contact_info,
+            scene::collicion_contant_info_ptr const  contact_info,
             object_id const&  other_id,
             scene::node_id const&  other_collider_nid
             );
@@ -72,7 +70,6 @@ private:
     void  construct_sensor(sensor_id const  id, sensor_props&  props);
 
     std::vector<std::shared_ptr<sensor_props> >  m_sensors; // Should be 'std::vector<std::unique_ptr<sensor_props> >', but does not compile :-(
-    std::unordered_map<scene::record_id, sensor_id>  m_from_rid_to_id;
     simulator*  m_simulator;
     scene_ptr  m_scene;
 };

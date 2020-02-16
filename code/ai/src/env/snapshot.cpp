@@ -41,7 +41,7 @@ snapshot::snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr)
     linear_acceleration = transform_vector(motion.acceleration.m_linear, to_agent_space_matrix);
     angular_acceleration = transform_vector(motion.acceleration.m_angular, to_agent_space_matrix);
 
-    gravity = transform_vector(actions.get_gravity_acceleration(), to_agent_space_matrix);
+    external_linear_acceleration = transform_vector(actions.get_external_linear_acceleration(), to_agent_space_matrix);
 
     ideal_linear_velocity = transform_vector(actions.get_ideal_linear_velocity_in_world_space(), to_agent_space_matrix);
     ideal_angular_velocity = transform_vector(actions.get_ideal_angular_velocity_in_world_space(), to_agent_space_matrix);

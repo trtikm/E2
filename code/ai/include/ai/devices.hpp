@@ -23,7 +23,7 @@ struct  devices
     explicit devices(simulator* const  simulator_, scene_ptr const  scene_);
 
     device_id  insert(
-            scene::node_id const&  device_nid,
+            scene::record_id const&  device_rid,
             skeletal_motion_templates const  motion_templates, // can be empty, when the device does not use skeletal animations.
             DEVICE_KIND const  device_kind,
             from_sensor_record_to_sensor_action_map const&  sensor_actions
@@ -43,19 +43,19 @@ struct  devices
     void  on_collision_contact(
             device_id const  id,
             scene::node_id const&  collider_nid,
-            scene::collicion_contant_info const&  contact_info,
+            scene::collicion_contant_info_ptr const  contact_info,
             object_id const&  other_id,
             scene::node_id const&  other_collider_nid
             );
 
-    void  on_sensor_event(device_id const  id, sensor const&  s);
+    void  on_sensor_event(device_id const  id, sensor const&  s, sensor const* const  other = nullptr);
 
 private:
 
     struct  device_props
     {
         std::unique_ptr<device>  device_ptr;
-        scene::node_id  device_nid;
+        scene::record_id  device_rid;
         skeletal_motion_templates  motion_templates;
         DEVICE_KIND  device_kind;
         std::shared_ptr<from_sensor_record_to_sensor_action_map>  m_sensor_actions;
