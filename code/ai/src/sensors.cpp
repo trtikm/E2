@@ -154,8 +154,9 @@ void  sensors::on_collision_contact(
         scene::node_id const&  other_collider_nid
         )
 {
-    ASSUMPTION(id < m_sensors.size() && m_sensors.at(id) != nullptr && m_sensors.at(id)->sensor_ptr != nullptr);
-    m_sensors.at(id)->sensor_ptr->on_collision_contact(collider_nid, contact_info, other_id, other_collider_nid);
+    ASSUMPTION(id < m_sensors.size() && m_sensors.at(id) != nullptr);
+    if (m_sensors.at(id)->sensor_ptr != nullptr)
+        m_sensors.at(id)->sensor_ptr->on_collision_contact(collider_nid, contact_info, other_id, other_collider_nid);
 }
 
 

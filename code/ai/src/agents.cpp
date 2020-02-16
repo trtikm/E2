@@ -111,16 +111,20 @@ void  agents::on_collision_contact(
         scene::node_id const&  other_collider_nid
         )
 {
-    m_agents.at(id)->agent_ptr->get_blackboard()->m_sensory_controller->get_collision_contacts()->on_collision_contact(
-            collider_nid,
-            contact_info
-            );
+    ASSUMPTION(id < m_agents.size() && m_agents.at(id) != nullptr);
+    if (m_agents.at(id)->agent_ptr != nullptr)
+        m_agents.at(id)->agent_ptr->get_blackboard()->m_sensory_controller->get_collision_contacts()->on_collision_contact(
+                collider_nid,
+                contact_info
+                );
 }
 
 
 void  agents::on_sensor_event(agent_id const  id, sensor const&  s, sensor const* const  other)
 {
-    m_agents.at(id)->agent_ptr->on_sensor_event(s, other);
+    ASSUMPTION(id < m_agents.size() && m_agents.at(id) != nullptr);
+    if (m_agents.at(id)->agent_ptr != nullptr)
+        m_agents.at(id)->agent_ptr->on_sensor_event(s, other);
 }
 
 

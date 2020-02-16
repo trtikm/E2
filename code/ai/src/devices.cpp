@@ -97,12 +97,20 @@ void  devices::on_collision_contact(
         object_id const&  other_id,
         scene::node_id const&  other_collider_nid
         )
-{}
+{
+    ASSUMPTION(id < m_devices.size() && m_devices.at(id) != nullptr);
+    if (m_devices.at(id)->device_ptr != nullptr)
+    {
+        // Process the contact here. However, so far nothing to do though...
+    }
+}
 
 
 void  devices::on_sensor_event(device_id const  id, sensor const&  s, sensor const* const  other)
 {
-    m_devices.at(id)->device_ptr->on_sensor_event(s, other);
+    ASSUMPTION(id < m_devices.size() && m_devices.at(id) != nullptr);
+    if (m_devices.at(id)->device_ptr != nullptr)
+        m_devices.at(id)->device_ptr->on_sensor_event(s, other);
 }
 
 
