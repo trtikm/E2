@@ -1290,18 +1290,18 @@ void  simulator::process_ai_requests()
             {
                 vector3  accel;
                 {
-                    vector3 const  origin_delta =
+                    vector3  origin_delta =
                             transform_point(vector3_zero(), origin_node_ptr->get_world_matrix()) -
                             transform_point(vector3_zero(), affected_node_ptr->get_world_matrix());
-                    float_32_bit const  distance = length(origin_delta);
-                    if (distance < 1e-4f)
-                        accel = vector3_zero();
-                    else
+                    float_32_bit  distance = length(origin_delta);
+                    if (distance < 1e-3f)
                     {
-                        float_32_bit const  magnitude =
-                                request->props.get_float("multiplier") * std::powf(distance, request->props.get_float("exponent"));
-                        accel = (magnitude / distance) * origin_delta;
+                        distance = 1e-3f;
+                        origin_delta = distance * vector3_unit_z();
                     }
+                    float_32_bit const  magnitude =
+                            request->props.get_float("multiplier") * std::powf(distance, request->props.get_float("exponent"));
+                    accel = (magnitude / distance) * origin_delta;
                 }
                 detail::update_rigid_body_external_acceleration(
                         m_rigid_bodies_external_linear_accelerations,
