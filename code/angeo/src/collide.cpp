@@ -559,6 +559,7 @@ bool  closest_point_of_triangle_to_point(
         vector3 const&  triangle_vertex_2,
         vector3 const&  triangle_vertex_3,
         vector3 const&  unit_normal_vector,
+        natural_8_bit const  edges_ignore_mask,
         bool const  cull_triangle_back_side,
         vector3 const&  point,
         vector3*  output_triangle_closest_point_ptr,
@@ -574,19 +575,35 @@ bool  closest_point_of_triangle_to_point(
 
     vector3  closest_point;
 
+    bool  edge_collider_output_state;
     auto const  edge_collider =
             [output_triangle_closest_point_ptr,
              output_triangle_shape_feature_id_ptr,
              output_parameter_ptr,
-             &unit_normal_vector](
+             &unit_normal_vector,
+             edges_ignore_mask,
+             &edge_collider_output_state](
                     vector3 const&  A,
                     vector3 const&  B,
                     natural_32_bit const  feature_index,
                     vector3 const&  P
                     )
             {
-                if (dot_product(cross_product(B - A, unit_normal_vector), P - A) < 0.0f)
+                vector3 const  AB = B - A;
+                vector3 const  AP = P - A;
+                vector3 const  binormal = cross_product(AB, unit_normal_vector);
+                float_32_bit dot = dot_product(binormal, AP);
+                if (dot < 0.0f)
                     return false;
+                if (((1U << feature_index) & edges_ignore_mask) != 0U // Should be the passed edge ignored?
+                    && dot > length(binormal) * 1e-4f) // Is the distance of the point to the edge greater then 1e-4f?
+                {
+                    edge_collider_output_state = false; // Yes, we indeed want to say there is no collison at all
+                                                        // because the point lies behind ignored -> there must be
+                                                        // another triangle sharing the edge which will report
+                                                        // the collision.
+                    return true;
+                }
                 float_32_bit const  line_param = closest_point_on_line_to_point(A, B, P, output_triangle_closest_point_ptr);
                 if (output_triangle_shape_feature_id_ptr != nullptr)
                 {
@@ -608,15 +625,16 @@ bool  closest_point_of_triangle_to_point(
                 }
                 if (output_parameter_ptr != nullptr)
                     *output_parameter_ptr = line_param;
+                edge_collider_output_state = true;
                 return true;
             };
 
     if (edge_collider(triangle_vertex_1, triangle_vertex_2, 0U, point) == true)
-        return true;
+        return edge_collider_output_state;
     if (edge_collider(triangle_vertex_2, triangle_vertex_3, 1U, point) == true)
-        return true;
+        return edge_collider_output_state;
     if (edge_collider(triangle_vertex_3, triangle_vertex_1, 2U, point) == true)
-        return true;
+        return edge_collider_output_state;
 
     collision_point_and_plane(
             point,

@@ -2102,6 +2102,7 @@ bool  collision_scene::compute_contacts__sphere_vs_triangle(
             geometry_2.end_point_2_in_world_space,
             geometry_2.end_point_3_in_world_space,
             geometry_2.unit_normal_in_world_space,
+            geometry_2.edges_ignore_mask,
             true,
             geometry_1.center_in_world_space,
             &triangle_closest_point,
