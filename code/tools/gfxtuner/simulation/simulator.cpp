@@ -122,6 +122,19 @@ scn::scene_node_id  skeleton_build_scene_node_id_of_bones(
 
 
 vector3  get_rigid_body_external_acceleration(
+        std::unordered_map<scn::scene_node_id, vector3> const&  rigid_body_external_accelerations,
+        bool const  include_initial_accel
+        )
+{
+    vector3  result = vector3_zero();
+    for (auto const&  field_id_and_accel : rigid_body_external_accelerations)
+        if (include_initial_accel || field_id_and_accel.first.valid())
+            result += field_id_and_accel.second;
+    return result;
+}
+
+
+vector3  get_rigid_body_external_acceleration(
         std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> > const&  external_accelerations,
         scn::scene_node_id const&  id
         )
@@ -129,8 +142,7 @@ vector3  get_rigid_body_external_acceleration(
     vector3  result = vector3_zero();
     auto const  it = external_accelerations.find(id);
     if (it != external_accelerations.end())
-        for (auto const&  field_id_and_accel : it->second)
-            result += field_id_and_accel.second;
+        result = get_rigid_body_external_acceleration(it->second, true);
     return result;
 }
 
@@ -176,6 +188,29 @@ void  erase_rigid_body_external_acceleration(
             if (obj_it->second.empty())
                 external_accelerations.erase(obj_it);
         }
+    }
+}
+
+
+void  switch_application_state_of_all_rigid_body_external_accelerations(
+        std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> > const&  external_accelerations,
+        angeo::rigid_body_simulator&  rb_simulator,
+        scn::scene const&  scene,
+        bool const  state
+        )
+{
+    float_32_bit const   multiplier = state ? 1.0f : -1.0f;
+    for (auto const&  node_and_map : external_accelerations)
+    {
+        scn::scene_node_ptr const  node_ptr = scene.get_scene_node(node_and_map.first);
+        if (node_ptr == nullptr)
+            continue;
+        scn::rigid_body const* const  rb_props = scn::get_rigid_body(*node_ptr);
+        if (rb_props == nullptr)
+            continue;
+        vector3 const  accel = multiplier * get_rigid_body_external_acceleration(node_and_map.second, false);
+        vector3 const  old_total_accel = rb_simulator.get_external_linear_acceleration(rb_props->id());
+        rb_simulator.set_external_linear_acceleration(rb_props->id(), old_total_accel + accel);
     }
 }
 
@@ -864,12 +899,25 @@ if (render_text)
 
 void  simulator::on_simulation_paused()
 {
+    detail::switch_application_state_of_all_rigid_body_external_accelerations(
+            m_rigid_bodies_external_linear_accelerations,
+            *m_rigid_body_simulator_ptr,
+            get_scene(),
+            false
+            );
     call_listeners(simulator_notifications::paused());
 }
 
 
 void  simulator::on_simulation_resumed()
 {
+    detail::switch_application_state_of_all_rigid_body_external_accelerations(
+            m_rigid_bodies_external_linear_accelerations,
+            *m_rigid_body_simulator_ptr,
+            get_scene(),
+            true
+            );
+
     m_scene_selection.clear();
     m_scene_edit_data.invalidate_data();
     m_scene_history->clear();
