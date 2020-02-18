@@ -490,7 +490,7 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
 {
     TMPROF_BLOCK();
 
-    simulation_time_config::auto_updater const  time_config(m_simulation_time_config, this);
+    qtgl::simulation_time_config::auto_updater const  time_config(m_simulation_time_config, this);
 
     if (keyboard_props().was_just_released(qtgl::KEY_ESCAPE()))
         call_listeners(simulator_notifications::escape_simulator_window());

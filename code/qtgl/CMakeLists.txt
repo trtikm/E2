@@ -15,6 +15,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/real_time_simulator.hpp
     ./src/real_time_simulator.cpp
+    ./include/qtgl/simulation_time_config.hpp
+    ./src/simulation_time_config.cpp
 
     ./include/qtgl/glapi.hpp
     ./src/glapi.cpp

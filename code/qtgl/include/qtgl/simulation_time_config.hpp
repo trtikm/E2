@@ -1,8 +1,12 @@
-#ifndef E2_TOOL_GFXTUNER_SIMULATION_TIME_CONFIG_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_SIMULATION_TIME_CONFIG_HPP_INCLUDED
+#ifndef QTGL_SIMULATION_TIME_CONFIG_HPP_INCLUDED
+#   define QTGL_SIMULATION_TIME_CONFIG_HPP_INCLUDED
 
-#   include <gfxtuner/simulation/simulator_notifications.hpp>
-#   include <qtgl/real_time_simulator.hpp>
+#   include <utility/basic_numeric_types.hpp>
+
+namespace qtgl {
+
+
+struct  real_time_simulator;
 
 
 struct  simulation_time_config
@@ -61,5 +65,7 @@ private:
     qtgl::real_time_simulator*  simulator_ptr;
 };
 
+
+}
 
 #endif

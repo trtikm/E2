@@ -1,7 +1,9 @@
-#   include <gfxtuner/simulation/simulation_time_config.hpp>
-#   include <qtgl/real_time_simulator.hpp>
-#   include <utility/invariants.hpp>
-#   include <algorithm>
+#include <qtgl/simulation_time_config.hpp>
+#include <qtgl/real_time_simulator.hpp>
+#include <utility/invariants.hpp>
+#include <algorithm>
+
+namespace qtgl {
 
 
 simulation_time_config::simulation_time_config()
@@ -42,9 +44,10 @@ simulation_time_config::auto_updater::auto_updater(simulation_time_config& cfg, 
                 config_working_copy.m_pause_state == PAUSE_STATE::PAUSED ||
                 config_working_copy.m_previous_pause_state == PAUSE_STATE::PAUSED))
         {
-            simulator_ptr->call_listeners(
-                    config_working_copy.is_paused() ? simulator_notifications::paused() : simulator_notifications::resumed()
-                    );
+            if (config_working_copy.is_paused())
+                simulator_ptr->on_simulation_paused();
+            else
+                simulator_ptr->on_simulation_resumed();
         }
         config_working_copy.m_previous_pause_state = config_working_copy.m_pause_state;
         config_ptr->m_previous_pause_state = config_working_copy.m_pause_state;
@@ -56,10 +59,13 @@ simulation_time_config::auto_updater::~auto_updater()
     if (config_working_copy.m_pause_state == PAUSE_STATE::UNPAUSED_FOR_SINGLE_STEP_ONLY)
     {
         if (simulator_ptr != nullptr)
-            simulator_ptr->call_listeners(simulator_notifications::paused());
+            simulator_ptr->on_simulation_paused();
         config_working_copy.m_previous_pause_state = PAUSE_STATE::PAUSED;
         config_working_copy.m_pause_state = PAUSE_STATE::PAUSED;
         config_ptr->m_previous_pause_state = PAUSE_STATE::PAUSED;
         config_ptr->m_pause_state = PAUSE_STATE::PAUSED;
     }
+}
+
+
 }

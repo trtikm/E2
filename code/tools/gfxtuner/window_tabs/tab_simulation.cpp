@@ -80,9 +80,9 @@ void  widgets::on_fixed_frequency_changed()
 void  widgets::on_fixed_frequency_use_changed()
 {
     wnd()->glwindow().call_now(&simulator::simulation_time_config_ref).set_fixed_step_usage(
-            m_fixed_frequency_never->isChecked()    ? simulation_time_config::FIXED_TIME_STEP_USE::NEVER :
-            m_fixed_frequency_always->isChecked()   ? simulation_time_config::FIXED_TIME_STEP_USE::ALWAYS :
-                                                      simulation_time_config::FIXED_TIME_STEP_USE::FOR_SINGLE_STEP_ONLY
+            m_fixed_frequency_never->isChecked()    ? qtgl::simulation_time_config::FIXED_TIME_STEP_USE::NEVER :
+            m_fixed_frequency_always->isChecked()   ? qtgl::simulation_time_config::FIXED_TIME_STEP_USE::ALWAYS :
+                                                      qtgl::simulation_time_config::FIXED_TIME_STEP_USE::FOR_SINGLE_STEP_ONLY
             );
 }
 

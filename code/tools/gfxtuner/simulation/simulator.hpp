@@ -1,7 +1,6 @@
 #ifndef E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
-#   include <gfxtuner/simulation/simulation_time_config.hpp>
 #   include <scene/scene.hpp>
 #   include <scene/scene.hpp>
 #   include <scene/scene_node_id.hpp>
@@ -16,6 +15,7 @@
 #   include <scene/records/device/device.hpp>
 #   include <scene/records/sensor/sensor.hpp>
 #   include <qtgl/real_time_simulator.hpp>
+#   include <qtgl/simulation_time_config.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
 #   include <qtgl/draw.hpp>
@@ -53,7 +53,7 @@ struct simulator : public qtgl::real_time_simulator
     simulator();
     ~simulator();
 
-    void synchronise_with_dependent_modules();
+    void synchronise_with_dependent_modules() override;
 
     // Simulation
 
@@ -62,7 +62,10 @@ struct simulator : public qtgl::real_time_simulator
             bool const  is_this_pure_redraw_request
             ) override;
 
-    simulation_time_config&  simulation_time_config_ref() { return m_simulation_time_config; }
+    void  on_simulation_paused() override;
+    void  on_simulation_resumed() override;
+
+    qtgl::simulation_time_config&  simulation_time_config_ref() { return m_simulation_time_config; }
 
     // Background and grid
 
@@ -302,9 +305,6 @@ struct simulator : public qtgl::real_time_simulator
     vector3  get_rigid_body_external_linear_acceleration(scn::scene_node_id const&  id) const;
     vector3  get_rigid_body_external_angular_acceleration(scn::scene_node_id const&  id) const;
 
-    void  on_simulation_paused();
-    void  on_simulation_resumed();
-
     CAMERA_CONTROLLER_TYPE  get_camera_controller_type() const
     {
         return m_simulation_time_config.is_paused() ?
@@ -424,7 +424,7 @@ private:
 
     // Common and shared data for both modes: Editing and Simulation
 
-    simulation_time_config  m_simulation_time_config;
+    qtgl::simulation_time_config  m_simulation_time_config;
     scn::scene_ptr  m_scene;
 
     struct  cache_of_batches_of_colliders

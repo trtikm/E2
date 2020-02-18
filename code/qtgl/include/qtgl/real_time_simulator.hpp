@@ -20,6 +20,9 @@ struct real_time_simulator
     virtual void next_round(float_64_bit const  seconds_from_previous_call,
                             bool const  is_this_pure_redraw_request) {}
 
+    virtual void  on_simulation_paused() {}
+    virtual void  on_simulation_resumed() {}
+
     void  call_listeners(std::string const&  notification_type) const;
 
     qtgl::window_props const&  window_props() const;
