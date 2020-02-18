@@ -659,6 +659,8 @@ natural_32_bit  closest_points_of_triangle_and_line(
     vector3 const&  triangle_vertex_2,
     vector3 const&  triangle_vertex_3,
     vector3 const&  triangle_unit_normal_vector,
+    natural_8_bit const  triangle_edges_ignore_mask,
+
     vector3  line_point_1,
     vector3  line_point_2,
 
@@ -670,9 +672,7 @@ natural_32_bit  closest_points_of_triangle_and_line(
     vector3*  output_triangle_closest_point_2,
     collision_shape_feature_id*  output_triangle_shape_feature_id_2,
     vector3*  output_line_closest_point_2,
-    collision_shape_feature_id*  output_line_shape_feature_id_2,
-
-    natural_8_bit const  triangle_edges_ignore_mask
+    collision_shape_feature_id*  output_line_shape_feature_id_2
     )
 {
     float_32_bit constexpr  distance_epsilon = 0.0001f;
@@ -742,17 +742,30 @@ natural_32_bit  closest_points_of_triangle_and_line(
             }
         };
 
+    auto const  ignore_edge =
+        [triangle_edges_ignore_mask](
+                natural_8_bit const  edge_mask,
+                float_32_bit const  dot1,
+                float_32_bit const  dot2,
+                vector3 const&  binormal) -> bool {
+            return (triangle_edges_ignore_mask & edge_mask) != 0U
+                   && std::min(absolute_value(dot1), absolute_value(dot2)) > length(binormal) * 1e-4f;
+        };
+
     vector3 const normal_T12 = cross_product(triangle_vertex_2 - triangle_vertex_1, triangle_unit_normal_vector);
 
     // Check that 'triangle_unit_normal_vector' agrees with the counter-clock-wise order of triangle's verices.
     ASSUMPTION(dot_product(normal_T12, triangle_vertex_3 - triangle_vertex_1) < 0.0f);
 
-    bool const  L1_behind_T12 = dot_product(normal_T12, line_point_1 - triangle_vertex_1) >= 0.0f;
-    bool const  L2_behind_T12 = dot_product(normal_T12, line_point_2 - triangle_vertex_1) >= 0.0f;
+    float_32_bit const  dot_L1_T12 = dot_product(normal_T12, line_point_1 - triangle_vertex_1);
+    float_32_bit const  dot_L2_T12 = dot_product(normal_T12, line_point_2 - triangle_vertex_1);
+
+    bool const  L1_behind_T12 = dot_L1_T12 >= 0.0f;
+    bool const  L2_behind_T12 = dot_L2_T12 >= 0.0f;
 
     if (L1_behind_T12 && L2_behind_T12)
     {
-        if ((triangle_edges_ignore_mask & 1U) != 0U)
+        if (ignore_edge(1U, dot_L1_T12, dot_L2_T12, normal_T12))
             return 0U;
 
         float_32_bit  triangle_param_1, triangle_param_2, line_param_1, line_param_2;
@@ -784,12 +797,15 @@ natural_32_bit  closest_points_of_triangle_and_line(
 
     vector3 const normal_T23 = cross_product(triangle_vertex_3 - triangle_vertex_2, triangle_unit_normal_vector);
 
-    bool const  L1_behind_T23 = dot_product(normal_T23, line_point_1 - triangle_vertex_2) >= 0.0f;
-    bool const  L2_behind_T23 = dot_product(normal_T23, line_point_2 - triangle_vertex_2) >= 0.0f;
+    float_32_bit const  dot_L1_T23 = dot_product(normal_T23, line_point_1 - triangle_vertex_2);
+    float_32_bit const  dot_L2_T23 = dot_product(normal_T23, line_point_2 - triangle_vertex_2);
+
+    bool const  L1_behind_T23 = dot_L1_T23 >= 0.0f;
+    bool const  L2_behind_T23 = dot_L2_T23 >= 0.0f;
 
     if (L1_behind_T23 && L2_behind_T23)
     {
-        if ((triangle_edges_ignore_mask & 2U) != 0U)
+        if (ignore_edge(2U, dot_L1_T23, dot_L2_T23, normal_T23))
             return 0U;
 
         float_32_bit  triangle_param_1, triangle_param_2, line_param_1, line_param_2;
@@ -819,14 +835,17 @@ natural_32_bit  closest_points_of_triangle_and_line(
         return num_collisions;
     }
 
-    vector3 const normal_T31 = cross_product(triangle_vertex_1 - triangle_vertex_3, triangle_unit_normal_vector);
+    vector3 const  normal_T31 = cross_product(triangle_vertex_1 - triangle_vertex_3, triangle_unit_normal_vector);
 
-    bool const  L1_behind_T31 = dot_product(normal_T31, line_point_1 - triangle_vertex_3) >= 0.0f;
-    bool const  L2_behind_T31 = dot_product(normal_T31, line_point_2 - triangle_vertex_3) >= 0.0f;
+    float_32_bit const  dot_L1_T31 = dot_product(normal_T31, line_point_1 - triangle_vertex_3);
+    float_32_bit const  dot_L2_T31 = dot_product(normal_T31, line_point_2 - triangle_vertex_3);
+
+    bool const  L1_behind_T31 = dot_L1_T31 >= 0.0f;
+    bool const  L2_behind_T31 = dot_L2_T31 >= 0.0f;
 
     if (L1_behind_T31 && L2_behind_T31)
     {
-        if ((triangle_edges_ignore_mask & 4U) != 0U)
+        if (ignore_edge(4U, dot_L1_T31, dot_L2_T31, normal_T31))
             return 0U;
 
         float_32_bit  triangle_param_1, triangle_param_2, line_param_1, line_param_2;
@@ -973,7 +992,8 @@ natural_32_bit  closest_points_of_triangle_and_line(
         }
     }
 
-    if ((triangle_edges_ignore_mask & 1U) == 0U && ((L1_behind_T12 && !L2_below_L1) || (L2_behind_T12 && !L1_below_L2)))
+    if (!ignore_edge(1U, dot_L1_T12, dot_L2_T12, normal_T12)
+        && ((L1_behind_T12 && !L2_below_L1) || (L2_behind_T12 && !L1_below_L2)))
     {
         closest_points_of_two_lines(
                 triangle_vertex_1,
@@ -996,7 +1016,8 @@ natural_32_bit  closest_points_of_triangle_and_line(
         ++num_closest_point_pairs;
     }
 
-    if ((triangle_edges_ignore_mask & 2U) == 0U && ((L1_behind_T23 && !L2_below_L1) || (L2_behind_T23 && !L1_below_L2)))
+    if (!ignore_edge(2U, dot_L1_T23, dot_L2_T23, normal_T23)
+        && ((L1_behind_T23 && !L2_below_L1) || (L2_behind_T23 && !L1_below_L2)))
     {
         closest_points_of_two_lines(
                 triangle_vertex_2,
@@ -1019,7 +1040,8 @@ natural_32_bit  closest_points_of_triangle_and_line(
         ++num_closest_point_pairs;
     }
 
-    if ((triangle_edges_ignore_mask & 4U) == 0U && ((L1_behind_T31 && !L2_below_L1) || (L2_behind_T31 && !L1_below_L2)))
+    if (!ignore_edge(4U, dot_L1_T31, dot_L2_T31, normal_T31)
+        && ((L1_behind_T31 && !L2_below_L1) || (L2_behind_T31 && !L1_below_L2)))
     {
         closest_points_of_two_lines(
                 triangle_vertex_3,
@@ -1044,8 +1066,6 @@ natural_32_bit  closest_points_of_triangle_and_line(
 
     if (is_line_parallel_with_plane_of_triangle)
     {
-        INVARIANT(num_closest_point_pairs > 1U);
-
         natural_32_bit  index_1 = 0U, index_2 = 1U;
         if (num_closest_point_pairs == 3U)
         {
@@ -1075,21 +1095,25 @@ natural_32_bit  closest_points_of_triangle_and_line(
         if (output_line_shape_feature_id_1 != nullptr)
             *output_line_shape_feature_id_1 = line_closest_point_feature_ids[index_1];
 
-        if (output_triangle_closest_point_2 != nullptr)
-            *output_triangle_closest_point_2 = triangle_closest_points[index_2];
-        if (output_triangle_shape_feature_id_2 != nullptr)
-            *output_triangle_shape_feature_id_2 = triangle_closest_point_feature_ids[index_2];
+        if (num_closest_point_pairs > 1U)
+        {
+            if (output_triangle_closest_point_2 != nullptr)
+                *output_triangle_closest_point_2 = triangle_closest_points[index_2];
+            if (output_triangle_shape_feature_id_2 != nullptr)
+                *output_triangle_shape_feature_id_2 = triangle_closest_point_feature_ids[index_2];
 
-        if (output_line_closest_point_2 != nullptr)
-            *output_line_closest_point_2 = line_closest_points[index_2];
-        if (output_line_shape_feature_id_2 != nullptr)
-            *output_line_shape_feature_id_2 = line_closest_point_feature_ids[index_2];
+            if (output_line_closest_point_2 != nullptr)
+                *output_line_closest_point_2 = line_closest_points[index_2];
+            if (output_line_shape_feature_id_2 != nullptr)
+                *output_line_shape_feature_id_2 = line_closest_point_feature_ids[index_2];
+        }
 
-        return 2U;
+        return num_closest_point_pairs;
     }
     else
     {
-        INVARIANT(num_closest_point_pairs > 0U);
+        if (num_closest_point_pairs == 0U)
+            return 0U;
 
         natural_32_bit  index = 0U;
         float_32_bit  distance2 = length_squared(triangle_closest_points[index] - line_closest_points[index]);

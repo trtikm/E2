@@ -945,15 +945,16 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         break;
     case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
         {
-            vector3 const& normal = get_triangle_unit_normal_in_world_space(coid);
-            if (dot_product(normal, ray_unit_direction_vector) >= 0.0f)
+            triangle_geometry const&  geometry = m_triangles_geometry.at(get_instance_index(coid));
+            if (dot_product(geometry.unit_normal_in_world_space, ray_unit_direction_vector) >= 0.0f)
                 return true;
             vector3  X,Y;
             if (angeo::closest_points_of_triangle_and_line(
-                    get_triangle_end_point_in_world_space(coid, 0U),
-                    get_triangle_end_point_in_world_space(coid, 1U),
-                    get_triangle_end_point_in_world_space(coid, 2U),
-                    normal,
+                    geometry.end_point_1_in_world_space,
+                    geometry.end_point_2_in_world_space,
+                    geometry.end_point_3_in_world_space,
+                    geometry.unit_normal_in_world_space,
+                    geometry.edges_ignore_mask,
                     ray_origin,
                     ray_end,
                     &Y,
@@ -1888,8 +1889,8 @@ bool  collision_scene::compute_contacts__capsule_vs_triangle(
             geometry_2.end_point_1_in_world_space,
             geometry_2.end_point_2_in_world_space,
             geometry_2.end_point_3_in_world_space,
-
             geometry_2.unit_normal_in_world_space,
+            geometry_2.edges_ignore_mask,
 
             geometry_1.end_point_1_in_world_space,
             geometry_1.end_point_2_in_world_space,

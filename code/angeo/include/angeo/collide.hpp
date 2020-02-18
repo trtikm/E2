@@ -218,6 +218,8 @@ natural_32_bit  closest_points_of_triangle_and_line(
         vector3 const&  triangle_vertex_2,
         vector3 const&  triangle_vertex_3,
         vector3 const&  triangle_unit_normal_vector,
+        natural_8_bit const  triangle_edges_ignore_mask,
+
         vector3  line_point_1,
         vector3  line_point_2,
 
@@ -229,9 +231,7 @@ natural_32_bit  closest_points_of_triangle_and_line(
         vector3*  output_triangle_closest_point_2,
         collision_shape_feature_id*  output_triangle_shape_feature_id_2,
         vector3*  output_line_closest_point_2,
-        collision_shape_feature_id*  output_line_shape_feature_id_2,
-
-        natural_8_bit const  triangle_edges_ignore_mask = 0U
+        collision_shape_feature_id*  output_line_shape_feature_id_2
         );
 
 
