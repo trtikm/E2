@@ -53,7 +53,7 @@ COLLISION_MATERIAL_TYPE  read_collison_material_from_string(std::string const&  
         {"RUBBER", COLLISION_MATERIAL_TYPE::RUBBER},
         {"STEEL", COLLISION_MATERIAL_TYPE::STEEL},
         {"WOOD", COLLISION_MATERIAL_TYPE::WOOD},
-        {"NO_FRINCTION_NO_BOUNCING", COLLISION_MATERIAL_TYPE::WOOD},
+        {"NO_FRINCTION_NO_BOUNCING", COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING},
     };
     auto const  it = map.find(name);
     ASSUMPTION(it != map.cend());
