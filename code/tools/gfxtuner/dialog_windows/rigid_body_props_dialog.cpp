@@ -127,7 +127,7 @@ rigid_body_props_dialog::rigid_body_props_dialog(
 
     m_widget_auto_compute_mass_and_inertia_tensor->setToolTip(
             "Whether to automatically compute inverted mass and inverted innertia tensor\n"
-            "from colliders under the scene node with this rigid body, or to manually\n"
+            "from moveable colliders under the scene node of this rigid body, or to manually\n"
             "specify the mass and the inertia tensor using the widgets below."
             );
 
@@ -221,9 +221,9 @@ rigid_body_props_dialog::rigid_body_props_dialog(
                     "NOTE: Insertion of mass and inertia tensor in the inverted forms has advantage\n"
                     "that you can also define unreal rigid bodies, i.e. those for which the inverted\n"
                     "forms normally do no exist. For example, rigid body with zero inverted mass\n"
-                    "and zero inverted inertia tensor cannot be moved by any force or torque;\n"
+                    "and zero inverted inertia tensor cannot change its motion by any force or torque;\n"
                     "when all elements of the inverted inertia tensor are zero except (2,2),\n"
-                    "then the rigid body can rotate only along z-axis (of its frame)."
+                    "then any torque can rotate the rigid body only along z-axis (of its frame)."
                     );
             QVBoxLayout* const group_layout = new QVBoxLayout;
             {
@@ -260,6 +260,11 @@ rigid_body_props_dialog::rigid_body_props_dialog(
             mass_and_inertia_tensor_group->setLayout(group_layout);
         }
         dlg_layout->addWidget(mass_and_inertia_tensor_group);
+        dlg_layout->addWidget(new QLabel(
+                "NOTE: Whenever there is inserted a NOT moveable collider under the scene node\n"
+                "of this rigid body, then all properties of the rigid body editable in the dialog\n"
+                "will automatically be reset to zeros (to make the rigid body not moveable too)."
+                ));
 
         QHBoxLayout* const buttons_layout = new QHBoxLayout;
         {

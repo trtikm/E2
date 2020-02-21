@@ -203,14 +203,16 @@ void  bind_ai_scene_to_simulator::insert_rigid_body_to_scene_node(
         )
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
-    m_simulator_ptr->insert_rigid_body_to_scene_node_ex(
+    m_simulator_ptr->insert_rigid_body_to_scene_node_direct(
+            m_simulator_ptr->get_scene_node(nid),
             linear_velocity,
             angular_velocity,
             external_linear_acceleration,
             external_angular_acceleration,
             mass_inverted,
             inertia_tensor_inverted,
-            nid
+            false,
+            nullptr
             );
 }
 

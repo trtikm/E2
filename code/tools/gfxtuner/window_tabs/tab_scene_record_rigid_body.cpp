@@ -67,26 +67,12 @@ void  register_record_undo_redo_processors(widgets* const  w)
     scn::scene_history_rigid_body_insert::set_redo_processor(
         [w](scn::scene_history_rigid_body_insert const&  history_node) {
             INVARIANT(history_node.get_id().get_folder_name() == scn::get_rigid_body_folder_name());
-            if (history_node.auto_compute_mass_and_inertia_tensor())
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_rigid_body_to_scene_node,
-                        std::cref(history_node.get_props().m_linear_velocity),
-                        std::cref(history_node.get_props().m_angular_velocity),
-                        std::cref(history_node.get_props().m_external_linear_acceleration),
-                        std::cref(history_node.get_props().m_external_angular_acceleration),
-                        std::cref(history_node.get_id().get_node_id())
-                        );
-            else
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_rigid_body_to_scene_node_ex,
-                        std::cref(history_node.get_props().m_linear_velocity),
-                        std::cref(history_node.get_props().m_angular_velocity),
-                        std::cref(history_node.get_props().m_external_linear_acceleration),
-                        std::cref(history_node.get_props().m_external_angular_acceleration),
-                        history_node.get_props().m_mass_inverted,
-                        std::cref(history_node.get_props().m_inertia_tensor_inverted),
-                        std::cref(history_node.get_id().get_node_id())
-                        );
+            w->wnd()->glwindow().call_now(
+                    &simulator::insert_rigid_body_to_scene_node,
+                    std::cref(history_node.get_props()),
+                    history_node.auto_compute_mass_and_inertia_tensor(),
+                    std::cref(history_node.get_id().get_node_id())
+                    );
             insert_record_to_tree_widget(
                     w->scene_tree(),
                     history_node.get_id(),
@@ -102,26 +88,12 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     &simulator::erase_rigid_body_from_scene_node,
                     std::cref(history_node.get_id().get_node_id())
                     );
-            if (history_node.get_old_auto_compute_mass_and_inertia_tensor())
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_rigid_body_to_scene_node,
-                        std::cref(history_node.get_old_props().m_linear_velocity),
-                        std::cref(history_node.get_old_props().m_angular_velocity),
-                        std::cref(history_node.get_old_props().m_external_linear_acceleration),
-                        std::cref(history_node.get_old_props().m_external_angular_acceleration),
-                        std::cref(history_node.get_id().get_node_id())
-                        );
-            else
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_rigid_body_to_scene_node_ex,
-                        std::cref(history_node.get_old_props().m_linear_velocity),
-                        std::cref(history_node.get_old_props().m_angular_velocity),
-                        std::cref(history_node.get_old_props().m_external_linear_acceleration),
-                        std::cref(history_node.get_old_props().m_external_angular_acceleration),
-                        history_node.get_old_props().m_mass_inverted,
-                        std::cref(history_node.get_old_props().m_inertia_tensor_inverted),
-                        std::cref(history_node.get_id().get_node_id())
-                        );
+            w->wnd()->glwindow().call_now(
+                    &simulator::insert_rigid_body_to_scene_node,
+                    std::cref(history_node.get_old_props()),
+                    history_node.get_old_auto_compute_mass_and_inertia_tensor(),
+                    std::cref(history_node.get_id().get_node_id())
+                    );
         });
     scn::scene_history_rigid_body_update_props::set_redo_processor(
         [w](scn::scene_history_rigid_body_update_props const&  history_node) {
@@ -130,26 +102,12 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     &simulator::erase_rigid_body_from_scene_node,
                     std::cref(history_node.get_id().get_node_id())
                     );
-            if (history_node.get_new_auto_compute_mass_and_inertia_tensor())
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_rigid_body_to_scene_node,
-                        std::cref(history_node.get_new_props().m_linear_velocity),
-                        std::cref(history_node.get_new_props().m_angular_velocity),
-                        std::cref(history_node.get_new_props().m_external_linear_acceleration),
-                        std::cref(history_node.get_new_props().m_external_angular_acceleration),
-                        std::cref(history_node.get_id().get_node_id())
-                        );
-            else
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_rigid_body_to_scene_node_ex,
-                        std::cref(history_node.get_new_props().m_linear_velocity),
-                        std::cref(history_node.get_new_props().m_angular_velocity),
-                        std::cref(history_node.get_new_props().m_external_linear_acceleration),
-                        std::cref(history_node.get_new_props().m_external_angular_acceleration),
-                        history_node.get_new_props().m_mass_inverted,
-                        std::cref(history_node.get_new_props().m_inertia_tensor_inverted),
-                        std::cref(history_node.get_id().get_node_id())
-                        );
+            w->wnd()->glwindow().call_now(
+                    &simulator::insert_rigid_body_to_scene_node,
+                    std::cref(history_node.get_new_props()),
+                    history_node.get_new_auto_compute_mass_and_inertia_tensor(),
+                    std::cref(history_node.get_id().get_node_id())
+                    );
         });
 }
 
@@ -196,26 +154,12 @@ void  register_record_handler_for_insert_scene_record(
                                     dlg.exec();
                                     if (!dlg.ok())
                                         return false;
-                                    if (auto_compute_mass_and_inertia_tensor)
-                                        w->wnd()->glwindow().call_now(
-                                                &simulator::insert_rigid_body_to_scene_node,
-                                                std::cref(rb_props->m_linear_velocity),
-                                                std::cref(rb_props->m_angular_velocity),
-                                                std::cref(rb_props->m_external_linear_acceleration),
-                                                std::cref(rb_props->m_external_angular_acceleration),
-                                                std::cref(record_id.get_node_id())
-                                                );
-                                    else
-                                        w->wnd()->glwindow().call_now(
-                                                &simulator::insert_rigid_body_to_scene_node_ex,
-                                                std::cref(rb_props->m_linear_velocity),
-                                                std::cref(rb_props->m_angular_velocity),
-                                                std::cref(rb_props->m_external_linear_acceleration),
-                                                std::cref(rb_props->m_external_angular_acceleration),
-                                                rb_props->m_mass_inverted,
-                                                std::cref(rb_props->m_inertia_tensor_inverted),
-                                                std::cref(record_id.get_node_id())
-                                                );
+                                    w->wnd()->glwindow().call_now(
+                                            &simulator::insert_rigid_body_to_scene_node,
+                                            std::cref(*rb_props),
+                                            auto_compute_mass_and_inertia_tensor,
+                                            std::cref(record_id.get_node_id())
+                                            );
                                     w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(
                                             record_id,
                                             auto_compute_mass_and_inertia_tensor,
@@ -273,26 +217,12 @@ void  register_record_handler_for_update_scene_record(
                             &simulator::erase_rigid_body_from_scene_node,
                             std::cref(record_id.get_node_id())
                             );
-                    if (auto_compute_mass_and_inertia_tensor)
-                        w->wnd()->glwindow().call_now(
-                                &simulator::insert_rigid_body_to_scene_node,
-                                std::cref(rb_props.m_linear_velocity),
-                                std::cref(rb_props.m_angular_velocity),
-                                std::cref(rb_props.m_external_linear_acceleration),
-                                std::cref(rb_props.m_external_angular_acceleration),
-                                std::cref(record_id.get_node_id())
-                                );
-                    else
-                        w->wnd()->glwindow().call_now(
-                                &simulator::insert_rigid_body_to_scene_node_ex,
-                                std::cref(rb_props.m_linear_velocity),
-                                std::cref(rb_props.m_angular_velocity),
-                                std::cref(rb_props.m_external_linear_acceleration),
-                                std::cref(rb_props.m_external_angular_acceleration),
-                                std::cref(rb_props.m_mass_inverted),
-                                std::cref(rb_props.m_inertia_tensor_inverted),
-                                std::cref(record_id.get_node_id())
-                                );
+                    w->wnd()->glwindow().call_now(
+                            &simulator::insert_rigid_body_to_scene_node,
+                            std::cref(rb_props),
+                            auto_compute_mass_and_inertia_tensor,
+                            std::cref(record_id.get_node_id())
+                            );
                 }
             });
 }
@@ -314,26 +244,12 @@ void  register_record_handler_for_duplicate_scene_record(
                             std::ref(auto_compute_mass_and_inertia_tensor),
                             std::ref(rb_props)
                             );
-                    if (auto_compute_mass_and_inertia_tensor)
-                        w->wnd()->glwindow().call_now(
-                                &simulator::insert_rigid_body_to_scene_node,
-                                std::cref(rb_props.m_linear_velocity),
-                                std::cref(rb_props.m_angular_velocity),
-                                std::cref(rb_props.m_external_linear_acceleration),
-                                std::cref(rb_props.m_external_angular_acceleration),
-                                std::cref(dst_record_id.get_node_id())
-                                );
-                    else
-                        w->wnd()->glwindow().call_now(
-                                &simulator::insert_rigid_body_to_scene_node_ex,
-                                std::cref(rb_props.m_linear_velocity),
-                                std::cref(rb_props.m_angular_velocity),
-                                std::cref(rb_props.m_external_linear_acceleration),
-                                std::cref(rb_props.m_external_angular_acceleration),
-                                std::cref(rb_props.m_mass_inverted),
-                                std::cref(rb_props.m_inertia_tensor_inverted),
-                                std::cref(dst_record_id.get_node_id())
-                                );
+                    w->wnd()->glwindow().call_now(
+                            &simulator::insert_rigid_body_to_scene_node,
+                            std::cref(rb_props),
+                            auto_compute_mass_and_inertia_tensor,
+                            std::cref(dst_record_id.get_node_id())
+                            );
                     w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(
                             dst_record_id,
                             auto_compute_mass_and_inertia_tensor,

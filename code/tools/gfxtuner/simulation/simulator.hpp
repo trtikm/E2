@@ -196,21 +196,21 @@ struct simulator : public qtgl::real_time_simulator
             );
 
     void  insert_rigid_body_to_scene_node(
-            vector3 const&  linear_velocity,
-            vector3 const&  angular_velocity,
-            vector3 const&  external_linear_acceleration,
-            vector3 const&  external_angular_acceleration,
+            scn::rigid_body_props const&  props,
+            bool const  auto_compute_mass_and_inertia_tensor,
             scn::scene_node_id const&  id
             );
 
-    void  insert_rigid_body_to_scene_node_ex(
+    void  insert_rigid_body_to_scene_node_direct(
+            scn::scene_node_ptr const  node_ptr,
             vector3 const&  linear_velocity,
             vector3 const&  angular_velocity,
             vector3 const&  external_linear_acceleration,
             vector3 const&  external_angular_acceleration,
             float_32_bit const  mass_inverted,
             matrix33 const&  inertia_tensor_inverted,
-            scn::scene_node_id const&  id
+            bool const  auto_compute_mass_and_inertia_tensor = false,
+            std::vector<angeo::collision_object_id> const*  coids_ptr = nullptr
             );
 
     void  erase_rigid_body_from_scene_node(

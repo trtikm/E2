@@ -2919,10 +2919,8 @@ void  simulator::get_collision_triangle_mesh_info(
 
 
 void  simulator::insert_rigid_body_to_scene_node(
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        vector3 const&  external_linear_acceleration,
-        vector3 const&  external_angular_acceleration,
+        scn::rigid_body_props const&  props,
+        bool const  auto_compute_mass_and_inertia_tensor,
         scn::scene_node_id const&  id
         )
 {
@@ -2937,7 +2935,7 @@ void  simulator::insert_rigid_body_to_scene_node(
     {
         collect_colliders_in_subtree(node_ptr, coids, &coid_nodes);
 
-        has_static_collider = coids.empty();
+        has_static_collider = false;
         for (angeo::collision_object_id coid : coids)
             if (!m_collision_scene_ptr->is_dynamic(coid))
             {
@@ -2950,10 +2948,19 @@ void  simulator::insert_rigid_body_to_scene_node(
                     m_collision_scene_ptr->disable_colliding(coids.at(i), coids.at(j));
     }
 
-    float_32_bit  inverted_mass = 0.0f;
-    matrix33  inverted_inertia_tensor_in_local_space = matrix33_zero();
-    if (!has_static_collider)
+    scn::rigid_body_props  rb_props;
+    if (has_static_collider)
     {
+        rb_props.m_linear_velocity = vector3_zero();
+        rb_props.m_angular_velocity = vector3_zero();
+        rb_props.m_external_linear_acceleration = vector3_zero();
+        rb_props.m_external_angular_acceleration = vector3_zero();
+        rb_props.m_mass_inverted = 0.0f;
+        rb_props.m_inertia_tensor_inverted = matrix33_zero();
+    }
+    else if (auto_compute_mass_and_inertia_tensor)
+    {
+        rb_props = props; // But mass and inertial tesnsor will be reset below.
         angeo::mass_and_inertia_tensor_builder  builder;
         for (std::size_t i = 0UL; i != coids.size(); ++i)
         {
@@ -2984,7 +2991,7 @@ void  simulator::insert_rigid_body_to_scene_node(
             }
         }
         vector3  center_of_mass_in_world_space;
-        builder.run(inverted_mass, inverted_inertia_tensor_in_local_space, center_of_mass_in_world_space);
+        builder.run(rb_props.m_mass_inverted, rb_props.m_inertia_tensor_inverted, center_of_mass_in_world_space);
 
         vector3 const  origin_shift_in_world_space =
                     center_of_mass_in_world_space - translation_vector(node_ptr->get_world_matrix());
@@ -2999,65 +3006,49 @@ void  simulator::insert_rigid_body_to_scene_node(
                 false
                 );
     }
+    else
+    {
+        rb_props = props;
+    }
 
-    vector3  origin;
-    matrix33  R;
-    decompose_matrix44(node_ptr->get_world_matrix(), origin, R);
-    angeo::rigid_body_id const  rb_id =
-            m_rigid_body_simulator_ptr->insert_rigid_body(
-                    origin,
-                    rotation_matrix_to_quaternion(R),
-                    inverted_mass,
-                    inverted_inertia_tensor_in_local_space,
-                    has_static_collider ? vector3_zero() : linear_velocity,
-                    has_static_collider ? vector3_zero() : angular_velocity,
-                    has_static_collider ? vector3_zero() : external_linear_acceleration,
-                    has_static_collider ? vector3_zero() : external_angular_acceleration
-                    );
-
-    scn::insert_rigid_body(*node_ptr, rb_id, true);
-    m_binding_of_rigid_bodies[rb_id] = node_ptr;
-
-    if (!has_static_collider && !are_equal_3d(external_linear_acceleration, vector3_zero(), 1e-5f))
-        m_rigid_bodies_external_linear_accelerations[id][{}] = external_linear_acceleration;
-    if (!has_static_collider && !are_equal_3d(external_angular_acceleration, vector3_zero(), 1e-5f))
-        m_rigid_bodies_external_angular_accelerations[id][{}] = external_angular_acceleration;
-
-    for (angeo::collision_object_id coid : coids)
-        m_binding_of_collision_objects[coid] = rb_id;
+    insert_rigid_body_to_scene_node_direct(
+            node_ptr,
+            rb_props.m_linear_velocity,
+            rb_props.m_angular_velocity,
+            rb_props.m_external_linear_acceleration,
+            rb_props.m_external_angular_acceleration,
+            rb_props.m_mass_inverted,
+            rb_props.m_inertia_tensor_inverted,
+            auto_compute_mass_and_inertia_tensor,
+            &coids
+            );
 }
 
-void  simulator::insert_rigid_body_to_scene_node_ex(
+
+void  simulator::insert_rigid_body_to_scene_node_direct(
+        scn::scene_node_ptr const  node_ptr,
         vector3 const&  linear_velocity,
         vector3 const&  angular_velocity,
         vector3 const&  external_linear_acceleration,
         vector3 const&  external_angular_acceleration,
         float_32_bit const  mass_inverted,
         matrix33 const&  inertia_tensor_inverted,
-        scn::scene_node_id const&  id
+        bool const  auto_compute_mass_and_inertia_tensor,
+        std::vector<angeo::collision_object_id> const*  coids_ptr
         )
 {
     TMPROF_BLOCK();
 
-    scn::scene_node_ptr const  node_ptr = get_scene_node(id);
     ASSUMPTION(node_ptr != nullptr && find_nearest_rigid_body_node(node_ptr) == nullptr);
 
     std::vector<angeo::collision_object_id>  coids;
-    bool  has_static_collider;
+    if (coids_ptr == nullptr)
     {
         collect_colliders_in_subtree(node_ptr, coids);
-
-        has_static_collider = coids.empty();
-        for (angeo::collision_object_id coid : coids)
-            if (!m_collision_scene_ptr->is_dynamic(coid))
-            {
-                has_static_collider = true;
-                break;
-            }
-        if (!has_static_collider)
-            for (std::size_t i = 0U; i < coids.size(); ++i)
-                for (std::size_t j = i + 1U; j < coids.size(); ++j)
-                    m_collision_scene_ptr->disable_colliding(coids.at(i), coids.at(j));
+        for (std::size_t i = 0U; i < coids.size(); ++i)
+            for (std::size_t j = i + 1U; j < coids.size(); ++j)
+                m_collision_scene_ptr->disable_colliding(coids.at(i), coids.at(j));
+        coids_ptr = &coids;
     }
 
     vector3  origin;
@@ -3075,15 +3066,15 @@ void  simulator::insert_rigid_body_to_scene_node_ex(
                     external_angular_acceleration
                     );
 
-    scn::insert_rigid_body(*node_ptr, rb_id, false);
+    scn::insert_rigid_body(*node_ptr, rb_id, auto_compute_mass_and_inertia_tensor);
     m_binding_of_rigid_bodies[rb_id] = node_ptr;
 
-    if (!has_static_collider && !are_equal_3d(external_linear_acceleration, vector3_zero(), 1e-5f))
-        m_rigid_bodies_external_linear_accelerations[id][{}] = external_linear_acceleration;
-    if (!has_static_collider && !are_equal_3d(external_angular_acceleration, vector3_zero(), 1e-5f))
-        m_rigid_bodies_external_angular_accelerations[id][{}] = external_angular_acceleration;
+    if (!are_equal_3d(external_linear_acceleration, vector3_zero(), 1e-5f))
+        m_rigid_bodies_external_linear_accelerations[node_ptr->get_id()][{}] = external_linear_acceleration;
+    if (!are_equal_3d(external_angular_acceleration, vector3_zero(), 1e-5f))
+        m_rigid_bodies_external_angular_accelerations[node_ptr->get_id()][{}] = external_angular_acceleration;
 
-    for (angeo::collision_object_id coid : coids)
+    for (angeo::collision_object_id  coid : *coids_ptr)
         m_binding_of_collision_objects[coid] = rb_id;
 }
 
@@ -3131,29 +3122,16 @@ void  simulator::rebuild_rigid_body_due_to_change_in_subtree(scn::scene_node_ptr
     ASSUMPTION(phs_node_ptr != nullptr);
     auto  rb_ptr = scn::get_rigid_body(*phs_node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
-    if (!rb_ptr->auto_compute_mass_and_inertia_tensor())
-    {
-        std::vector<angeo::collision_object_id>  coids;
-        collect_colliders_in_subtree(phs_node_ptr, coids, nullptr);
-        for (angeo::collision_object_id coid : coids)
-            m_binding_of_collision_objects[coid] = rb_ptr->id();
-        return;
-    }
-
+    bool const  auto_compute_backup = rb_ptr->auto_compute_mass_and_inertia_tensor();
     scn::rigid_body_props  rb_backup;
     rb_backup.m_linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id());
     rb_backup.m_angular_velocity = m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id());
     rb_backup.m_external_linear_acceleration = m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_ptr->id());
     rb_backup.m_external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_ptr->id());
-
+    rb_backup.m_mass_inverted = m_rigid_body_simulator_ptr->get_inverted_mass(rb_ptr->id());
+    rb_backup.m_inertia_tensor_inverted = m_rigid_body_simulator_ptr->get_inverted_inertia_tensor_in_local_space(rb_ptr->id());
     erase_rigid_body_from_scene_node(phs_node_ptr->get_id());
-    insert_rigid_body_to_scene_node(
-            rb_backup.m_linear_velocity,
-            rb_backup.m_angular_velocity,
-            rb_backup.m_external_linear_acceleration,
-            rb_backup.m_external_angular_acceleration,
-            phs_node_ptr->get_id()
-            );
+    insert_rigid_body_to_scene_node(rb_backup, auto_compute_backup, phs_node_ptr->get_id());
 }
 
 
@@ -3496,7 +3474,8 @@ void  simulator::load_rigid_body(
                        data.get<float_32_bit>(key_path / "z"));
     };
 
-    auto const  load_matrix33 = [&data](std::string const&  key, matrix33&  M) -> void {
+    auto const  load_matrix33 = [&data](std::string const&  key) -> matrix33 {
+        matrix33  M;
         boost::property_tree::path const  key_path(key, '/');
         M(0,0) = data.get<float_32_bit>(key_path / "00");
         M(0,1) = data.get<float_32_bit>(key_path / "01");
@@ -3507,30 +3486,20 @@ void  simulator::load_rigid_body(
         M(2,0) = data.get<float_32_bit>(key_path / "20");
         M(2,1) = data.get<float_32_bit>(key_path / "21");
         M(2,2) = data.get<float_32_bit>(key_path / "22");
+        return M;
     };
 
-    if (data.count("mass_inverted") != 0)
-    {
-        matrix33  inertia_inverted;
-        load_matrix33("inertia_tensor_inverted", inertia_inverted);
-        insert_rigid_body_to_scene_node_ex(
-                load_vector("linear_velocity"),
-                load_vector("angular_velocity"),
-                load_vector("external_linear_acceleration"),
-                load_vector("external_angular_acceleration"),
-                data.get<float_32_bit>("mass_inverted"),
-                inertia_inverted,
-                id
-                );
-    }
-    else
-        insert_rigid_body_to_scene_node(
-                load_vector("linear_velocity"),
-                load_vector("angular_velocity"),
-                load_vector("external_linear_acceleration"),
-                load_vector("external_angular_acceleration"),
-                id
-                );
+    bool  auto_compute_mass_and_inertia = data.count("mass_inverted") == 0;
+
+    scn::rigid_body_props  rb_props;
+    rb_props.m_linear_velocity = load_vector("linear_velocity"),
+    rb_props.m_angular_velocity = load_vector("angular_velocity"),
+    rb_props.m_external_linear_acceleration = load_vector("external_linear_acceleration"),
+    rb_props.m_external_angular_acceleration = load_vector("external_angular_acceleration"),
+    rb_props.m_mass_inverted = auto_compute_mass_and_inertia ? 0.0f : data.get<float_32_bit>("mass_inverted");
+    rb_props.m_inertia_tensor_inverted = auto_compute_mass_and_inertia ? matrix33_zero() : load_matrix33("inertia_tensor_inverted");
+
+    insert_rigid_body_to_scene_node(rb_props, auto_compute_mass_and_inertia, id);
 }
 
 void  simulator::save_rigid_body(scn::scene_node_id const&  id, boost::property_tree::ptree&  data)
