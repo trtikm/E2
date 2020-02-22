@@ -9,10 +9,10 @@ namespace ai {
 
 enum struct  AGENT_KIND : natural_8_bit
 {
-    MOCK = 0,
-    STATIONARY = 1,
-    RANDOM = 2,
-    ROBOT = 3,
+    MOCK,
+    STATIONARY,
+    RANDOM,
+    ROBOT,
 };
 
 
