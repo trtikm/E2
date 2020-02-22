@@ -3021,6 +3021,14 @@ void  simulator::insert_rigid_body_to_scene_node(
             scn::scene_node_ptr const  coid_node_ptr = coid_nodes.at(i);
             switch (angeo::get_shape_type(coid))
             {
+            case angeo::COLLISION_SHAPE_TYPE::BOX:
+                builder.insert_box(
+                        m_collision_scene_ptr->get_box_half_sizes_along_axes(coid),
+                        coid_node_ptr->get_world_matrix(),
+                        m_collision_scene_ptr->get_material(coid),
+                        1.0f // TODO!
+                        );
+                break;
             case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
                 builder.insert_capsule(
                         m_collision_scene_ptr->get_capsule_half_distance_between_end_points(coid),
