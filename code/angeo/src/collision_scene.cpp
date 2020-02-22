@@ -125,33 +125,18 @@ collision_object_id  collision_scene::insert_box(
             geometry.half_sizes_along_axes = half_sizes_along_axes;
 
             matrix33  R;
-            decompose_matrix44(from_base_matrix, geometry.origin_in_world_space, R);
-            rotation_matrix_to_basis(
-                    R,
-                    geometry.basis_x_vector_in_world_space,
-                    geometry.basis_y_vector_in_world_space,
-                    geometry.basis_z_vector_in_world_space
-                    );
-
-            express_box_in_terms_of_its_faces(
-                    geometry.origin_in_world_space,
-                    geometry.basis_x_vector_in_world_space,
-                    geometry.basis_y_vector_in_world_space,
-                    geometry.basis_z_vector_in_world_space,
-                    geometry.half_sizes_along_axes,
-                    &geometry.polygons,
-                    geometry.to_polygon_space_matrices,
-                    geometry.from_polygon_space_matrices,
-                    &geometry.origins_and_unit_normals_in_world_space,
-                    false
-            );
+            decompose_matrix44(from_base_matrix, geometry.location.origin_ref(), R);
+            rotation_matrix_to_basis(R, geometry.location.basis_vector_x_ref(),
+                                        geometry.location.basis_vector_y_ref(),
+                                        geometry.location.basis_vector_z_ref());
+            compute_polygons_of_box(geometry.location, geometry.half_sizes_along_axes, geometry.polyhedron);
         }
         axis_aligned_bounding_box const  bbox =
                 compute_aabb_of_box(
-                        geometry.origin_in_world_space,
-                        geometry.basis_x_vector_in_world_space,
-                        geometry.basis_y_vector_in_world_space,
-                        geometry.basis_z_vector_in_world_space,
+                        geometry.location.origin(),
+                        geometry.location.basis_vector_x(),
+                        geometry.location.basis_vector_y(),
+                        geometry.location.basis_vector_z(),
                         geometry.half_sizes_along_axes
                         );
 
@@ -891,17 +876,17 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
             if (clip_line_into_bbox(
                         point3_to_orthonormal_base(
                                 ray_origin,
-                                geometry.origin_in_world_space,
-                                geometry.basis_x_vector_in_world_space,
-                                geometry.basis_y_vector_in_world_space,
-                                geometry.basis_z_vector_in_world_space
+                                geometry.location.origin(),
+                                geometry.location.basis_vector_x(),
+                                geometry.location.basis_vector_y(),
+                                geometry.location.basis_vector_z()
                                 ),
                         point3_to_orthonormal_base(
                                 ray_end,
-                                geometry.origin_in_world_space,
-                                geometry.basis_x_vector_in_world_space,
-                                geometry.basis_y_vector_in_world_space,
-                                geometry.basis_z_vector_in_world_space
+                                geometry.location.origin(),
+                                geometry.location.basis_vector_x(),
+                                geometry.location.basis_vector_y(),
+                                geometry.location.basis_vector_z()
                                 ),
                         -geometry.half_sizes_along_axes,
                         geometry.half_sizes_along_axes,
@@ -1078,60 +1063,11 @@ vector3  collision_scene::get_object_aabb_max_corner(collision_object_id const  
 }
 
 
-vector3 const&  collision_scene::get_box_origin_in_world_space(collision_object_id const  coid) const
+coordinate_system_explicit const&  collision_scene::get_box_coord_system_explicit(collision_object_id const  coid) const
 {
     ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
-    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-    return geometry.origin_in_world_space;
-}
-
-vector3 const&  collision_scene::get_box_basis_x_vector_in_world_space(collision_object_id const  coid) const
-{
-    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
-    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-    return geometry.basis_x_vector_in_world_space;
-}
-
-vector3 const&  collision_scene::get_box_basis_y_vector_in_world_space(collision_object_id const  coid) const
-{
-    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
-    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-    return geometry.basis_y_vector_in_world_space;
-}
-
-vector3 const&  collision_scene::get_box_basis_z_vector_in_world_space(collision_object_id const  coid) const
-{
-    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
-    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-    return geometry.basis_z_vector_in_world_space;
-}
-
-vector3 const&  collision_scene::get_box_polygon_origin_in_world_space(collision_object_id const  coid, natural_8_bit const  polygon_index) const
-{
-    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX && polygon_index < 6U);
-    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-    return geometry.origins_and_unit_normals_in_world_space.at(polygon_index).first;
-}
-
-vector3 const&  collision_scene::get_box_polygon_unit_normal_in_world_space(collision_object_id const  coid, natural_8_bit const  polygon_index) const
-{
-    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX && polygon_index < 6U);
-    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-    return geometry.origins_and_unit_normals_in_world_space.at(polygon_index).second;
-}
-
-matrix44 const&  collision_scene::get_box_to_polygon_space_matrix(collision_object_id const  coid, natural_8_bit const  polygon_index) const
-{
-    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX && polygon_index < 6U);
-    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-    return geometry.to_polygon_space_matrices.at(polygon_index);
-}
-
-matrix44 const&  collision_scene::get_box_from_polygon_space_matrix(collision_object_id const  coid, natural_8_bit const  polygon_index) const
-{
-    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX && polygon_index < 6U);
-    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-    return geometry.from_polygon_space_matrices.at(polygon_index);
+    box_geometry const& geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.location;
 }
 
 vector3 const&  collision_scene::get_box_half_sizes_along_axes(collision_object_id const  coid) const
@@ -1139,6 +1075,13 @@ vector3 const&  collision_scene::get_box_half_sizes_along_axes(collision_object_
     ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
     box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
     return geometry.half_sizes_along_axes;
+}
+
+convex_polyhedron const&  collision_scene::get_box_polygons(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.polyhedron;
 }
 
 
@@ -1341,27 +1284,16 @@ void  collision_scene::update_shape_position(collision_object_id const  coid, ma
         {
             matrix33  R;
             auto&  geometry = m_boxes_geometry.at(get_instance_index(coid));
-            decompose_matrix44(from_base_matrix, geometry.origin_in_world_space, R);
-            rotation_matrix_to_basis(R, geometry.basis_x_vector_in_world_space, geometry.basis_y_vector_in_world_space, geometry.basis_z_vector_in_world_space);
-            express_box_in_terms_of_its_faces(
-                    geometry.origin_in_world_space,
-                    geometry.basis_x_vector_in_world_space,
-                    geometry.basis_y_vector_in_world_space,
-                    geometry.basis_z_vector_in_world_space,
-                    geometry.half_sizes_along_axes,
-                    nullptr,
-                    geometry.to_polygon_space_matrices,
-                    geometry.from_polygon_space_matrices,
-                    &geometry.origins_and_unit_normals_in_world_space,
-                    false
-                    );
-
+            decompose_matrix44(from_base_matrix, geometry.location.origin_ref(), R);
+            rotation_matrix_to_basis(R, geometry.location.basis_vector_x_ref(),
+                                        geometry.location.basis_vector_y_ref(),
+                                        geometry.location.basis_vector_z_ref());
             m_boxes_bbox.at(get_instance_index(coid)) =
                     compute_aabb_of_box(
-                            geometry.origin_in_world_space,
-                            geometry.basis_x_vector_in_world_space,
-                            geometry.basis_y_vector_in_world_space,
-                            geometry.basis_z_vector_in_world_space,
+                            geometry.location.origin(),
+                            geometry.location.basis_vector_x(),
+                            geometry.location.basis_vector_y(),
+                            geometry.location.basis_vector_z(),
                             geometry.half_sizes_along_axes
                             );
         }
@@ -1598,7 +1530,42 @@ bool  collision_scene::compute_contacts__box_vs_box(
 {
     TMPROF_BLOCK();
 
-    NOT_IMPLEMENTED_YET();
+    box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
+    box_geometry const&  geometry_2 = m_boxes_geometry.at(get_instance_index(coid_2));
+
+    vector3  collision_plane_unit_normal_in_world_space;
+    std::vector<vector3>  collision_points_in_world_space;
+    std::vector<float_32_bit>  penetration_depths_of_collision_points;
+    std::vector<std::pair<collision_shape_feature_id, collision_shape_feature_id> >  collision_shape_feature_ids;
+    bool const  collision_state = collision_box_box(
+            geometry_1.location,
+            geometry_1.half_sizes_along_axes,
+            geometry_1.polyhedron,
+
+            geometry_2.location,
+            geometry_2.half_sizes_along_axes,
+            geometry_2.polyhedron,
+
+            &collision_plane_unit_normal_in_world_space,
+            &collision_points_in_world_space,
+            &penetration_depths_of_collision_points,
+            &collision_shape_feature_ids
+            );
+    if (collision_state == false)
+        return true;
+    INVARIANT(
+        !collision_points_in_world_space.empty() &&
+        collision_points_in_world_space.size() == penetration_depths_of_collision_points.size()
+        );
+    for (natural_32_bit  i = 0U; i != collision_points_in_world_space.size(); ++i)
+        if (acceptor(
+                { { coid_1, collision_shape_feature_ids.at(i).first }, { coid_2, collision_shape_feature_ids.at(i).second } },
+                collision_points_in_world_space.at(i),
+                collision_plane_unit_normal_in_world_space,
+                penetration_depths_of_collision_points.at(i)
+                ) == false)
+            return false;
+    return true;
 }
 
 

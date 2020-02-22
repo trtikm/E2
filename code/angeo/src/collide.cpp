@@ -1390,7 +1390,6 @@ POINT_SET_TYPE  clip_polygon(
     TMPROF_BLOCK();
 
     INVARIANT(polygon_points.size() >= 4UL);    // The first point and the last one are the same.
-                                                // So, at least 3 different points are required.
 
     // clip_normal * (X - clip_origin) = 0
     // X = A + t*(B-A)  ; A = polygon_points.at(i-1), B = polygon_points.at(i)
@@ -1613,22 +1612,22 @@ POINT_SET_TYPE  clip_polygon(
 POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,
         matrix44 const&  to_polygon_space_matrix,
-        std::vector< std::pair<vector3,vector3> > const&  clip_planes_in_world_space, // First point ptr, secomd unit normal
+        std::vector< std::pair<vector3,vector3> > const&  clip_planes,  // First is origin, second unit normal
         std::vector<vector2>* const  output_clipped_polygon_points,
         std::vector<natural_32_bit>* const  output_indices_of_intersection_points
         )
 {
     TMPROF_BLOCK();
 
-    natural_32_bit  free_buffer_index = ((clip_planes_in_world_space.size() & 1UL) == 0UL) ? 1U : 0U;
+    natural_32_bit  free_buffer_index = ((clip_planes.size() & 1UL) == 0UL) ? 1U : 0U;
 
     std::array<std::vector<vector2>, 2U>  polygon_points_buffers;
     std::array<std::vector<vector2>*, 2U> const  polygon_points_buffer_ptr{
         output_clipped_polygon_points == nullptr ? &polygon_points_buffers.at(0U) : output_clipped_polygon_points,
         &polygon_points_buffers.at(1U)
     };
-    polygon_points_buffer_ptr.at(0U)->reserve(polygon_points.size() + 2U * clip_planes_in_world_space.size() + 1U);
-    polygon_points_buffer_ptr.at(1U)->reserve(polygon_points.size() + 2U * clip_planes_in_world_space.size() + 1U);
+    polygon_points_buffer_ptr.at(0U)->reserve(polygon_points.size() + 2U * clip_planes.size() + 1U);
+    polygon_points_buffer_ptr.at(1U)->reserve(polygon_points.size() + 2U * clip_planes.size() + 1U);
 
     std::vector<vector2> const*  polygon_points_ptr = &polygon_points;
 
@@ -1640,14 +1639,14 @@ POINT_SET_TYPE  clip_polygon(
     if (output_indices_of_intersection_points != nullptr)
     {
         intersection_points_buffer_ptr.at(0U)->clear();
-        intersection_points_buffer_ptr.at(0U)->reserve(2U * clip_planes_in_world_space.size());
-        intersection_points_buffer_ptr.at(1U)->reserve(2U * clip_planes_in_world_space.size());
+        intersection_points_buffer_ptr.at(0U)->reserve(2U * clip_planes.size());
+        intersection_points_buffer_ptr.at(1U)->reserve(2U * clip_planes.size());
     }
 
     std::vector<natural_32_bit> const*  intersection_points_ptr = intersection_points_buffer_ptr.at((free_buffer_index + 1U) % 2U);
 
     bool  was_clipped = false;
-    for (std::pair<vector3, vector3> const&  origin_and_normal : clip_planes_in_world_space)
+    for (std::pair<vector3, vector3> const&  origin_and_normal : clip_planes)
     {
         clipped_polygon_description  description;
         POINT_SET_TYPE const  set_type = angeo::clip_polygon(
@@ -1727,265 +1726,68 @@ POINT_SET_TYPE  clip_polygon(
 }
 
 
-void  express_box_in_terms_of_its_faces(
-        vector3 const&  origin_in_world_space,
-        vector3 const&  basis_x_vector_in_world_space,
-        vector3 const&  basis_y_vector_in_world_space,
-        vector3 const&  basis_z_vector_in_world_space,
+void  compute_polygons_of_box(
+        coordinate_system_explicit const&  location,
         vector3 const&  half_sizes_along_axes,
-
-        std::vector<std::vector<vector2> >* const  output_polygons,   // INVARIANT: output_polygons->size() == 6 && foreach i : output_polygons->at(i).size() == 5
-        std::vector<matrix44>&  output_to_polygon_space_matrices,   // INVARIANT: output_to_polygon_space_matrices.size() == 6
-        std::vector<matrix44>&  output_from_polygon_space_matrices, // INVARIANT: output_from_polygon_space_matrices.size() == 6
-        std::vector< std::pair<vector3, vector3> >* const  output_origins_and_unit_normals_in_world_space,   // INVARIANT: output_origins_and_unit_normals_in_world_space.size() == 6
-        bool const  normals_should_point_outside_the_box    // Whther the normals in 'output_origins_and_unit_normals_in_world_space' should point from the box or into the box.
+        convex_polyhedron&  output_polygons
         )
 {
     TMPROF_BLOCK();
 
-    if (output_polygons != nullptr)
-        output_polygons->resize(6U);
-    output_to_polygon_space_matrices.resize(6U);
-    output_from_polygon_space_matrices.resize(6U);
-    if (output_origins_and_unit_normals_in_world_space != nullptr)
-        output_origins_and_unit_normals_in_world_space->resize(6U);
+    auto const  set_frame =
+            [&output_polygons](natural_32_bit const  idx, vector3 const&  o, vector3 const&  x, vector3 const&  y, vector3 const&  z)
+            {
+                coordinate_system_explicit&  frame = output_polygons.polygon_frames.at(idx);
+                frame.set_origin(o);
+                frame.set_basis_vector_x(x);
+                frame.set_basis_vector_y(y);
+                frame.set_basis_vector_z(z);
+            };
+    auto const  set_polygon =
+            [&output_polygons](natural_32_bit const  idx, float_32_bit const  half_x, float_32_bit const  half_y)
+            {
+                std::vector<vector2>&  points = output_polygons.polygons.at(idx);
+                points.resize(5U);
+                points.at(0UL) = vector2(-half_x, -half_y);
+                points.at(1UL) = vector2( half_x, -half_y);
+                points.at(2UL) = vector2( half_x,  half_y);
+                points.at(3UL) = vector2(-half_x,  half_y);
+                points.at(4UL) = points.front();
+            };
 
-    natural_32_bit  idx = 0U;
+    output_polygons.polygons.resize(6U);
+    output_polygons.polygon_frames.resize(6U);
 
     // xy-face for z-min
-    {
-        vector3 const  face_center_in_world_space = origin_in_world_space + -half_sizes_along_axes(2) * basis_z_vector_in_world_space;
-
-        compose_to_base_matrix(
-                face_center_in_world_space,
-                basis_x_vector_in_world_space,
-                -basis_y_vector_in_world_space,
-                -basis_z_vector_in_world_space,
-                output_to_polygon_space_matrices.at(idx)
-                );
-        compose_from_base_matrix(
-                face_center_in_world_space,
-                basis_x_vector_in_world_space,
-                -basis_y_vector_in_world_space,
-                -basis_z_vector_in_world_space,
-                output_from_polygon_space_matrices.at(idx)
-                );
-
-        if (output_polygons != nullptr)
-        {
-            std::vector<vector2>&  points = output_polygons->at(idx);
-            points.resize(5U);
-            points.at(0UL) = vector2(-half_sizes_along_axes(0), -half_sizes_along_axes(1));
-            points.at(1UL) = vector2(half_sizes_along_axes(0), -half_sizes_along_axes(1));
-            points.at(2UL) = vector2(half_sizes_along_axes(0), half_sizes_along_axes(1));
-            points.at(3UL) = vector2(-half_sizes_along_axes(0), half_sizes_along_axes(1));
-            points.at(4UL) = points.front();
-        }
-
-        if (output_origins_and_unit_normals_in_world_space != nullptr)
-            output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    face_center_in_world_space,
-                    -basis_z_vector_in_world_space
-                    };
-    }
-    ++idx;
-
-    // xz-face for y-min
-    {
-        vector3 const  face_center_in_world_space = origin_in_world_space + -half_sizes_along_axes(1) * basis_y_vector_in_world_space;
-
-        compose_to_base_matrix(
-                face_center_in_world_space,
-                basis_x_vector_in_world_space,
-                basis_z_vector_in_world_space,
-                -basis_y_vector_in_world_space,
-                output_to_polygon_space_matrices.at(idx)
-                );
-
-        compose_from_base_matrix(
-                face_center_in_world_space,
-                basis_x_vector_in_world_space,
-                basis_z_vector_in_world_space,
-                -basis_y_vector_in_world_space,
-                output_from_polygon_space_matrices.at(idx)
-                );
-
-        if (output_polygons != nullptr)
-        {
-            std::vector<vector2>&  points = output_polygons->at(idx);
-            points.resize(5U);
-            points.at(0UL) = vector2(-half_sizes_along_axes(0), -half_sizes_along_axes(2));
-            points.at(1UL) = vector2(half_sizes_along_axes(0), -half_sizes_along_axes(2));
-            points.at(2UL) = vector2(half_sizes_along_axes(0), half_sizes_along_axes(2));
-            points.at(3UL) = vector2(-half_sizes_along_axes(0), half_sizes_along_axes(2));
-            points.at(4UL) = points.front();
-        }
-
-        if (output_origins_and_unit_normals_in_world_space != nullptr)
-            output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    face_center_in_world_space,
-                    -basis_y_vector_in_world_space
-                    };
-    }
-    ++idx;
-
-    // yz-face for x-min
-    {
-        vector3 const  face_center_in_world_space = origin_in_world_space + -half_sizes_along_axes(0) * basis_x_vector_in_world_space;
-
-        compose_to_base_matrix(
-                face_center_in_world_space,
-                basis_y_vector_in_world_space,
-                -basis_z_vector_in_world_space,
-                -basis_x_vector_in_world_space,
-                output_to_polygon_space_matrices.at(idx)
-                );
-        compose_from_base_matrix(
-                face_center_in_world_space,
-                basis_y_vector_in_world_space,
-                -basis_z_vector_in_world_space,
-                -basis_x_vector_in_world_space,
-                output_from_polygon_space_matrices.at(idx)
-                );
-
-        if (output_polygons != nullptr)
-        {
-            std::vector<vector2>&  points = output_polygons->at(idx);
-            points.resize(5U);
-            points.at(0UL) = vector2(-half_sizes_along_axes(1), -half_sizes_along_axes(2));
-            points.at(1UL) = vector2(half_sizes_along_axes(1), -half_sizes_along_axes(2));
-            points.at(2UL) = vector2(half_sizes_along_axes(1), half_sizes_along_axes(2));
-            points.at(3UL) = vector2(-half_sizes_along_axes(1), half_sizes_along_axes(2));
-            points.at(4UL) = points.front();
-        }
-
-        if (output_origins_and_unit_normals_in_world_space != nullptr)
-            output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    face_center_in_world_space,
-                    -basis_x_vector_in_world_space
-                    };
-    }
-    ++idx;
+    set_frame(0U, { 0.0f, 0.0f, -half_sizes_along_axes(2) }, vector3_unit_x(), vector3_unit_y(), vector3_unit_z());
+    set_polygon(0U, half_sizes_along_axes(0), half_sizes_along_axes(1));
 
     // xy-face for z-max
-    {
-        vector3 const  face_center_in_world_space = origin_in_world_space + half_sizes_along_axes(2) * basis_z_vector_in_world_space;
+    set_frame(1U, { 0.0f, 0.0f, half_sizes_along_axes(2) }, vector3_unit_x(), -vector3_unit_y(), -vector3_unit_z());
+    set_polygon(1U, half_sizes_along_axes(0), half_sizes_along_axes(1));
 
-        compose_to_base_matrix(
-                face_center_in_world_space,
-                basis_x_vector_in_world_space,
-                basis_y_vector_in_world_space,
-                basis_z_vector_in_world_space,
-                output_to_polygon_space_matrices.at(idx)
-                );
-        compose_from_base_matrix(
-                face_center_in_world_space,
-                basis_x_vector_in_world_space,
-                basis_y_vector_in_world_space,
-                basis_z_vector_in_world_space,
-                output_from_polygon_space_matrices.at(idx)
-                );
-
-        if (output_polygons != nullptr)
-        {
-            std::vector<vector2>&  points = output_polygons->at(idx);
-            points.resize(5U);
-            points.at(0UL) = vector2(-half_sizes_along_axes(0), -half_sizes_along_axes(1));
-            points.at(1UL) = vector2(half_sizes_along_axes(0), -half_sizes_along_axes(1));
-            points.at(2UL) = vector2(half_sizes_along_axes(0), half_sizes_along_axes(1));
-            points.at(3UL) = vector2(-half_sizes_along_axes(0), half_sizes_along_axes(1));
-            points.at(4UL) = points.front();
-        }
-
-        if (output_origins_and_unit_normals_in_world_space != nullptr)
-            output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    face_center_in_world_space,
-                    basis_z_vector_in_world_space
-                    };
-    }
-    ++idx;
+    // xz-face for y-min
+    set_frame(2U, { 0.0f, -half_sizes_along_axes(1), 0.0f }, vector3_unit_x(), -vector3_unit_z(), vector3_unit_y());
+    set_polygon(2U, half_sizes_along_axes(0), half_sizes_along_axes(2));
 
     // xz-face for y-max
-    {
-        vector3 const  face_center_in_world_space = origin_in_world_space + half_sizes_along_axes(1) * basis_y_vector_in_world_space;
+    set_frame(3U, { 0.0f, half_sizes_along_axes(1), 0.0f }, vector3_unit_x(), vector3_unit_z(), -vector3_unit_y());
+    set_polygon(3U, half_sizes_along_axes(0), half_sizes_along_axes(2));
 
-        compose_to_base_matrix(
-                face_center_in_world_space,
-                basis_x_vector_in_world_space,
-                -basis_z_vector_in_world_space,
-                basis_y_vector_in_world_space,
-                output_to_polygon_space_matrices.at(idx)
-                );
-        compose_from_base_matrix(
-                face_center_in_world_space,
-                basis_x_vector_in_world_space,
-                -basis_z_vector_in_world_space,
-                basis_y_vector_in_world_space,
-                output_from_polygon_space_matrices.at(idx)
-                );
-
-        if (output_polygons != nullptr)
-        {
-            std::vector<vector2>&  points = output_polygons->at(idx);
-            points.resize(5U);
-            points.at(0UL) = vector2(-half_sizes_along_axes(0), -half_sizes_along_axes(2));
-            points.at(1UL) = vector2(half_sizes_along_axes(0), -half_sizes_along_axes(2));
-            points.at(2UL) = vector2(half_sizes_along_axes(0), half_sizes_along_axes(2));
-            points.at(3UL) = vector2(-half_sizes_along_axes(0), half_sizes_along_axes(2));
-            points.at(4UL) = points.front();
-        }
-
-        if (output_origins_and_unit_normals_in_world_space != nullptr)
-            output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    face_center_in_world_space,
-                    basis_y_vector_in_world_space
-                    };
-    }
-    ++idx;
+    // yz-face for x-min
+    set_frame(4U, { -half_sizes_along_axes(0), 0.0f, 0.0f }, vector3_unit_y(), vector3_unit_z(), vector3_unit_x());
+    set_polygon(4U, half_sizes_along_axes(1), half_sizes_along_axes(2));
 
     // yz-face for x-max
-    {
-        vector3 const  face_center_in_world_space = origin_in_world_space + half_sizes_along_axes(0) * basis_x_vector_in_world_space;
-
-        compose_to_base_matrix(
-                face_center_in_world_space,
-                basis_y_vector_in_world_space,
-                basis_z_vector_in_world_space,
-                basis_x_vector_in_world_space,
-                output_to_polygon_space_matrices.at(idx)
-                );
-        compose_from_base_matrix(
-                face_center_in_world_space,
-                basis_y_vector_in_world_space,
-                basis_z_vector_in_world_space,
-                basis_x_vector_in_world_space,
-                output_from_polygon_space_matrices.at(idx)
-                );
-
-        if (output_polygons != nullptr)
-        {
-            std::vector<vector2>&  points = output_polygons->at(idx);
-            points.resize(5U);
-            points.at(0UL) = vector2(-half_sizes_along_axes(1), -half_sizes_along_axes(2));
-            points.at(1UL) = vector2(half_sizes_along_axes(1), -half_sizes_along_axes(2));
-            points.at(2UL) = vector2(half_sizes_along_axes(1), half_sizes_along_axes(2));
-            points.at(3UL) = vector2(-half_sizes_along_axes(1), half_sizes_along_axes(2));
-            points.at(4UL) = points.front();
-        }
-
-        if (output_origins_and_unit_normals_in_world_space != nullptr)
-            output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    face_center_in_world_space,
-                    basis_x_vector_in_world_space
-                    };
-    }
-    ++idx;
+    set_frame(5U, { half_sizes_along_axes(0), 0.0f, 0.0f }, vector3_unit_y(), -vector3_unit_z(), -vector3_unit_x());
+    set_polygon(5U, half_sizes_along_axes(1), half_sizes_along_axes(2));
 }
 
 
 struct  closest_box_feature_to_a_point
 {
-    COLLISION_SHAPE_FEATURE_TYPE  feature;
+    COLLISION_SHAPE_FEATURE_TYPE  feature_type;
+    natural_32_bit  feature_index;
     COORDINATE  coordinate;
     float_32_bit  direction_sign;
     float_32_bit  sum_of_slopes;
@@ -2034,7 +1836,7 @@ void  compute_closest_box_feature_to_a_point(
         // A special case: The point is very close to the origin of the box.
         // So, we give up and return to FACE feature with the axis of the most thin side and
         // the impossiby bad sum of slopes.
-        output.feature = COLLISION_SHAPE_FEATURE_TYPE::FACE;
+        output.feature_type = COLLISION_SHAPE_FEATURE_TYPE::FACE;
         output.coordinate =
                 box_half_sizes_along_axes(0) < box_half_sizes_along_axes(1) ?
                         (box_half_sizes_along_axes(0) < box_half_sizes_along_axes(2) ? COORDINATE::X : COORDINATE::Z) :
@@ -2063,19 +1865,19 @@ void  compute_closest_box_feature_to_a_point(
         ++feature_kind;
     }
 
-    output.feature = (COLLISION_SHAPE_FEATURE_TYPE)feature_kind;
+    output.feature_type = (COLLISION_SHAPE_FEATURE_TYPE)feature_kind;
     output.coordinate = (COORDINATE)(feature_kind == 2U ? order[0] : order[2]);
-    output.direction_sign = p(order[0]) >= 0.0f ? 1.0f : -1.0f;
+    output.direction_sign = point_in_box_local_space(order[0]) >= 0.0f ? 1.0f : -1.0f;
     output.sum_of_slopes = slope[0] + slope[1];
-    switch (output.feature)
+    switch (output.feature_type)
     {
     case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
         output.feature_vector_in_world_space =
                 point3_from_orthonormal_base(
                         {
-                            (p(order[0]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(0),
-                            (p(order[1]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(1),
-                            (p(order[2]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(2)
+                            (point_in_box_local_space(order[0]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(order[0]),
+                            (point_in_box_local_space(order[1]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(order[1]),
+                            (point_in_box_local_space(order[2]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(order[2])
                         },
                         box_origin_in_world_space,
                         *box_axis_in_world_space[0],
@@ -2103,16 +1905,10 @@ void  compute_closest_box_feature_to_a_point(
 vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
         vector3 const&  common_contact_point_in_world_space,
 
-        vector3 const&  box_1_origin_in_world_space,
-        vector3 const&  box_1_basis_x_vector_in_world_space,
-        vector3 const&  box_1_basis_y_vector_in_world_space,
-        vector3 const&  box_1_basis_z_vector_in_world_space,
+        coordinate_system_explicit const&  box_1_location,
         vector3 const&  box_1_half_sizes_along_axes,
 
-        vector3 const&  box_2_origin_in_world_space,
-        vector3 const&  box_2_basis_x_vector_in_world_space,
-        vector3 const&  box_2_basis_y_vector_in_world_space,
-        vector3 const&  box_2_basis_z_vector_in_world_space,
+        coordinate_system_explicit const&  box_2_location,
         vector3 const&  box_2_half_sizes_along_axes,
 
         float_32_bit&  output_penetration_depth,
@@ -2122,62 +1918,62 @@ vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
     vector3 const  point_1 =
             point3_to_orthonormal_base(
                     common_contact_point_in_world_space,
-                    box_1_origin_in_world_space,
-                    box_1_basis_x_vector_in_world_space,
-                    box_1_basis_y_vector_in_world_space,
-                    box_1_basis_z_vector_in_world_space
+                    box_1_location.origin(),
+                    box_1_location.basis_vector_x(),
+                    box_1_location.basis_vector_y(),
+                    box_1_location.basis_vector_z()
                     );
     closest_box_feature_to_a_point  props_1;
     compute_closest_box_feature_to_a_point(
             props_1,
             point_1,
             box_1_half_sizes_along_axes,
-            box_1_origin_in_world_space,
-            { &box_1_basis_x_vector_in_world_space, &box_1_basis_y_vector_in_world_space, &box_1_basis_z_vector_in_world_space },
+            box_1_location.origin(),
+            { &box_1_location.basis_vector_x(), &box_1_location.basis_vector_y(), &box_1_location.basis_vector_z() },
             0.005f
             );
 
-    if (props_1.feature == COLLISION_SHAPE_FEATURE_TYPE::FACE)
+    if (props_1.feature_type == COLLISION_SHAPE_FEATURE_TYPE::FACE)
     {
         output_penetration_depth = props_1.distance_to_feature;
         if (output_feature_ptr != nullptr)
-            *output_feature_ptr = props_1.feature;
+            *output_feature_ptr = props_1.feature_type;
         return props_1.feature_vector_in_world_space;
     }
 
     vector3 const  point_2 =
             point3_to_orthonormal_base(
                     common_contact_point_in_world_space,
-                    box_2_origin_in_world_space,
-                    box_2_basis_x_vector_in_world_space,
-                    box_2_basis_y_vector_in_world_space,
-                    box_2_basis_z_vector_in_world_space
+                    box_2_location.origin(),
+                    box_2_location.basis_vector_x(),
+                    box_2_location.basis_vector_y(),
+                    box_2_location.basis_vector_z()
                     );
     closest_box_feature_to_a_point  props_2;
     compute_closest_box_feature_to_a_point(
             props_2,
             point_2,
             box_2_half_sizes_along_axes,
-            box_2_origin_in_world_space,
-            { &box_2_basis_x_vector_in_world_space, &box_2_basis_y_vector_in_world_space, &box_2_basis_z_vector_in_world_space },
+            box_2_location.origin(),
+            { &box_2_location.basis_vector_x(), &box_2_location.basis_vector_y(), &box_2_location.basis_vector_z() },
             0.005f
             );
 
-    if (props_2.feature == COLLISION_SHAPE_FEATURE_TYPE::FACE)
+    if (props_2.feature_type == COLLISION_SHAPE_FEATURE_TYPE::FACE)
     {
         output_penetration_depth = props_2.distance_to_feature;
         if (output_feature_ptr != nullptr)
-            *output_feature_ptr = props_2.feature;
+            *output_feature_ptr = props_2.feature_type;
         return -props_2.feature_vector_in_world_space;
     }
 
-    if (props_1.feature == COLLISION_SHAPE_FEATURE_TYPE::EDGE && props_2.feature == COLLISION_SHAPE_FEATURE_TYPE::EDGE)
+    if (props_1.feature_type == COLLISION_SHAPE_FEATURE_TYPE::EDGE && props_2.feature_type == COLLISION_SHAPE_FEATURE_TYPE::EDGE)
     {
         output_penetration_depth = std::max(props_1.distance_to_feature, props_2.distance_to_feature);
         if (output_feature_ptr != nullptr)
-            *output_feature_ptr = props_1.feature;
+            *output_feature_ptr = props_1.feature_type;
         vector3  normal = cross_product(props_1.feature_vector_in_world_space, props_2.feature_vector_in_world_space);
-        if (dot_product(normal, common_contact_point_in_world_space - box_1_origin_in_world_space) < 0.0f)
+        if (dot_product(normal, common_contact_point_in_world_space - box_1_location.origin()) < 0.0f)
             normal = -normal;
         return normalised(normal);
     }
@@ -2185,127 +1981,62 @@ vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
     output_penetration_depth = std::max(props_1.distance_to_feature, props_2.distance_to_feature);
     if (output_feature_ptr != nullptr)
         *output_feature_ptr = COLLISION_SHAPE_FEATURE_TYPE::VERTEX;
-    return normalised(box_2_origin_in_world_space - box_1_origin_in_world_space);
+    return normalised(box_2_location.origin() - box_1_location.origin());
 }
 
 
 bool  collision_box_box(
-        vector3 const&  box_1_origin_in_world_space,
-        vector3 const&  box_1_basis_x_vector_in_world_space,
-        vector3 const&  box_1_basis_y_vector_in_world_space,
-        vector3 const&  box_1_basis_z_vector_in_world_space,
+        coordinate_system_explicit const&  box_1_location,
         vector3 const&  box_1_half_sizes_along_axes,
+        convex_polyhedron const&  box_1_polygons,
 
-        vector3 const&  box_2_origin_in_world_space,
-        vector3 const&  box_2_basis_x_vector_in_world_space,
-        vector3 const&  box_2_basis_y_vector_in_world_space,
-        vector3 const&  box_2_basis_z_vector_in_world_space,
+        coordinate_system_explicit const&  box_2_location,
         vector3 const&  box_2_half_sizes_along_axes,
+        convex_polyhedron const&  box_2_polygons,
 
         vector3* const  ouptut_collision_plane_unit_normal_in_world_space,
         std::vector<vector3>* const  output_collision_points_in_world_space,
-        std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points
-        )
-{
-    TMPROF_BLOCK();
-
-    std::vector<std::vector<vector2> >  box_1_polygons;
-    std::vector<matrix44>  box_1_to_polygon_space_matrices;
-    std::vector<matrix44>  box_1_from_polygon_space_matrices;
-    std::vector< std::pair<vector3, vector3> >  box_1_origins_and_unit_normals_in_world_space;
-    express_box_in_terms_of_its_faces(
-            box_1_origin_in_world_space,
-            box_1_basis_x_vector_in_world_space,
-            box_1_basis_y_vector_in_world_space,
-            box_1_basis_z_vector_in_world_space,
-            box_1_half_sizes_along_axes,
-            &box_1_polygons,
-            box_1_to_polygon_space_matrices,
-            box_1_from_polygon_space_matrices,
-            &box_1_origins_and_unit_normals_in_world_space,
-            false
-            );
-
-    std::vector<std::vector<vector2> >  box_2_polygons;
-    std::vector<matrix44>  box_2_to_polygon_space_matrices;
-    std::vector<matrix44>  box_2_from_polygon_space_matrices;
-    std::vector< std::pair<vector3, vector3> >  box_2_origins_and_unit_normals_in_world_space;
-    express_box_in_terms_of_its_faces(
-            box_2_origin_in_world_space,
-            box_2_basis_x_vector_in_world_space,
-            box_2_basis_y_vector_in_world_space,
-            box_2_basis_z_vector_in_world_space,
-            box_2_half_sizes_along_axes,
-            &box_2_polygons,
-            box_2_to_polygon_space_matrices,
-            box_2_from_polygon_space_matrices,
-            &box_2_origins_and_unit_normals_in_world_space,
-            false
-            );
-
-    return collision_box_box(
-                box_1_origin_in_world_space,
-                box_1_basis_x_vector_in_world_space,
-                box_1_basis_y_vector_in_world_space,
-                box_1_basis_z_vector_in_world_space,
-                box_1_half_sizes_along_axes,
-                box_1_polygons,
-                box_1_to_polygon_space_matrices,
-                box_1_from_polygon_space_matrices,
-                box_1_origins_and_unit_normals_in_world_space,
-
-                box_2_origin_in_world_space,
-                box_2_basis_x_vector_in_world_space,
-                box_2_basis_y_vector_in_world_space,
-                box_2_basis_z_vector_in_world_space,
-                box_2_half_sizes_along_axes,
-                box_2_polygons,
-                box_2_to_polygon_space_matrices,
-                box_2_from_polygon_space_matrices,
-                box_2_origins_and_unit_normals_in_world_space,
-
-                ouptut_collision_plane_unit_normal_in_world_space,
-                output_collision_points_in_world_space,
-                output_penetration_depths_of_collision_points
-                );
-}
-
-
-bool  collision_box_box(
-        vector3 const&  box_1_origin_in_world_space,
-        vector3 const&  box_1_basis_x_vector_in_world_space,
-        vector3 const&  box_1_basis_y_vector_in_world_space,
-        vector3 const&  box_1_basis_z_vector_in_world_space,
-        vector3 const&  box_1_half_sizes_along_axes,
-        std::vector<std::vector<vector2> > const&  box_1_polygons,
-        std::vector<matrix44> const&  box_1_to_polygon_space_matrices,
-        std::vector<matrix44> const&   box_1_from_polygon_space_matrices,
-        std::vector< std::pair<vector3, vector3> > const&  box_1_origins_and_unit_normals_in_world_space,
-
-        vector3 const&  box_2_origin_in_world_space,
-        vector3 const&  box_2_basis_x_vector_in_world_space,
-        vector3 const&  box_2_basis_y_vector_in_world_space,
-        vector3 const&  box_2_basis_z_vector_in_world_space,
-        vector3 const&  box_2_half_sizes_along_axes,
-        std::vector<std::vector<vector2> > const&  box_2_polygons,
-        std::vector<matrix44> const&  box_2_to_polygon_space_matrices,
-        std::vector<matrix44> const&   box_2_from_polygon_space_matrices,
-        std::vector< std::pair<vector3, vector3> > const&  box_2_origins_and_unit_normals_in_world_space,
-
-        vector3* const  ouptut_collision_plane_unit_normal_in_world_space,
-        std::vector<vector3>* const  output_collision_points_in_world_space,
-        std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points
+        std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points,
+        std::vector<std::pair<collision_shape_feature_id, collision_shape_feature_id> >* const  output_collision_shape_feature_ids
         )
 {
     std::unordered_set<vector3, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  raw_collision_points;
 
-    for (natural_32_bit  i = 0U, n = (natural_32_bit)box_1_polygons.size(); i < n; ++i)
+    matrix44  from_box_1_matrix, to_box_1_matrix;
+    from_base_matrix(box_1_location, from_box_1_matrix);
+    to_base_matrix(box_1_location, to_box_1_matrix);
+
+    matrix44  from_box_2_matrix, to_box_2_matrix;
+    from_base_matrix(box_2_location, from_box_2_matrix);
+    to_base_matrix(box_2_location, to_box_2_matrix);
+
+    matrix44 const  from_box_1_to_box_2_matrix = to_box_2_matrix * from_box_1_matrix;
+    matrix44 const  from_box_2_to_box_1_matrix = to_box_1_matrix * from_box_2_matrix;
+
+    std::vector< std::pair<vector3, vector3> >  box_1_clip_planes;  // First is origin, second unit normal
+    for (natural_32_bit i = 0U, n = (natural_32_bit)box_1_polygons.polygons.size(); i < n; ++i)
+        box_1_clip_planes.push_back({
+                transform_point(box_1_polygons.polygon_frames.at(i).origin(), from_box_1_to_box_2_matrix),
+                transform_vector(box_1_polygons.polygon_frames.at(i).basis_vector_z(), from_box_1_to_box_2_matrix),
+                });
+
+    std::vector< std::pair<vector3, vector3> >  box_2_clip_planes;  // First is origin, second unit normal
+    for (natural_32_bit i = 0U, n = (natural_32_bit)box_2_polygons.polygons.size(); i < n; ++i)
+        box_2_clip_planes.push_back({
+                transform_point(box_2_polygons.polygon_frames.at(i).origin(), from_box_2_to_box_1_matrix),
+                transform_vector(box_2_polygons.polygon_frames.at(i).basis_vector_z(), from_box_2_to_box_1_matrix),
+                });
+
+    for (natural_32_bit  i = 0U, n = (natural_32_bit)box_1_polygons.polygons.size(); i < n; ++i)
     {
+        matrix44  to_polygon_space_matrix;
+        to_base_matrix(box_1_polygons.polygon_frames.at(i), to_polygon_space_matrix);
+
         std::vector<vector2>  clipped_polygon;
         POINT_SET_TYPE const  type = clip_polygon(
-                box_1_polygons.at(i),
-                box_1_to_polygon_space_matrices.at(i),
-                box_2_origins_and_unit_normals_in_world_space,
+                box_1_polygons.polygons.at(i),
+                to_polygon_space_matrix,
+                box_2_clip_planes,
                 &clipped_polygon,
                 nullptr
                 );
@@ -2314,19 +2045,31 @@ bool  collision_box_box(
             continue;
 
         std::vector<vector2> const* const  raw_collision_points_in_box_space = (type == POINT_SET_TYPE::FULL) ?
-                &box_1_polygons.at(i)   :
-                &clipped_polygon        ;
+                &box_1_polygons.polygons.at(i)  :
+                &clipped_polygon                ;
+
+        INVARIANT(!raw_collision_points_in_box_space->empty());
+
+        matrix44  from_polygon_space_matrix;
+        from_base_matrix(box_1_polygons.polygon_frames.at(i), from_polygon_space_matrix);
+
+        matrix44 const  from_polygon_to_world_matrix = from_box_1_matrix * from_polygon_space_matrix;
         for (natural_32_bit j = 0U, m = (natural_32_bit)raw_collision_points_in_box_space->size() - 1U; j < m; ++m)
-            raw_collision_points.insert(transform_point(expand23(raw_collision_points_in_box_space->at(j)), box_1_from_polygon_space_matrices.at(i)));
+            raw_collision_points.insert(
+                    transform_point(expand23(raw_collision_points_in_box_space->at(j)), from_polygon_to_world_matrix)
+                    );
     }
 
-    for (natural_32_bit  i = 0U, n = (natural_32_bit)box_2_polygons.size(); i < n; ++i)
+    for (natural_32_bit  i = 0U, n = (natural_32_bit)box_2_polygons.polygons.size(); i < n; ++i)
     {
+        matrix44  to_polygon_space_matrix;
+        to_base_matrix(box_2_polygons.polygon_frames.at(i), to_polygon_space_matrix);
+
         std::vector<vector2>  clipped_polygon;
         POINT_SET_TYPE const  type = clip_polygon(
-                box_2_polygons.at(i),
-                box_2_to_polygon_space_matrices.at(i),
-                box_1_origins_and_unit_normals_in_world_space,
+                box_2_polygons.polygons.at(i),
+                to_polygon_space_matrix,
+                box_1_clip_planes,
                 &clipped_polygon,
                 nullptr
                 );
@@ -2335,10 +2078,17 @@ bool  collision_box_box(
             continue;
 
         std::vector<vector2> const* const  raw_collision_points_in_box_space = (type == POINT_SET_TYPE::FULL) ?
-                &box_2_polygons.at(i)   :
-                &clipped_polygon        ;
+                &box_2_polygons.polygons.at(i)  :
+                &clipped_polygon                ;
+
+        matrix44  from_polygon_space_matrix;
+        from_base_matrix(box_2_polygons.polygon_frames.at(i), from_polygon_space_matrix);
+
+        matrix44 const  from_polygon_to_world_matrix = from_box_2_matrix * from_polygon_space_matrix;
         for (natural_32_bit j = 0U, m = (natural_32_bit)raw_collision_points_in_box_space->size() - 1U; j < m; ++m)
-            raw_collision_points.insert(transform_point(expand23(raw_collision_points_in_box_space->at(j)), box_2_from_polygon_space_matrices.at(i)));
+            raw_collision_points.insert(
+                    transform_point(expand23(raw_collision_points_in_box_space->at(j)), from_polygon_to_world_matrix)
+                    );
     }
 
     if (raw_collision_points.empty())
@@ -2359,15 +2109,9 @@ bool  collision_box_box(
         *ouptut_collision_plane_unit_normal_in_world_space =
                 compute_collision_unit_normal_and_penetration_depth_from_contact_point(
                         mass_center_of_collision_points,
-                        box_1_origin_in_world_space,
-                        box_1_basis_x_vector_in_world_space,
-                        box_1_basis_y_vector_in_world_space,
-                        box_1_basis_z_vector_in_world_space,
+                        box_1_location,
                         box_1_half_sizes_along_axes,
-                        box_2_origin_in_world_space,
-                        box_2_basis_x_vector_in_world_space,
-                        box_2_basis_y_vector_in_world_space,
-                        box_2_basis_z_vector_in_world_space,
+                        box_2_location,
                         box_2_half_sizes_along_axes,
                         mass_centre_penetration_depth,
                         &feature

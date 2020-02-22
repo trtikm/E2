@@ -5,9 +5,33 @@
 namespace angeo {
 
 
+coordinate_system_explicit::coordinate_system_explicit(vector3 const&  origin_, matrix33 const&  rotation_matrix_)
+    : m_origin{ origin_ }
+    , m_basis_vectors()
+{
+    rotation_matrix_to_basis(rotation_matrix_, m_basis_vectors.at(0), m_basis_vectors.at(1), m_basis_vectors.at(2));
+}
+
+coordinate_system_explicit::coordinate_system_explicit(coordinate_system const&  coord_system_)
+    : coordinate_system_explicit(coord_system_.origin(), quaternion_to_rotation_matrix(coord_system_.orientation()))
+{}
+
+
+coordinate_system_explicit const&  get_world_coord_system_explicit()
+{
+    static coordinate_system_explicit const  world(vector3_zero(), vector3_unit_x(), vector3_unit_y(), vector3_unit_z());
+    return world;
+}
+
+
 coordinate_system_ptr  coordinate_system::create(vector3 const&  origin, quaternion const&  orientation)
 {
     return coordinate_system_ptr( new coordinate_system(origin,orientation) );
+}
+
+coordinate_system_ptr  coordinate_system::create(coordinate_system_explicit const&  coord_system_explicit)
+{
+    return coordinate_system_ptr( new coordinate_system(coord_system_explicit) );
 }
 
 coordinate_system::coordinate_system(vector3 const&  origin, quaternion const&  orientation)
@@ -17,6 +41,25 @@ coordinate_system::coordinate_system(vector3 const&  origin, quaternion const&  
     ASSUMPTION(are_equal(length_squared(m_orientation),1));
 }
 
+coordinate_system::coordinate_system(vector3 const&  origin, matrix33 const&  rotation_matrix)
+    : coordinate_system(origin, rotation_matrix_to_quaternion(rotation_matrix))
+{}
+
+coordinate_system::coordinate_system(coordinate_system_explicit const&  coord_system_explicit)
+    : coordinate_system(
+            coord_system_explicit.origin(),
+            [&coord_system_explicit]() -> matrix33 {
+                matrix33 R;
+                basis_to_rotation_matrix(
+                        coord_system_explicit.basis_vector_x(),
+                        coord_system_explicit.basis_vector_y(),
+                        coord_system_explicit.basis_vector_z(),
+                        R
+                        );
+                return R;
+                }()
+            )
+{}
 
 void coordinate_system::set_orientation(quaternion const&  new_normalised_orientation)
 {

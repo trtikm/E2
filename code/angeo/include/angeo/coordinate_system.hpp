@@ -3,6 +3,7 @@
 
 #   include <angeo/tensor_math.hpp>
 #   include <utility/basic_numeric_types.hpp>
+#   include <array>
 #   include <memory>
 
 namespace angeo {
@@ -13,12 +14,77 @@ using  coordinate_system_ptr = std::shared_ptr<coordinate_system>;
 using  coordinate_system_const_ptr = std::shared_ptr<coordinate_system const>;
 
 
+struct  coordinate_system_explicit
+{
+    coordinate_system_explicit() {}
+
+    coordinate_system_explicit(
+            vector3 const&  origin_,
+            vector3 const&  basis_x_unit_vector_,
+            vector3 const&  basis_y_unit_vector_,
+            vector3 const&  basis_z_unit_vector_
+            )
+        : m_origin{ origin_ }
+        , m_basis_vectors{ basis_x_unit_vector_, basis_y_unit_vector_, basis_z_unit_vector_ }
+    {}
+
+    coordinate_system_explicit(vector3 const&  origin_, matrix33 const&  rotation_matrix_);
+    coordinate_system_explicit(coordinate_system const&  coord_system_);
+
+    vector3 const&  origin() const { return m_origin; }
+    vector3 const&  basis_vector_x() const { return m_basis_vectors.at(0); }
+    vector3 const&  basis_vector_y() const { return m_basis_vectors.at(1); }
+    vector3 const&  basis_vector_z() const { return m_basis_vectors.at(2); }
+    vector3 const&  basis_vector(natural_32_bit const  index) const { return m_basis_vectors.at(index); }
+
+    void  set_origin(vector3 const&  u) { m_origin = u; }
+    void  set_basis_vector_x(vector3 const&  u) { m_basis_vectors.at(0) = u; }
+    void  set_basis_vector_y(vector3 const&  u) { m_basis_vectors.at(1) = u; }
+    void  set_basis_vector_z(vector3 const&  u) { m_basis_vectors.at(2) = u; }
+
+    vector3&  origin_ref() { return m_origin; }
+    vector3&  basis_vector_x_ref() { return m_basis_vectors.at(0); }
+    vector3&  basis_vector_y_ref() { return m_basis_vectors.at(1); }
+    vector3&  basis_vector_z_ref() { return m_basis_vectors.at(2); }
+    vector3&  basis_vector_ref(natural_32_bit const  index) { return m_basis_vectors.at(index); }
+
+private:
+    vector3  m_origin;
+    std::array<vector3, 3U>  m_basis_vectors;
+};
+
+coordinate_system_explicit const&  get_world_coord_system_explicit();
+
+inline void  from_base_matrix(coordinate_system_explicit const&  coord_system, matrix44&  output)
+{
+    compose_from_base_matrix(
+            coord_system.origin(),
+            coord_system.basis_vector_x(),
+            coord_system.basis_vector_y(),
+            coord_system.basis_vector_z(),
+            output);
+}
+
+inline void  to_base_matrix(coordinate_system_explicit const&  coord_system, matrix44&  output)
+{
+    compose_to_base_matrix(
+            coord_system.origin(),
+            coord_system.basis_vector_x(),
+            coord_system.basis_vector_y(),
+            coord_system.basis_vector_z(),
+            output);
+}
+
+
 struct coordinate_system
 {
     static coordinate_system_ptr  create(vector3 const&  origin, quaternion const&  orientation);
+    static coordinate_system_ptr  create(coordinate_system_explicit const&  coord_system_explicit);
 
     coordinate_system() : coordinate_system(vector3_zero(),quaternion_identity()) {}
     coordinate_system(vector3 const&  origin, quaternion const&  orientation);
+    coordinate_system(vector3 const&  origin, matrix33 const&  rotation_matrix);
+    coordinate_system(coordinate_system_explicit const&  coord_system_explicit);
 
     vector3 const&  origin() const { return m_origin; }
     quaternion const&  orientation() const { return m_orientation; }

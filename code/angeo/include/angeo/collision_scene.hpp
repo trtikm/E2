@@ -197,15 +197,9 @@ struct  collision_scene
 
     bool  is_dynamic(collision_object_id const  coid) const { return m_dynamic_object_ids.count(coid) != 0UL; }
 
-    vector3 const&  get_box_origin_in_world_space(collision_object_id const  coid) const;
-    vector3 const&  get_box_basis_x_vector_in_world_space(collision_object_id const  coid) const;
-    vector3 const&  get_box_basis_y_vector_in_world_space(collision_object_id const  coid) const;
-    vector3 const&  get_box_basis_z_vector_in_world_space(collision_object_id const  coid) const;
-    vector3 const&  get_box_polygon_origin_in_world_space(collision_object_id const  coid, natural_8_bit const  polygon_index) const;
-    vector3 const&  get_box_polygon_unit_normal_in_world_space(collision_object_id const  coid, natural_8_bit const  polygon_index) const;
-    matrix44 const&  get_box_to_polygon_space_matrix(collision_object_id const  coid, natural_8_bit const  polygon_index) const;
-    matrix44 const&  get_box_from_polygon_space_matrix(collision_object_id const  coid, natural_8_bit const  polygon_index) const;
+    coordinate_system_explicit const&  get_box_coord_system_explicit(collision_object_id const  coid) const;
     vector3 const&  get_box_half_sizes_along_axes(collision_object_id const  coid) const;
+    convex_polyhedron const&  get_box_polygons(collision_object_id const  coid) const;
 
     vector3 const&  get_capsule_end_point_1_in_world_space(collision_object_id const  coid) const;
     vector3 const&  get_capsule_end_point_2_in_world_space(collision_object_id const  coid) const;
@@ -372,26 +366,9 @@ private:
 
     struct box_geometry
     {
-        // Compact representation of a box in world space.
-        vector3  origin_in_world_space;
-        vector3  basis_x_vector_in_world_space;
-        vector3  basis_y_vector_in_world_space;
-        vector3  basis_z_vector_in_world_space;
-
-        // Explicit representation of a box in world space: in terms of its 6 sides.
-        std::vector<std::vector<vector2> >  polygons;
-        std::vector<matrix44>  to_polygon_space_matrices;
-        std::vector<matrix44>  from_polygon_space_matrices;
-        std::vector< std::pair<vector3, vector3> >  origins_and_unit_normals_in_world_space;
-
-        // In the models space the box is defined as follows:
-        //      origin_in_world_space = vector3_zero()
-        //      basis_x_vector_in_world_space = vector3_unit_x()
-        //      basis_y_vector_in_world_space = vector3_unit_y()
-        //      basis_z_vector_in_world_space = vector3_unit_z()
-        //      half_sizes_along_axes = distances of sides of the box from origin along x, y, and z axes respectively.
-        // So, in model space we only need the half sizes:
+        coordinate_system_explicit  location;
         vector3  half_sizes_along_axes;
+        convex_polyhedron  polyhedron;
     };
 
     std::vector<box_geometry>  m_boxes_geometry;

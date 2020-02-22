@@ -421,6 +421,16 @@ float_32_bit  distance_from_center_of_capsule_to_surface_in_direction(
 inline float_32_bit  distance_from_center_of_sphere_to_surface(float_32_bit const  radius) { return radius; }
 
 
+struct  convex_polyhedron
+{
+    std::vector<std::vector<vector2> >  polygons;
+    std::vector<coordinate_system_explicit>  polygon_frames;    // Each coord system is expressed in the space of the polyhedron.
+                                                                // The basis_vector_z() of each coord system represents the unit
+                                                                // normal vector of polygon's plane. The nomal vector points inside
+                                                                // the polyhedron.
+};
+
+
 enum struct POINT_SET_TYPE : natural_8_bit
 {
     EMPTY = 0,
@@ -444,6 +454,7 @@ struct clipped_polygon_description
 
 POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,    // The first and the last point must be the same.
+                                                        // Polygon points below the clip plane are clipped away.
         vector2 const&  clip_origin,
         vector2 const&  clip_normal,
         clipped_polygon_description* const  description
@@ -460,6 +471,7 @@ POINT_SET_TYPE  instersection_of_plane_with_xy_coord_plane(
 
 POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,    // The first and the last point must be the same.
+                                                        // Polygon points below the clip plane are clipped away.
         matrix44 const&  to_polygon_space_matrix,
         vector3 const&  clip_origin,
         vector3 const&  clip_normal,
@@ -469,67 +481,28 @@ POINT_SET_TYPE  clip_polygon(
 
 POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,    // The first and the last point must be the same.
+                                                        // Polygon points below any clip plane are clipped away.
         matrix44 const&  to_polygon_space_matrix,
-        std::vector< std::pair<vector3,vector3> > const&  clip_planes_in_world_space,
+        std::vector< std::pair<vector3,vector3> > const&  clip_planes,  // First is origin, second unit normal
         std::vector<vector2>* const  output_clipped_polygon_points,
         std::vector<natural_32_bit>* const  output_indices_of_intersection_points
         );
 
 
-void  express_box_in_terms_of_its_faces(
-        vector3 const&  origin_in_world_space,
-        vector3 const&  basis_x_vector_in_world_space,
-        vector3 const&  basis_y_vector_in_world_space,
-        vector3 const&  basis_z_vector_in_world_space,
+void  compute_polygons_of_box(
+        coordinate_system_explicit const&  location,
         vector3 const&  half_sizes_along_axes,
-
-        std::vector<std::vector<vector2> >* const  output_polygons,   // INVARIANT: output_polygons->size() == 6 && foreach i : output_polygons->at(i).size() == 5
-        std::vector<matrix44>&  output_to_polygon_space_matrices,   // INVARIANT: output_to_polygon_space_matrices.size() == 6
-        std::vector<matrix44>&  output_from_polygon_space_matrices, // INVARIANT: output_from_polygon_space_matrices.size() == 6
-        std::vector< std::pair<vector3, vector3> >* const  output_origins_and_unit_normals_in_world_space,   // INVARIANT: output_origins_and_unit_normals_in_world_space.size() == 6
-        bool const  normals_should_point_outside_the_box    // Whther the normals in 'output_origins_and_unit_normals_in_world_space' should point from the box or into the box.
+        convex_polyhedron&  output_polygons
         );
-
-
-inline void  express_box_in_terms_of_its_faces(
-        vector3 const&  half_sizes_along_axes,
-
-        std::vector<std::vector<vector2> >* const  output_polygons,   // INVARIANT: output_polygons->size() == 6 && foreach i : output_polygons->at(i).size() == 5
-        std::vector<matrix44>&  output_to_polygon_space_matrices,   // INVARIANT: output_to_polygon_space_matrices.size() == 6
-        std::vector<matrix44>&  output_from_polygon_space_matrices, // INVARIANT: output_from_polygon_space_matrices.size() == 6
-        std::vector< std::pair<vector3, vector3> >* const  output_origins_and_unit_normals_in_world_space,   // INVARIANT: output_origins_and_unit_normals_in_world_space.size() == 6
-        bool const  normals_should_point_outside_the_box    // Whther the normals in 'output_origins_and_unit_normals_in_world_space' should point from the box or into the box.
-        )
-{
-    express_box_in_terms_of_its_faces(
-            vector3_zero(),
-            vector3_unit_x(),
-            vector3_unit_y(),
-            vector3_unit_z(),
-            half_sizes_along_axes,
-
-            output_polygons,
-            output_to_polygon_space_matrices,
-            output_from_polygon_space_matrices,
-            output_origins_and_unit_normals_in_world_space,
-            normals_should_point_outside_the_box
-            );
-}
 
 
 vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
         vector3 const&  common_contact_point_in_world_space,
 
-        vector3 const&  box_1_origin_in_world_space,
-        vector3 const&  box_1_basis_x_vector_in_world_space,
-        vector3 const&  box_1_basis_y_vector_in_world_space,
-        vector3 const&  box_1_basis_z_vector_in_world_space,
+        coordinate_system_explicit const&  box_1_location,
         vector3 const&  box_1_half_sizes_along_axes,
 
-        vector3 const&  box_2_origin_in_world_space,
-        vector3 const&  box_2_basis_x_vector_in_world_space,
-        vector3 const&  box_2_basis_y_vector_in_world_space,
-        vector3 const&  box_2_basis_z_vector_in_world_space,
+        coordinate_system_explicit const&  box_2_location,
         vector3 const&  box_2_half_sizes_along_axes,
 
         float_32_bit&  output_penetration_depth,
@@ -538,48 +511,18 @@ vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
 
 
 bool  collision_box_box(
-        vector3 const&  box_1_origin_in_world_space,
-        vector3 const&  box_1_basis_x_vector_in_world_space,
-        vector3 const&  box_1_basis_y_vector_in_world_space,
-        vector3 const&  box_1_basis_z_vector_in_world_space,
+        coordinate_system_explicit const&  box_1_location,
         vector3 const&  box_1_half_sizes_along_axes,
-        std::vector<std::vector<vector2> > const&  box_1_polygons,
-        std::vector<matrix44> const&  box_1_to_polygon_space_matrices,
-        std::vector<matrix44> const&   box_1_from_polygon_space_matrices,
-        std::vector< std::pair<vector3, vector3> > const&  box_1_origins_and_unit_normals_in_world_space,
+        convex_polyhedron const&  box_1_polygons,
 
-        vector3 const&  box_2_origin_in_world_space,
-        vector3 const&  box_2_basis_x_vector_in_world_space,
-        vector3 const&  box_2_basis_y_vector_in_world_space,
-        vector3 const&  box_2_basis_z_vector_in_world_space,
+        coordinate_system_explicit const&  box_2_location,
         vector3 const&  box_2_half_sizes_along_axes,
-        std::vector<std::vector<vector2> > const&  box_2_polygons,
-        std::vector<matrix44> const&  box_2_to_polygon_space_matrices,
-        std::vector<matrix44> const&   box_2_from_polygon_space_matrices,
-        std::vector< std::pair<vector3, vector3> > const&  box_2_origins_and_unit_normals_in_world_space,
+        convex_polyhedron const&  box_2_polygons,
 
         vector3* const  ouptut_collision_plane_unit_normal_in_world_space,
         std::vector<vector3>* const  output_collision_points_in_world_space,
-        std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points
-        );
-
-
-bool  collision_box_box(
-        vector3 const&  box_1_origin_in_world_space,
-        vector3 const&  box_1_basis_x_vector_in_world_space,
-        vector3 const&  box_1_basis_y_vector_in_world_space,
-        vector3 const&  box_1_basis_z_vector_in_world_space,
-        vector3 const&  box_1_half_sizes_along_axes,
-
-        vector3 const&  box_2_origin_in_world_space,
-        vector3 const&  box_2_basis_x_vector_in_world_space,
-        vector3 const&  box_2_basis_y_vector_in_world_space,
-        vector3 const&  box_2_basis_z_vector_in_world_space,
-        vector3 const&  box_2_half_sizes_along_axes,
-
-        vector3* const  ouptut_collision_plane_unit_normal_in_world_space,
-        std::vector<vector3>* const  output_collision_points_in_world_space,
-        std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points
+        std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points,
+        std::vector<std::pair<collision_shape_feature_id, collision_shape_feature_id> >* const  output_collision_shape_feature_ids
         );
 
 
