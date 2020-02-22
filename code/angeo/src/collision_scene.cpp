@@ -1509,7 +1509,7 @@ bool  collision_scene::compute_contacts(
         switch (shape_type_2)
         {
         case COLLISION_SHAPE_TYPE::BOX:
-            return compute_contacts__box_vs_capsule(cop.first, cop.second, acceptor);
+            return compute_contacts__box_vs_box(cop.first, cop.second, acceptor);
         case COLLISION_SHAPE_TYPE::CAPSULE:
             return compute_contacts__box_vs_capsule(cop.first, cop.second, acceptor);
         case COLLISION_SHAPE_TYPE::LINE:
