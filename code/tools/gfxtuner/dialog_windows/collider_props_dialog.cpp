@@ -51,6 +51,12 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, scn::co
     , m_widget_collision_class(new QComboBox)
     , m_density_multiplier(new QLineEdit)
 
+    // WIDGETS FOR BOX
+
+    , m_widget_box_half_size_along_x_axis(nullptr)
+    , m_widget_box_half_size_along_y_axis(nullptr)
+    , m_widget_box_half_size_along_z_axis(nullptr)
+
     // WIDGETS FOR CAPSULE
 
     , m_widget_capsule_half_distance_between_end_points(nullptr)
@@ -72,7 +78,43 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, scn::co
         {
             QVBoxLayout* const collider_shape_layout = new QVBoxLayout;
             {
-                if (m_props->m_shape_type == "capsule")
+                if (m_props->m_shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
+                {
+                    QHBoxLayout* const half_sizes_along_axis_layout = new QHBoxLayout;
+                    {
+                        half_sizes_along_axis_layout->addWidget(new QLabel("Half sizes [xyz]"));
+                        m_widget_box_half_size_along_x_axis = new QLineEdit();
+                        m_widget_box_half_size_along_x_axis->setText(
+                            QString::number(m_props->m_box_half_sizes_along_axes(0))
+                        );
+                        m_widget_box_half_size_along_x_axis->setToolTip(
+                            "A halved length of the box, i.e. half size along the axis x."
+                        );
+                        half_sizes_along_axis_layout->addWidget(m_widget_box_half_size_along_x_axis);
+
+                        m_widget_box_half_size_along_y_axis = new QLineEdit();
+                        m_widget_box_half_size_along_y_axis->setText(
+                            QString::number(m_props->m_box_half_sizes_along_axes(1))
+                        );
+                        m_widget_box_half_size_along_y_axis->setToolTip(
+                            "A halved width of the box, i.e. half size along the axis y."
+                        );
+                        half_sizes_along_axis_layout->addWidget(m_widget_box_half_size_along_y_axis);
+
+                        m_widget_box_half_size_along_z_axis = new QLineEdit();
+                        m_widget_box_half_size_along_z_axis->setText(
+                            QString::number(m_props->m_box_half_sizes_along_axes(2))
+                        );
+                        m_widget_box_half_size_along_z_axis->setToolTip(
+                            "A halved height of the box, i.e. half size along the axis z."
+                        );
+                        half_sizes_along_axis_layout->addWidget(m_widget_box_half_size_along_z_axis);
+
+                        half_sizes_along_axis_layout->addStretch(1);
+                    }
+                    collider_shape_layout->addLayout(half_sizes_along_axis_layout);
+                }
+                else if (m_props->m_shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
                 {
                     QHBoxLayout* const half_distance_between_end_points_layout = new QHBoxLayout;
                     {
@@ -108,7 +150,7 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, scn::co
                     }
                     collider_shape_layout->addLayout(thickness_from_central_line_layout);
                 }
-                else if (m_props->m_shape_type == "sphere")
+                else if (m_props->m_shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
                 {
                     QHBoxLayout* const radius_layout = new QHBoxLayout;
                     {
@@ -121,7 +163,7 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, scn::co
                     }
                     collider_shape_layout->addLayout(radius_layout);
                 }
-                else if (m_props->m_shape_type == "triangle mesh")
+                else if (m_props->m_shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
                 {
                     QHBoxLayout* const triangle_mesh_layout = new QHBoxLayout;
                     {
@@ -246,7 +288,7 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, scn::co
         //dlg_layout->setAlignment(buttons_layout, Qt::Alignment(Qt::AlignmentFlag::AlignRight));
     }
     this->setLayout(dlg_layout);
-    this->setWindowTitle((msgstream() << "Collider: " << m_props->m_shape_type).get().c_str());
+    this->setWindowTitle((msgstream() << "Collider: " << angeo::as_string(m_props->m_shape_type)).get().c_str());
     //this->resize(300,100);
 }
 
@@ -281,19 +323,28 @@ void  collider_props_dialog::on_triangle_mesh_choose_buffers_directory()
 
 void  collider_props_dialog::accept()
 {
-    if (m_props->m_shape_type == "capsule")
+    if (m_props->m_shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
+    {
+        m_props->m_box_half_sizes_along_axes(0) =
+            std::atof(qtgl::to_string(m_widget_box_half_size_along_x_axis->text()).c_str());
+        m_props->m_box_half_sizes_along_axes(1) =
+            std::atof(qtgl::to_string(m_widget_box_half_size_along_y_axis->text()).c_str());
+        m_props->m_box_half_sizes_along_axes(2) =
+            std::atof(qtgl::to_string(m_widget_box_half_size_along_z_axis->text()).c_str());
+    }
+    else if (m_props->m_shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
     {
         m_props->m_capsule_half_distance_between_end_points =
                 std::atof(qtgl::to_string(m_widget_capsule_half_distance_between_end_points->text()).c_str());
         m_props->m_capsule_thickness_from_central_line =
                 std::atof(qtgl::to_string(m_widget_capsule_thickness_from_central_line->text()).c_str());
     }
-    else if (m_props->m_shape_type == "sphere")
+    else if (m_props->m_shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
     {
         m_props->m_sphere_radius =
             std::atof(qtgl::to_string(m_widget_sphere_radius->text()).c_str());
     }
-    else if (m_props->m_shape_type == "triangle mesh")
+    else if (m_props->m_shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
     {
         m_props->m_triangle_mesh_buffers_directory = qtgl::to_string(m_widget_triangle_mesh_buffers_directory->text());
     }

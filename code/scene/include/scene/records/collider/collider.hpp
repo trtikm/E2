@@ -1,6 +1,7 @@
 #ifndef E2_SCENE_RECORDS_COLLIDER_COLLIDER_HPP_INCLUDED
 #   define E2_SCENE_RECORDS_COLLIDER_COLLIDER_HPP_INCLUDED
 
+#   include <angeo/collision_shape_id.hpp>
 #   include <angeo/collision_object_id.hpp>
 #   include <angeo/collision_material.hpp>
 #   include <angeo/collision_class.hpp>
@@ -41,12 +42,16 @@ private:
 
 struct  collider_props final
 {
-    std::string  m_shape_type;
+    angeo::COLLISION_SHAPE_TYPE  m_shape_type;
 
     bool  m_as_dynamic;
     angeo::COLLISION_MATERIAL_TYPE  m_material;
     angeo::COLLISION_CLASS  m_collision_class;
     float_32_bit  m_density_multiplier;
+
+    // DATA OF BOX
+
+    vector3  m_box_half_sizes_along_axes;
 
     // DATA OF CAPSULE
 

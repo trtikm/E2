@@ -32,21 +32,25 @@ namespace window_tabs { namespace tab_scene { namespace record_collider { namesp
 
 void  set_collider_props_to_defaults(std::string const&  shape_type, scn::collider_props&  props)
 {
-    props.m_shape_type = shape_type;
+    props.m_shape_type = angeo::as_collision_shape_type(shape_type);
     props.m_as_dynamic = true;
     props.m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
     props.m_collision_class = angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT;
     props.m_density_multiplier = 1.0f;
-    if (props.m_shape_type == "capsule")
+    if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
+    {
+        props.m_box_half_sizes_along_axes = vector3(0.05f, 0.05f, 0.05f);
+    }
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
     {
         props.m_capsule_half_distance_between_end_points = 0.05f;
         props.m_capsule_thickness_from_central_line = 0.05f;
     }
-    else if (props.m_shape_type == "sphere")
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
     {
         props.m_sphere_radius = 0.05f;
     }
-    else if (props.m_shape_type == "triangle mesh")
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
     {
         props.m_as_dynamic = false;
         props.m_triangle_mesh_buffers_directory =
@@ -63,7 +67,19 @@ void  set_collider_props_to_defaults(std::string const&  shape_type, scn::collid
 
 void  insert_collider_to_simulator(widgets* const  w, scn::collider_props const&  props, scn::scene_record_id const&  record_id)
 {
-    if (props.m_shape_type == "capsule")
+    if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
+    {
+        w->wnd()->glwindow().call_now(
+                &simulator::insert_collision_box_to_scene_node,
+                props.m_box_half_sizes_along_axes,
+                props.m_material,
+                props.m_collision_class,
+                props.m_density_multiplier,
+                props.m_as_dynamic,
+                std::cref(record_id)
+                );
+    }
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
     {
         w->wnd()->glwindow().call_now(
                 &simulator::insert_collision_capsule_to_scene_node,
@@ -76,7 +92,7 @@ void  insert_collider_to_simulator(widgets* const  w, scn::collider_props const&
                 std::cref(record_id)
                 );
     }
-    else if (props.m_shape_type == "sphere")
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
     {
         w->wnd()->glwindow().call_now(
                 &simulator::insert_collision_sphere_to_scene_node,
@@ -88,7 +104,7 @@ void  insert_collider_to_simulator(widgets* const  w, scn::collider_props const&
                 std::cref(record_id)
                 );
     }
-    else if (props.m_shape_type == "triangle mesh")
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
     {
         TMPROF_BLOCK();
 
@@ -134,8 +150,18 @@ void  erase_collider_from_simulator(widgets* const  w, scn::scene_record_id cons
 
 void  read_collider_props_from_simulator(widgets* const  w, scn::scene_record_id const&  record_id, scn::collider_props&  props)
 {
-    props.m_shape_type = record_id.get_record_name();
-    if (props.m_shape_type == "capsule")
+    props.m_shape_type = angeo::as_collision_shape_type(record_id.get_record_name());
+    if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
+        w->wnd()->glwindow().call_now(
+                &simulator::get_collision_box_info,
+                std::cref(record_id),
+                std::ref(props.m_box_half_sizes_along_axes),
+                std::ref(props.m_material),
+                std::ref(props.m_collision_class),
+                std::ref(props.m_density_multiplier),
+                std::ref(props.m_as_dynamic)
+                );
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
         w->wnd()->glwindow().call_now(
                 &simulator::get_collision_capsule_info,
                 std::cref(record_id),
@@ -146,7 +172,7 @@ void  read_collider_props_from_simulator(widgets* const  w, scn::scene_record_id
                 std::ref(props.m_density_multiplier),
                 std::ref(props.m_as_dynamic)
                 );
-    else if (props.m_shape_type == "sphere")
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
         w->wnd()->glwindow().call_now(
                 &simulator::get_collision_sphere_info,
                 std::cref(record_id),
@@ -156,7 +182,7 @@ void  read_collider_props_from_simulator(widgets* const  w, scn::scene_record_id
                 std::ref(props.m_density_multiplier),
                 std::ref(props.m_as_dynamic)
                 );
-    else if (props.m_shape_type == "triangle mesh")
+    else if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
     {
         qtgl::buffer  vertex_buffer;
         qtgl::buffer  index_buffer;
@@ -253,7 +279,7 @@ void  register_record_handler_for_insert_scene_record(
                         if (!dlg.ok())
                             return{ "",{} };
                         return {
-                            props->m_shape_type,
+                            angeo::as_string(props->m_shape_type),
                             [w, props](scn::scene_record_id const&  record_id) -> bool {
                                     detail::insert_collider_to_simulator(w, *props, record_id);
                                     w->get_scene_history()->insert<scn::scene_history_collider_insert>(record_id, *props, false);

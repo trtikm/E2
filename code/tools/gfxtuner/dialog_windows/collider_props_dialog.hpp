@@ -49,6 +49,12 @@ private:
     QComboBox*  m_widget_collision_class;
     QLineEdit*  m_density_multiplier;
 
+    // WIDGETS FOR BOX
+
+    QLineEdit*  m_widget_box_half_size_along_x_axis;
+    QLineEdit*  m_widget_box_half_size_along_y_axis;
+    QLineEdit*  m_widget_box_half_size_along_z_axis;
+
     // WIDGETS FOR CAPSULE
 
     QLineEdit*  m_widget_capsule_half_distance_between_end_points;

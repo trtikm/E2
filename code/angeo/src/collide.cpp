@@ -1746,6 +1746,7 @@ void  express_box_in_terms_of_its_faces(
     if (output_polygons != nullptr)
         output_polygons->resize(6U);
     output_to_polygon_space_matrices.resize(6U);
+    output_from_polygon_space_matrices.resize(6U);
     if (output_origins_and_unit_normals_in_world_space != nullptr)
         output_origins_and_unit_normals_in_world_space->resize(6U);
 

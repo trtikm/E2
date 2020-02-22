@@ -2,6 +2,7 @@
 #   define ANGEO_COLLISION_SHAPE_ID_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
+#   include <string>
 
 namespace angeo {
 
@@ -13,15 +14,15 @@ namespace angeo {
  */
 enum struct  COLLISION_SHAPE_TYPE : natural_8_bit
 {
-    BOX                     = 0,
-    CAPSULE                 = 1,
-    //CONE                    = 2,
-    //CYLINDER                = 3,
-    LINE                    = 4,
-    POINT                   = 5,
-    //POLYHEDRON              = 6,
-    SPHERE                  = 7,
-    TRIANGLE                = 8,
+    BOX,
+    CAPSULE,
+    //CONE,
+    //CYLINDER,
+    LINE,
+    POINT,
+    //POLYHEDRON,
+    SPHERE,
+    TRIANGLE,
 };
 
 inline natural_8_bit  as_number(COLLISION_SHAPE_TYPE const  cst)
@@ -29,7 +30,14 @@ inline natural_8_bit  as_number(COLLISION_SHAPE_TYPE const  cst)
     return static_cast<natural_8_bit>(cst);
 }
 
-char const*  as_string(COLLISION_SHAPE_TYPE const  cst);
+inline COLLISION_SHAPE_TYPE  as_collision_shape_type(natural_8_bit const  index)
+{
+    return (COLLISION_SHAPE_TYPE)index;
+}
+
+std::string const&  description(COLLISION_SHAPE_TYPE const  cst);
+std::string const&  as_string(COLLISION_SHAPE_TYPE const  cst);
+COLLISION_SHAPE_TYPE  as_collision_shape_type(std::string const&  name);
 
 inline constexpr natural_8_bit  get_max_collision_shape_type_id()
 { 

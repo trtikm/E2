@@ -104,6 +104,22 @@ float_32_bit  get_material_density(COLLISION_MATERIAL_TYPE const  material)
 }
 
 
+void  mass_and_inertia_tensor_builder::insert_box(
+        vector3 const&  half_sizes_along_axes,
+        matrix44 const&  from_base_matrix,
+        COLLISION_MATERIAL_TYPE const  material,
+        float_32_bit const  density_multiplier
+        )
+{
+    ASSUMPTION(density_multiplier >= 0.001f);
+    m_boxes.push_back({
+            half_sizes_along_axes,
+            from_base_matrix,
+            compute_mass(density_multiplier * get_material_density(material), compute_volume_of_box(half_sizes_along_axes))
+            });
+}
+
+
 void  mass_and_inertia_tensor_builder::insert_capsule(
         float_32_bit const  half_distance_between_end_points,
         float_32_bit const  thickness_from_central_line,
@@ -148,6 +164,12 @@ void  mass_and_inertia_tensor_builder::compute_inverted_total_mass_and_center_of
     center_of_mass = vector3_zero();
     inverted_mass = 0.0f;
 
+    for (box_info const&  info : m_boxes)
+    {
+        center_of_mass += info.mass * translation_vector(info.from_base_matrix);
+        inverted_mass += info.mass;
+    }
+
     for (capsule_info const&  info : m_capsules)
     {
         center_of_mass += info.mass * translation_vector(info.from_base_matrix);
@@ -183,6 +205,23 @@ void  mass_and_inertia_tensor_builder::run(
     }
 
     matrix33  inertia_tensor = matrix33_zero();
+
+    for (box_info const&  info : m_boxes)
+        detail::foreach_particle_in_bbox(
+                axis_aligned_bounding_box{ -info.half_sizes_along_axes, info.half_sizes_along_axes },
+                info.mass,
+                1000U,
+                [&info](vector3 const&  position) -> bool {
+                        return true;
+                    },
+                [&inertia_tensor, &info, &center_of_mass](vector3 const&  position, float_32_bit const  mass) -> void {
+                        detail::update_inertia_tensor_for_particle(
+                                transform_point(position, info.from_base_matrix) - center_of_mass,
+                                mass,
+                                inertia_tensor
+                                );
+                    }
+                );
 
     for (capsule_info const&  info : m_capsules)
         detail::foreach_particle_in_bbox(

@@ -22,6 +22,8 @@
 #   include <qtgl/batch_generators.hpp>
 #   include <qtgl/offscreen.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <angeo/tensor_hash.hpp>
+#   include <angeo/tensor_equal_to.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
 #   include <ai/simulator.hpp>
@@ -135,6 +137,15 @@ struct simulator : public qtgl::real_time_simulator
             scn::scene_node_id const&  scene_node_id
             );
 
+    void  insert_collision_box_to_scene_node(
+            vector3 const&  half_sizes_along_axes,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
+            bool const  as_dynamic,
+            scn::scene_record_id const&  id
+            );
+
     void  insert_collision_sphere_to_scene_node(
             float_32_bit const  radius,
             angeo::COLLISION_MATERIAL_TYPE const  material,
@@ -165,6 +176,15 @@ struct simulator : public qtgl::real_time_simulator
 
     void  erase_collision_object_from_scene_node(
             scn::scene_record_id const&  id
+            );
+
+    void  get_collision_box_info(
+            scn::scene_record_id const&  id,
+            vector3&  half_sizes_along_axes,
+            angeo::COLLISION_MATERIAL_TYPE&  material,
+            angeo::COLLISION_CLASS&  collision_class,
+            float_32_bit&  density_multiplier,
+            bool&  is_dynamic
             );
 
     void  get_collision_sphere_info(
@@ -436,6 +456,9 @@ private:
             qtgl::batch  neighbours;
         };
 
+        std::unordered_map<
+                vector3, qtgl::batch,
+                angeo::tensor_hash<vector3, 1000U>, angeo::tensor_equal_to<vector3, 1000U> >  boxes;
         std::unordered_map<float_32_bit, qtgl::batch>  spheres;
         std::unordered_map<std::pair<float_32_bit, float_32_bit>, qtgl::batch>  capsules;
         std::unordered_map<std::string, triangle_mesh_batches>  triangle_meshes;
@@ -445,6 +468,7 @@ private:
 
         void clear()
         {
+            boxes.clear();
             capsules.clear();
             spheres.clear();
             triangle_meshes.clear();

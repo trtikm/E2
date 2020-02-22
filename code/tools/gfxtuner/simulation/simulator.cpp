@@ -27,6 +27,7 @@
 #include <utility/development.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/algorithm/string.hpp>
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -2190,6 +2191,18 @@ void  simulator::render_colliders(
                         angeo::collision_object_id const  coid = collider_ptr->id();
                         switch (angeo::get_shape_type(coid))
                         {
+                        case angeo::COLLISION_SHAPE_TYPE::BOX:
+                            {
+                                vector3 const  key { m_collision_scene_ptr->get_box_half_sizes_along_axes(coid) };
+                                auto  it = m_cache_of_batches_of_colliders.boxes.find(key);
+                                if (it == m_cache_of_batches_of_colliders.boxes.end())
+                                    it = m_cache_of_batches_of_colliders.boxes.insert({
+                                                key,
+                                                qtgl::create_wireframe_box(-key, key, m_colliders_colour)
+                                                }).first;
+                                batches.push_back(it->second);
+                            }
+                            break;
                         case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
                             {
                                 std::pair<float_32_bit, float_32_bit> const  key {
@@ -2750,6 +2763,28 @@ void  simulator::erase_batch_from_scene_node(
 }
 
 
+void  simulator::insert_collision_box_to_scene_node(
+        vector3 const&  half_sizes_along_axes,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
+        bool const  as_dynamic,
+        scn::scene_record_id const&  id
+        )
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
+    angeo::collision_object_id const  collider_id =
+        m_collision_scene_ptr->insert_box(half_sizes_along_axes, node_ptr->get_world_matrix(), material, collision_class, as_dynamic);
+    scn::insert_collider(*node_ptr, angeo::as_collision_shape_type(id.get_record_name()), collider_id, density_multiplier);
+
+    if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
+        rebuild_rigid_body_due_to_change_in_subtree(phs_node);
+}
+
+
 void  simulator::insert_collision_sphere_to_scene_node(
         float_32_bit const  radius,
         angeo::COLLISION_MATERIAL_TYPE const  material,
@@ -2765,7 +2800,7 @@ void  simulator::insert_collision_sphere_to_scene_node(
     ASSUMPTION(node_ptr != nullptr);
     angeo::collision_object_id const  collider_id =
             m_collision_scene_ptr->insert_sphere(radius, node_ptr->get_world_matrix(), material, collision_class, as_dynamic);
-    scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
+    scn::insert_collider(*node_ptr, angeo::as_collision_shape_type(id.get_record_name()), collider_id, density_multiplier);
 
     if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
         rebuild_rigid_body_due_to_change_in_subtree(phs_node);
@@ -2794,7 +2829,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
                     collision_class,
                     as_dynamic
                     );
-    scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
+    scn::insert_collider(*node_ptr, angeo::as_collision_shape_type(id.get_record_name()), collider_id, density_multiplier);
 
     if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
         rebuild_rigid_body_due_to_change_in_subtree(phs_node);
@@ -2825,7 +2860,7 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
             collider_ids
             );
 
-    scn::insert_collider(*node_ptr, id.get_record_name(), collider_ids, density_multiplier);
+    scn::insert_collider(*node_ptr, angeo::as_collision_shape_type(id.get_record_name()), collider_ids, density_multiplier);
 
     if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
         rebuild_rigid_body_due_to_change_in_subtree(phs_node);
@@ -2857,6 +2892,24 @@ void  simulator::erase_collision_object_from_scene_node(
             rebuild_rigid_body_due_to_change_in_subtree(phs_node);
 }
 
+
+void  simulator::get_collision_box_info(
+        scn::scene_record_id const&  id,
+        vector3&  half_sizes_along_axes,
+        angeo::COLLISION_MATERIAL_TYPE&  material,
+        angeo::COLLISION_CLASS&  collision_class,
+        float_32_bit&  density_multiplier,
+        bool&  is_dynamic
+        )
+{
+    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_id()));
+    ASSUMPTION(collider != nullptr);
+    half_sizes_along_axes = m_collision_scene_ptr->get_box_half_sizes_along_axes(collider->id());
+    material = m_collision_scene_ptr->get_material(collider->id());
+    collision_class = m_collision_scene_ptr->get_collision_class(collider->id());
+    density_multiplier = collider->get_density_multiplier();
+    is_dynamic = m_collision_scene_ptr->is_dynamic(collider->id());
+}
 
 void  simulator::get_collision_sphere_info(
         scn::scene_record_id const&  id,
@@ -3378,8 +3431,19 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
 {
     TMPROF_BLOCK();
 
-    std::string const  shape_type = data.get<std::string>("shape_type");
-    if (shape_type == "capsule")
+    angeo::COLLISION_SHAPE_TYPE const  shape_type = angeo::as_collision_shape_type(data.get<std::string>("shape_type"));
+    if (shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
+        insert_collision_box_to_scene_node(
+            vector3(data.get<float_32_bit>("half_size_along_x"),
+                    data.get<float_32_bit>("half_size_along_y"),
+                    data.get<float_32_bit>("half_size_along_z")),
+            angeo::read_collison_material_from_string(data.get<std::string>("material")),
+            angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
+            data.get<float_32_bit>("density_multiplier"),
+            data.get<bool>("is_dynamic"),
+            scn::make_collider_record_id(id, shape_type)
+        );
+    else if (shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
         insert_collision_capsule_to_scene_node(
                 data.get<float_32_bit>("half_distance_between_end_points"),
                 data.get<float_32_bit>("thickness_from_central_line"),
@@ -3389,7 +3453,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 data.get<bool>("is_dynamic"),
                 scn::make_collider_record_id(id, shape_type)
                 );
-    else if (shape_type == "sphere")
+    else if (shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
         insert_collision_sphere_to_scene_node(
                 data.get<float_32_bit>("radius"),
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
@@ -3398,7 +3462,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 data.get<bool>("is_dynamic"),
                 scn::make_collider_record_id(id, shape_type)
                 );
-    else if (shape_type == "triangle mesh")
+    else if (shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
     {
         boost::filesystem::path const  buffers_dir = data.get<std::string>("buffers_directory");
         qtgl::buffer  vertex_buffer(buffers_dir / "vertices.txt", std::numeric_limits<async::load_priority_type>::max());
@@ -3426,20 +3490,23 @@ void  simulator::save_collider(scn::collider const&  collider, boost::property_t
 {
     TMPROF_BLOCK();
 
+    data.put("shape_type", angeo::as_string(angeo::get_shape_type(collider.id())));
     switch (angeo::get_shape_type(collider.id()))
     {
+    case angeo::COLLISION_SHAPE_TYPE::BOX:
+        data.put("half_size_along_x", m_collision_scene_ptr->get_box_half_sizes_along_axes(collider.id())(0));
+        data.put("half_size_along_y", m_collision_scene_ptr->get_box_half_sizes_along_axes(collider.id())(1));
+        data.put("half_size_along_z", m_collision_scene_ptr->get_box_half_sizes_along_axes(collider.id())(2));
+        break;
     case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
-        data.put("shape_type", "capsule");
         data.put("half_distance_between_end_points", m_collision_scene_ptr->get_capsule_half_distance_between_end_points(collider.id()));
         data.put("thickness_from_central_line", m_collision_scene_ptr->get_capsule_thickness_from_central_line(collider.id()));
         break;
     case angeo::COLLISION_SHAPE_TYPE::SPHERE:
-        data.put("shape_type", "sphere");
         data.put("radius", m_collision_scene_ptr->get_sphere_radius(collider.id()));
         break;
     case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
         {
-            data.put("shape_type", "triangle mesh");
             detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
                 m_collision_scene_ptr->get_triangle_points_getter(collider.id()).target<detail::collider_triangle_mesh_vertex_getter>();
             data.put(
@@ -3628,11 +3695,7 @@ void  simulator::clear_scene()
 {
     m_scene_selection.clear();
     m_scene_edit_data.invalidate_data();
-    m_cache_of_batches_of_colliders.capsules.clear();
-    m_cache_of_batches_of_colliders.spheres.clear();
-    m_cache_of_batches_of_colliders.triangle_meshes.clear();
-    m_cache_of_batches_of_colliders.collision_normals_points.release();
-    m_cache_of_batches_of_colliders.collision_normals_batch.release();
+    m_cache_of_batches_of_colliders.clear();
 
     m_cache_of_batches_of_ai_agents.lines.release();
     m_cache_of_batches_of_ai_agents.lines_batch.release();
