@@ -1348,6 +1348,7 @@ void  widgets::clear_scene()
         return;
     }
 
+    wnd()->set_focus_to_glwindow();
     m_scene_tree->clear();
     wnd()->glwindow().call_now(&simulator::clear_scene);
     wnd()->set_current_scene_dir("");
