@@ -20,6 +20,19 @@ enum struct  COORDINATE : natural_8_bit
 };
 
 
+inline natural_8_bit  as_number(COORDINATE const  coord) noexcept
+{
+    return *reinterpret_cast<natural_8_bit const*>(&coord);
+}
+
+
+inline COORDINATE  as_coordinate(natural_8_bit const  index)
+{
+    ASSUMPTION(index <= as_number(COORDINATE::V));
+    return (COORDINATE)index;
+}
+
+
 /**
  * It computes a point to a parameter 't' on the line 'X = line_begin + t * (line_end - line_begin)'
  * in range [0,1] such that X is the closest point to the passed one.
@@ -496,7 +509,25 @@ void  compute_polygons_of_box(
         );
 
 
-vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
+struct  closest_box_feature_to_a_point
+{
+    COLLISION_SHAPE_FEATURE_TYPE  feature_type;
+    vector3  feature_vector_in_world_space; // Not used for feature type VERTEX.
+    float_32_bit  distance_to_feature;
+    natural_32_bit  feature_index;
+};
+
+
+void  compute_closest_box_feature_to_a_point(
+        closest_box_feature_to_a_point&  output,
+        vector3 const&  point_in_box_local_space,
+        vector3 const&  box_half_sizes_along_axes,
+        coordinate_system_explicit const&  box_location_in_word_space,
+        float_32_bit const  max_edge_thickness = 0.005f
+        );
+
+
+vector3  compute_box_collision_unit_normal_and_penetration_depth_from_contact_point(
         vector3 const&  common_contact_point_in_world_space,
 
         coordinate_system_explicit const&  box_1_location,
@@ -506,7 +537,7 @@ vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
         vector3 const&  box_2_half_sizes_along_axes,
 
         float_32_bit&  output_penetration_depth,
-        COLLISION_SHAPE_FEATURE_TYPE* const  output_feature_ptr
+        std::pair<collision_shape_feature_id, collision_shape_feature_id>* const  output_collision_shape_feature_id_ptr
         );
 
 
