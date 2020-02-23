@@ -3,6 +3,7 @@
 
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/hash_combine.hpp>
+#   include <utility/assumptions.hpp>
 
 namespace angeo {
 
@@ -13,6 +14,19 @@ enum struct  COLLISION_SHAPE_FEATURE_TYPE : natural_8_bit
     EDGE        = 1,
     FACE        = 2,
 };
+
+
+inline natural_8_bit  as_number(COLLISION_SHAPE_FEATURE_TYPE const  type) noexcept
+{
+    return *reinterpret_cast<natural_8_bit const*>(&type);
+}
+
+
+inline COLLISION_SHAPE_FEATURE_TYPE  as_collision_shape_feature_type(natural_8_bit const  index)
+{
+    ASSUMPTION(index <= as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE));
+    return (COLLISION_SHAPE_FEATURE_TYPE) index;
+}
 
 
 struct  collision_shape_feature_id
