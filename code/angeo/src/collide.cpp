@@ -1614,6 +1614,7 @@ POINT_SET_TYPE  clip_polygon(
         matrix44 const&  to_polygon_space_matrix,
         std::vector< std::pair<vector3,vector3> > const&  clip_planes,  // First is origin, second unit normal
         std::vector<vector2>* const  output_clipped_polygon_points,
+        std::vector<collision_shape_feature_id>* const  output_collision_shape_feature_ids,
         std::vector<natural_32_bit>* const  output_indices_of_intersection_points
         )
 {
@@ -1630,6 +1631,23 @@ POINT_SET_TYPE  clip_polygon(
     polygon_points_buffer_ptr.at(1U)->reserve(polygon_points.size() + 2U * clip_planes.size() + 1U);
 
     std::vector<vector2> const*  polygon_points_ptr = &polygon_points;
+
+    std::array<std::vector<collision_shape_feature_id>, 2U>  feature_id_buffers;
+    std::array<std::vector<collision_shape_feature_id>*, 2U> const  feature_id_buffer_ptr{
+        output_collision_shape_feature_ids == nullptr ? &feature_id_buffers.at(0U) : output_collision_shape_feature_ids,
+        & feature_id_buffers.at(1U)
+    };
+    if (output_collision_shape_feature_ids != nullptr)
+    {
+        feature_id_buffer_ptr.at(0U)->reserve(polygon_points.size() + 2U * clip_planes.size() + 1U);
+        feature_id_buffer_ptr.at(1U)->reserve(polygon_points.size() + 2U * clip_planes.size() + 1U);
+
+        std::vector<collision_shape_feature_id>& ids = feature_id_buffers.at(free_buffer_index);
+        for (natural_32_bit  i = 0U; i != polygon_points.size(); ++i)
+            ids.push_back(make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, i));
+    }
+
+    std::vector<collision_shape_feature_id> const* feature_ids_ptr = &feature_id_buffers.at((free_buffer_index + 1U) % 2U);
 
     std::array<std::vector<natural_32_bit>, 2U>  intersection_points_buffers;
     std::array<std::vector<natural_32_bit>*, 2U> const  intersection_points_buffer_ptr{
@@ -1662,14 +1680,21 @@ POINT_SET_TYPE  clip_polygon(
             continue;
 
         std::vector<vector2>&  free_polygon_points_buffer_ref = *polygon_points_buffer_ptr.at(free_buffer_index);
+        std::vector<collision_shape_feature_id>&  free_feature_id_buffer_ref = *feature_id_buffer_ptr.at(free_buffer_index);
         std::vector<natural_32_bit>&  free_intersection_points_buffer_ref = *intersection_points_buffer_ptr.at(free_buffer_index);
         free_polygon_points_buffer_ref.clear();
+        if (output_collision_shape_feature_ids != nullptr)
+            free_feature_id_buffer_ref.clear();
         if (output_indices_of_intersection_points != nullptr)
             free_intersection_points_buffer_ref.clear();
         if (description.index_start <= description.index_end)
         {
             for (std::size_t  i = description.index_start; i != description.index_end; ++i)
                 free_polygon_points_buffer_ref.push_back(polygon_points_ptr->at(i));
+
+            if (output_collision_shape_feature_ids != nullptr)
+                for (std::size_t i = description.index_start; i != description.index_end; ++i)
+                    free_feature_id_buffer_ref.push_back(feature_ids_ptr->at(i));
 
             if (output_indices_of_intersection_points != nullptr)
                 for (natural_32_bit  idx : *intersection_points_ptr)
@@ -1683,6 +1708,14 @@ POINT_SET_TYPE  clip_polygon(
             for (std::size_t i = 0U; i != description.index_end; ++i)
                 free_polygon_points_buffer_ref.push_back(polygon_points_ptr->at(i));
 
+            if (output_collision_shape_feature_ids != nullptr)
+            {
+                for (std::size_t i = description.index_start; i != polygon_points_ptr->size(); ++i)
+                    free_feature_id_buffer_ref.push_back(feature_ids_ptr->at(i));
+                for (std::size_t i = 0U; i != description.index_end; ++i)
+                    free_feature_id_buffer_ref.push_back(feature_ids_ptr->at(i));
+            }
+
             if (output_indices_of_intersection_points != nullptr)
             {
                 natural_32_bit const  end_shift = (natural_32_bit)(polygon_points_ptr->size() - description.index_start);
@@ -1693,13 +1726,50 @@ POINT_SET_TYPE  clip_polygon(
                         free_intersection_points_buffer_ref.push_back(idx + end_shift);
             }
         }
-        free_intersection_points_buffer_ref.push_back((natural_32_bit)free_polygon_points_buffer_ref.size());
-        if (output_indices_of_intersection_points != nullptr)
-            free_polygon_points_buffer_ref.push_back(description.point_start);
 
-        free_intersection_points_buffer_ref.push_back((natural_32_bit)free_polygon_points_buffer_ref.size());
+        auto const  build_intersection_feature_id =
+            [](collision_shape_feature_id const&  feature_1, collision_shape_feature_id const&  feature_2) {
+                COLLISION_SHAPE_FEATURE_TYPE  feature_type;
+                natural_32_bit  feature_index;
+                if (feature_1.m_feature_type <= feature_2.m_feature_type)
+                {
+                    feature_type = as_collision_shape_feature_type(feature_1.m_feature_type);
+                    feature_index = feature_1.m_feature_index;
+                }
+                else
+                {
+                    feature_type = as_collision_shape_feature_type(feature_2.m_feature_type);
+                    feature_index = feature_2.m_feature_index > 0U ? feature_2.m_feature_index - 1U : 0U;
+                }
+                switch (feature_type)
+                {
+                case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+                    return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, feature_index);
+                case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+                    return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+                    return make_collision_shape_feature_id(feature_type, feature_index);
+                default: UNREACHABLE(); break;
+                }
+            };
+
         if (output_indices_of_intersection_points != nullptr)
-            free_polygon_points_buffer_ref.push_back(description.point_end);
+            free_intersection_points_buffer_ref.push_back((natural_32_bit)free_polygon_points_buffer_ref.size());
+        if (output_collision_shape_feature_ids != nullptr)
+            free_feature_id_buffer_ref.push_back(build_intersection_feature_id(
+                    feature_ids_ptr->at(description.index_end),
+                    feature_ids_ptr->at(description.index_end + 1U)
+                    ));
+        free_polygon_points_buffer_ref.push_back(description.point_start);
+
+        if (output_indices_of_intersection_points != nullptr)
+            free_intersection_points_buffer_ref.push_back((natural_32_bit)free_polygon_points_buffer_ref.size());
+        if (output_collision_shape_feature_ids != nullptr)
+            free_feature_id_buffer_ref.push_back(build_intersection_feature_id(
+                    feature_ids_ptr->at(description.index_start - 1U),
+                    feature_ids_ptr->at(description.index_start)
+                    ));
+        free_polygon_points_buffer_ref.push_back(description.point_end);
 
         free_polygon_points_buffer_ref.push_back(free_polygon_points_buffer_ref.front()); // Make the polygon cyclic.
 
@@ -1996,8 +2066,6 @@ bool  collision_box_box(
         std::vector<std::pair<collision_shape_feature_id, collision_shape_feature_id> >* const  output_collision_shape_feature_ids
         )
 {
-    std::unordered_set<vector3, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  raw_collision_points;
-
     matrix44  from_box_1_matrix, to_box_1_matrix;
     from_base_matrix(box_1_location, from_box_1_matrix);
     to_base_matrix(box_1_location, to_box_1_matrix);
@@ -2023,17 +2091,21 @@ bool  collision_box_box(
                 transform_vector(box_2_polygons.polygon_frames.at(i).basis_vector_z(), from_box_2_to_box_1_matrix),
                 });
 
+    std::unordered_map<vector3, collision_shape_feature_id, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >
+            raw_collision_points_1;
     for (natural_32_bit  i = 0U, n = (natural_32_bit)box_1_polygons.polygons.size(); i < n; ++i)
     {
         matrix44  to_polygon_space_matrix;
         to_base_matrix(box_1_polygons.polygon_frames.at(i), to_polygon_space_matrix);
 
         std::vector<vector2>  clipped_polygon;
+        std::vector<collision_shape_feature_id>  feature_ids;
         POINT_SET_TYPE const  type = clip_polygon(
                 box_1_polygons.polygons.at(i),
                 to_polygon_space_matrix,
                 box_2_clip_planes,
                 &clipped_polygon,
+                &feature_ids,
                 nullptr
                 );
 
@@ -2051,22 +2123,27 @@ bool  collision_box_box(
 
         matrix44 const  from_polygon_to_world_matrix = from_box_1_matrix * from_polygon_space_matrix;
         for (natural_32_bit j = 0U, m = (natural_32_bit)raw_collision_points_in_box_space->size() - 1U; j < m; ++m)
-            raw_collision_points.insert(
-                    transform_point(expand23(raw_collision_points_in_box_space->at(j)), from_polygon_to_world_matrix)
-                    );
+            raw_collision_points_1.insert({
+                    transform_point(expand23(raw_collision_points_in_box_space->at(j)), from_polygon_to_world_matrix),
+                    feature_ids.at(j)
+                    });
     }
 
+    std::unordered_map<vector3, collision_shape_feature_id, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >
+            raw_collision_points_2;
     for (natural_32_bit  i = 0U, n = (natural_32_bit)box_2_polygons.polygons.size(); i < n; ++i)
     {
         matrix44  to_polygon_space_matrix;
         to_base_matrix(box_2_polygons.polygon_frames.at(i), to_polygon_space_matrix);
 
         std::vector<vector2>  clipped_polygon;
+        std::vector<collision_shape_feature_id>  feature_ids;
         POINT_SET_TYPE const  type = clip_polygon(
                 box_2_polygons.polygons.at(i),
                 to_polygon_space_matrix,
                 box_1_clip_planes,
                 &clipped_polygon,
+                &feature_ids,
                 nullptr
                 );
 
@@ -2082,12 +2159,13 @@ bool  collision_box_box(
 
         matrix44 const  from_polygon_to_world_matrix = from_box_2_matrix * from_polygon_space_matrix;
         for (natural_32_bit j = 0U, m = (natural_32_bit)raw_collision_points_in_box_space->size() - 1U; j < m; ++m)
-            raw_collision_points.insert(
-                    transform_point(expand23(raw_collision_points_in_box_space->at(j)), from_polygon_to_world_matrix)
-                    );
+            raw_collision_points_2.insert({
+                    transform_point(expand23(raw_collision_points_in_box_space->at(j)), from_polygon_to_world_matrix),
+                    feature_ids.at(j)
+                });
     }
 
-    if (raw_collision_points.empty())
+    if (raw_collision_points_1.size() + raw_collision_points_2.size() == 0UL)
         return false;
 
     vector3  mass_center_of_collision_points;
@@ -2098,9 +2176,11 @@ bool  collision_box_box(
     if (ouptut_collision_plane_unit_normal_in_world_space != nullptr)
     {
         mass_center_of_collision_points = vector3_zero();
-        for (vector3 const& p : raw_collision_points)
-            mass_center_of_collision_points += p;
-        mass_center_of_collision_points /= (float_32_bit)raw_collision_points.size();
+        for (auto const&  point_and_feature : raw_collision_points_1)
+            mass_center_of_collision_points += point_and_feature.first;
+        for (auto const&  point_and_feature : raw_collision_points_2)
+            mass_center_of_collision_points += point_and_feature.first;
+        mass_center_of_collision_points /= (float_32_bit)(raw_collision_points_1.size() + raw_collision_points_2.size());
 
         COLLISION_SHAPE_FEATURE_TYPE  feature;
         *ouptut_collision_plane_unit_normal_in_world_space =
@@ -2126,27 +2206,46 @@ bool  collision_box_box(
 
         if (is_face_collision_type)
         {
-            std::unordered_map<vector3, float_32_bit, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  collision_points;
-            for (vector3 const& p : raw_collision_points)
+            struct  intersection_point_info
             {
                 float_32_bit  depth;
+                collision_shape_feature_id  feature_id_1;
+                collision_shape_feature_id  feature_id_2;
+            };
+
+            std::unordered_map<vector3, intersection_point_info, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  collision_points;
+            for (auto  it_1 = raw_collision_points_1.cbegin(); it_1 != raw_collision_points_1.cend(); ++it_1)
+            {
+                auto const  it_2 = raw_collision_points_2.find(it_1->first);
+                if (it_2 == raw_collision_points_2.end())
+                    continue;
+
+                vector3 const&  p = it_1->first;
+
+                intersection_point_info  info;
+                info.feature_id_1 = it_1->second;
+                info.feature_id_2 = it_2->second;
                 vector3 const  normal_shift =
                         project_to_unit_vector(
                                 p - mass_center_of_collision_points,
                                 *ouptut_collision_plane_unit_normal_in_world_space,
-                                depth
+                                info.depth
                                 );
-                collision_points.insert({ p - normal_shift, depth });
+                collision_points.insert({ p - normal_shift, info });
             }
-            for (auto const&  point_and_depth : collision_points)
-                if (mass_centre_penetration_depth + point_and_depth.second > 0.0f)
+            INVARIANT(!collision_points.empty());
+            for (auto const&  point_and_info : collision_points)
+                if (mass_centre_penetration_depth + point_and_info.second.depth > 0.0f)
                 {
-                    output_collision_points_in_world_space->push_back(point_and_depth.first);
+                    output_collision_points_in_world_space->push_back(point_and_info.first);
                     if (output_penetration_depths_of_collision_points != nullptr)
-                        output_penetration_depths_of_collision_points->push_back(mass_centre_penetration_depth + point_and_depth.second);
-                    // TODO!
-                    //if (output_collision_shape_feature_ids != nullptr)
-                    //    output_collision_shape_feature_ids->push_back( ??? );
+                        output_penetration_depths_of_collision_points->push_back(
+                                mass_centre_penetration_depth + point_and_info.second.depth
+                                );
+                    if (output_collision_shape_feature_ids != nullptr)
+                        output_collision_shape_feature_ids->push_back(
+                                { point_and_info.second.feature_id_1, point_and_info.second.feature_id_2 }
+                                );
                 }
         }
         else

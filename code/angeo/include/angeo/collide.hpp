@@ -454,14 +454,20 @@ enum struct POINT_SET_TYPE : natural_8_bit
 
 struct clipped_polygon_description
 {
-    std::size_t  index_start;
-    std::size_t  index_end;
+    // INVARIANT: the fields below are valid only when the algorithm 'clip_polygon' below return POINT_SET_TYPE::GENERAL.
 
-    vector2 point_start;
-    vector2 point_end;
+    std::size_t  index_start;   // Index of the first vertex of the original polygon which is in front of the clip plane.
+    std::size_t  index_end;     // Index of the last vertex of the original polygon which is in front of the clip plane.
+                                // NOTE: if index_end < index_start, then the indices of the original polygon in front of
+                                //       the clip plane are [index_start,..,N-1,0,..,index_end], where N is number of the
+                                //       vertices in the original polygon.
 
-    scalar param_start;
-    scalar param_end;
+    vector2 point_start;        // The start point of the intersection edge of the clipped polygon with the clip plane.
+    vector2 point_end;          // The end point of the intersection edge of the clipped polygon with the clip plane.
+
+    scalar param_start;         // INVARIANT: point_start = P[index_end] + param_start * (P[index_end + 1] - P[index_end])
+    scalar param_end;           // INVARIANT: point_end = P[index_start - 1] + param_end * (P[index_start] - P[index_start - 1])
+                                // where 'P' is the array of vertices of the original polygon.
 };
 
 
@@ -498,6 +504,7 @@ POINT_SET_TYPE  clip_polygon(
         matrix44 const&  to_polygon_space_matrix,
         std::vector< std::pair<vector3,vector3> > const&  clip_planes,  // First is origin, second unit normal
         std::vector<vector2>* const  output_clipped_polygon_points,
+        std::vector<collision_shape_feature_id>* const  output_collision_shape_feature_ids,
         std::vector<natural_32_bit>* const  output_indices_of_intersection_points
         );
 
