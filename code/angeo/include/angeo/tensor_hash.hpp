@@ -22,8 +22,8 @@ struct tensor_hash<vector2, EPSILON_INVERTED>
     inline result_type operator()(argument_type const& v) const
     {
         result_type seed = 0;
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(0)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(1)));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(0) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(1) + 0.5f));
         return seed;
     }
 };
@@ -38,9 +38,9 @@ struct tensor_hash<vector3, EPSILON_INVERTED>
     inline result_type operator()(argument_type const& v) const
     {
         result_type seed = 0;
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(0)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(1)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(2)));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(0) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(1) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(2) + 0.5f));
         return seed;
     }
 };
@@ -55,10 +55,10 @@ struct tensor_hash<vector4, EPSILON_INVERTED>
     inline result_type operator()(argument_type const& v) const
     {
         result_type seed = 0;
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(0)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(1)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(2)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(3)));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(0) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(1) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(2) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(3) + 0.5f));
         return seed;
     }
 };
@@ -73,12 +73,12 @@ struct tensor_hash<vector6, EPSILON_INVERTED>
     inline result_type operator()(argument_type const& v) const
     {
         result_type seed = 0;
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(0)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(1)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(2)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(3)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(4)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(5)));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(0) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(1) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(2) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(3) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(4) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * v(5) + 0.5f));
         return seed;
     }
 };
@@ -93,10 +93,10 @@ struct tensor_hash<quaternion, EPSILON_INVERTED>
     inline result_type operator()(argument_type const& q) const
     {
         result_type seed = 0;
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * q.coeffs()(0)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * q.coeffs()(1)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * q.coeffs()(2)));
-        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * q.coeffs()(3)));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * q.coeffs()(0) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * q.coeffs()(1) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * q.coeffs()(2) + 0.5f));
+        ::hash_combine(seed, (result_type)(EPSILON_INVERTED * q.coeffs()(3) + 0.5f));
         return seed;
     }
 };
@@ -113,7 +113,7 @@ struct tensor_hash<matrix22, EPSILON_INVERTED>
         result_type seed = 0;
         for (int i = 0; i != 2; ++i)
             for (int j = 0; j != 2; ++j)
-                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i, j)));
+                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i, j) + 0.5f));
         return seed;
     }
 };
@@ -130,7 +130,7 @@ struct tensor_hash<matrix32, EPSILON_INVERTED>
         result_type seed = 0;
         for (int i = 0; i != 3; ++i)
             for (int j = 0; j != 2; ++j)
-                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i, j)));
+                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i, j) + 0.5f));
         return seed;
     }
 };
@@ -147,7 +147,7 @@ struct tensor_hash<matrix33, EPSILON_INVERTED>
         result_type seed = 0;
         for (int i = 0; i != 3; ++i)
             for (int j = 0; j != 3; ++j)
-                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i,j)));
+                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i,j) + 0.5f));
         return seed;
     }
 };
@@ -164,7 +164,7 @@ struct tensor_hash<matrix43, EPSILON_INVERTED>
         result_type seed = 0;
         for (int i = 0; i != 4; ++i)
             for (int j = 0; j != 3; ++j)
-                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i, j)));
+                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i, j) + 0.5f));
         return seed;
     }
 };
@@ -181,7 +181,7 @@ struct tensor_hash<matrix44, EPSILON_INVERTED>
         result_type seed = 0;
         for (int i = 0; i != 4; ++i)
             for (int j = 0; j != 4; ++j)
-                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i, j)));
+                ::hash_combine(seed, (result_type)(EPSILON_INVERTED * M(i, j) + 0.5f));
         return seed;
     }
 };
