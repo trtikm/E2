@@ -257,9 +257,9 @@ void  compose_from_base_matrix(
         matrix44&  M
         )
 {
-    M(0, 0) = x_axis_unit_vector(0);  M(0, 1) = y_axis_unit_vector(0);  M(0, 2) = z_axis_unit_vector(0);  M(0, 2) = origin(0);
-    M(1, 0) = x_axis_unit_vector(1);  M(1, 1) = y_axis_unit_vector(1);  M(1, 2) = z_axis_unit_vector(1);  M(1, 2) = origin(1);
-    M(2, 0) = x_axis_unit_vector(2);  M(2, 1) = y_axis_unit_vector(2);  M(2, 2) = z_axis_unit_vector(2);  M(2, 2) = origin(2);
+    M(0, 0) = x_axis_unit_vector(0);  M(0, 1) = y_axis_unit_vector(0);  M(0, 2) = z_axis_unit_vector(0);  M(0, 3) = origin(0);
+    M(1, 0) = x_axis_unit_vector(1);  M(1, 1) = y_axis_unit_vector(1);  M(1, 2) = z_axis_unit_vector(1);  M(1, 3) = origin(1);
+    M(2, 0) = x_axis_unit_vector(2);  M(2, 1) = y_axis_unit_vector(2);  M(2, 2) = z_axis_unit_vector(2);  M(2, 3) = origin(2);
     M(3, 0) = 0.0f;                   M(3, 1) = 0.0f;                   M(3, 2) = 0.0f;                   M(3, 3) = 1.0f;
 }
 
@@ -292,9 +292,9 @@ void  compose_to_base_matrix(
         matrix44&  M
         )
 {
-    M(0, 0) = x_axis_unit_vector(0);  M(0, 1) = x_axis_unit_vector(1);  M(0, 2) = x_axis_unit_vector(2);  M(0, 2) = -dot_product(x_axis_unit_vector, origin);
-    M(1, 0) = y_axis_unit_vector(0);  M(1, 1) = y_axis_unit_vector(1);  M(1, 2) = y_axis_unit_vector(2);  M(1, 2) = -dot_product(y_axis_unit_vector, origin);
-    M(2, 0) = z_axis_unit_vector(0);  M(2, 1) = z_axis_unit_vector(1);  M(2, 2) = z_axis_unit_vector(2);  M(2, 2) = -dot_product(z_axis_unit_vector, origin);
+    M(0, 0) = x_axis_unit_vector(0);  M(0, 1) = x_axis_unit_vector(1);  M(0, 2) = x_axis_unit_vector(2);  M(0, 3) = -dot_product(x_axis_unit_vector, origin);
+    M(1, 0) = y_axis_unit_vector(0);  M(1, 1) = y_axis_unit_vector(1);  M(1, 2) = y_axis_unit_vector(2);  M(1, 3) = -dot_product(y_axis_unit_vector, origin);
+    M(2, 0) = z_axis_unit_vector(0);  M(2, 1) = z_axis_unit_vector(1);  M(2, 2) = z_axis_unit_vector(2);  M(2, 3) = -dot_product(z_axis_unit_vector, origin);
     M(3, 0) = 0.0f;                   M(3, 1) = 0.0f;                   M(3, 2) = 0.0f;                   M(3, 3) = 1.0f;
 }
 
