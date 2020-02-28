@@ -1949,7 +1949,7 @@ void  compute_closest_box_feature_to_a_point(
         output.feature_vector_in_world_space = box_location_in_word_space.basis_vector(order[coordinate]);
         output.distance_to_feature =
                 length_2d(vector2(box_half_sizes_along_axes(order[0]), box_half_sizes_along_axes(order[3U - coordinate])) -
-                          vector2(point_in_box_local_space(order[0]), point_in_box_local_space(order[3U - coordinate])));
+                          vector2(std::fabs(point_in_box_local_space(order[0])), std::fabs(point_in_box_local_space(order[3U - coordinate]))));
         output.feature_index = get_feature_index(order[0], point_in_box_local_space(order[0]), 0U) |
                                get_feature_index(order[3 - coordinate], point_in_box_local_space(order[3 - coordinate]), 1U) ;
         break;
@@ -2039,13 +2039,13 @@ vector3  compute_box_collision_unit_normal_and_penetration_depth_from_contact_po
     {
         output_penetration_depth = std::max(props_1.distance_to_feature, props_2.distance_to_feature);
         vector3  normal = cross_product(props_1.feature_vector_in_world_space, props_2.feature_vector_in_world_space);
-        if (dot_product(normal, common_contact_point_in_world_space - box_1_location.origin()) < 0.0f)
+        if (dot_product(normal, common_contact_point_in_world_space - box_1_location.origin()) > 0.0f)
             normal = -normal;
         return normalised(normal);
     }
 
     output_penetration_depth = std::max(props_1.distance_to_feature, props_2.distance_to_feature);
-    vector3 const  origins_delta = box_2_location.origin() - box_1_location.origin();
+    vector3 const  origins_delta = box_1_location.origin() - box_2_location.origin();
     float_32_bit const  origins_distance = length(origins_delta);
     return origins_distance < 0.0001f ? vector3_unit_z() : (1.0f / origins_distance) * origins_delta;
 }
@@ -2197,6 +2197,8 @@ bool  collision_box_box(
     {
         ASSUMPTION(ouptut_collision_plane_unit_normal_in_world_space != nullptr);
 
+        float_32_bit constexpr  MAX_PENETRATION_DEPTH = 0.005;
+
         if (is_face_collision_type)
         {
             struct  intersection_point_info
@@ -2210,31 +2212,53 @@ bool  collision_box_box(
             for (auto  it_1 = raw_collision_points_1.cbegin(); it_1 != raw_collision_points_1.cend(); ++it_1)
             {
                 auto const  it_2 = raw_collision_points_2.find(it_1->first);
-                if (it_2 == raw_collision_points_2.end())
+                bool const  has_corresponding_point = it_2 != raw_collision_points_2.end();
+                if (!has_corresponding_point
+                    && as_collision_shape_feature_type(it_1->second.m_feature_type) != COLLISION_SHAPE_FEATURE_TYPE::VERTEX)
                     continue;
 
                 vector3 const&  p = it_1->first;
 
                 intersection_point_info  info;
                 info.feature_id_1 = it_1->second;
+                info.feature_id_2 = has_corresponding_point ?
+                                            it_2->second :
+                                            make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U);
+                float_32_bit  normal_distance;
+                //vector3 const  normal_shift =
+                project_to_unit_vector(
+                        p - mass_center_of_collision_points,
+                        *ouptut_collision_plane_unit_normal_in_world_space,
+                        normal_distance
+                        );
+                info.depth = std::min(MAX_PENETRATION_DEPTH, mass_centre_penetration_depth + std::max(0.0f, normal_distance));
+                //collision_points.insert({ p - normal_shift, info });
+                collision_points.insert({ p, info });
+            }
+            for (auto  it_2 = raw_collision_points_2.cbegin(); it_2 != raw_collision_points_2.cend(); ++it_2)
+                if (as_collision_shape_feature_type(it_2->second.m_feature_type) == COLLISION_SHAPE_FEATURE_TYPE::VERTEX &&
+                    collision_points.count(it_2->first) == 0U)
+            {
+                vector3 const&  p = it_2->first;
+
+                intersection_point_info  info;
+                info.feature_id_1 = make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U);
                 info.feature_id_2 = it_2->second;
-                info.depth = mass_centre_penetration_depth;
-                vector3 const  normal_shift =
-                       project_to_unit_vector(
-                               p - mass_center_of_collision_points,
-                               *ouptut_collision_plane_unit_normal_in_world_space
-                               );
-                collision_points.insert({ p - normal_shift, info });
-                //collision_points.insert({ p, info });
+                float_32_bit  normal_distance;
+                project_to_unit_vector(
+                        p - mass_center_of_collision_points,
+                        *ouptut_collision_plane_unit_normal_in_world_space,
+                        normal_distance
+                        );
+                info.depth = std::min(MAX_PENETRATION_DEPTH, mass_centre_penetration_depth + std::max(0.0f, normal_distance));
+                collision_points.insert({ p, info });
             }
             INVARIANT(!collision_points.empty());
             for (auto const&  point_and_info : collision_points)
             {
                 output_collision_points_in_world_space->push_back(point_and_info.first);
                 if (output_penetration_depths_of_collision_points != nullptr)
-                    output_penetration_depths_of_collision_points->push_back(
-                            mass_centre_penetration_depth + point_and_info.second.depth
-                            );
+                    output_penetration_depths_of_collision_points->push_back(point_and_info.second.depth);
                 if (output_collision_shape_feature_ids != nullptr)
                     output_collision_shape_feature_ids->push_back(
                             { point_and_info.second.feature_id_1, point_and_info.second.feature_id_2 }
@@ -2245,7 +2269,9 @@ bool  collision_box_box(
         {
             output_collision_points_in_world_space->push_back(mass_center_of_collision_points);
             if (output_penetration_depths_of_collision_points != nullptr)
-                output_penetration_depths_of_collision_points->push_back(mass_centre_penetration_depth);
+                output_penetration_depths_of_collision_points->push_back(
+                            std::min(MAX_PENETRATION_DEPTH, std::max(0.0f, mass_centre_penetration_depth))
+                            );
             if (output_collision_shape_feature_ids != nullptr)
                 output_collision_shape_feature_ids->push_back(mass_centre_collision_shape_feature_id);
         }
