@@ -13,6 +13,7 @@ enum struct  COLLISION_SHAPE_FEATURE_TYPE : natural_8_bit
     VERTEX      = 0,
     EDGE        = 1,
     FACE        = 2,
+    VOLUME      = 3
 };
 
 
@@ -24,7 +25,7 @@ inline natural_8_bit  as_number(COLLISION_SHAPE_FEATURE_TYPE const  type) noexce
 
 inline COLLISION_SHAPE_FEATURE_TYPE  as_collision_shape_feature_type(natural_8_bit const  index)
 {
-    ASSUMPTION(index <= as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE));
+    ASSUMPTION(index <= as_number(COLLISION_SHAPE_FEATURE_TYPE::VOLUME));
     return (COLLISION_SHAPE_FEATURE_TYPE) index;
 }
 
@@ -45,7 +46,7 @@ inline collision_shape_feature_id  make_collision_shape_feature_id(
         ) noexcept
 {
     collision_shape_feature_id  cfid;
-    cfid.m_feature_type = static_cast<natural_8_bit>(feature_type);
+    cfid.m_feature_type = as_number(feature_type);
     cfid.m_feature_index = feature_index;
     return cfid;
 }
