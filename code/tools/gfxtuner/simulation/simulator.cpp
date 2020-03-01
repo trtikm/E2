@@ -696,8 +696,6 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         if (free_fly_report.rotated)
             call_listeners(simulator_notifications::camera_orientation_updated());
 
-        get_collision_scene()->get_statistics().on_next_frame();
-
         if (!time_config().is_paused())
             perform_simulation_step(time_config().get_clipped_simulation_time_step_in_seconds(seconds_from_previous_call));
         else
@@ -1090,6 +1088,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step)
 {
     TMPROF_BLOCK();
+
+    get_collision_scene()->get_statistics().on_next_frame();
 
     auto const  ai_scene_binding = std::dynamic_pointer_cast<bind_ai_scene_to_simulator>(get_ai_simulator()->get_scene_ptr());
 
