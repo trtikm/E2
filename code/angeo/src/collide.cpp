@@ -1622,19 +1622,40 @@ POINT_SET_TYPE  clip_polygon(
 
     auto const  build_intersection_feature_id =
         [](collision_shape_feature_id const&  feature_1, collision_shape_feature_id const&  feature_2) {
-            COLLISION_SHAPE_FEATURE_TYPE const feature_type = as_collision_shape_feature_type(
-                    feature_1.m_feature_type <= feature_2.m_feature_type ?
-                            feature_1.m_feature_type :
-                            feature_2.m_feature_type
-                    );
-            switch (feature_type)
+            switch (as_collision_shape_feature_type(feature_1.m_feature_type))
             {
             case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
-                return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, feature_1.m_feature_index);
+                switch (as_collision_shape_feature_type(feature_2.m_feature_type))
+                {
+                case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+                    return ((feature_1.m_feature_index + 1U) % 4U == feature_2.m_feature_index) ?
+                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, feature_1.m_feature_index) :
+                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+                    return (feature_1.m_feature_index == feature_2.m_feature_index) ?
+                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, feature_1.m_feature_index) :
+                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+                    return feature_2;
+                default: UNREACHABLE(); break;
+                }
             case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
-                return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                switch (as_collision_shape_feature_type(feature_2.m_feature_type))
+                {
+                case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+                    return ((feature_1.m_feature_index + 1U) % 4U == feature_2.m_feature_index) ?
+                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, feature_1.m_feature_index) :
+                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+                    return (feature_1.m_feature_index == feature_2.m_feature_index) ?
+                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, feature_1.m_feature_index) :
+                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+                    return feature_2;
+                default: UNREACHABLE(); break;
+                }
             case COLLISION_SHAPE_FEATURE_TYPE::FACE:
-                return make_collision_shape_feature_id(feature_type, 0U);
+                return feature_1;
             default: UNREACHABLE(); break;
             }
         };
@@ -1662,8 +1683,9 @@ POINT_SET_TYPE  clip_polygon(
         feature_id_buffer_ptr.at(1U)->reserve(polygon_points.size() + 2U * clip_planes.size() + 1U);
 
         std::vector<collision_shape_feature_id>& ids = *feature_id_buffer_ptr.at((free_buffer_index + 1U) % 2U);
-        for (natural_32_bit  i = 0U; i != polygon_points.size(); ++i)
+        for (natural_32_bit  i = 0U; i < polygon_points.size() - 1U; ++i)
             ids.push_back(make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, i));
+        ids.push_back(ids.front());
     }
 
     std::vector<collision_shape_feature_id> const*  feature_ids_ptr = feature_id_buffer_ptr.at((free_buffer_index + 1U) % 2U);
@@ -1749,19 +1771,25 @@ POINT_SET_TYPE  clip_polygon(
         if (output_indices_of_intersection_points != nullptr)
             free_intersection_points_buffer_ref.push_back((natural_32_bit)free_polygon_points_buffer_ref.size());
         if (output_collision_shape_feature_ids != nullptr)
+        {
+            INVARIANT(description.index_end + 1U < feature_ids_ptr->size());
             free_feature_id_buffer_ref.push_back(build_intersection_feature_id(
                     feature_ids_ptr->at(description.index_end),
                     feature_ids_ptr->at(description.index_end + 1U)
                     ));
+        }
         free_polygon_points_buffer_ref.push_back(description.point_start);
 
         if (output_indices_of_intersection_points != nullptr)
             free_intersection_points_buffer_ref.push_back((natural_32_bit)free_polygon_points_buffer_ref.size());
         if (output_collision_shape_feature_ids != nullptr)
+        {
+            INVARIANT(description.index_start > 0U);
             free_feature_id_buffer_ref.push_back(build_intersection_feature_id(
                     feature_ids_ptr->at(description.index_start - 1U),
                     feature_ids_ptr->at(description.index_start)
                     ));
+        }
         free_polygon_points_buffer_ref.push_back(description.point_end);
 
         free_polygon_points_buffer_ref.push_back(free_polygon_points_buffer_ref.front()); // Make the polygon cyclic.
@@ -1827,29 +1855,221 @@ void  compute_polygons_of_box(
     output_polygons.polygons.resize(6U);
     output_polygons.polygon_frames.resize(6U);
 
-    // xy-face for z-min
+    // face 0: xy-face for z-min
     set_frame(0U, { 0.0f, 0.0f, -half_sizes_along_axes(2) }, vector3_unit_x(), vector3_unit_y(), vector3_unit_z());
     set_polygon(0U, half_sizes_along_axes(0), half_sizes_along_axes(1));
 
-    // xy-face for z-max
+    // face 1: xy-face for z-max
     set_frame(1U, { 0.0f, 0.0f, half_sizes_along_axes(2) }, vector3_unit_x(), -vector3_unit_y(), -vector3_unit_z());
     set_polygon(1U, half_sizes_along_axes(0), half_sizes_along_axes(1));
 
-    // xz-face for y-min
+    // face 2: xz-face for y-min
     set_frame(2U, { 0.0f, -half_sizes_along_axes(1), 0.0f }, vector3_unit_x(), -vector3_unit_z(), vector3_unit_y());
     set_polygon(2U, half_sizes_along_axes(0), half_sizes_along_axes(2));
 
-    // xz-face for y-max
+    // face 3: xz-face for y-max
     set_frame(3U, { 0.0f, half_sizes_along_axes(1), 0.0f }, vector3_unit_x(), vector3_unit_z(), -vector3_unit_y());
     set_polygon(3U, half_sizes_along_axes(0), half_sizes_along_axes(2));
 
-    // yz-face for x-min
+    // face 4: yz-face for x-min
     set_frame(4U, { -half_sizes_along_axes(0), 0.0f, 0.0f }, vector3_unit_y(), vector3_unit_z(), vector3_unit_x());
     set_polygon(4U, half_sizes_along_axes(1), half_sizes_along_axes(2));
 
-    // yz-face for x-max
+    // face 5: yz-face for x-max
     set_frame(5U, { half_sizes_along_axes(0), 0.0f, 0.0f }, vector3_unit_y(), -vector3_unit_z(), -vector3_unit_x());
     set_polygon(5U, half_sizes_along_axes(1), half_sizes_along_axes(2));
+}
+
+
+natural_16_bit  compute_feature_index_of_face_of_box(natural_16_bit const  face_index)
+{
+    return face_index;
+}
+
+
+natural_16_bit  compute_feature_index_of_face_of_box(
+        natural_8_bit const  dominant_coordinate_index,
+        float_32_bit const  dominant_coordinate
+        )
+{
+    static const natural_16_bit  indices[3][2] = {
+        { 4U, 5U }, // x-coord. is dominant -> yz - plane
+        { 2U, 3U }, // y-coord. is dominant -> xz - plane
+        { 0U, 1U }, // z-coord. is dominant -> xy - plane
+    };
+    return indices[dominant_coordinate_index][dominant_coordinate < 0.0f ? 0 : 1];
+}
+
+
+natural_16_bit  compute_feature_index_of_vertex_of_box(
+        natural_16_bit const  face_feature_index,
+        natural_16_bit const  vertex_index_in_face
+        )
+{
+    ASSUMPTION(face_feature_index < 6U && vertex_index_in_face < 5U); // NOTE: face is cyclic (has one additional vertex).
+    static natural_16_bit const  indices[6U][5U] = {
+        // face 0: xy-face for z-min
+        { 0U, 1U, 2U, 3U, 0U },
+        // face 1: xy-face for z-max
+        { 7U, 6U, 5U, 4U, 7U },
+        // face 2: xz-face for y-min
+        { 4U, 5U, 1U, 0U, 4U },
+        // face 3: xz-face for y-max
+        { 3U, 2U, 6U, 7U, 3U },
+        // face 4: yz-face for x-min
+        { 0U, 3U, 7U, 4U, 0U },
+        // face 5: yz-face for x-max
+        { 5U, 6U, 2U, 1U, 5U },
+    };
+    return indices[face_feature_index][vertex_index_in_face];
+}
+
+
+natural_16_bit  compute_feature_index_of_vertex_of_box(vector3 const&  point)
+{
+    if (point(2) < 0.0f)
+        if (point(1) < 0.0f)
+            return point(0) < 0.0f ? 0U : 1U;
+        else
+            return point(0) < 0.0f ? 3U : 2U;
+    else
+        if (point(1) < 0.0f)
+            return point(0) < 0.0f ? 4U : 5U;
+        else
+            return point(0) < 0.0f ? 7U : 6U;
+}
+
+
+natural_16_bit  compute_feature_index_of_edge_of_box(
+        natural_16_bit const  face_feature_index,
+        natural_16_bit const  edge_index_in_face
+        )
+{
+    ASSUMPTION(face_feature_index < 6U && edge_index_in_face < 5U); // NOTE: face is cyclic (has one additional edge).
+    static natural_16_bit const  indices[6U][5U] = {
+        // face 0: xy-face for z-min
+        { 0U, 1U, 2U, 3U, 0U },
+        // face 1: xy-face for z-max
+        { 6U, 5U, 4U, 7U, 6U },
+        // face 2: xz-face for y-min
+        { 4U, 9U, 0U, 8U, 4U },
+        // face 3: xz-face for y-max
+        { 2U, 10U, 6U, 11U, 2U },
+        // face 4: yz-face for x-min
+        { 3U, 11U, 7U, 8U, 3U },
+        // face 5: yz-face for x-max
+        { 5U, 10U, 1U, 9U, 5U },
+    };
+    return indices[face_feature_index][edge_index_in_face];
+}
+
+
+natural_16_bit  compute_feature_index_of_edge_of_box_from_two_faces(
+        natural_16_bit const  face_1_feature_index,
+        natural_16_bit const  face_2_feature_index
+        )
+{
+    // Must be symetric:
+    static const natural_16_bit  indices[6][6] = {
+        { 0xffU, 0xffU,    0U,    2U,    3U,    1U },
+        { 0xffU, 0xffU,    4U,    6U,    7U,    5U },
+        {    0U,    4U, 0xffU, 0xffU,    8U,    9U },
+        {    2U,    6U, 0xffU, 0xffU,   11U,   10U },
+        {    3U,    7U,    8U,   11U, 0xffU, 0xffU },
+        {    1U,    5U,    9U,   10U, 0xffU, 0xffU },
+    };
+    ASSUMPTION(face_1_feature_index < 6U && face_2_feature_index < 6U && indices[face_1_feature_index][face_2_feature_index] != 0xffU);
+    return indices[face_1_feature_index][face_2_feature_index];
+}
+
+
+natural_16_bit  compute_feature_index_of_feature_of_box(
+        natural_16_bit const  face_feature_index,
+        COLLISION_SHAPE_FEATURE_TYPE const  feature_type,
+        natural_16_bit const  feature_index_in_face
+        )
+{
+    switch (feature_type)
+    {
+    case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+        return compute_feature_index_of_vertex_of_box(face_feature_index, feature_index_in_face);
+    case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+        return compute_feature_index_of_edge_of_box(face_feature_index, feature_index_in_face);
+    case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+        return compute_feature_index_of_face_of_box(face_feature_index);
+    default:
+        return 0;
+    }
+}
+
+
+bool  comprises_first_box_feature_second_one(
+        collision_shape_feature_id const&  first,
+        collision_shape_feature_id const&  second
+        )
+{
+    if (second.m_feature_type > first.m_feature_type)
+        return false;
+    if (second.m_feature_type == first.m_feature_type)
+        return second.m_feature_index == first.m_feature_index;
+
+    static const natural_32_bit  edge_vertices[12][2] = {
+        { 0U, 1U }, // 0
+        { 1U, 2U }, // 1
+        { 2U, 3U }, // 2
+        { 3U, 0U }, // 3
+        { 4U, 5U }, // 4
+        { 5U, 6U }, // 5
+        { 6U, 7U }, // 6
+        { 7U, 8U }, // 7
+        { 0U, 4U }, // 8
+        { 1U, 5U }, // 9
+        { 2U, 6U }, // 10
+        { 3U, 7U }, // 11
+    };
+
+    static const natural_32_bit  face_edges[6][4] = {
+        { 0U, 1U, 2U, 3U },
+        { 6U, 5U, 4U, 7U },
+        { 4U, 9U, 0U, 8U },
+        { 2U, 10U, 6U, 11U },
+        { 3U, 11U, 7U, 8U },
+        { 5U, 10U, 1U, 9U },
+    };
+
+    static const natural_32_bit  face_vertices[6][4] = {
+        { 0U, 1U, 2U, 3U },
+        { 7U, 6U, 5U, 4U },
+        { 4U, 5U, 1U, 0U },
+        { 3U, 2U, 6U, 7U },
+        { 0U, 3U, 7U, 4U },
+        { 5U, 6U, 2U, 1U },
+    };
+
+    switch (as_collision_shape_feature_type(first.m_feature_type))
+    {
+    case COLLISION_SHAPE_FEATURE_TYPE::VERTEX: UNREACHABLE(); return false;
+    case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+        return edge_vertices[first.m_feature_index][0] == second.m_feature_index ||
+               edge_vertices[first.m_feature_index][1] == second.m_feature_index ;
+    case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+        switch (as_collision_shape_feature_type(second.m_feature_type))
+        {
+        case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+            return face_vertices[first.m_feature_index][0] == second.m_feature_index ||
+                   face_vertices[first.m_feature_index][1] == second.m_feature_index ||
+                   face_vertices[first.m_feature_index][2] == second.m_feature_index ||
+                   face_vertices[first.m_feature_index][3] == second.m_feature_index ;
+        case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+            return face_edges[first.m_feature_index][0] == second.m_feature_index ||
+                   face_edges[first.m_feature_index][1] == second.m_feature_index ||
+                   face_edges[first.m_feature_index][2] == second.m_feature_index ||
+                   face_edges[first.m_feature_index][3] == second.m_feature_index ;
+        default: UNREACHABLE(); return false;
+        }
+    default:
+        return true;
+    }
 }
 
 
@@ -1921,11 +2141,6 @@ void  compute_closest_box_feature_to_a_point(
             coordinate = 0;
     }
 
-    auto const get_feature_index =
-        [](natural_8_bit const  coordinate, float_32_bit const  direction_sign, natural_8_bit const  shift) -> natural_16_bit {
-            return ((1U + coordinate) | (direction_sign > 0.0f ? (1U << 2U) : 0U)) << (3U * shift);
-        };
-
     output.feature_type = as_collision_shape_feature_type(feature_kind);
     switch (output.feature_type)
     {
@@ -1940,9 +2155,7 @@ void  compute_closest_box_feature_to_a_point(
                         (point_in_box_local_space(order[2]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(order[2])
                         }
                     - point_in_box_local_space);
-        output.feature_index = get_feature_index(order[0], point_in_box_local_space(order[0]), 0U) |
-                               get_feature_index(order[1], point_in_box_local_space(order[1]), 1U) |
-                               get_feature_index(order[2], point_in_box_local_space(order[2]), 2U) ;
+        output.feature_index = compute_feature_index_of_vertex_of_box(point_in_box_local_space);
         break;
     case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
         INVARIANT(coordinate == 1U || coordinate == 2U);
@@ -1950,15 +2163,17 @@ void  compute_closest_box_feature_to_a_point(
         output.distance_to_feature =
                 length_2d(vector2(box_half_sizes_along_axes(order[0]), box_half_sizes_along_axes(order[3U - coordinate])) -
                           vector2(std::fabs(point_in_box_local_space(order[0])), std::fabs(point_in_box_local_space(order[3U - coordinate]))));
-        output.feature_index = get_feature_index(order[0], point_in_box_local_space(order[0]), 0U) |
-                               get_feature_index(order[3 - coordinate], point_in_box_local_space(order[3 - coordinate]), 1U) ;
+        output.feature_index = compute_feature_index_of_edge_of_box_from_two_faces(
+                compute_feature_index_of_face_of_box(order[0], point_in_box_local_space(order[0])),
+                compute_feature_index_of_face_of_box(order[3 - coordinate], point_in_box_local_space(order[3 - coordinate]))
+                );
         break;
     case COLLISION_SHAPE_FEATURE_TYPE::FACE:
         INVARIANT(coordinate == 0U);
         output.feature_vector_in_world_space =
                 (point_in_box_local_space(order[0U]) >= 0.0f ? 1.0f : -1.0f) * box_location_in_word_space.basis_vector(order[0U]);
         output.distance_to_feature = box_half_sizes_along_axes(order[0U]) - std::fabs(point_in_box_local_space(order[0U]));
-        output.feature_index = get_feature_index(order[0U], point_in_box_local_space(order[0U]), 0U);
+        output.feature_index = compute_feature_index_of_face_of_box(order[0U], point_in_box_local_space(order[0U]));
         break;
     default: UNREACHABLE();
     }
@@ -2091,21 +2306,20 @@ bool  collision_box_box(
                 transform_vector(box_2_polygons.polygon_frames.at(i).basis_vector_z(), from_box_2_to_box_1_matrix),
                 });
 
+    natural_32_bit constexpr  feature_id_bit_shift = 1U << 3U; // Box has 6 polygons -> we need to reserve 3 bits.
+
     using raw_collision_points_map =
             std::unordered_map<vector3, collision_shape_feature_id, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >;
 
     auto const  clip_polyhedron =
         [](convex_polyhedron const&  polyhedron,
             matrix44 const&  from_polyhedron_matrix,
-           std::vector< std::pair<vector3, vector3> >  clip_planes,
+           std::vector< std::pair<vector3, vector3> > const&  clip_planes,
+           natural_32_bit const  feature_id_bit_shift,
            raw_collision_points_map&  output
            )
         {
-            natural_32_bit const  n = (natural_32_bit)polyhedron.polygons.size();
-            natural_32_bit  feature_id_bit_shift = 0U;
-            while (1U << feature_id_bit_shift < n + 1U)
-                ++feature_id_bit_shift;
-            for (natural_32_bit  i = 0U; i < n; ++i)
+            for (natural_32_bit  i = 0U, n = (natural_32_bit)polyhedron.polygons.size(); i != n; ++i)
             {
                 matrix44  to_polygon_space_matrix;
                 to_base_matrix(polyhedron.polygon_frames.at(i), to_polygon_space_matrix);
@@ -2129,15 +2343,20 @@ bool  collision_box_box(
                 if (type == POINT_SET_TYPE::FULL)
                 {
                     raw_collision_points_in_box_space = &polyhedron.polygons.at(i);
-                    feature_ids.resize(polyhedron.polygons.size());
-                    for (natural_32_bit i = 0U; i != polyhedron.polygons.size(); ++i)
-                        feature_ids.at(i) = make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, i);
+                    feature_ids.resize(raw_collision_points_in_box_space->size());
+                    for (natural_32_bit  j = 0U;  j < raw_collision_points_in_box_space->size() - 1U; ++j)
+                        feature_ids.at(j) = make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, j);
+                    feature_ids.back() = feature_ids.front();
                 }
                 else
                     raw_collision_points_in_box_space = &clipped_polygon;
 
                 for (collision_shape_feature_id&  id : feature_ids)
-                    id.m_feature_index = (id.m_feature_index << feature_id_bit_shift) | i;
+                    id.m_feature_index = compute_feature_index_of_feature_of_box(
+                            i,
+                            as_collision_shape_feature_type(id.m_feature_type),
+                            id.m_feature_index
+                            );
 
                 INVARIANT(!raw_collision_points_in_box_space->empty());
 
@@ -2154,25 +2373,21 @@ bool  collision_box_box(
         };
 
     raw_collision_points_map raw_collision_points_1;
-    clip_polyhedron(box_1_polygons, from_box_1_matrix, box_2_clip_planes, raw_collision_points_1);
+    clip_polyhedron(box_1_polygons, from_box_1_matrix, box_2_clip_planes, feature_id_bit_shift, raw_collision_points_1);
+    if (raw_collision_points_1.empty())
+        return false;
 
     raw_collision_points_map raw_collision_points_2;
-    clip_polyhedron(box_2_polygons, from_box_2_matrix, box_1_clip_planes, raw_collision_points_2);
-
-    if (raw_collision_points_1.size() + raw_collision_points_2.size() == 0UL)
+    clip_polyhedron(box_2_polygons, from_box_2_matrix, box_1_clip_planes, feature_id_bit_shift, raw_collision_points_2);
+    if (raw_collision_points_2.empty())
         return false;
 
     vector3  mass_center_of_collision_points;
     float_32_bit  mass_centre_penetration_depth;
     std::pair<collision_shape_feature_id, collision_shape_feature_id>  mass_centre_collision_shape_feature_id;
 
-    enum struct BOXES_COLLISION_TYPE
-    {
-        FACE_VERTEX,
-        VERTEX_FACE,
-        FACE_GENERAL,
-        OTHER,
-    } boxes_collision_type;
+    float_32_bit constexpr  MAX_PENETRATION_DEPTH = 0.005f;
+
 
     if (ouptut_collision_plane_unit_normal_in_world_space != nullptr)
     {
@@ -2193,143 +2408,83 @@ bool  collision_box_box(
                         mass_centre_penetration_depth,
                         &mass_centre_collision_shape_feature_id
                         );
-
-        if (mass_centre_collision_shape_feature_id.first.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE))
-            if (mass_centre_collision_shape_feature_id.second.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::VERTEX))
-                boxes_collision_type = BOXES_COLLISION_TYPE::FACE_VERTEX;
-            else
-                boxes_collision_type = BOXES_COLLISION_TYPE::FACE_GENERAL;
-        else if (mass_centre_collision_shape_feature_id.second.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE))
-            if (mass_centre_collision_shape_feature_id.first.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::VERTEX))
-                boxes_collision_type = BOXES_COLLISION_TYPE::VERTEX_FACE;
-            else
-                boxes_collision_type = BOXES_COLLISION_TYPE::FACE_GENERAL;
-        else
-            boxes_collision_type = BOXES_COLLISION_TYPE::OTHER;
-
-        INVARIANT(mass_centre_penetration_depth > -1e-5f);
     }
 
     if (output_collision_points_in_world_space != nullptr)
     {
         ASSUMPTION(ouptut_collision_plane_unit_normal_in_world_space != nullptr);
 
-        float_32_bit constexpr  MAX_PENETRATION_DEPTH = 0.005f;
-
-        switch (boxes_collision_type)
+        if (mass_centre_collision_shape_feature_id.first.m_feature_type < as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE) &&
+            mass_centre_collision_shape_feature_id.second.m_feature_type < as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE))
         {
-        case BOXES_COLLISION_TYPE::FACE_VERTEX:
-            for (auto it_2 = raw_collision_points_2.cbegin(); it_2 != raw_collision_points_2.cend(); ++it_2)
-                if (as_collision_shape_feature_type(it_2->second.m_feature_type) == COLLISION_SHAPE_FEATURE_TYPE::VERTEX)
-                {
-                    float_32_bit  normal_distance;
-                    project_to_unit_vector(
-                            it_2->first - mass_center_of_collision_points,
-                            *ouptut_collision_plane_unit_normal_in_world_space,
-                            normal_distance
-                            );
-                    output_collision_points_in_world_space->push_back(it_2->first);
-                    if (output_penetration_depths_of_collision_points != nullptr)
-                        output_penetration_depths_of_collision_points->push_back(
-                                std::min(MAX_PENETRATION_DEPTH, mass_centre_penetration_depth + std::max(0.0f, normal_distance))
-                                );
-                    if (output_collision_shape_feature_ids != nullptr)
-                        output_collision_shape_feature_ids->push_back(
-                                { make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U), it_2->second }
-                                );
-                }
-            break;
-        case BOXES_COLLISION_TYPE::VERTEX_FACE:
-            for (auto it_1 = raw_collision_points_1.cbegin(); it_1 != raw_collision_points_1.cend(); ++it_1)
-                if (as_collision_shape_feature_type(it_1->second.m_feature_type) == COLLISION_SHAPE_FEATURE_TYPE::VERTEX)
-                {
-                    float_32_bit  normal_distance;
-                    project_to_unit_vector(
-                            it_1->first - mass_center_of_collision_points,
-                            *ouptut_collision_plane_unit_normal_in_world_space,
-                            normal_distance
-                            );
-                    output_collision_points_in_world_space->push_back(it_1->first);
-                    if (output_penetration_depths_of_collision_points != nullptr)
-                        output_penetration_depths_of_collision_points->push_back(
-                                std::min(MAX_PENETRATION_DEPTH, mass_centre_penetration_depth + std::max(0.0f, normal_distance))
-                                );
-                    if (output_collision_shape_feature_ids != nullptr)
-                        output_collision_shape_feature_ids->push_back(
-                                { it_1->second, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U) }
-                                );
-                }
-            break;
-        case BOXES_COLLISION_TYPE::FACE_GENERAL:
-            {
-                struct  intersection_point_info
-                {
-                    float_32_bit  depth;
-                    collision_shape_feature_id  feature_id_1;
-                    collision_shape_feature_id  feature_id_2;
-                };
-                std::unordered_map<vector3, intersection_point_info, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  collision_points;
-                for (auto  it_1 = raw_collision_points_1.cbegin(); it_1 != raw_collision_points_1.cend(); ++it_1)
-                {
-                    auto const  it_2 = raw_collision_points_2.find(it_1->first);
-                    bool const  has_corresponding_point = it_2 != raw_collision_points_2.end();
-                    if (!has_corresponding_point
-                        && as_collision_shape_feature_type(it_1->second.m_feature_type) != COLLISION_SHAPE_FEATURE_TYPE::VERTEX)
-                        continue;
-
-                    intersection_point_info  info;
-                    info.feature_id_1 = it_1->second;
-                    info.feature_id_2 = has_corresponding_point ?
-                                                it_2->second :
-                                                make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U);
-                    float_32_bit  normal_distance;
-                    project_to_unit_vector(
-                            it_1->first - mass_center_of_collision_points,
-                            *ouptut_collision_plane_unit_normal_in_world_space,
-                            normal_distance
-                            );
-                    info.depth = std::min(MAX_PENETRATION_DEPTH, mass_centre_penetration_depth + std::max(0.0f, normal_distance));
-                    collision_points.insert({ it_1->first, info });
-                }
-                for (auto  it_2 = raw_collision_points_2.cbegin(); it_2 != raw_collision_points_2.cend(); ++it_2)
-                    if (as_collision_shape_feature_type(it_2->second.m_feature_type) == COLLISION_SHAPE_FEATURE_TYPE::VERTEX &&
-                        collision_points.count(it_2->first) == 0U)
-                {
-                    intersection_point_info  info;
-                    info.feature_id_1 = make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U);
-                    info.feature_id_2 = it_2->second;
-                    float_32_bit  normal_distance;
-                    project_to_unit_vector(
-                            it_2->first - mass_center_of_collision_points,
-                            *ouptut_collision_plane_unit_normal_in_world_space,
-                            normal_distance
-                            );
-                    info.depth = std::min(MAX_PENETRATION_DEPTH, mass_centre_penetration_depth + std::max(0.0f, normal_distance));
-                    collision_points.insert({ it_2->first, info });
-                }
-                INVARIANT(!collision_points.empty());
-                for (auto const&  point_and_info : collision_points)
-                {
-                    output_collision_points_in_world_space->push_back(point_and_info.first);
-                    if (output_penetration_depths_of_collision_points != nullptr)
-                        output_penetration_depths_of_collision_points->push_back(point_and_info.second.depth);
-                    if (output_collision_shape_feature_ids != nullptr)
-                        output_collision_shape_feature_ids->push_back(
-                                { point_and_info.second.feature_id_1, point_and_info.second.feature_id_2 }
-                                );
-                }
-            }
-            break;
-        case BOXES_COLLISION_TYPE::OTHER:
             output_collision_points_in_world_space->push_back(mass_center_of_collision_points);
             if (output_penetration_depths_of_collision_points != nullptr)
                 output_penetration_depths_of_collision_points->push_back(
-                            std::min(MAX_PENETRATION_DEPTH, std::max(0.0f, mass_centre_penetration_depth))
-                            );
+                    std::min(MAX_PENETRATION_DEPTH, std::max(0.0f, mass_centre_penetration_depth))
+                );
             if (output_collision_shape_feature_ids != nullptr)
                 output_collision_shape_feature_ids->push_back(mass_centre_collision_shape_feature_id);
-            break;
-        default: UNREACHABLE();
+        }
+        else
+        {
+            struct  intersection_point_info
+            {
+                float_32_bit  depth;
+                collision_shape_feature_id  feature_id_1;
+                collision_shape_feature_id  feature_id_2;
+            };
+            std::unordered_map<vector3, intersection_point_info, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  collision_points;
+            {
+                for (auto it_1 = raw_collision_points_1.cbegin(); it_1 != raw_collision_points_1.cend(); ++it_1)
+                    if (it_1->second.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::VERTEX)
+                            || (it_1->second.m_feature_type < as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE)
+                                && comprises_first_box_feature_second_one(mass_centre_collision_shape_feature_id.first, it_1->second)))
+                    {
+                        intersection_point_info  info;
+                        info.feature_id_1 = it_1->second;
+                        auto const  it_2 = raw_collision_points_2.find(it_1->first);
+                        info.feature_id_2 = it_2 != raw_collision_points_2.end() ?
+                                                    it_2->second :
+                                                    make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U);
+                        float_32_bit  normal_distance;
+                        project_to_unit_vector(
+                                it_1->first - mass_center_of_collision_points,
+                                *ouptut_collision_plane_unit_normal_in_world_space,
+                                normal_distance
+                                );
+                        info.depth = std::min(MAX_PENETRATION_DEPTH, mass_centre_penetration_depth + std::max(0.0f, normal_distance));
+                        collision_points.insert({ it_1->first, info });
+                    }
+                for (auto it_2 = raw_collision_points_2.cbegin(); it_2 != raw_collision_points_2.cend(); ++it_2)
+                    if (it_2->second.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::VERTEX)
+                            || (it_2->second.m_feature_type < as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE)
+                                && comprises_first_box_feature_second_one(mass_centre_collision_shape_feature_id.second, it_2->second)))
+                    {
+                        intersection_point_info  info;
+                        auto const  it_1 = raw_collision_points_1.find(it_2->first);
+                        info.feature_id_1 = it_1 != raw_collision_points_1.end() ?
+                                                    it_1->second :
+                                                    make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U);
+                        info.feature_id_2 = it_2->second;
+                        float_32_bit  normal_distance;
+                        project_to_unit_vector(
+                                it_2->first - mass_center_of_collision_points,
+                                -*ouptut_collision_plane_unit_normal_in_world_space,
+                                normal_distance
+                                );
+                        info.depth = std::min(MAX_PENETRATION_DEPTH, mass_centre_penetration_depth + std::max(0.0f, normal_distance));
+                        collision_points.insert({ it_2->first, info });
+                    }
+            }
+            INVARIANT(!collision_points.empty());
+            for (auto const&  point_and_info : collision_points)
+            {
+                output_collision_points_in_world_space->push_back(point_and_info.first);
+                if (output_penetration_depths_of_collision_points != nullptr)
+                    output_penetration_depths_of_collision_points->push_back(point_and_info.second.depth);
+                if (output_collision_shape_feature_ids != nullptr)
+                    output_collision_shape_feature_ids->push_back({point_and_info.second.feature_id_1, point_and_info.second.feature_id_2});
+            }
         }
     }
 

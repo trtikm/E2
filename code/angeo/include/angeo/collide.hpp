@@ -509,10 +509,83 @@ POINT_SET_TYPE  clip_polygon(
         );
 
 
+/*
+  Box polygons and feature indixes of faces, edges, and vertices
+  ==============================================================
+  Legend: <face-index>@<vertex/face-index>
+
+
+                       4@3           7              4@2
+                     4---------------------------------7
+                2@0 /|1@3                         1@0 /| 3@3
+                   / |                               / |
+                  /  |       y -----1               /  |
+                 /   |             /               /   |
+               4/    |            /               /6   |
+               /     |           x               /     |
+              /      |               y          /      |
+             / 1@2   |       5       |     1@1 /       |            Here is the local coord. system of box on the left:
+            5---------------------------------6 3@2    |
+         2@1| 5@0    |               |     5@1|        |11              Z
+            |        |               4----- x |        |                |
+            |       8|                        |    y   |                |
+            |        |                        |    |   |                |
+            |        |                        |    |   |                |
+            |    2   |                        |    |   |                O----------- Y
+            |   /|   |                        |    3   |               /
+            |  / |   |                      10|   /    |              /
+            | x  |   |                        |  /     |             /
+            |    y   |      5------ x         | x      |            X
+           9|        | 4@0  |                 |     4@1|
+            |    2@3 0------|-----------------|--------3            The z-axis of the coord. system of each face points inside
+            |       / 0@0   |       3         |    0@3/ 3@0         the box.
+            |      /        y                 |      /
+            |     /                           |     /
+            |    /0              0----- y     |    /
+            |   /               /             |   / 2
+            |  /               /              |  /
+            | /               x               | /
+        2@2 |/5@3                          5@2|/ 3@1
+            1---------------------------------2
+              0@1           1              0@2
+
+*/
+
 void  compute_polygons_of_box(
         coordinate_system_explicit const&  location,
         vector3 const&  half_sizes_along_axes,
         convex_polyhedron&  output_polygons
+        );
+
+
+natural_16_bit  compute_feature_index_of_face_of_box(natural_16_bit const  face_index);
+natural_16_bit  compute_feature_index_of_face_of_box(
+        natural_8_bit const  dominant_coordinate_index,
+        float_32_bit const  dominant_coordinate
+        );
+
+
+natural_16_bit  compute_feature_index_of_vertex_of_box(
+        natural_16_bit const  face_feature_index,
+        natural_16_bit const  vertex_index_in_face
+        );
+natural_16_bit  compute_feature_index_of_vertex_of_box(vector3 const&  point);
+
+
+natural_16_bit  compute_feature_index_of_edge_of_box(
+        natural_16_bit const  face_feature_index,
+        natural_16_bit const  edge_index_in_face
+        );
+natural_16_bit  compute_feature_index_of_edge_of_box_from_two_faces(
+        natural_16_bit  face_1_feature_index,
+        natural_16_bit  face_2_feature_index
+        );
+
+
+natural_16_bit  compute_feature_index_of_feature_of_box(
+        natural_16_bit const  face_feature_index,
+        COLLISION_SHAPE_FEATURE_TYPE const  feature_type,
+        natural_16_bit const  feature_index_in_face
         );
 
 
