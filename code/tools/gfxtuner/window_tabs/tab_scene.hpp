@@ -230,6 +230,7 @@ private:
             m_save_record_handlers;
 
     bool  m_processing_selection_change;
+    bool  m_is_coord_system_pos_changed_enabled;
 
     natural_64_bit  m_save_commit_id;
 
