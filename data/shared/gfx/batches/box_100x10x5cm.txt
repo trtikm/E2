@@ -1,4 +1,4 @@
-mesh meshes/box_10x5x100cm
+mesh meshes/box_100x10x5cm
 skins
 {
     default

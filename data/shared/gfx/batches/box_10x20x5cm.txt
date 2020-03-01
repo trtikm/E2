@@ -1,0 +1,27 @@
+mesh meshes/box_10x20x5cm
+skins
+{
+    default
+    {
+        textures
+        {
+            diffuse
+            {
+                texcoord_index 0
+                pathname textures/box_material/box_diffuse.txt
+            }
+        }
+        draw_state
+        {
+           use_alpha_blending              false
+           alpha_blending_src_function     SRC_ALPHA
+           alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA
+           cull_face_mode                  BACK
+        }
+        alpha_testing
+        {
+           use_alpha_testing               false
+           alpha_test_constant             0.0
+        }
+    }
+}
