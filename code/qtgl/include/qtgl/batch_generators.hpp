@@ -87,9 +87,21 @@ batch  create_coord_cross(
         );
 
 
-batch  create_wireframe_box(
+batch  create_wireframe_box( // Deprecated!
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+batch  create_wireframe_box(
+        vector3 const&  half_sizes_along_axes,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+batch  create_solid_box(
+        vector3 const&  half_sizes_along_axes,
         vector4 const&  colour,
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
@@ -140,6 +152,23 @@ batch  create_triangle_mesh(
         texture const&  diffuse,
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
+        );
+
+
+batch  create_triangle_mesh(
+        std::vector< std::array<float_32_bit, 3> > const&  vertices,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_,
+        std::string const&  id
+        );
+
+
+batch  create_triangle_mesh(
+        std::vector< std::array<float_32_bit, 3> > const&  vertices,
+        std::vector< std::array<natural_32_bit, 3> > const&  indices,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_,
+        std::string const&  id
         );
 
 

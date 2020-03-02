@@ -2198,7 +2198,7 @@ void  simulator::render_colliders(
                                 if (it == m_cache_of_batches_of_colliders.boxes.end())
                                     it = m_cache_of_batches_of_colliders.boxes.insert({
                                                 key,
-                                                qtgl::create_wireframe_box(-key, key, m_colliders_colour)
+                                                qtgl::create_wireframe_box(key, m_colliders_colour)
                                                 }).first;
                                 batches.push_back(it->second);
                             }
