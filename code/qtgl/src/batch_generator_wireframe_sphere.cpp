@@ -120,7 +120,7 @@ batch  create_wireframe_sphere(
 }
 
 
-batch  create_solid_sphere(
+batch  create_solid_smooth_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
         vector4 const&  colour,
@@ -191,6 +191,82 @@ batch  create_solid_sphere(
     return create_triangle_mesh(
                 vertices,
                 indices,
+                normals,
+                colour,
+                fog_type_,
+                id.empty() ? make_sphere_id_without_prefix(radius, num_lines_per_quarter_of_circle, colour, fog_type_, false) : id
+                );
+}
+
+
+batch  create_solid_sphere(
+        float_32_bit const  radius,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_,
+        std::string const&  id
+        )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(radius > 1e-4f);
+    ASSUMPTION(num_lines_per_quarter_of_circle != 0U);
+
+    std::vector< std::array<float_32_bit, 3> >  vertices;
+    std::vector< std::array<float_32_bit, 3> >  normals;
+
+    auto const  push_back_vector = [](vector3 const&  what, std::vector< std::array<float_32_bit, 3> >&  where) -> void {
+        where.push_back({ what(0), what(1), what(2) });
+    };
+
+    auto const  push_back_triangle = [&vertices, &normals, &push_back_vector](
+        vector3 const&  A, vector3 const&  B, vector3 const&  C, vector3 const&  n) -> void {
+        push_back_vector(A, vertices); push_back_vector(n, normals);
+        push_back_vector(B, vertices); push_back_vector(n, normals);
+        push_back_vector(C, vertices); push_back_vector(n, normals);
+    };
+
+    float_32_bit const  delta_phi = (PI() / 2.0f) / static_cast<float_32_bit>(num_lines_per_quarter_of_circle);
+    natural_32_bit const  num_horisontal_steps = 4U * num_lines_per_quarter_of_circle;
+    natural_32_bit const  num_vertical_steps = 2U * num_lines_per_quarter_of_circle;
+    for (natural_32_bit  i = 0U; i < num_horisontal_steps; ++i)
+    {
+        float_32_bit const cFI1 = std::cosf(i * delta_phi);
+        float_32_bit const sFI1 = std::sinf(i * delta_phi);
+
+        float_32_bit const cFI2 = std::cosf((i + 1U) * delta_phi);
+        float_32_bit const sFI2 = std::sinf((i + 1U) * delta_phi);
+
+        for (natural_8_bit  j = 0U; j < num_vertical_steps; ++j)
+        {
+            float_32_bit const cPSI1 = std::cosf(j * delta_phi - PI()/2.0f);
+            float_32_bit const sPSI1 = std::sinf(j * delta_phi - PI() / 2.0f);
+
+            float_32_bit const cPSI2 = std::cosf((j + 1U) * delta_phi - PI() / 2.0f);
+            float_32_bit const sPSI2 = std::sinf((j + 1U) * delta_phi - PI() / 2.0f);
+
+            vector3 const  v[4] = {
+                { cFI1 * cPSI1, sFI1 * cPSI1, sPSI1 },
+                { cFI1 * cPSI2, sFI1 * cPSI2, sPSI2 },
+                { cFI2 * cPSI1, sFI2 * cPSI1, sPSI1 },
+                { cFI2 * cPSI2, sFI2 * cPSI2, sPSI2 },
+            };
+            vector3 const  n = normalised(v[0] + v[1] + v[2] + v[3]);
+
+            if (j == 0U)
+                push_back_triangle(v[2], v[3], v[1], n);
+            else if (j == num_vertical_steps - 1U)
+                push_back_triangle(v[0], v[2], v[1], n);
+            else
+            {
+                push_back_triangle(v[0], v[2], v[1], n);
+                push_back_triangle(v[2], v[3], v[1], n);
+            }
+        }
+    }
+
+    return create_triangle_mesh(
+                vertices,
                 normals,
                 colour,
                 fog_type_,

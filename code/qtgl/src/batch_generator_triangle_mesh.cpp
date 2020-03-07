@@ -265,6 +265,68 @@ batch  create_triangle_mesh(
 
 
 batch  create_triangle_mesh(
+        std::vector< std::array<float_32_bit, 3> > const& vertices,
+        std::vector< std::array<float_32_bit, 3> > const& normals,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_,
+        std::string const&  id
+        )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(vertices.size() == normals.size());
+
+    std::vector< std::array<float_32_bit, 4> > const  colours(
+            vertices.size(),
+            std::array<float_32_bit, 4> {
+                (float_32_bit)colour(0),
+                (float_32_bit)colour(1),
+                (float_32_bit)colour(2),
+                (float_32_bit)colour(3)
+                }
+            );
+
+    batch const  pbatch = batch(
+        id.empty() ? id : "/generic/sketch/batch/" + id,
+        buffers_binding(
+            0U,
+            3U,
+            {
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                  buffer(vertices, true, (id.empty() ? id : "/generic/sketch/buffer/vertices/" + id)) },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL,
+                  buffer(normals, false, (id.empty() ? id : "/generic/sketch/buffer/normals/" + id)) },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                  buffer(colours, id.empty() ? id : "/generic/sketch/buffer/diffuse/" + id) },
+            },
+            id.empty() ? id : "/generic/sketch/buffers_binding/" + id
+            ),
+        textures_binding_map_type{},
+        {}, // Texcoord binding.
+        effects_config{
+            nullptr,
+            { LIGHT_TYPE::AMBIENT, LIGHT_TYPE::DIRECTIONAL }, // Light types.
+            {
+                // Lighting data types.
+                {LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER},
+                {LIGHTING_DATA_TYPE::NORMAL, SHADER_DATA_INPUT_TYPE::BUFFER},
+                {LIGHTING_DATA_TYPE::DIRECTION, SHADER_DATA_INPUT_TYPE::UNIFORM}
+            },
+            SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
+            {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
+            fog_type_,
+            SHADER_PROGRAM_TYPE::VERTEX // fog algo location
+            },
+        draw_state(nullptr),
+        modelspace(),
+        skeleton_alignment(),
+        batch_available_resources::alpha_testing_props()
+        );
+    return pbatch;
+}
+
+
+batch  create_triangle_mesh(
         std::vector< std::array<float_32_bit, 3> > const&  vertices,
         std::vector< std::array<natural_32_bit, 3> > const&  indices,
         std::vector< std::array<float_32_bit, 3> > const&  normals,

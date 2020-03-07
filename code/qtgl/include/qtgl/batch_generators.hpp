@@ -176,6 +176,13 @@ batch  create_wireframe_sphere(
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
         );
+batch  create_solid_smooth_sphere(
+        float_32_bit const  radius,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
 batch  create_solid_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
@@ -240,6 +247,15 @@ batch  create_triangle_mesh(
 
 batch  create_triangle_mesh(
         std::vector< std::array<float_32_bit, 3> > const&  vertices,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_,
+        std::string const&  id
+        );
+
+
+batch  create_triangle_mesh(
+        std::vector< std::array<float_32_bit, 3> > const& vertices,
+        std::vector< std::array<float_32_bit, 3> > const& normals,
         vector4 const&  colour,
         FOG_TYPE const  fog_type_,
         std::string const&  id
