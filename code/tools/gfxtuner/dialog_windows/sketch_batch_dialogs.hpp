@@ -102,13 +102,17 @@ private:
 
     QComboBox*  m_widget_fog_type;
 
-    QCheckBox* m_widget_wireframe;
+    QCheckBox*  m_widget_wireframe;
 
     // WIDGETS FOR BOX
 
     QLineEdit*  m_widget_box_half_size_along_x_axis;
     QLineEdit*  m_widget_box_half_size_along_y_axis;
     QLineEdit*  m_widget_box_half_size_along_z_axis;
+
+    // WIDGETS FOR CAPSULE & SPHERE
+
+    QLineEdit*  m_widget_num_lines_per_quarter_of_circle;
 
     // WIDGETS FOR CAPSULE
 

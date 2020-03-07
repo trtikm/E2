@@ -39,13 +39,13 @@ sketch_batch_kind_selection_dialog::sketch_batch_kind_selection_dialog(program_w
     ASSUMPTION(
             m_kind == qtgl::sketch_kind_box()
             //|| m_kind == qtgl::sketch_kind_capsule()
-            //|| m_kind == qtgl::sketch_kind_sphere()
+            || m_kind == qtgl::sketch_kind_sphere()
             //|| m_kind == qtgl::sketch_kind_mesh()
             //|| m_kind == qtgl::sketch_kind_convex_hull()
             );
     m_kind_combo_box->addItem(qtgl::sketch_kind_box().c_str());
     //m_kind_combo_box->addItem(qtgl::sketch_kind_capsule().c_str());
-    //m_kind_combo_box->addItem(qtgl::sketch_kind_sphere().c_str());
+    m_kind_combo_box->addItem(qtgl::sketch_kind_sphere().c_str());
     //m_kind_combo_box->addItem(qtgl::sketch_kind_mesh().c_str());
     //m_kind_combo_box->addItem(qtgl::sketch_kind_convex_hull().c_str());
     m_kind_combo_box->setCurrentText(m_kind.c_str());
@@ -130,9 +130,9 @@ sketch_batch_props_dialog::sketch_batch_props::sketch_batch_props(std::string co
     if (qtgl::parse_box_info_from_id(props, m_box_half_sizes_along_axes, m_colour, m_fog_type, m_wireframe))
         m_kind = qtgl::sketch_kind_box();
     else if (qtgl::parse_capsule_info_from_id(props, m_capsule_half_distance_between_end_points, m_capsule_thickness_from_central_line, m_num_lines_per_quarter_of_circle, m_colour, m_fog_type, m_wireframe))
-        m_kind = qtgl::sketch_kind_box();
+        m_kind = qtgl::sketch_kind_capsule();
     else if (qtgl::parse_sphere_info_from_id(props, m_sphere_radius, m_num_lines_per_quarter_of_circle, m_colour, m_fog_type, m_wireframe))
-        m_kind = qtgl::sketch_kind_box();
+        m_kind = qtgl::sketch_kind_sphere();
     else { UNREACHABLE(); return; }
 }
 
@@ -171,6 +171,10 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
     , m_widget_box_half_size_along_y_axis(nullptr)
     , m_widget_box_half_size_along_z_axis(nullptr)
 
+    // WIDGETS FOR CAPSULE & SPHERE
+
+    , m_widget_num_lines_per_quarter_of_circle(nullptr)
+
     // WIDGETS FOR CAPSULE
 
     , m_widget_capsule_half_distance_between_end_points(nullptr)
@@ -190,7 +194,7 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
     {
         QWidget* const collider_shape_group = new QGroupBox("Shape properties");
         {
-            QVBoxLayout* const collider_shape_layout = new QVBoxLayout;
+            QVBoxLayout* const shape_layout = new QVBoxLayout;
             {
                 if (m_props->m_kind == qtgl::sketch_kind_box())
                 {
@@ -226,7 +230,7 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
 
                         half_sizes_along_axis_layout->addStretch(1);
                     }
-                    collider_shape_layout->addLayout(half_sizes_along_axis_layout);
+                    shape_layout->addLayout(half_sizes_along_axis_layout);
                 }
                 else if (m_props->m_kind == qtgl::sketch_kind_capsule())
                 {
@@ -245,7 +249,7 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
 
                         half_distance_between_end_points_layout->addStretch(1);
                     }
-                    collider_shape_layout->addLayout(half_distance_between_end_points_layout);
+                    shape_layout->addLayout(half_distance_between_end_points_layout);
 
                     QHBoxLayout* const thickness_from_central_line_layout = new QHBoxLayout;
                     {
@@ -262,7 +266,24 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
 
                         thickness_from_central_line_layout->addStretch(1);
                     }
-                    collider_shape_layout->addLayout(thickness_from_central_line_layout);
+                    shape_layout->addLayout(thickness_from_central_line_layout);
+
+                    QHBoxLayout* const num_lines_layout = new QHBoxLayout;
+                    {
+                        num_lines_layout->addWidget(new QLabel("Num lines per qurter circle"));
+                        m_widget_num_lines_per_quarter_of_circle = new QLineEdit();
+                        m_widget_num_lines_per_quarter_of_circle->setText(
+                            QString::number(m_props->m_num_lines_per_quarter_of_circle)
+                        );
+                        m_widget_num_lines_per_quarter_of_circle->setToolTip(
+                            "Defines a level of details. Namely, the intersection of the object with the XY-coord. plane\n"
+                            "is a circle. Then specificy in the edit box, how many lines you want the 1/4 of that circle\n"
+                            "to be approximated by. The lowest valid value is 1."
+                        );
+                        num_lines_layout->addWidget(m_widget_num_lines_per_quarter_of_circle);
+                    }
+                    shape_layout->addLayout(num_lines_layout);
+
                 }
                 else if (m_props->m_kind == qtgl::sketch_kind_sphere())
                 {
@@ -275,7 +296,23 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
                         radius_layout->addWidget(m_widget_sphere_radius);
                         radius_layout->addStretch(1);
                     }
-                    collider_shape_layout->addLayout(radius_layout);
+                    shape_layout->addLayout(radius_layout);
+
+                    QHBoxLayout* const num_lines_layout = new QHBoxLayout;
+                    {
+                        num_lines_layout->addWidget(new QLabel("Num lines per qurter circle"));
+                        m_widget_num_lines_per_quarter_of_circle = new QLineEdit();
+                        m_widget_num_lines_per_quarter_of_circle->setText(
+                            QString::number(m_props->m_num_lines_per_quarter_of_circle)
+                        );
+                        m_widget_num_lines_per_quarter_of_circle->setToolTip(
+                            "Defines a level of details. Namely, the intersection of the object with the XY-coord. plane\n"
+                            "is a circle. Then specificy in the edit box, how many lines you want the 1/4 of that circle\n"
+                            "to be approximated by. The lowest valid value is 1."
+                        );
+                        num_lines_layout->addWidget(m_widget_num_lines_per_quarter_of_circle);
+                    }
+                    shape_layout->addLayout(num_lines_layout);
                 }
                 else if (m_props->m_kind == qtgl::sketch_kind_mesh() || m_props->m_kind == qtgl::sketch_kind_convex_hull())
                 {
@@ -304,7 +341,7 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
                             }(this)
                             );
                     }
-                    collider_shape_layout->addLayout(triangle_mesh_layout);
+                    shape_layout->addLayout(triangle_mesh_layout);
 
                     m_widget_ok->setEnabled(
                             check_triangle_mesh_buffers_directory(
@@ -317,9 +354,9 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
                     UNREACHABLE();
                 }
 
-                collider_shape_layout->addStretch(1);
+                shape_layout->addStretch(1);
             }
-            collider_shape_group->setLayout(collider_shape_layout);
+            collider_shape_group->setLayout(shape_layout);
         }
         dlg_layout->addWidget(collider_shape_group);
 
@@ -442,11 +479,13 @@ void  sketch_batch_props_dialog::accept()
                 std::atof(qtgl::to_string(m_widget_capsule_half_distance_between_end_points->text()).c_str());
         m_props->m_capsule_thickness_from_central_line =
                 std::atof(qtgl::to_string(m_widget_capsule_thickness_from_central_line->text()).c_str());
+        m_props->m_num_lines_per_quarter_of_circle = std::atoi(qtgl::to_string(m_widget_num_lines_per_quarter_of_circle->text()).c_str());
     }
     else if (m_props->m_kind == qtgl::sketch_kind_sphere())
     {
         m_props->m_sphere_radius =
             std::atof(qtgl::to_string(m_widget_sphere_radius->text()).c_str());
+        m_props->m_num_lines_per_quarter_of_circle = std::atoi(qtgl::to_string(m_widget_num_lines_per_quarter_of_circle->text()).c_str());
     }
     else if (m_props->m_kind == qtgl::sketch_kind_mesh() || m_props->m_kind == qtgl::sketch_kind_sphere())
     {

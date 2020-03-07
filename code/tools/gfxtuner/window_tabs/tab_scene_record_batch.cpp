@@ -258,37 +258,6 @@ void  register_record_handler_for_update_scene_record(
                             return;
                         new_effects_config = old_effects_config;
                         new_skin_name = old_skin_name;
-                        //auto const  current_window_guard = w->wnd()->glwindow().make_me_current();
-                        //// Remove old sketch batch.
-                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(
-                        //        record_id,
-                        //        old_batch.get_id(),
-                        //        old_batch.get_skin_name(),
-                        //        old_batch.get_effects_config(),
-                        //        true
-                        //        );
-                        //w->wnd()->glwindow().call_now(
-                        //        &simulator::erase_batch_from_scene_node,
-                        //        std::cref(record_id.get_record_name()),
-                        //        std::cref(record_id.get_node_id())
-                        //        );
-                        //old_batch.release();
-                        //// And insert new one.
-                        //w->wnd()->glwindow().call_now(
-                        //        &simulator::insert_batch_to_scene_node,
-                        //        std::cref(record_id.get_record_name()),
-                        //        std::cref(sketch_id),
-                        //        std::cref("default"),
-                        //        w->wnd()->glwindow().call_now(&simulator::get_effects_config),
-                        //        std::cref(record_id.get_node_id())
-                        //        );
-                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(
-                        //        record_id,
-                        //        sketch_id,
-                        //        "default",
-                        //        w->wnd()->glwindow().call_now(&simulator::get_effects_config),
-                        //        false
-                        //        );
                     }
                     else
                     {
