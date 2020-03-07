@@ -38,13 +38,13 @@ sketch_batch_kind_selection_dialog::sketch_batch_kind_selection_dialog(program_w
 {
     ASSUMPTION(
             m_kind == qtgl::sketch_kind_box()
-            //|| m_kind == qtgl::sketch_kind_capsule()
+            || m_kind == qtgl::sketch_kind_capsule()
             || m_kind == qtgl::sketch_kind_sphere()
             //|| m_kind == qtgl::sketch_kind_mesh()
             //|| m_kind == qtgl::sketch_kind_convex_hull()
             );
     m_kind_combo_box->addItem(qtgl::sketch_kind_box().c_str());
-    //m_kind_combo_box->addItem(qtgl::sketch_kind_capsule().c_str());
+    m_kind_combo_box->addItem(qtgl::sketch_kind_capsule().c_str());
     m_kind_combo_box->addItem(qtgl::sketch_kind_sphere().c_str());
     //m_kind_combo_box->addItem(qtgl::sketch_kind_mesh().c_str());
     //m_kind_combo_box->addItem(qtgl::sketch_kind_convex_hull().c_str());
@@ -401,6 +401,7 @@ sketch_batch_props_dialog::sketch_batch_props_dialog(program_window* const  wnd,
                         );
 
                 fog_and_wireframe_layout->addWidget(m_widget_wireframe);
+                m_widget_wireframe->setChecked(m_props->m_wireframe);
                 fog_and_wireframe_layout->addStretch(1);
             }
             common_props_layout->addLayout(fog_and_wireframe_layout);
