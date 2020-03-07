@@ -119,16 +119,17 @@ struct simulator : public qtgl::real_time_simulator
 
     void  insert_batch_to_scene_node(
             scn::scene_node::record_name const&  batch_name,
-            boost::filesystem::path const&  batch_pathname,
+            std::string const&  batch_pathname_or_sketch_id,
             std::string const&  skin_name,
-            qtgl::effects_config const  effects,
+            qtgl::effects_config const&  effects,
             scn::scene_node_id const&  scene_node_id
             );
 
     void  replace_batch_in_scene_node(
             scn::scene_node::record_name const&  batch_name,
+            std::string const&  new_batch_pathname_or_sketch_id,
             std::string const&  new_skin_name,
-            qtgl::effects_config const  new_effects,
+            qtgl::effects_config const&  new_effects,
             scn::scene_node_id const&  scene_node_id
             );
 

@@ -60,6 +60,7 @@ enum struct FOG_TYPE : natural_8_bit
 };
 
 std::string  name(FOG_TYPE const  fog_type_);
+FOG_TYPE  fog_type_from_name(std::string const&  fog_type_name);
 
 
 }

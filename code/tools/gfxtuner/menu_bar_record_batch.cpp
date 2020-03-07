@@ -19,6 +19,15 @@ void  register_record_menu_items(std::vector<record_menu_item_info>&  record_men
         scn::get_batches_folder_name(),
         "default"   // mode
         });
+    record_menu_items.push_back({
+        "Insert s&ketch batch",
+        "Ctrl+Alt+G",
+        "A batch is an atomic block of grahical data. A sketch batch is a batch with low-quality graphical effects. It should\n"
+        "be used for visualising an experiment, e.g. sketching the scene, visualising colliders."
+        "",
+        scn::get_batches_folder_name(),
+        "sketch"   // mode
+        });
 }
 
 

@@ -8,6 +8,7 @@
 #   include <vector>
 #   include <string>
 #   include <boost/filesystem/path.hpp>
+#   include <boost/property_tree/ptree.hpp>
 
 namespace qtgl {
 
@@ -87,6 +88,18 @@ batch  create_coord_cross(
         );
 
 
+std::string  get_sketch_id_prefix();
+
+inline std::string  sketch_kind_box() { return "box"; }
+inline std::string  sketch_kind_capsule() { return "capsule"; }
+inline std::string  sketch_kind_sphere() { return "sphere"; }
+inline std::string  sketch_kind_mesh() { return "mesh"; }
+inline std::string  sketch_kind_convex_hull() { return "convex_hull"; }
+
+
+bool  read_sketch_info_from_id(std::string const& id, boost::property_tree::ptree&  output_info);
+
+
 batch  create_wireframe_box( // Deprecated!
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
@@ -106,6 +119,19 @@ batch  create_solid_box(
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
         );
+std::string  make_box_id_without_prefix(
+        vector3 const&  half_sizes_along_axes,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type,
+        bool const  wireframe
+        );
+bool  parse_box_info_from_id(
+        boost::property_tree::ptree const&  ptree,
+        vector3&  half_sizes_along_axes,
+        vector4&  colour,
+        FOG_TYPE&  fog_type,
+        bool&  wireframe
+        );
 
 
 batch  create_wireframe_capsule(
@@ -116,6 +142,31 @@ batch  create_wireframe_capsule(
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
         );
+batch  create_solid_capsule(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+std::string  make_capsule_id_without_prefix(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type,
+        bool const  wireframe
+        );
+bool  parse_capsule_info_from_id(
+        boost::property_tree::ptree const&  ptree,
+        float_32_bit&  half_distance_between_end_points,
+        float_32_bit&  thickness_from_central_line,
+        natural_8_bit&  num_lines_per_quarter_of_circle,
+        vector4&  colour,
+        FOG_TYPE&  fog_type,
+        bool&  wireframe
+        );
 
 
 batch  create_wireframe_sphere(
@@ -125,11 +176,43 @@ batch  create_wireframe_sphere(
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
         );
+batch  create_solid_sphere(
+        float_32_bit const  radius,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+std::string  make_sphere_id_without_prefix(
+        float_32_bit const  radius,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type,
+        bool const  wireframe
+        );
+bool  parse_sphere_info_from_id(
+        boost::property_tree::ptree const&  ptree,
+        float_32_bit&  radius,
+        natural_8_bit&  num_lines_per_quarter_of_circle,
+        vector4&  colour,
+        FOG_TYPE&  fog_type,
+        bool&  wireframe
+        );
 
 
 batch  create_triangle_mesh(
         qtgl::buffer  vertex_buffer,
         qtgl::buffer  index_buffer,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+
+
+batch  create_triangle_mesh(
+        qtgl::buffer  vertex_buffer,
+        qtgl::buffer  index_buffer,
+        qtgl::buffer  normal_buffer,
         vector4 const&  colour,
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
@@ -166,6 +249,7 @@ batch  create_triangle_mesh(
 batch  create_triangle_mesh(
         std::vector< std::array<float_32_bit, 3> > const&  vertices,
         std::vector< std::array<natural_32_bit, 3> > const&  indices,
+        std::vector< std::array<float_32_bit, 3> > const&  normals,
         vector4 const&  colour,
         FOG_TYPE const  fog_type_,
         std::string const&  id

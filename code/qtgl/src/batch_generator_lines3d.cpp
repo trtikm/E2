@@ -20,17 +20,17 @@ batch  create_lines3d(
     ASSUMPTION(vertices.size() == colours.size());
 
     batch const  pbatch = batch(
-        id.empty() ? id : "/generic/lines3d_with_colours/batch/" + id,
+        id.empty() ? id : "/generic/sketch/batch/" + id,
         buffers_binding(
             0U,
             2U,
             {
                 { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
-                  buffer(vertices, true, (id.empty() ? id : "/generic/lines3d_with_colours/buffer/vertices/" + id)) },
+                  buffer(vertices, true, (id.empty() ? id : "/generic/sketch/buffer/vertices/" + id)) },
                 { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
-                  buffer(colours, id.empty() ? id : "/generic/lines3d_with_colours/buffer/diffuse/" + id) },
+                  buffer(colours, id.empty() ? id : "/generic/sketch/buffer/diffuse/" + id) },
             },
-            id.empty() ? id : "/generic/lines3d_with_colours/buffers_binding/" + id
+            id.empty() ? id : "/generic/sketch/buffers_binding/" + id
             ),
         textures_binding_map_type{},
         {}, // Texcoord binding.

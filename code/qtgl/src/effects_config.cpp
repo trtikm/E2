@@ -18,6 +18,18 @@ std::string  name(FOG_TYPE const  fog_type_)
 }
 
 
+FOG_TYPE  fog_type_from_name(std::string const&  fog_type_name)
+{
+    if (fog_type_name == name(FOG_TYPE::NONE))
+        return FOG_TYPE::NONE;
+    if (fog_type_name == name(FOG_TYPE::INTERPOLATED))
+        return FOG_TYPE::INTERPOLATED;
+    if (fog_type_name == name(FOG_TYPE::DETAILED))
+        return FOG_TYPE::DETAILED;
+    UNREACHABLE();
+}
+
+
 }
 
 namespace qtgl {

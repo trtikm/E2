@@ -104,6 +104,10 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/detail/window.hpp
     ./src/detail/window.cpp
 
+    ./include/qtgl/detail/as_json.hpp 
+    ./include/qtgl/detail/from_json.hpp 
+    ./src/detail/from_json.cpp 
+    
     ./include/qtgl/offscreen.hpp
     ./src/offscreen.cpp
     )

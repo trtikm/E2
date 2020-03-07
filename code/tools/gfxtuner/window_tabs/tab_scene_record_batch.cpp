@@ -2,6 +2,7 @@
 #include <gfxtuner/window_tabs/tab_scene.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/dialog_windows/effects_config_dialog.hpp>
+#include <gfxtuner/dialog_windows/sketch_batch_dialogs.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <scene/scene.hpp>
@@ -13,6 +14,44 @@
 #include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/algorithm/string.hpp>
+
+namespace window_tabs { namespace tab_scene { namespace record_batch { namespace detail {
+
+
+std::string  update_sketch_batch_props(widgets* const  w, dialog_windows::sketch_batch_props_dialog::sketch_batch_props&  props)
+{
+    std::string  sketch_id;
+    dialog_windows::sketch_batch_props_dialog  props_dlg(w->wnd(), &props);
+    props_dlg.exec();
+    if (!props_dlg.ok())
+        return sketch_id;
+    if (props.m_kind == qtgl::sketch_kind_box())
+        sketch_id = qtgl::make_box_id_without_prefix(
+                props.m_box_half_sizes_along_axes,
+                props.m_colour, props.m_fog_type, props.m_wireframe);
+    else if (props.m_kind == qtgl::sketch_kind_capsule())
+        sketch_id = qtgl::make_capsule_id_without_prefix(
+                props.m_capsule_half_distance_between_end_points,
+                props.m_capsule_thickness_from_central_line,
+                props.m_num_lines_per_quarter_of_circle,
+                props.m_colour, props.m_fog_type, props.m_wireframe);
+    else if (props.m_kind == qtgl::sketch_kind_sphere())
+        sketch_id = qtgl::make_sphere_id_without_prefix(
+                props.m_sphere_radius,
+                props.m_num_lines_per_quarter_of_circle,
+                props.m_colour, props.m_fog_type, props.m_wireframe);
+    else if (props.m_kind == qtgl::sketch_kind_mesh())
+        return { "", {} }; // TODO!
+    else if (props.m_kind == qtgl::sketch_kind_convex_hull())
+        return { "", {} }; // TODO!
+    else
+        UNREACHABLE();
+    return qtgl::get_sketch_id_prefix() + sketch_id;
+}
+
+
+}}}}
 
 namespace window_tabs { namespace tab_scene { namespace record_batch {
 
@@ -44,7 +83,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
             w->wnd()->glwindow().call_now(
                     &simulator::insert_batch_to_scene_node,
                     std::cref(history_node.get_id().get_record_name()),
-                    std::cref(history_node.get_batch_pathname()),
+                    std::cref(history_node.get_batch_pathname_or_sketch_id()),
                     std::cref(history_node.get_skin_name()),
                     history_node.get_effects_config(),
                     std::cref(history_node.get_id().get_node_id())
@@ -68,7 +107,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
             w->wnd()->glwindow().call_now(
                     &simulator::insert_batch_to_scene_node,
                     std::cref(history_node.get_id().get_record_name()),
-                    std::cref(history_node.get_batch_pathname()),
+                    std::cref(history_node.get_old_batch_pathname_or_sketch_id()),
                     std::cref(history_node.get_old_skin_name()),
                     history_node.get_old_effects_config(),
                     std::cref(history_node.get_id().get_node_id())
@@ -85,7 +124,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
             w->wnd()->glwindow().call_now(
                     &simulator::insert_batch_to_scene_node,
                     std::cref(history_node.get_id().get_record_name()),
-                    std::cref(history_node.get_batch_pathname()),
+                    std::cref(history_node.get_new_batch_pathname_or_sketch_id()),
                     std::cref(history_node.get_new_skin_name()),
                     history_node.get_new_effects_config(),
                     std::cref(history_node.get_id().get_node_id())
@@ -106,51 +145,71 @@ void  register_record_handler_for_insert_scene_record(
             scn::get_batches_folder_name(),
             {
                 true, // Allows multiple records in the folder (i.e. to open the name-selection dialog).
-                [](widgets* const  w, std::string const&, std::unordered_set<std::string> const&  used_names)
+                [](widgets* const  w, std::string const&  mode, std::unordered_set<std::string> const&  used_names)
                     -> std::pair<std::string, std::function<bool(scn::scene_record_id const&)>> {
-                    boost::filesystem::path const&  root_dir =
-                            canonical_path(boost::filesystem::absolute(
-                                boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "batches"
-                                ));
-                    QFileDialog  dialog(w->wnd());
-                    dialog.setDirectory(root_dir.string().c_str());
-                    dialog.setFileMode(QFileDialog::ExistingFile);
-                    if (!dialog.exec())
-                        return {"", {}};
-                    QStringList const  selected = dialog.selectedFiles();
-                    if (selected.size() != 1)
-                    {
-                        w->wnd()->print_status_message("ERROR: Exactly one file must be provided.", 10000);
-                        return {"", {}};
-                    }
-                    boost::filesystem::path const  pathname = qtgl::to_string(selected.front());
+                    std::string  batch_pathname_or_sketch_id;
                     std::string  batch_name;
+                    if (mode == "sketch")
                     {
-                        std::string const  batch_dir = pathname.parent_path().filename().string();
-                        if (batch_dir != "batches")
+                        dialog_windows::sketch_batch_kind_selection_dialog  kind_dlg(w->wnd(), qtgl::sketch_kind_box());
+                        kind_dlg.exec();
+                        if (!kind_dlg.ok())
+                            return { "", {} };
+                        dialog_windows::sketch_batch_props_dialog::sketch_batch_props  props;
+                        props.m_kind = kind_dlg.get_kind();
+                        batch_pathname_or_sketch_id = detail::update_sketch_batch_props(w, props);
+                        if (batch_pathname_or_sketch_id.empty())
+                            return { "", {} };
+                        batch_name = "sketch_" + props.m_kind;
+                    }
+                    else
+                    {
+                        ASSUMPTION(mode == "default");
+                        boost::filesystem::path const&  root_dir =
+                                canonical_path(boost::filesystem::absolute(
+                                    boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "batches"
+                                    ));
+                        QFileDialog  dialog(w->wnd());
+                        dialog.setDirectory(root_dir.string().c_str());
+                        dialog.setFileMode(QFileDialog::ExistingFile);
+                        if (!dialog.exec())
+                            return {"", {}};
+                        QStringList const  selected = dialog.selectedFiles();
+                        if (selected.size() != 1)
                         {
-                            batch_name.append(batch_dir);
-                            batch_name.push_back('.');
+                            w->wnd()->print_status_message("ERROR: Exactly one file must be provided.", 10000);
+                            return {"", {}};
                         }
-                        boost::filesystem::path  batch_file_name = pathname.filename();
-                        if (batch_file_name.has_extension())
-                            batch_file_name.replace_extension("");
-                        batch_name.append(batch_file_name.string());
+                        boost::filesystem::path const  pathname = qtgl::to_string(selected.front());
+                        std::string  batch_name;
+                        {
+                            std::string const  batch_dir = pathname.parent_path().filename().string();
+                            if (batch_dir != "batches")
+                            {
+                                batch_name.append(batch_dir);
+                                batch_name.push_back('.');
+                            }
+                            boost::filesystem::path  batch_file_name = pathname.filename();
+                            if (batch_file_name.has_extension())
+                                batch_file_name.replace_extension("");
+                            batch_name.append(batch_file_name.string());
+                        }
+                        batch_pathname_or_sketch_id = pathname.string();
                     }
                     return {
                         batch_name,
-                        [pathname, w](scn::scene_record_id const&  record_id) -> bool {
+                        [batch_pathname_or_sketch_id, w](scn::scene_record_id const&  record_id) -> bool {
                                 w->wnd()->glwindow().call_now(
                                         &simulator::insert_batch_to_scene_node,
                                         std::cref(record_id.get_record_name()),
-                                        std::cref(pathname),
+                                        std::cref(batch_pathname_or_sketch_id),
                                         std::cref("default"),
                                         w->wnd()->glwindow().call_now(&simulator::get_effects_config),
                                         std::cref(record_id.get_node_id())
                                         );
                                 w->get_scene_history()->insert<scn::scene_history_batch_insert>(
                                         record_id,
-                                        pathname,
+                                        batch_pathname_or_sketch_id,
                                         "default",
                                         w->wnd()->glwindow().call_now(&simulator::get_effects_config),
                                         false
@@ -174,36 +233,86 @@ void  register_record_handler_for_update_scene_record(
                     scn::scene_node_ptr const  src_node_ptr =
                             w->wnd()->glwindow().call_now(&simulator::get_scene_node, record_id.get_node_id());
 
-                    boost::filesystem::path  pathname;
+                    std::string  old_batch_pathname_or_sketch_id;
                     qtgl::effects_config old_effects_config;
                     std::string  old_skin_name;
                     std::vector<std::string>  skin_names;
                     {
-                        qtgl::batch const  old_batch = scn::get_batch(*src_node_ptr, record_id.get_record_name());
-                        pathname = old_batch.get_path();
+                        qtgl::batch  old_batch = scn::get_batch(*src_node_ptr, record_id.get_record_name());
+                        old_batch_pathname_or_sketch_id = old_batch.get_id();
                         old_effects_config = old_batch.get_effects_config();
                         old_skin_name = old_batch.get_skin_name();
                         for (auto const& elem : old_batch.get_available_resources().skins())
                             skin_names.push_back(elem.first);
                     }
-                    dialog_windows::effects_config_dialog  dlg(w->wnd(), old_effects_config.resource_const(), old_skin_name, skin_names);
-                    dlg.exec();
-                    if (!dlg.ok())
-                        return;
-                    qtgl::effects_config const  new_effects_config = qtgl::effects_config::make(dlg.get_new_effects_data());
-                    std::string const  new_skin_name = dlg.get_new_skin_name();
+
+                    std::string  new_batch_pathname_or_sketch_id;
+                    qtgl::effects_config  new_effects_config;
+                    std::string  new_skin_name;
+                    if (boost::starts_with(old_batch_pathname_or_sketch_id, qtgl::get_sketch_id_prefix()))
+                    {
+                        dialog_windows::sketch_batch_props_dialog::sketch_batch_props  props(old_batch_pathname_or_sketch_id);
+                        new_batch_pathname_or_sketch_id = detail::update_sketch_batch_props(w, props);
+                        if (new_batch_pathname_or_sketch_id.empty() ||
+                                new_batch_pathname_or_sketch_id == old_batch_pathname_or_sketch_id)
+                            return;
+                        new_effects_config = old_effects_config;
+                        new_skin_name = old_skin_name;
+                        //auto const  current_window_guard = w->wnd()->glwindow().make_me_current();
+                        //// Remove old sketch batch.
+                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(
+                        //        record_id,
+                        //        old_batch.get_id(),
+                        //        old_batch.get_skin_name(),
+                        //        old_batch.get_effects_config(),
+                        //        true
+                        //        );
+                        //w->wnd()->glwindow().call_now(
+                        //        &simulator::erase_batch_from_scene_node,
+                        //        std::cref(record_id.get_record_name()),
+                        //        std::cref(record_id.get_node_id())
+                        //        );
+                        //old_batch.release();
+                        //// And insert new one.
+                        //w->wnd()->glwindow().call_now(
+                        //        &simulator::insert_batch_to_scene_node,
+                        //        std::cref(record_id.get_record_name()),
+                        //        std::cref(sketch_id),
+                        //        std::cref("default"),
+                        //        w->wnd()->glwindow().call_now(&simulator::get_effects_config),
+                        //        std::cref(record_id.get_node_id())
+                        //        );
+                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(
+                        //        record_id,
+                        //        sketch_id,
+                        //        "default",
+                        //        w->wnd()->glwindow().call_now(&simulator::get_effects_config),
+                        //        false
+                        //        );
+                    }
+                    else
+                    {
+                        dialog_windows::effects_config_dialog  dlg(w->wnd(), old_effects_config.resource_const(), old_skin_name, skin_names);
+                        dlg.exec();
+                        if (!dlg.ok())
+                            return;
+                        new_effects_config = qtgl::effects_config::make(dlg.get_new_effects_data());
+                        new_skin_name = dlg.get_new_skin_name();
+                    }
 
                     w->get_scene_history()->insert<scn::scene_history_batch_update_props>(
                             std::cref(record_id),
-                            std::cref(pathname),
+                            std::cref(old_batch_pathname_or_sketch_id),
                             std::cref(old_skin_name),
                             old_effects_config,
+                            std::cref(new_batch_pathname_or_sketch_id),
                             std::cref(new_skin_name),
                             new_effects_config,
                             false);
                     w->wnd()->glwindow().call_now(
                             &simulator::replace_batch_in_scene_node,
                             std::cref(record_id.get_record_name()),
+                            std::cref(new_batch_pathname_or_sketch_id),
                             std::cref(new_skin_name),
                             new_effects_config,
                             std::cref(record_id.get_node_id())
@@ -227,14 +336,14 @@ void  register_record_handler_for_duplicate_scene_record(
                     w->wnd()->glwindow().call_now(
                             &simulator::insert_batch_to_scene_node,
                             std::cref(dst_record_id.get_record_name()),
-                            std::cref(b.get_path()),
+                            std::cref(b.get_id()),
                             std::cref(b.get_skin_name()),
                             b.get_effects_config(),
                             std::cref(dst_record_id.get_node_id())
                             );
                     w->get_scene_history()->insert<scn::scene_history_batch_insert>(
                             dst_record_id,
-                            b.get_path(),
+                            b.get_id(),
                             b.get_skin_name(),
                             b.get_effects_config(),
                             false
@@ -259,7 +368,7 @@ void  register_record_handler_for_erase_scene_record(
                         qtgl::batch const  b = scn::get_batch(*parent_node_ptr, id.get_record_name());
                         w->get_scene_history()->insert<scn::scene_history_batch_insert>(
                                 id,
-                                b.get_path(),
+                                b.get_id(),
                                 b.get_skin_name(),
                                 b.get_effects_config(),
                                 true
@@ -304,7 +413,7 @@ void  register_record_handler_for_load_scene_record(
                     qtgl::effects_config::shader_output_types  shader_output_types;
                     for (auto const& sot_and_tree : effects.get_child("shader_output_types"))
                         shader_output_types.insert((qtgl::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
-                    std::string const  pathname = data.get<std::string>("pathname");
+                    std::string const  batch_pathname_or_sketch_id = data.get<std::string>(data.count("id") != 0U ? "id" : "pathname");
                     std::string const  skin = data.get<std::string>("skin");
                     qtgl::effects_config const  effects_config(
                             nullptr,
@@ -318,7 +427,7 @@ void  register_record_handler_for_load_scene_record(
                     w->wnd()->glwindow().call_now(
                             &simulator::insert_batch_to_scene_node,
                             std::cref(id.get_record_name()),
-                            std::cref(pathname),
+                            std::cref(batch_pathname_or_sketch_id),
                             std::cref(skin),
                             std::cref(effects_config),
                             std::cref(id.get_node_id())
@@ -333,7 +442,7 @@ void  register_record_handler_for_load_scene_record(
                     {
                         w->get_scene_history()->insert<scn::scene_history_batch_insert>(
                                 id,
-                                pathname,
+                                batch_pathname_or_sketch_id,
                                 skin,
                                 effects_config,
                                 false
@@ -361,7 +470,7 @@ void  register_record_handler_for_save_scene_record(
                 boost::property_tree::ptree&  data,
                 std::unordered_map<std::string, boost::property_tree::ptree>&  infos) -> void {
                     qtgl::batch const  b = scn::get_batch(*node_ptr, id.get_record_name());
-                    data.put("pathname", b.get_path().string());
+                    data.put("id", b.get_id());
                     data.put("skin", b.get_skin_name());
                     data.put("effects", b.get_effects_config().key().get_unique_id());
 

@@ -37,7 +37,8 @@ batch_data::batch_data(
         modelspace const  modelspace_,
         skeleton_alignment const  skeleton_alignment_,
         batch_available_resources const  resources_,
-        std::string const&  skin_name_
+        std::string const&  skin_name_,
+        std::string const&  id_
         )
     : m_buffers_binding(buffers_binding_)
     , m_shaders_binding()
@@ -49,7 +50,7 @@ batch_data::batch_data(
     , m_available_resources(resources_)
     , m_instancing_data()
     , m_skin_name(skin_name_)
-    , m_path()
+    , m_id(id_)
     , m_ready(false)
 {
     TMPROF_BLOCK();

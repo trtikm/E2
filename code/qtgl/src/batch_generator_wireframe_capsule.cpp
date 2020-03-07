@@ -1,9 +1,59 @@
 #include <qtgl/batch_generators.hpp>
+#include <qtgl/detail/as_json.hpp>
+#include <qtgl/detail/from_json.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 
 namespace qtgl {
+
+
+std::string  make_capsule_id_without_prefix(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type,
+        bool const  wireframe
+        )
+{
+    using namespace qtgl::detail;
+    std::stringstream  sstr;
+    sstr << '{'
+         << as_json("kind") << ':' << as_json(sketch_kind_capsule()) << ','
+         << as_json("half_distance") << ':' << as_json(half_distance_between_end_points) << ','
+         << as_json("thickness") << ':' << as_json(thickness_from_central_line) << ','
+         << as_json("num_lines") << ':' << as_json(num_lines_per_quarter_of_circle) << ','
+         << as_json("colour") << ':' << as_json(colour) << ','
+         << as_json("fog") << ':' << as_json(name(fog_type)) << ','
+         << as_json("wireframe") << ':' << as_json(wireframe)
+         << '}';
+    return sstr.str();
+}
+
+
+bool  parse_capsule_info_from_id(
+        boost::property_tree::ptree const&  ptree,
+        float_32_bit&  half_distance_between_end_points,
+        float_32_bit&  thickness_from_central_line,
+        natural_8_bit&  num_lines_per_quarter_of_circle,
+        vector4&  colour,
+        FOG_TYPE&  fog_type,
+        bool&  wireframe
+        )
+{
+    using namespace qtgl::detail;
+    if (ptree.get<std::string>("kind") != sketch_kind_capsule())
+        return false;
+    half_distance_between_end_points = ptree.get<float_32_bit>("half_distance");
+    thickness_from_central_line = ptree.get<float_32_bit>("thickness");
+    num_lines_per_quarter_of_circle = ptree.get<natural_8_bit>("num_lines");
+    colour = from_json_vector4(ptree.get_child("colour"));
+    fog_type = fog_type_from_name(ptree.get<std::string>("fog"));
+    wireframe = ptree.get<bool>("wireframe");
+    return true;
+}
 
 
 batch  create_wireframe_capsule(
@@ -105,8 +155,39 @@ batch  create_wireframe_capsule(
         vertices.push_back({ 0.0f, v[0], -v[1] - half_distance_between_end_points });
     }
 
-    return create_lines3d(vertices, colour, fog_type_, id);
+    return create_lines3d(
+                vertices,
+                colour,
+                fog_type_,
+                id.empty() ? make_capsule_id_without_prefix(
+                                    half_distance_between_end_points,
+                                    thickness_from_central_line,
+                                    num_lines_per_quarter_of_circle,
+                                    colour,
+                                    fog_type_,
+                                    true
+                                    )
+                           : id
+                );
 }
 
+
+batch  create_solid_capsule(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_,
+        std::string const&  id
+        )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(half_distance_between_end_points > 1e-4f);
+    ASSUMPTION(thickness_from_central_line > 1e-4f);
+    ASSUMPTION(num_lines_per_quarter_of_circle != 0U);
+
+    NOT_IMPLEMENTED_YET();
+}
 
 }

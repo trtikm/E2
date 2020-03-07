@@ -99,6 +99,8 @@ add_executable(${THIS_TARGET_NAME}
     dialog_windows/rigid_body_props_dialog.cpp
     dialog_windows/property_map_widget_utils.hpp
     dialog_windows/property_map_widget_utils.cpp
+    dialog_windows/sketch_batch_dialogs.hpp 
+    dialog_windows/sketch_batch_dialogs.cpp 
 
     simulation/simulator.hpp
     simulation/simulator.cpp

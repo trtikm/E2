@@ -27,6 +27,7 @@
 #include <utility/development.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <vector>
 #include <map>
@@ -213,6 +214,31 @@ void  switch_application_state_of_all_rigid_body_external_accelerations(
         vector3 const  old_total_accel = rb_simulator.get_external_linear_acceleration(rb_props->id());
         rb_simulator.set_external_linear_acceleration(rb_props->id(), old_total_accel + accel);
     }
+}
+
+
+qtgl::batch  create_sketch_batch_from_sketch_id(std::string const&  sketch_id)
+{
+    boost::property_tree::ptree  props;
+    qtgl::read_sketch_info_from_id(sketch_id, props);
+    vector3  box_half_sizes_along_axes;
+    float_32_bit  capsule_half_distance;
+    float_32_bit  capsule_thickness;
+    float_32_bit  sphere_radius;
+    natural_8_bit  num_lines;
+    vector4  colour;
+    qtgl::FOG_TYPE  fog_type;
+    bool wireframe;
+    if (qtgl::parse_box_info_from_id(props, box_half_sizes_along_axes, colour, fog_type, wireframe))
+        return wireframe ? qtgl::create_wireframe_box(box_half_sizes_along_axes, colour, fog_type) :
+                           qtgl::create_solid_box(box_half_sizes_along_axes, colour, fog_type);
+    else if (qtgl::parse_capsule_info_from_id(props, capsule_half_distance, capsule_thickness, num_lines, colour, fog_type, wireframe))
+        return wireframe ? qtgl::create_wireframe_capsule(capsule_half_distance, capsule_thickness, num_lines, colour, fog_type) :
+                           qtgl::create_solid_capsule(capsule_half_distance, capsule_thickness, num_lines, colour, fog_type);
+    else if (qtgl::parse_sphere_info_from_id(props, sphere_radius, num_lines, colour, fog_type, wireframe))
+        return wireframe ? qtgl::create_wireframe_sphere(sphere_radius, num_lines, colour, fog_type) :
+                           qtgl::create_solid_sphere(sphere_radius, num_lines, colour, fog_type);
+    else { UNREACHABLE(); return qtgl::batch(); }
 }
 
 
@@ -2717,23 +2743,28 @@ void  simulator::update_collider_locations_in_subtree(scn::scene_node_ptr  node_
 
 void  simulator::insert_batch_to_scene_node(
         scn::scene_node::record_name const&  batch_name,
-        boost::filesystem::path const&  batch_pathname,
+        std::string const&  batch_pathname_or_sketch_id,
         std::string const&  skin_name,
-        qtgl::effects_config const  effects,
+        qtgl::effects_config const&  effects,
         scn::scene_node_id const&  scene_node_id
         )
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(scn::has_node(get_scene(), scene_node_id));
-    auto const  batch = qtgl::batch(canonical_path(batch_pathname), effects, skin_name);
+    qtgl::batch  batch;
+    if (boost::starts_with(batch_pathname_or_sketch_id, qtgl::get_sketch_id_prefix()))
+        batch = detail::create_sketch_batch_from_sketch_id(batch_pathname_or_sketch_id);
+    else
+        batch = qtgl::batch(canonical_path(batch_pathname_or_sketch_id), effects, skin_name);
     scn::insert_batch(*get_scene_node(scene_node_id), batch_name, batch);
 }
 
 void  simulator::replace_batch_in_scene_node(
         scn::scene_node::record_name const&  batch_name,
+        std::string const&  new_batch_pathname_or_sketch_id,
         std::string const&  new_skin_name,
-        qtgl::effects_config const  new_effects,
+        qtgl::effects_config const&  new_effects,
         scn::scene_node_id const&  scene_node_id
         )
 {
@@ -2745,7 +2776,11 @@ void  simulator::replace_batch_in_scene_node(
     qtgl::batch const  old_batch = scn::get_batch(*node_ptr, batch_name);
     ASSUMPTION(!old_batch.empty());
 
-    qtgl::batch const  new_batch = qtgl::batch(old_batch.get_path(), new_effects, new_skin_name);
+    qtgl::batch  new_batch;
+    if (boost::starts_with(new_batch_pathname_or_sketch_id, qtgl::get_sketch_id_prefix()))
+        new_batch = detail::create_sketch_batch_from_sketch_id(new_batch_pathname_or_sketch_id);
+    else
+        new_batch = qtgl::batch(old_batch.get_id(), new_effects, new_skin_name);
 
     scn::erase_batch(*node_ptr, batch_name);
     scn::insert_batch(*node_ptr, batch_name, new_batch);

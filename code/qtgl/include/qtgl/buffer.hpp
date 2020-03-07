@@ -203,7 +203,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
                 )
     {}
 
-    buffer(std::vector< std::array<float_32_bit,2> > const&  data, std::string const&  key = "")
+    explicit buffer(std::vector< std::array<float_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 nullptr,
@@ -211,7 +211,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
                 )
     {}
 
-    buffer( std::vector< std::array<float_32_bit,3> > const&  data,
+    explicit buffer( std::vector< std::array<float_32_bit,3> > const&  data,
             bool const  do_compute_boundary = false,
             std::string const&  key = ""
             )
@@ -223,7 +223,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
                 )
     {}
 
-    buffer(std::vector< std::array<float_32_bit,4> > const&  data, std::string const&  key = "")
+    explicit buffer(std::vector< std::array<float_32_bit,4> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 nullptr,
@@ -231,7 +231,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
                 )
     {}
 
-    buffer(std::vector< natural_32_bit > const&  data, std::string const&  key = "")
+    explicit buffer(std::vector< natural_32_bit > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 nullptr,
@@ -239,7 +239,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
                 )
     {}
 
-    buffer(std::vector< std::array<natural_32_bit,2> > const&  data, std::string const&  key = "")
+    explicit buffer(std::vector< std::array<natural_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 nullptr,
@@ -247,7 +247,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
                 )
     {}
 
-    buffer(std::vector< std::array<natural_32_bit,3> > const&  data, std::string const&  key = "")
+    explicit buffer(std::vector< std::array<natural_32_bit,3> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 nullptr,
