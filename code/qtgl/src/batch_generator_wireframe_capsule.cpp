@@ -187,7 +187,103 @@ batch  create_solid_capsule(
     ASSUMPTION(thickness_from_central_line > 1e-4f);
     ASSUMPTION(num_lines_per_quarter_of_circle != 0U);
 
-    NOT_IMPLEMENTED_YET();
+    std::vector< std::array<float_32_bit, 3> >  vertices;
+    std::vector< std::array<float_32_bit, 3> >  normals;
+
+    auto const  push_back_vector = [](vector3 const&  what, std::vector< std::array<float_32_bit, 3> >&  where) -> void {
+        where.push_back({ what(0), what(1), what(2) });
+    };
+
+    auto const  push_back_triangle = [&vertices, &normals, &push_back_vector](
+        vector3 const&  A, vector3 const&  B, vector3 const&  C, vector3 const&  n) -> void {
+        push_back_vector(A, vertices); push_back_vector(n, normals);
+        push_back_vector(B, vertices); push_back_vector(n, normals);
+        push_back_vector(C, vertices); push_back_vector(n, normals);
+    };
+
+    float_32_bit const  delta_phi = (PI() / 2.0f) / static_cast<float_32_bit>(num_lines_per_quarter_of_circle);
+
+    natural_32_bit const  num_horisontal_steps = 4U * num_lines_per_quarter_of_circle;
+    natural_32_bit const  num_vertical_steps = 2U * num_lines_per_quarter_of_circle;
+    for (natural_32_bit i = 0U; i < num_horisontal_steps; ++i)
+    {
+        float_32_bit const cFI1 = std::cosf(i * delta_phi);
+        float_32_bit const sFI1 = std::sinf(i * delta_phi);
+
+        float_32_bit const cFI2 = std::cosf((i + 1U) * delta_phi);
+        float_32_bit const sFI2 = std::sinf((i + 1U) * delta_phi);
+
+        for (natural_8_bit j = 0U; j < num_vertical_steps; ++j)
+        {
+            float_32_bit const cPSI1 = std::cosf(j * delta_phi - PI() / 2.0f);
+            float_32_bit const sPSI1 = std::sinf(j * delta_phi - PI() / 2.0f);
+
+            float_32_bit const cPSI2 = std::cosf((j + 1U) * delta_phi - PI() / 2.0f);
+            float_32_bit const sPSI2 = std::sinf((j + 1U) * delta_phi - PI() / 2.0f);
+
+            vector3 const  w[4] = {
+                { cFI1 * cPSI1, sFI1 * cPSI1, sPSI1 },
+                { cFI1 * cPSI2, sFI1 * cPSI2, sPSI2 },
+                { cFI2 * cPSI1, sFI2 * cPSI1, sPSI1 },
+                { cFI2 * cPSI2, sFI2 * cPSI2, sPSI2 },
+            };
+            vector3 const  n = normalised(w[0] + w[1] + w[2] + w[3]);
+            vector3 const  shift_z =
+                    (j < num_lines_per_quarter_of_circle ? -1.0f : 1.0f) * half_distance_between_end_points * vector3_unit_z();
+            vector3 const  v[4] = {
+                thickness_from_central_line * w[0] + shift_z,
+                thickness_from_central_line * w[1] + shift_z,
+                thickness_from_central_line * w[2] + shift_z,
+                thickness_from_central_line * w[3] + shift_z
+            };
+
+            if (j == 0U)
+                push_back_triangle(v[2], v[3], v[1], n);
+            else if (j == num_vertical_steps - 1U)
+                push_back_triangle(v[0], v[2], v[1], n);
+            else
+            {
+                push_back_triangle(v[0], v[2], v[1], n);
+                push_back_triangle(v[2], v[3], v[1], n);
+            }
+        }
+    }
+    for (natural_32_bit i = 0U; i < num_horisontal_steps; ++i)
+    {
+        float_32_bit const cFI1 = std::cosf(i * delta_phi);
+        float_32_bit const sFI1 = std::sinf(i * delta_phi);
+
+        float_32_bit const cFI2 = std::cosf((i + 1U) * delta_phi);
+        float_32_bit const sFI2 = std::sinf((i + 1U) * delta_phi);
+
+        vector3 const  w[2] = { { cFI1, sFI1, 0.0f }, { cFI2, sFI2, 0.0f } };
+        vector3 const  n = normalised(w[0] + w[1]);
+        vector3 const  v[4] = {
+            thickness_from_central_line * w[0] - half_distance_between_end_points * vector3_unit_z(),
+            thickness_from_central_line * w[0] + half_distance_between_end_points * vector3_unit_z(),
+            thickness_from_central_line * w[1] - half_distance_between_end_points * vector3_unit_z(),
+            thickness_from_central_line * w[1] + half_distance_between_end_points * vector3_unit_z(),
+        };
+
+        push_back_triangle(v[0], v[2], v[1], n);
+        push_back_triangle(v[2], v[3], v[1], n);
+    }
+
+    return create_triangle_mesh(
+                vertices,
+                normals,
+                colour,
+                fog_type_,
+                id.empty() ? make_capsule_id_without_prefix(
+                                    half_distance_between_end_points,
+                                    thickness_from_central_line,
+                                    num_lines_per_quarter_of_circle,
+                                    colour,
+                                    fog_type_,
+                                    false
+                                    )
+                           : id
+                );
 }
 
 }
