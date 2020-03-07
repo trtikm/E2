@@ -1529,7 +1529,7 @@ scn::scene_node_ptr  simulator::import_scene_node(
             else if (folder_it->first == scn::get_batches_folder_name())
                 insert_batch_to_scene_node(
                         record_it->first,
-                        record_it->second.get<std::string>("pathname"),
+                        record_it->second.get<std::string>("id"),
                         record_it->second.get<std::string>("skin"),
                         get_effects_config(),
                         id

@@ -382,7 +382,7 @@ void  register_record_handler_for_load_scene_record(
                     qtgl::effects_config::shader_output_types  shader_output_types;
                     for (auto const& sot_and_tree : effects.get_child("shader_output_types"))
                         shader_output_types.insert((qtgl::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
-                    std::string const  batch_pathname_or_sketch_id = data.get<std::string>(data.count("id") != 0U ? "id" : "pathname");
+                    std::string const  batch_pathname_or_sketch_id = data.get<std::string>("id");
                     std::string const  skin = data.get<std::string>("skin");
                     qtgl::effects_config const  effects_config(
                             nullptr,
