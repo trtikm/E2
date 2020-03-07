@@ -245,13 +245,14 @@ batch  create_solid_sphere(
             float_32_bit const cPSI2 = std::cosf((j + 1U) * delta_phi - PI() / 2.0f);
             float_32_bit const sPSI2 = std::sinf((j + 1U) * delta_phi - PI() / 2.0f);
 
-            vector3 const  v[4] = {
+            vector3 const  w[4] = {
                 { cFI1 * cPSI1, sFI1 * cPSI1, sPSI1 },
                 { cFI1 * cPSI2, sFI1 * cPSI2, sPSI2 },
                 { cFI2 * cPSI1, sFI2 * cPSI1, sPSI1 },
                 { cFI2 * cPSI2, sFI2 * cPSI2, sPSI2 },
             };
-            vector3 const  n = normalised(v[0] + v[1] + v[2] + v[3]);
+            vector3 const  n = normalised(w[0] + w[1] + w[2] + w[3]);
+            vector3 const  v[4] = { radius * w[0], radius * w[1], radius * w[2], radius * w[3] };
 
             if (j == 0U)
                 push_back_triangle(v[2], v[3], v[1], n);
