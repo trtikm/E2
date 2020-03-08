@@ -1577,6 +1577,7 @@ bool  collision_scene::compute_contacts__box_vs_capsule(
 {
     TMPROF_BLOCK();
 
+    box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
     capsule_geometry const& geometry_2 = m_capsules_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
@@ -1591,6 +1592,7 @@ bool  collision_scene::compute_contacts__box_vs_line(
 {
     TMPROF_BLOCK();
 
+    box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
     line_geometry const& geometry_2 = m_lines_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
@@ -1605,6 +1607,7 @@ bool  collision_scene::compute_contacts__box_vs_point(
 {
     TMPROF_BLOCK();
 
+    box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
     vector3 const& point_2 = m_points_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
@@ -1619,9 +1622,70 @@ bool  collision_scene::compute_contacts__box_vs_sphere(
 {
     TMPROF_BLOCK();
 
-    sphere_geometry const& geometry_2 = m_spheres_geometry.at(get_instance_index(coid_2));
+    box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
+    sphere_geometry const&  geometry_2 = m_spheres_geometry.at(get_instance_index(coid_2));
 
-    NOT_IMPLEMENTED_YET();
+    vector3 const  sphere_center_in_box_space = point3_to_orthonormal_base(
+            geometry_2.center_in_world_space,
+            geometry_1.location.origin(),
+            geometry_1.location.basis_vector_x(),
+            geometry_1.location.basis_vector_y(),
+            geometry_1.location.basis_vector_z()
+            );
+    
+    vector3  closest_point;
+    closest_point_of_bbox_to_point(
+            -geometry_1.half_sizes_along_axes,
+            geometry_1.half_sizes_along_axes,
+            sphere_center_in_box_space,
+            closest_point
+            );
+
+    vector3 collision_vector = closest_point - sphere_center_in_box_space;
+    float_32_bit const  distance = length(collision_vector);
+    if (distance >= geometry_2.radius)
+        return true;
+
+    float_32_bit const  penetration_depth = geometry_2.radius - distance;
+
+    vector3  collision_point, collision_normal;
+    if (distance < 1e-4f)
+    {
+        collision_point = closest_point;
+        collision_normal = geometry_1.half_sizes_along_axes(0) < geometry_1.half_sizes_along_axes(1)
+                                ? (geometry_1.half_sizes_along_axes(0) < geometry_1.half_sizes_along_axes(2) ?
+                                        vector3_unit_x() : vector3_unit_z())
+                                : (geometry_1.half_sizes_along_axes(1) < geometry_1.half_sizes_along_axes(2) ?
+                                        vector3_unit_y() : vector3_unit_z());
+        if (dot_product(collision_normal, collision_point) < 0.0f)
+            collision_normal = -collision_normal;
+    }
+    else
+    {
+        collision_point = closest_point;
+        collision_normal = collision_vector / distance;
+    }
+
+    collision_point = point3_from_orthonormal_base(
+            collision_point,
+            geometry_1.location.origin(),
+            geometry_1.location.basis_vector_x(),
+            geometry_1.location.basis_vector_y(),
+            geometry_1.location.basis_vector_z()
+            );
+    collision_normal = normalised(vector3_from_orthonormal_base(
+            collision_vector,
+            geometry_1.location.basis_vector_x(),
+            geometry_1.location.basis_vector_y(),
+            geometry_1.location.basis_vector_z()
+            ));
+
+    static contact_id const  cid{
+        { coid_1, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U) },
+        { coid_2, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U) },
+    };
+
+    return acceptor(cid, collision_point, collision_normal, penetration_depth);
 }
 
 
@@ -1633,7 +1697,10 @@ bool  collision_scene::compute_contacts__box_vs_triangle(
 {
     TMPROF_BLOCK();
 
-    triangle_geometry const& geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
+    box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
+    triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
+
+
 
     NOT_IMPLEMENTED_YET();
 }
