@@ -3046,7 +3046,7 @@ void  simulator::insert_rigid_body_to_scene_node(
         rb_props.m_mass_inverted = 0.0f;
         rb_props.m_inertia_tensor_inverted = matrix33_zero();
     }
-    else if (auto_compute_mass_and_inertia_tensor)
+    else if (auto_compute_mass_and_inertia_tensor && !coids.empty())
     {
         rb_props = props; // But mass and inertial tesnsor will be reset below.
         angeo::mass_and_inertia_tensor_builder  builder;
