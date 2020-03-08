@@ -44,9 +44,9 @@ struct  object_id
 };
 
 
-inline natural_32_bit  as_number(OBJECT_KIND const  kind) noexcept
+inline natural_8_bit  as_number(OBJECT_KIND const  kind) noexcept
 {
-    return *reinterpret_cast<natural_32_bit const*>(&kind);
+    return (natural_8_bit)kind;
 }
 
 

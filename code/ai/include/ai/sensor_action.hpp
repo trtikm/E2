@@ -39,7 +39,7 @@ std::string const&  description(SENSOR_ACTION_KIND const  kind);
 
 inline natural_8_bit  as_number(SENSOR_ACTION_KIND const  kind) noexcept
 {
-    return *reinterpret_cast<natural_8_bit const*>(&kind);
+    return (natural_8_bit)kind;
 }
 
 inline SENSOR_ACTION_KIND  as_sensor_action_kind(natural_8_bit const  index)

@@ -19,7 +19,7 @@ enum struct  COLLISION_SHAPE_FEATURE_TYPE : natural_8_bit
 
 inline natural_8_bit  as_number(COLLISION_SHAPE_FEATURE_TYPE const  type) noexcept
 {
-    return *reinterpret_cast<natural_8_bit const*>(&type);
+    return (natural_8_bit)type;
 }
 
 

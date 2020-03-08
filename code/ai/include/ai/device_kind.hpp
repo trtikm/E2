@@ -18,7 +18,7 @@ std::string const&  description(DEVICE_KIND const  kind);
 
 inline natural_8_bit  as_number(DEVICE_KIND const  kind) noexcept
 {
-    return *reinterpret_cast<natural_8_bit const*>(&kind);
+    return (natural_8_bit)kind;
 }
 
 

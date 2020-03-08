@@ -22,7 +22,7 @@ enum struct  COORDINATE : natural_8_bit
 
 inline natural_8_bit  as_number(COORDINATE const  coord) noexcept
 {
-    return *reinterpret_cast<natural_8_bit const*>(&coord);
+    return (natural_8_bit)coord;
 }
 
 
