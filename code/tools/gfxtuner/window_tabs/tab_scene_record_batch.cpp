@@ -181,19 +181,16 @@ void  register_record_handler_for_insert_scene_record(
                             return {"", {}};
                         }
                         boost::filesystem::path const  pathname = qtgl::to_string(selected.front());
-                        std::string  batch_name;
+                        std::string const  batch_dir = pathname.parent_path().filename().string();
+                        if (batch_dir != "batches")
                         {
-                            std::string const  batch_dir = pathname.parent_path().filename().string();
-                            if (batch_dir != "batches")
-                            {
-                                batch_name.append(batch_dir);
-                                batch_name.push_back('.');
-                            }
-                            boost::filesystem::path  batch_file_name = pathname.filename();
-                            if (batch_file_name.has_extension())
-                                batch_file_name.replace_extension("");
-                            batch_name.append(batch_file_name.string());
+                            batch_name.append(batch_dir);
+                            batch_name.push_back('.');
                         }
+                        boost::filesystem::path  batch_file_name = pathname.filename();
+                        if (batch_file_name.has_extension())
+                            batch_file_name.replace_extension("");
+                        batch_name.append(batch_file_name.string());
                         batch_pathname_or_sketch_id = pathname.string();
                     }
                     return {
