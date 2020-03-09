@@ -1369,7 +1369,7 @@ natural_32_bit  closest_points_of_bbox_and_line(
             ))
     {
         output_bbox_closest_point_1 = output_line_closest_point_1;
-        if (are_equal_3d(output_line_closest_point_1, output_line_closest_point_2, 1e04f))
+        if (are_equal_3d(output_line_closest_point_1, output_line_closest_point_2, 1e-03f))
             return 1U;
         output_bbox_closest_point_2 = output_line_closest_point_2;
         return 2U;
@@ -1377,53 +1377,39 @@ natural_32_bit  closest_points_of_bbox_and_line(
 
     // So, the line has empty intersection with the bbox.
 
-    // Now we handle the case, when the line is parallel with with some face of the bbox.
-    for (natural_32_bit i = 0U; i != 3U; ++i)
-        if (are_equal(line_begin(i), line_end(i), 0.001f)
-            && (line_begin(i) <= bbox_low_corner(i) || line_begin(i) >= bbox_high_corner(i)))
-        {
-            // We clip the line with all faces of the box except those which are parallel with the line.
-            bool const  result = clip_line_into_bbox(
-                    line_begin,
-                    line_end,
-                    bbox_low_corner,
-                    bbox_high_corner,
-                    &output_line_closest_point_1,
-                    &output_line_closest_point_2,
-                    nullptr,
-                    nullptr,
-                    i
-                    );
-            if (result == false)
-                continue; // There is nothing of the line above the face.
-            output_bbox_closest_point_1 = 
-                    closest_point_of_bbox_to_point(bbox_low_corner, bbox_high_corner, output_line_closest_point_1);
-            if (are_equal_3d(output_line_closest_point_1, output_line_closest_point_2, 1e-04f))
-                return 1U;
-            output_bbox_closest_point_2 =
-                closest_point_of_bbox_to_point(bbox_low_corner, bbox_high_corner, output_line_closest_point_2);
-            return 2U;
-        }
-
     float_32_bit  lo = 0.0f;
     float_32_bit  hi = 1.0f;
-    vector3 const  u = line_end - line_begin;
+    vector3 const  line_vector = line_end - line_begin;
     for (natural_32_bit  num_iterations = 0U; true; ++num_iterations)
     {
         // The iteration above should converge to the closest point in up to roughly 20 iterations.
         INVARIANT(num_iterations < 50U);
 
         float_32_bit const  t = (lo + hi) / 2.0f;
-        output_line_closest_point_1 = line_begin + t * u;
+        output_line_closest_point_1 = line_begin + t * line_vector;
         output_bbox_closest_point_1 = closest_point_of_bbox_to_point(bbox_low_corner, bbox_high_corner, output_line_closest_point_1);
-        if (length_squared((hi - lo) * u) < 1e-6f)
+        if (length_squared((hi - lo) * line_vector) < 1e-6f)
             break;
         // We use t-component of the gradient of the distance function between output_line_closest_point_1 and output_bbox_closest_point_1
-        float_32_bit const  df_dt = dot_product(u, output_line_closest_point_1 - output_bbox_closest_point_1);
+        float_32_bit const  df_dt = dot_product(line_vector, output_line_closest_point_1 - output_bbox_closest_point_1);
         if (df_dt < 0.0f) // We go the opposing direction than the grandinet cmponent increases (because we look for the minimum).
             lo = t;
         else
             hi = t;
+    }
+
+    vector3 const  contacts_vector = output_line_closest_point_1 - output_bbox_closest_point_1;
+    natural_32_bit const  max_coord_index =
+            (std::fabs(contacts_vector(0)) > std::fabs(contacts_vector(1))) ?
+                    (std::fabs(contacts_vector(0)) > std::fabs(contacts_vector(2)) ? 0U : 2U) :
+                    (std::fabs(contacts_vector(1)) > std::fabs(contacts_vector(2)) ? 1U : 2U) ;
+    vector3  p, q;
+    if (clip_line_into_bbox(line_begin, line_end, bbox_low_corner, bbox_high_corner, &p, &q, nullptr, nullptr, max_coord_index))
+    {
+        output_line_closest_point_2 =
+                p(max_coord_index) * contacts_vector(max_coord_index) > q(max_coord_index)* contacts_vector(max_coord_index) ? p : q;
+        output_bbox_closest_point_2 = closest_point_of_bbox_to_point(bbox_low_corner, bbox_high_corner, output_line_closest_point_2);
+        return 2U;
     }
 
     return 1U;

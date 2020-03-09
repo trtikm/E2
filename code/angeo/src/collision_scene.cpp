@@ -1599,7 +1599,7 @@ bool  collision_scene::compute_contacts__box_vs_capsule(
 
     vector3  box_closest_points[2];
     vector3  line_closest_points[2];
-    natural_32_bit const  num_points = closest_points_of_bbox_and_line(
+    natural_32_bit  num_points = closest_points_of_bbox_and_line(
             sphere_centers[0],
             sphere_centers[1],
             -geometry_1.half_sizes_along_axes,
@@ -1612,9 +1612,17 @@ bool  collision_scene::compute_contacts__box_vs_capsule(
     INVARIANT(num_points == 1U || num_points == 2U);
 
     vector3 const  contacts_direction = box_closest_points[0] - line_closest_points[0];
-    float_32_bit const  contacts_distance = length(contacts_direction);
-    if (contacts_distance >= geometry_2.thickness_from_central_line)
+    float_32_bit  contacts_distances[2] = {
+            length(contacts_direction)
+    };
+    if (contacts_distances[0] >= geometry_2.thickness_from_central_line)
         return true;
+    if (num_points == 2U)
+    {
+        contacts_distances[1] = length(box_closest_points[1] - line_closest_points[1]);
+        if (contacts_distances[1] >= geometry_2.thickness_from_central_line)
+            num_points = 1U;
+    }
 
     auto const  get_line_contanct_feature_id =
         [sphere_centers, line_closest_points](natural_32_bit const  i) -> collision_shape_feature_id {
@@ -1628,12 +1636,8 @@ bool  collision_scene::compute_contacts__box_vs_capsule(
     float_32_bit constexpr  MAX_PENETRATION_DEPTH = 0.01f;
 
     vector3  normal_in_box_space;
-    float_32_bit  penetration_depth;
-    if (contacts_distance > 1e-3f)
-    {
-        normal_in_box_space = (1.0f / contacts_distance) * contacts_direction;
-        penetration_depth = geometry_2.thickness_from_central_line - contacts_distance;
-    }
+    if (num_points == 1U && contacts_distances[0] > 1e-3f)
+        normal_in_box_space = (1.0f / contacts_distances[0]) * contacts_direction;
     else
     {
         vector3  mass_center_of_closest_points = box_closest_points[0];
@@ -1649,12 +1653,11 @@ bool  collision_scene::compute_contacts__box_vs_capsule(
         normal_in_box_space =
                 (distances_to_faces[0] < distances_to_faces[1]) ?
                         (distances_to_faces[0] < distances_to_faces[2] ?
-                                (mass_center_of_closest_points(0) < 0.0f ? -1.0f : 1.0f) * vector3_unit_x() :
-                                (mass_center_of_closest_points(2) < 0.0f ? -1.0f : 1.0f) * vector3_unit_z() ) :
+                                (mass_center_of_closest_points(0) < 0.0f ? 1.0f : -1.0f) * vector3_unit_x() :
+                                (mass_center_of_closest_points(2) < 0.0f ? 1.0f : -1.0f) * vector3_unit_z() ) :
                         (distances_to_faces[1] < distances_to_faces[2] ?
-                                (mass_center_of_closest_points(1) < 0.0f ? -1.0f : 1.0f) * vector3_unit_y() :
-                                (mass_center_of_closest_points(2) < 0.0f ? -1.0f : 1.0f) * vector3_unit_z() ) ;
-        penetration_depth = geometry_2.thickness_from_central_line;
+                                (mass_center_of_closest_points(1) < 0.0f ? 1.0f : -1.0f) * vector3_unit_y() :
+                                (mass_center_of_closest_points(2) < 0.0f ? 1.0f : -1.0f) * vector3_unit_z() ) ;
     }
 
     vector3 const  normal_in_world_space = normalised(vector3_from_orthonormal_base(
@@ -1663,7 +1666,6 @@ bool  collision_scene::compute_contacts__box_vs_capsule(
             geometry_1.location.basis_vector_y(),
             geometry_1.location.basis_vector_z()
             ));
-    penetration_depth = std::min(MAX_PENETRATION_DEPTH, penetration_depth);
 
     for (natural_32_bit  i = 0U; i < num_points; ++i)
         if (acceptor(
@@ -1679,7 +1681,7 @@ bool  collision_scene::compute_contacts__box_vs_capsule(
                         geometry_1.location.basis_vector_z()
                         ),
                 normal_in_world_space,
-                penetration_depth
+                std::min(MAX_PENETRATION_DEPTH, geometry_2.thickness_from_central_line - contacts_distances[i])
                 ) == false)
             return false;
     return true;

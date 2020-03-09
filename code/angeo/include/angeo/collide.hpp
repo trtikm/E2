@@ -423,10 +423,7 @@ bool  collision_bbox_bbox(
         );
 
 
-// Returns the number of closest points:
-//  1 - if there is exactly one closest point
-//  2 - if there are infinitely many closest points, i.e. a sub-line of the passed line;
-//      in this case the returned points are the extremal points of the sub-line.
+// Returns the number of closest points
 natural_32_bit  closest_points_of_bbox_and_line(
         vector3 const&  line_begin,
         vector3 const&  line_end,
@@ -436,6 +433,8 @@ natural_32_bit  closest_points_of_bbox_and_line(
         vector3&  output_bbox_closest_point_1,
         vector3&  output_line_closest_point_1,
 
+        // Additional (i.e. not necessarily closest) points lying either both inside
+        // the bbox or on and above the closest face of the box to the line.
         vector3&  output_bbox_closest_point_2,
         vector3&  output_line_closest_point_2
         );
