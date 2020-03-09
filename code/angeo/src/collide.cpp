@@ -1220,7 +1220,8 @@ bool  clip_line_into_bbox(
         vector3* const  clipped_line_begin,
         vector3* const  clipped_line_end,
         float_32_bit* const  parameter_of_line_begin,
-        float_32_bit* const  parameter_of_line_end
+        float_32_bit* const  parameter_of_line_end,
+        natural_32_bit const  skip_coord_index
         )
 {
     float_32_bit  tB = 0.0f;
@@ -1228,8 +1229,11 @@ bool  clip_line_into_bbox(
 
     vector3 const  u = line_end - line_begin;
 
-    for (auto  i = 0; i != 3; ++i)
+    for (natural_32_bit  i = 0U; i != 3U; ++i)
     {
+        if (i == skip_coord_index)
+            continue;
+
         float_32_bit const  B = line_begin(i) + tB * u(i);
         float_32_bit const  E = line_begin(i) + tE * u(i);
 
@@ -1336,6 +1340,93 @@ bool  collision_bbox_bbox(
                 intersection_bbox_low_corner,
                 intersection_bbox_high_corner
                 );
+}
+
+
+natural_32_bit  closest_points_of_bbox_and_line(
+        vector3 const&  line_begin,
+        vector3 const&  line_end,
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+
+        vector3&  output_bbox_closest_point_1,
+        vector3&  output_line_closest_point_1,
+
+        vector3&  output_bbox_closest_point_2,
+        vector3&  output_line_closest_point_2
+        )
+{
+    // We first handle the case, when the line has non-empty intersection with the bbox.
+    if (clip_line_into_bbox(
+            line_begin,
+            line_end,
+            bbox_low_corner,
+            bbox_high_corner,
+            &output_line_closest_point_1,
+            &output_line_closest_point_2,
+            nullptr,
+            nullptr
+            ))
+    {
+        output_bbox_closest_point_1 = output_line_closest_point_1;
+        if (are_equal_3d(output_line_closest_point_1, output_line_closest_point_2, 1e04f))
+            return 1U;
+        output_bbox_closest_point_2 = output_line_closest_point_2;
+        return 2U;
+    }
+
+    // So, the line has empty intersection with the bbox.
+
+    // Now we handle the case, when the line is parallel with with some face of the bbox.
+    for (natural_32_bit i = 0U; i != 3U; ++i)
+        if (are_equal(line_begin(i), line_end(i), 0.001f)
+            && (line_begin(i) <= bbox_low_corner(i) || line_begin(i) >= bbox_high_corner(i)))
+        {
+            // We clip the line with all faces of the box except those which are parallel with the line.
+            bool const  result = clip_line_into_bbox(
+                    line_begin,
+                    line_end,
+                    bbox_low_corner,
+                    bbox_high_corner,
+                    &output_line_closest_point_1,
+                    &output_line_closest_point_2,
+                    nullptr,
+                    nullptr,
+                    i
+                    );
+            if (result == false)
+                continue; // There is nothing of the line above the face.
+            output_bbox_closest_point_1 = 
+                    closest_point_of_bbox_to_point(bbox_low_corner, bbox_high_corner, output_line_closest_point_1);
+            if (are_equal_3d(output_line_closest_point_1, output_line_closest_point_2, 1e-04f))
+                return 1U;
+            output_bbox_closest_point_2 =
+                closest_point_of_bbox_to_point(bbox_low_corner, bbox_high_corner, output_line_closest_point_2);
+            return 2U;
+        }
+
+    float_32_bit  lo = 0.0f;
+    float_32_bit  hi = 1.0f;
+    vector3 const  u = line_end - line_begin;
+    for (natural_32_bit  num_iterations = 0U; true; ++num_iterations)
+    {
+        // The iteration above should converge to the closest point in up to roughly 20 iterations.
+        INVARIANT(num_iterations < 50U);
+
+        float_32_bit const  t = (lo + hi) / 2.0f;
+        output_line_closest_point_1 = line_begin + t * u;
+        output_bbox_closest_point_1 = closest_point_of_bbox_to_point(bbox_low_corner, bbox_high_corner, output_line_closest_point_1);
+        if (length_squared((hi - lo) * u) < 1e-6f)
+            break;
+        // We use t-component of the gradient of the distance function between output_line_closest_point_1 and output_bbox_closest_point_1
+        float_32_bit const  df_dt = dot_product(u, output_line_closest_point_1 - output_bbox_closest_point_1);
+        if (df_dt < 0.0f) // We go the opposing direction than the grandinet cmponent increases (because we look for the minimum).
+            lo = t;
+        else
+            hi = t;
+    }
+
+    return 1U;
 }
 
 
@@ -2073,12 +2164,12 @@ bool  comprises_first_box_feature_second_one(
 }
 
 
-void  compute_closest_box_feature_to_a_point(
-        closest_box_feature_to_a_point&  output,
+collision_shape_feature_id  compute_closest_box_feature_to_a_point(
         vector3 const&  point_in_box_local_space,
         vector3 const&  box_half_sizes_along_axes,
-        coordinate_system_explicit const&  box_location_in_word_space,
-        float_32_bit const  max_edge_thickness
+        float_32_bit const  max_edge_thickness,
+        natural_32_bit* const  output_order_ptr,
+        natural_8_bit* const  output_coordinate_ptr
         )
 {
     vector3 const  p{
@@ -2141,7 +2232,62 @@ void  compute_closest_box_feature_to_a_point(
             coordinate = 0;
     }
 
-    output.feature_type = as_collision_shape_feature_type(feature_kind);
+    collision_shape_feature_id  id;
+    id.m_feature_type = feature_kind;
+    switch (as_collision_shape_feature_type(feature_kind))
+    {
+    case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+        INVARIANT(coordinate == 0U); // sure, but does not matter as we do not use it here.
+        id.m_feature_index = compute_feature_index_of_vertex_of_box(point_in_box_local_space);
+        break;
+    case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+        INVARIANT(coordinate == 1U || coordinate == 2U);
+        id.m_feature_index = compute_feature_index_of_edge_of_box_from_two_faces(
+                compute_feature_index_of_face_of_box(order[0], point_in_box_local_space(order[0])),
+                compute_feature_index_of_face_of_box(order[3 - coordinate], point_in_box_local_space(order[3 - coordinate]))
+                );
+        break;
+    case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+        INVARIANT(coordinate == 0U);
+        id.m_feature_index = compute_feature_index_of_face_of_box(order[0U], point_in_box_local_space(order[0U]));
+        break;
+    default: UNREACHABLE();
+    }
+
+    if (output_order_ptr != nullptr)
+    {
+        output_order_ptr[0] = order[0];
+        output_order_ptr[1] = order[1];
+        output_order_ptr[2] = order[2];
+    }
+    if (output_coordinate_ptr != nullptr)
+        *output_coordinate_ptr = coordinate;
+
+    return id;
+}
+
+
+void  compute_closest_box_feature_to_a_point(
+        closest_box_feature_to_a_point&  output,
+        vector3 const&  point_in_box_local_space,
+        vector3 const&  box_half_sizes_along_axes,
+        coordinate_system_explicit const&  box_location_in_word_space,
+        float_32_bit const  max_edge_thickness
+        )
+{
+    natural_32_bit  order[3];
+    natural_8_bit  coordinate;
+    collision_shape_feature_id const  id = compute_closest_box_feature_to_a_point(
+            point_in_box_local_space,
+            box_half_sizes_along_axes,
+            max_edge_thickness,
+            order,
+            &coordinate
+            );
+
+    output.feature_type = as_collision_shape_feature_type(id.m_feature_type);
+    output.feature_index = id.m_feature_index;
+
     switch (output.feature_type)
     {
     case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
@@ -2155,7 +2301,6 @@ void  compute_closest_box_feature_to_a_point(
                         (point_in_box_local_space(order[2]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(order[2])
                         }
                     - point_in_box_local_space);
-        output.feature_index = compute_feature_index_of_vertex_of_box(point_in_box_local_space);
         break;
     case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
         INVARIANT(coordinate == 1U || coordinate == 2U);
@@ -2163,17 +2308,12 @@ void  compute_closest_box_feature_to_a_point(
         output.distance_to_feature =
                 length_2d(vector2(box_half_sizes_along_axes(order[0]), box_half_sizes_along_axes(order[3U - coordinate])) -
                           vector2(std::fabs(point_in_box_local_space(order[0])), std::fabs(point_in_box_local_space(order[3U - coordinate]))));
-        output.feature_index = compute_feature_index_of_edge_of_box_from_two_faces(
-                compute_feature_index_of_face_of_box(order[0], point_in_box_local_space(order[0])),
-                compute_feature_index_of_face_of_box(order[3 - coordinate], point_in_box_local_space(order[3 - coordinate]))
-                );
         break;
     case COLLISION_SHAPE_FEATURE_TYPE::FACE:
         INVARIANT(coordinate == 0U);
         output.feature_vector_in_world_space =
                 (point_in_box_local_space(order[0U]) >= 0.0f ? 1.0f : -1.0f) * box_location_in_word_space.basis_vector(order[0U]);
         output.distance_to_feature = box_half_sizes_along_axes(order[0U]) - std::fabs(point_in_box_local_space(order[0U]));
-        output.feature_index = compute_feature_index_of_face_of_box(order[0U], point_in_box_local_space(order[0U]));
         break;
     default: UNREACHABLE();
     }

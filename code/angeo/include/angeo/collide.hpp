@@ -267,6 +267,16 @@ void  closest_point_of_bbox_to_point(
         vector3 const&  point,
         vector3&  output_closest_point
         );
+inline vector3  closest_point_of_bbox_to_point(
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+        vector3 const&  point
+        )
+{
+    vector3  output_closest_point;
+    closest_point_of_bbox_to_point(bbox_low_corner, bbox_high_corner, point, output_closest_point);
+    return output_closest_point;
+}
 
 
 /**
@@ -369,6 +379,9 @@ bool  collision_ray_and_plane(
  *                                  second corner point of the sub-line intersecting with
  *                                  the boundig box will be stored, if the passed values
  *                                  is NOT nullptr.
+ * @param skip_coord_index      Allows to skip clipping of the line in the passed coordinate index.
+ *                              Valid values (i.e. coord. indices) are 0, 1, and 2. Any other passed
+ *                              value will not cause skipping of any coordinate.
  */
 bool  clip_line_into_bbox(
         vector3 const&  line_begin,
@@ -378,7 +391,8 @@ bool  clip_line_into_bbox(
         vector3* const  clipped_line_begin,
         vector3* const  clipped_line_end,
         float_32_bit* const  parameter_of_line_begin,
-        float_32_bit* const  parameter_of_line_end
+        float_32_bit* const  parameter_of_line_end,
+        natural_32_bit const  skip_coord_index = std::numeric_limits<natural_32_bit>::max()
         );
 
 
@@ -406,6 +420,24 @@ bool  collision_bbox_bbox(
         vector3 const&  bbox_0_high_corner,
         vector3 const&  bbox_1_low_corner,
         vector3 const&  bbox_1_high_corner
+        );
+
+
+// Returns the number of closest points:
+//  1 - if there is exactly one closest point
+//  2 - if there are infinitely many closest points, i.e. a sub-line of the passed line;
+//      in this case the returned points are the extremal points of the sub-line.
+natural_32_bit  closest_points_of_bbox_and_line(
+        vector3 const&  line_begin,
+        vector3 const&  line_end,
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+
+        vector3&  output_bbox_closest_point_1,
+        vector3&  output_line_closest_point_1,
+
+        vector3&  output_bbox_closest_point_2,
+        vector3&  output_line_closest_point_2
         );
 
 
@@ -598,6 +630,13 @@ struct  closest_box_feature_to_a_point
 };
 
 
+collision_shape_feature_id  compute_closest_box_feature_to_a_point(
+        vector3 const&  point_in_box_local_space,
+        vector3 const&  box_half_sizes_along_axes,
+        float_32_bit const  max_edge_thickness = 0.005f,
+        natural_32_bit* const  output_order_ptr = nullptr,
+        natural_8_bit* const  output_coordinate_ptr = nullptr
+        );
 void  compute_closest_box_feature_to_a_point(
         closest_box_feature_to_a_point&  output,
         vector3 const&  point_in_box_local_space,
