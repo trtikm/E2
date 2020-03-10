@@ -396,6 +396,18 @@ bool  clip_line_into_bbox(
         );
 
 
+// Returns true iff the intersection of the triangle and the bbox is non-empty.
+bool  clip_triangle_into_bbox(
+        vector3 const&  triangle_point_1,
+        vector3 const&  triangle_point_2,
+        vector3 const&  triangle_point_3,
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+        std::vector<vector3>* const  output_triangle_clipped_points = nullptr,
+        std::vector<collision_shape_feature_id>* const  output_triangle_feature_ids = nullptr
+        );
+
+
 /**
  * Computes and intersection of two axis-aligned bounding boxes.
  *
@@ -673,6 +685,31 @@ bool  collision_box_box(
         std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points,
         std::vector<std::pair<collision_shape_feature_id, collision_shape_feature_id> >* const  output_collision_shape_feature_ids
         );
+
+
+struct  collision_contact_props
+{
+    vector3  point;         // In world space.
+    vector3  unit_normal;   // In world space.
+    float_32_bit  penetration_depth;
+    std::pair<collision_shape_feature_id, collision_shape_feature_id>  feature_ids;
+};
+
+
+void  collision_box_triangle(
+        coordinate_system_explicit const&  box_location,
+        vector3 const&  box_half_sizes_along_axes,
+        convex_polyhedron const&  box_polygons,
+
+        vector3 const&  triangle_point_0_in_world_space,
+        vector3 const&  triangle_point_1_in_world_space,
+        vector3 const&  triangle_point_2_in_world_space,
+        vector3 const&  triangle_unit_normal_in_world_space,
+        natural_8_bit const  triangle_edges_ignore_mask,
+
+        std::vector<collision_contact_props>&  output_collision_contacts
+        );
+
 
 
 }

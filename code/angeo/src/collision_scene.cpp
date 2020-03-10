@@ -1721,7 +1721,7 @@ bool  collision_scene::compute_contacts__box_vs_point(
 bool  collision_scene::compute_contacts__box_vs_sphere(
         collision_object_id const  coid_1,
         collision_object_id const  coid_2,
-        contact_acceptor const& acceptor
+        contact_acceptor const&  acceptor
         )
 {
     TMPROF_BLOCK();
@@ -1804,9 +1804,26 @@ bool  collision_scene::compute_contacts__box_vs_triangle(
     box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
     triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
 
+    std::vector<collision_contact_props>  collision_contacts;
+    collision_box_triangle(
+            geometry_1.location,
+            geometry_1.half_sizes_along_axes,
+            geometry_1.polyhedron,
 
-
-    NOT_IMPLEMENTED_YET();
+            geometry_2.end_point_1_in_world_space,
+            geometry_2.end_point_2_in_world_space,
+            geometry_2.end_point_3_in_world_space,
+            geometry_2.unit_normal_in_world_space,
+            geometry_2.edges_ignore_mask,
+            collision_contacts
+            );
+    for (collision_contact_props const&  props : collision_contacts)
+    {
+        contact_id const  cid = { { coid_1, props.feature_ids.first }, { coid_2, props.feature_ids.second } };
+        if (acceptor(cid, props.point, props.unit_normal, props.penetration_depth) == false)
+            return false;
+    }
+    return true;
 }
 
 

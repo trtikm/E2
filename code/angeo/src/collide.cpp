@@ -1,6 +1,7 @@
 #include <angeo/collide.hpp>
 #include <angeo/tensor_hash.hpp>
 #include <angeo/tensor_equal_to.hpp>
+#include <angeo/coordinate_system.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -1300,6 +1301,20 @@ bool  clip_line_into_bbox(
         *parameter_of_line_end = tE;
 
     return true;
+}
+
+
+bool  clip_triangle_into_bbox(
+        vector3 const&  triangle_point_1,
+        vector3 const&  triangle_point_2,
+        vector3 const&  triangle_point_3,
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+        std::vector<vector3>* const  output_triangle_clipped_points,
+        std::vector<collision_shape_feature_id>* const  output_triangle_feature_ids
+        )
+{
+    NOT_IMPLEMENTED_YET();
 }
 
 
@@ -2644,6 +2659,125 @@ bool  collision_box_box(
 
     return true;
 }
+
+
+void  collision_box_triangle(
+        coordinate_system_explicit const&  box_location,
+        vector3 const&  box_half_sizes_along_axes,
+        convex_polyhedron const&  box_polygons,
+
+        vector3 const&  triangle_point_0_in_world_space,
+        vector3 const&  triangle_point_1_in_world_space,
+        vector3 const&  triangle_point_2_in_world_space,
+        vector3 const&  triangle_unit_normal_in_world_space,
+        natural_8_bit const  triangle_edges_ignore_mask,
+
+        std::vector<collision_contact_props>&  output_collision_contacts
+        )
+{
+    vector3 const  triangle_points_in_box_space[3]{
+        point3_to_orthonormal_base(
+                triangle_point_0_in_world_space,
+                box_location.origin(),
+                box_location.basis_vector_x(),
+                box_location.basis_vector_y(),
+                box_location.basis_vector_z()
+                ),
+        point3_to_orthonormal_base(
+                triangle_point_1_in_world_space,
+                box_location.origin(),
+                box_location.basis_vector_x(),
+                box_location.basis_vector_y(),
+                box_location.basis_vector_z()
+                ),
+        point3_to_orthonormal_base(
+                triangle_point_2_in_world_space,
+                box_location.origin(),
+                box_location.basis_vector_x(),
+                box_location.basis_vector_y(),
+                box_location.basis_vector_z()
+                )
+    };
+
+    std::vector<vector3>  triangle_clipped_points;
+    std::vector<collision_shape_feature_id>  triangle_feature_ids;
+    if (clip_triangle_into_bbox(
+            triangle_points_in_box_space[0],
+            triangle_points_in_box_space[1],
+            triangle_points_in_box_space[2],
+            -box_half_sizes_along_axes,
+            box_half_sizes_along_axes,
+            &triangle_clipped_points,
+            &triangle_feature_ids
+            ) == false)
+        return;
+
+    INVARIANT(!triangle_clipped_points.empty() && triangle_clipped_points.size() == triangle_feature_ids.size());
+
+    vector3  mass_center_of_clipped_points = vector3_zero();
+    for (vector3 const& u : triangle_clipped_points)
+        mass_center_of_clipped_points += u;
+    mass_center_of_clipped_points /= (float_32_bit)triangle_clipped_points.size();
+
+    float_32_bit const  distances_to_faces[3] {
+        box_half_sizes_along_axes(0) - std::fabs(mass_center_of_clipped_points(0)),
+        box_half_sizes_along_axes(1) - std::fabs(mass_center_of_clipped_points(1)),
+        box_half_sizes_along_axes(2) - std::fabs(mass_center_of_clipped_points(2)),
+    };
+
+    natural_32_bit const  default_normal_coord_index =
+            (distances_to_faces[0] < distances_to_faces[1]) ?
+                    (distances_to_faces[0] < distances_to_faces[2] ? 0U : 2U) :
+                    (distances_to_faces[1] < distances_to_faces[2] ? 1U : 2U) ;
+
+    float_32_bit const  default_normal_coord_sign = mass_center_of_clipped_points(default_normal_coord_index) < 0.0f ? 1.0f : -1.0f;
+
+    vector3 const  default_normal_in_box_space =
+            default_normal_coord_sign * get_world_coord_system_explicit().basis_vector(default_normal_coord_index);
+
+    vector3 const  default_normal_in_world_space =
+            normalised(vector3_from_orthonormal_base(
+                    default_normal_in_box_space,
+                    box_location.basis_vector_x(),
+                    box_location.basis_vector_y(),
+                    box_location.basis_vector_z()
+                    ));
+
+    for (natural_32_bit  i = 0U; i != triangle_clipped_points.size(); ++i)
+    {
+        collision_shape_feature_id const&  triangle_feature_id = triangle_feature_ids.at(i);
+        if (triangle_feature_id.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::EDGE)
+            && (triangle_edges_ignore_mask & triangle_feature_id.m_feature_index) != 0U)
+            continue;
+        if (triangle_feature_id.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::VERTEX)
+            && (triangle_edges_ignore_mask & triangle_feature_id.m_feature_index) != 0U
+            && (triangle_edges_ignore_mask & ((triangle_feature_id.m_feature_index + 2U) % 3U)) != 0U)
+            continue;
+
+        float_32_bit const  penetration_depth = std::fabs(
+                default_normal_coord_sign * box_half_sizes_along_axes(default_normal_coord_index)
+                - triangle_clipped_points.at(i)(default_normal_coord_index)
+                );
+
+        float_32_bit constexpr  MAX_PENETRATION_DEPTH = 0.01f;
+
+        output_collision_contacts.push_back({
+            point3_from_orthonormal_base(
+                    triangle_clipped_points.at(i),
+                    box_location.origin(),
+                    box_location.basis_vector_x(),
+                    box_location.basis_vector_y(),
+                    box_location.basis_vector_z()
+                    ),
+            triangle_feature_id.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE) ?
+                    -triangle_unit_normal_in_world_space :
+                    default_normal_in_world_space,
+            std::min(MAX_PENETRATION_DEPTH, penetration_depth),
+            { compute_closest_box_feature_to_a_point(triangle_clipped_points.at(i), box_half_sizes_along_axes), triangle_feature_id }
+        });
+    }
+}
+
 
 
 }
