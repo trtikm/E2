@@ -1314,7 +1314,142 @@ bool  clip_triangle_into_bbox(
         std::vector<collision_shape_feature_id>* const  output_triangle_feature_ids
         )
 {
-    NOT_IMPLEMENTED_YET();
+    struct  clip_plane_info
+    {
+        natural_32_bit  coord_index;
+        float_32_bit  origin;
+        float_32_bit  normal;
+    };
+    clip_plane_info const  clip_planes[6] = {
+        { 0U, bbox_low_corner(0),   1.0f },
+        { 0U, bbox_high_corner(0), -1.0f },
+        { 1U, bbox_low_corner(1),   1.0f },
+        { 1U, bbox_high_corner(1), -1.0f },
+        { 2U, bbox_low_corner(2),   1.0f },
+        { 2U, bbox_high_corner(2), -1.0f },
+    };
+
+    std::vector<vector3> tmp_clip_points_1, tmp_clip_points_2;
+    tmp_clip_points_1.reserve(9);
+    tmp_clip_points_1.push_back(triangle_point_1);
+    tmp_clip_points_1.push_back(triangle_point_2);
+    tmp_clip_points_1.push_back(triangle_point_3);
+    tmp_clip_points_2.reserve(9);
+    std::vector<vector3>* const  clip_point_buffers[2] = {
+        &tmp_clip_points_1,
+        output_triangle_clipped_points == nullptr ? &tmp_clip_points_2 : output_triangle_clipped_points
+    };
+
+    std::vector<collision_shape_feature_id>  tmp_feature_ids_1, tmp_feature_ids_2;
+    tmp_feature_ids_1.reserve(9);
+    tmp_feature_ids_1.push_back(make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U));
+    tmp_feature_ids_1.push_back(make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 1U));
+    tmp_feature_ids_1.push_back(make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 2U));
+    tmp_feature_ids_2.reserve(9);
+    std::vector<collision_shape_feature_id>* const  feature_id_buffers[2] = {
+        &tmp_feature_ids_1,
+        output_triangle_feature_ids == nullptr ? &tmp_feature_ids_2 : output_triangle_feature_ids
+    };
+
+    auto const  get_intersection_feature_id =
+        [](collision_shape_feature_id const  id_A, collision_shape_feature_id const  id_B) ->collision_shape_feature_id {
+            switch (as_collision_shape_feature_type(id_A.m_feature_type))
+            {
+            case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+                switch (as_collision_shape_feature_type(id_B.m_feature_type))
+                {
+                case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+                    return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, id_A.m_feature_index);
+                case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+                    if (id_A.m_feature_index == id_B.m_feature_index)
+                        return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, id_A.m_feature_index);
+                    return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+                    return id_B;
+                default: UNREACHABLE(); break;
+                }
+            case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+                switch (as_collision_shape_feature_type(id_B.m_feature_type))
+                {
+                case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+                    if ((id_A.m_feature_index + 1U) % 3U == id_B.m_feature_index)
+                        return id_A;
+                    return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+                    if (id_A.m_feature_index == id_B.m_feature_index)
+                        return id_A;
+                    return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+                case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+                    return id_B;
+                default: UNREACHABLE(); break;
+                }
+            case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+                return id_A;
+            default: UNREACHABLE(); break;
+            }
+        };
+
+    for (natural_32_bit  i = 0U; i != 6U; ++i)
+    {
+        clip_plane_info const&  clip_plane = clip_planes[i];
+
+        float_32_bit const  dot_n_o = clip_plane.normal * clip_plane.origin;
+
+        clip_point_buffers[1]->clear();
+        feature_id_buffers[1]->clear();
+        for (natural_32_bit  n = (natural_32_bit)clip_point_buffers[0]->size(), j = n - 1U, k = 0U; k != n; j = k, ++k)
+        {
+            vector3 const&  A = clip_point_buffers[0]->at(j);
+            vector3 const&  B = clip_point_buffers[0]->at(k);
+
+            collision_shape_feature_id const  id_A = feature_id_buffers[0]->at(j);
+            collision_shape_feature_id const  id_B = feature_id_buffers[0]->at(k);
+
+            // normal * (X - origin) = 0
+            // X = A + t*(B-A)
+            // --------------------
+            // normal * (A + t*(B-A) - origin) = 0
+            // t * normal * (B-A) + normal * (A - origin) = 0
+            // t * (dot(normal,B) - dot(normal,A)) + (dot(normal,A) - dot(normal,origin)) = 0
+
+            float_32_bit const  dot_n_A = clip_plane.normal * A(clip_plane.coord_index);
+            float_32_bit const  dot_n_B = clip_plane.normal * B(clip_plane.coord_index);
+
+            float_32_bit constexpr  epsilon = 0.001f;
+
+            if (dot_n_A < dot_n_o) // Is A below the clip plane? (~ dot(n, A - O) < 0.0f)
+            {
+                if (dot_n_o + epsilon < dot_n_B)
+                {
+                    float_32_bit const  t = (dot_n_o - dot_n_A) / (dot_n_B - dot_n_A);
+                    clip_point_buffers[1]->push_back(A + t * (B - A));
+                    feature_id_buffers[1]->push_back(get_intersection_feature_id(id_A, id_B));
+                }
+            }
+            else
+            {
+                clip_point_buffers[1]->push_back(A);
+                feature_id_buffers[1]->push_back(id_A);
+                if (dot_n_B < dot_n_o - epsilon)
+                {
+                    float_32_bit const  t = (dot_n_o - dot_n_A) / (dot_n_B - dot_n_A);
+                    clip_point_buffers[1]->push_back(A + t * (B - A));
+                    feature_id_buffers[1]->push_back(get_intersection_feature_id(id_A, id_B));
+                }
+                else if (dot_n_B < dot_n_o)
+                {
+                    clip_point_buffers[1]->push_back(B);
+                    feature_id_buffers[1]->push_back(id_B);
+                }
+            }
+        }
+        clip_point_buffers[0]->swap(*clip_point_buffers[1]);
+        feature_id_buffers[0]->swap(*feature_id_buffers[1]);
+    }
+    clip_point_buffers[0]->swap(*clip_point_buffers[1]);
+    feature_id_buffers[0]->swap(*feature_id_buffers[1]);
+
+    return !clip_point_buffers[1]->empty();
 }
 
 
@@ -2747,15 +2882,15 @@ void  collision_box_triangle(
     {
         collision_shape_feature_id const&  triangle_feature_id = triangle_feature_ids.at(i);
         if (triangle_feature_id.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::EDGE)
-            && (triangle_edges_ignore_mask & triangle_feature_id.m_feature_index) != 0U)
+            && (triangle_edges_ignore_mask & (1U << triangle_feature_id.m_feature_index)) != 0U)
             continue;
         if (triangle_feature_id.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::VERTEX)
-            && (triangle_edges_ignore_mask & triangle_feature_id.m_feature_index) != 0U
-            && (triangle_edges_ignore_mask & ((triangle_feature_id.m_feature_index + 2U) % 3U)) != 0U)
+            && (triangle_edges_ignore_mask & (1U << triangle_feature_id.m_feature_index)) != 0U
+            && (triangle_edges_ignore_mask & (1U << ((triangle_feature_id.m_feature_index + 2U) % 3U))) != 0U)
             continue;
 
         float_32_bit const  penetration_depth = std::fabs(
-                default_normal_coord_sign * box_half_sizes_along_axes(default_normal_coord_index)
+                - default_normal_coord_sign * box_half_sizes_along_axes(default_normal_coord_index)
                 - triangle_clipped_points.at(i)(default_normal_coord_index)
                 );
 
@@ -2770,7 +2905,7 @@ void  collision_box_triangle(
                     box_location.basis_vector_z()
                     ),
             triangle_feature_id.m_feature_type == as_number(COLLISION_SHAPE_FEATURE_TYPE::FACE) ?
-                    -triangle_unit_normal_in_world_space :
+                    triangle_unit_normal_in_world_space :
                     default_normal_in_world_space,
             std::min(MAX_PENETRATION_DEPTH, penetration_depth),
             { compute_closest_box_feature_to_a_point(triangle_clipped_points.at(i), box_half_sizes_along_axes), triangle_feature_id }
