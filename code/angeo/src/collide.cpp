@@ -2384,7 +2384,7 @@ collision_shape_feature_id  compute_closest_box_feature_to_a_point(
                 );
         break;
     case COLLISION_SHAPE_FEATURE_TYPE::FACE:
-        INVARIANT(coordinate == 0U);
+        // Due to the special case above the coordinate can be any of 0,1,2.
         id.m_feature_index = compute_feature_index_of_face_of_box(order[0U], point_in_box_local_space(order[0U]));
         break;
     default: UNREACHABLE();
@@ -2446,7 +2446,6 @@ void  compute_closest_box_feature_to_a_point(
                           vector2(std::fabs(point_in_box_local_space(order[0])), std::fabs(point_in_box_local_space(order[3U - coordinate]))));
         break;
     case COLLISION_SHAPE_FEATURE_TYPE::FACE:
-        INVARIANT(coordinate == 0U);
         output.feature_vector_in_world_space =
                 (point_in_box_local_space(order[0U]) >= 0.0f ? 1.0f : -1.0f) * box_location_in_word_space.basis_vector(order[0U]);
         output.distance_to_feature = box_half_sizes_along_axes(order[0U]) - std::fabs(point_in_box_local_space(order[0U]));

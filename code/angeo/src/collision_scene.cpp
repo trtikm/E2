@@ -1778,7 +1778,7 @@ bool  collision_scene::compute_contacts__box_vs_sphere(
             geometry_1.location.basis_vector_z()
             );
     collision_normal = normalised(vector3_from_orthonormal_base(
-            collision_vector,
+            collision_normal,
             geometry_1.location.basis_vector_x(),
             geometry_1.location.basis_vector_y(),
             geometry_1.location.basis_vector_z()
