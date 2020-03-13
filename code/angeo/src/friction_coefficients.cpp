@@ -32,7 +32,7 @@ float_32_bit  get_static_friction_coefficient(
           .0f,    .0f,        .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,  // NO_FRINCTION_NO_BOUNCING
     //  ASPHALT CONCRETE    DIRT    GLASS   GRASS   GUM     ICE     LEATHER MUD     PLASTIC RUBBER  STEEL   WOOD    NO_FRINCTION_NO_BOUNCING
     };
-    return material_0 < material_1 ? static_friction_coefficient[(natural_8_bit)material_0][(natural_8_bit)material_1] :
+    return material_0 > material_1 ? static_friction_coefficient[(natural_8_bit)material_0][(natural_8_bit)material_1] :
                                      static_friction_coefficient[(natural_8_bit)material_1][(natural_8_bit)material_0] ;
 }
 
@@ -61,7 +61,7 @@ float_32_bit  get_dynamic_friction_coefficient(
           .0f,    .0f,        .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,  // NO_FRINCTION_NO_BOUNCING
     //  ASPHALT CONCRETE    DIRT    GLASS   GRASS   GUM     ICE     LEATHER MUD     PLASTIC RUBBER  STEEL   WOOD    NO_FRINCTION_NO_BOUNCING
     };
-    return material_0 < material_1 ? dynamic_friction_coefficient[(natural_8_bit)material_0][(natural_8_bit)material_1] :
+    return material_0 > material_1 ? dynamic_friction_coefficient[(natural_8_bit)material_0][(natural_8_bit)material_1] :
                                      dynamic_friction_coefficient[(natural_8_bit)material_1][(natural_8_bit)material_0] ;
 }
 
