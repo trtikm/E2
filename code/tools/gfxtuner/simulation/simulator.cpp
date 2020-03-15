@@ -947,9 +947,6 @@ void  simulator::on_simulation_resumed()
     m_scene_edit_data.invalidate_data();
     m_scene_history->clear();
 
-    m_cache_of_batches_of_colliders.clear();
-    m_cache_of_batches_of_ai_agents.clear();
-
     call_listeners(simulator_notifications::resumed());
 }
 
@@ -2207,8 +2204,14 @@ void  simulator::render_colliders(
     qtgl::glapi().glGetIntegerv(GL_POLYGON_MODE, &backup_polygon_mode[0]);
     qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    cache_of_batches_of_colliders::boxes_map  old_boxes;  old_boxes.swap(m_cache_of_batches_of_colliders.boxes);
+    cache_of_batches_of_colliders::spheres_map  old_spheres;  old_spheres.swap(m_cache_of_batches_of_colliders.spheres);
+    cache_of_batches_of_colliders::capsules_map  old_capsules;  old_capsules.swap(m_cache_of_batches_of_colliders.capsules);
+    cache_of_batches_of_colliders::triangles_map  old_triangle_meshes;  old_triangle_meshes.swap(m_cache_of_batches_of_colliders.triangle_meshes);
+
     get_scene().foreach_node(
-        [this, &matrix_from_world_to_camera, &matrix_from_camera_to_clipspace, &draw_state](scn::scene_node_ptr const  node_ptr)
+        [this, &matrix_from_world_to_camera, &matrix_from_camera_to_clipspace, &draw_state,
+         &old_boxes, &old_spheres, &old_capsules, &old_triangle_meshes](scn::scene_node_ptr const  node_ptr)
             -> bool {
                 if (auto const collider_ptr = scn::get_collider(*node_ptr))
                 {
@@ -2220,12 +2223,13 @@ void  simulator::render_colliders(
                         case angeo::COLLISION_SHAPE_TYPE::BOX:
                             {
                                 vector3 const  key { m_collision_scene_ptr->get_box_half_sizes_along_axes(coid) };
-                                auto  it = m_cache_of_batches_of_colliders.boxes.find(key);
-                                if (it == m_cache_of_batches_of_colliders.boxes.end())
-                                    it = m_cache_of_batches_of_colliders.boxes.insert({
+                                auto  it = old_boxes.find(key);
+                                if (it == old_boxes.end())
+                                    it = old_boxes.insert({
                                                 key,
                                                 qtgl::create_wireframe_box(key, m_colliders_colour)
                                                 }).first;
+                                m_cache_of_batches_of_colliders.boxes.insert(*it);
                                 batches.push_back(it->second);
                             }
                             break;
@@ -2235,24 +2239,26 @@ void  simulator::render_colliders(
                                         m_collision_scene_ptr->get_capsule_half_distance_between_end_points(coid),
                                         m_collision_scene_ptr->get_capsule_thickness_from_central_line(coid)
                                         };
-                                auto  it = m_cache_of_batches_of_colliders.capsules.find(key);
-                                if (it == m_cache_of_batches_of_colliders.capsules.end())
-                                    it = m_cache_of_batches_of_colliders.capsules.insert({
+                                auto  it = old_capsules.find(key);
+                                if (it == old_capsules.end())
+                                    it = old_capsules.insert({
                                                 key,
                                                 qtgl::create_wireframe_capsule(key.first, key.second, 5U, m_colliders_colour)
                                                 }).first;
+                                m_cache_of_batches_of_colliders.capsules.insert(*it);
                                 batches.push_back(it->second);
                             }
                             break;
                         case angeo::COLLISION_SHAPE_TYPE::SPHERE:
                             {
                                 float_32_bit const  key = m_collision_scene_ptr->get_sphere_radius(coid);
-                                auto  it = m_cache_of_batches_of_colliders.spheres.find(key);
-                                if (it == m_cache_of_batches_of_colliders.spheres.end())
-                                    it = m_cache_of_batches_of_colliders.spheres.insert({
+                                auto  it = old_spheres.find(key);
+                                if (it == old_spheres.end())
+                                    it = old_spheres.insert({
                                                 key,
                                                 qtgl::create_wireframe_sphere(key, 5U, m_colliders_colour)
                                                 }).first;
+                                m_cache_of_batches_of_colliders.spheres.insert(*it);
                                 batches.push_back(it->second);
                             }
                             break;
@@ -2264,8 +2270,8 @@ void  simulator::render_colliders(
                                 std::string const  key =
                                     boost::filesystem::path(vertices_getter_ptr->get_vertex_buffer().key().get_unique_id())
                                             .parent_path().string();
-                                auto  it = m_cache_of_batches_of_colliders.triangle_meshes.find(key);
-                                if (it == m_cache_of_batches_of_colliders.triangle_meshes.end())
+                                auto  it = old_triangle_meshes.find(key);
+                                if (it == old_triangle_meshes.end())
                                 {
                                     qtgl::batch  triangles_batch;
                                     qtgl::batch  normals_batch;
@@ -2345,6 +2351,7 @@ void  simulator::render_colliders(
                                                 { triangles_batch, normals_batch, neighbours_batch }
                                                 }).first;
                                 }
+                                m_cache_of_batches_of_colliders.triangle_meshes.insert(*it);
                                 batches.push_back(it->second.triangles);
                                 if (m_do_show_normals_of_collision_triangles)
                                     batches.push_back(it->second.normals);

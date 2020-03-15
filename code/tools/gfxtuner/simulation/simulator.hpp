@@ -457,12 +457,17 @@ private:
             qtgl::batch  neighbours;
         };
 
-        std::unordered_map<
-                vector3, qtgl::batch,
-                angeo::tensor_hash<vector3, 1000U>, angeo::tensor_equal_to<vector3, 1000U> >  boxes;
-        std::unordered_map<float_32_bit, qtgl::batch>  spheres;
-        std::unordered_map<std::pair<float_32_bit, float_32_bit>, qtgl::batch>  capsules;
-        std::unordered_map<std::string, triangle_mesh_batches>  triangle_meshes;
+        using  boxes_map = std::unordered_map<vector3, qtgl::batch,
+                                             angeo::tensor_hash<vector3, 1000U>,
+                                             angeo::tensor_equal_to<vector3, 1000U> >;
+        using  spheres_map = std::unordered_map<float_32_bit, qtgl::batch>;
+        using  capsules_map = std::unordered_map<std::pair<float_32_bit, float_32_bit>, qtgl::batch>;
+        using  triangles_map = std::unordered_map<std::string, triangle_mesh_batches>;
+
+        boxes_map  boxes;
+        spheres_map  spheres;
+        capsules_map  capsules;
+        triangles_map  triangle_meshes;
 
         std::unique_ptr<std::vector< std::pair<vector3, vector3> > >  collision_normals_points;
         qtgl::batch  collision_normals_batch;
