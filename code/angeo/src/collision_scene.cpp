@@ -1784,7 +1784,7 @@ bool  collision_scene::compute_contacts__box_vs_sphere(
             geometry_1.location.basis_vector_z()
             ));
 
-    static contact_id const  cid{
+    contact_id const  cid{
         { coid_1, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U) },
         { coid_2, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VOLUME, 0U) },
     };
