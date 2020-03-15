@@ -2649,12 +2649,11 @@ bool  collision_box_box(
 
     raw_collision_points_map raw_collision_points_1;
     clip_polyhedron(box_1_polygons, from_box_1_matrix, box_2_clip_planes, feature_id_bit_shift, raw_collision_points_1);
-    if (raw_collision_points_1.empty())
-        return false;
 
     raw_collision_points_map raw_collision_points_2;
     clip_polyhedron(box_2_polygons, from_box_2_matrix, box_1_clip_planes, feature_id_bit_shift, raw_collision_points_2);
-    if (raw_collision_points_2.empty())
+
+    if (raw_collision_points_1.empty() && raw_collision_points_2.empty())
         return false;
 
     vector3  mass_center_of_collision_points;
@@ -2779,7 +2778,6 @@ bool  collision_box_box(
                             collect_contact_points_2(it_2);
                 }
             }
-            INVARIANT(!collision_points.empty());
             for (auto const&  point_and_info : collision_points)
             {
                 output_collision_points_in_world_space->push_back(point_and_info.first);
@@ -2788,6 +2786,7 @@ bool  collision_box_box(
                 if (output_collision_shape_feature_ids != nullptr)
                     output_collision_shape_feature_ids->push_back({point_and_info.second.feature_id_1, point_and_info.second.feature_id_2});
             }
+            return !collision_points.empty();
         }
     }
 

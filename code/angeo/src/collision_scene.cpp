@@ -1761,7 +1761,7 @@ bool  collision_scene::compute_contacts__box_vs_sphere(
                                         vector3_unit_x() : vector3_unit_z())
                                 : (geometry_1.half_sizes_along_axes(1) < geometry_1.half_sizes_along_axes(2) ?
                                         vector3_unit_y() : vector3_unit_z());
-        if (dot_product(collision_normal, collision_point) < 0.0f)
+        if (dot_product(collision_normal, collision_point) > 0.0f)
             collision_normal = -collision_normal;
     }
     else
