@@ -189,6 +189,15 @@ private:
 };
 
 
+vector3  compute_velocity_of_point_of_rigid_body(
+        // All vectors must be in the same coord system, of course.
+        vector3 const&  rigid_body_mass_centre_position,
+        vector3 const&  rigid_body_linear_velocity,
+        vector3 const&  rigid_body_angular_velocity,
+        vector3 const&  point
+        );
+
+
 }
 
 #endif

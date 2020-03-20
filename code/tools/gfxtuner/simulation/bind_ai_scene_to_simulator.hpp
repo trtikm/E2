@@ -89,6 +89,8 @@ struct bind_ai_scene_to_simulator : public ai::scene
     vector3  get_external_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const override;
     vector3  get_external_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const override;
 
+    vector3  get_linear_velocity_of_collider_at_point(collision_object_id const  coid, vector3 const&  point_in_world_space) const override;
+
     void  register_to_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
             ai::object_id const&  oid       // Identifies an ai object which will receive the contancts of the collider to its blackboard.
@@ -99,12 +101,13 @@ struct bind_ai_scene_to_simulator : public ai::scene
             ) override;
     bool  do_tracking_collision_contact_of_collision_object(angeo::collision_object_id const  coid) const;
     void  on_collision_contact(
-            angeo::collision_object_id const  coid,
             vector3 const&  contact_point_in_world_space,
             vector3 const&  unit_normal_in_world_space,
-            angeo::COLLISION_MATERIAL_TYPE const  material,
             float_32_bit const  normal_force_magnitude,
-            angeo::collision_object_id const* const  other_coid_ptr
+            angeo::collision_object_id const  coid,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::collision_object_id const  other_coid,
+            angeo::COLLISION_MATERIAL_TYPE const  other_material
             ) const;
 
     angeo::collision_scene const&  get_collision_scene() const;
@@ -116,15 +119,6 @@ private:
 
     using collision_contacts_stream_type =
             std::unordered_map<angeo::collision_object_id, std::pair<node_id, std::unordered_set<ai::object_id> > >;
-
-    void  on_collision_contact(
-            collision_contacts_stream_type::const_iterator const  it,
-            vector3 const&  contact_point_in_world_space,
-            vector3 const&  unit_normal_in_world_space,
-            angeo::COLLISION_MATERIAL_TYPE const  material,
-            float_32_bit const  normal_force_magnitude,
-            collision_contacts_stream_type::const_iterator const  other_it
-            ) const;
 
     simulator*  m_simulator_ptr;
     collision_contacts_stream_type  m_collision_contacts_stream;

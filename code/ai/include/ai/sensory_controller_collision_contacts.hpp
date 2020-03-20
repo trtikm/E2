@@ -24,11 +24,11 @@ struct  sensory_controller_collision_contacts final
                                                     // vectors respectively. Namely, given a vector to a contact point in the 
                                                     // mentioned Cartesian coordinates, its angle from the 'forward' vector in the
                                                     // ('forward', 'left') plane, scaled to the interval <0, 1>, is the x cell
-                                                    // coodinate, and is angle from ('forward', 'left') plane, scaled to the
+                                                    // coodinate, and its angle from ('forward', 'left') plane, scaled to the
                                                     // interval <0, 1>, is the y cell coodinate.
         std::function<float_32_bit(float_32_bit)>  distribution_of_cells_along_y_axis;
                                                     // Although the cells form a regular 2D grid in the memory model, it might
-                                                    // might still be useful to control a spatial distribution of the cells in
+                                                    // still be useful to control a spatial distribution of the cells in
                                                     // the Cartesian coord. system. Typically, the density of cells inreases as
                                                     // we go further from the ('forward', 'left') plane. The function here defines
                                                     // that stretching. The argument is always in range <0.0, 1.0> and the return

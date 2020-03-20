@@ -12,7 +12,12 @@ namespace angeo { namespace detail {
 
 vector3  compute_velocity_of_point_of_rigid_body(rigid_body const&  rb, vector3 const&  point)
 {
-    return rb.m_velocity.m_linear + cross_product(rb.m_velocity.m_angular, point - rb.m_position_of_mass_centre);
+    return angeo::compute_velocity_of_point_of_rigid_body(
+            rb.m_position_of_mass_centre,
+            rb.m_velocity.m_linear,
+            rb.m_velocity.m_angular,
+            point
+            );
 }
 
 
@@ -380,6 +385,22 @@ void  rigid_body_simulator::update_contact_cache()
     m_from_constraints_to_contact_ids.clear();
 
     m_statistics.m_contact_cache_size = (natural_32_bit)m_contact_cache.size();
+}
+
+
+}
+
+namespace angeo {
+
+
+vector3  compute_velocity_of_point_of_rigid_body(
+        vector3 const&  rigid_body_mass_centre_position,
+        vector3 const&  rigid_body_linear_velocity,
+        vector3 const&  rigid_body_angular_velocity,
+        vector3 const&  point
+        )
+{
+    return rigid_body_linear_velocity + cross_product(rigid_body_angular_velocity, point - rigid_body_mass_centre_position);
 }
 
 

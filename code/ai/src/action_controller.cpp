@@ -7,6 +7,7 @@
 #include <ai/detail/ideal_velocity_buider.hpp>
 #include <ai/detail/collider_utils.hpp>
 #include <angeo/skeleton_kinematics.hpp>
+#include <angeo/friction_coefficients.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -41,8 +42,12 @@ natural_32_bit  choose_next_motion_action(
                         bb->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map(),
                         bb->m_action_controller->get_motion_object_motion(),
                         *ctx.desire_props_ptr,
+                        bb->m_action_controller->get_environment_linear_velocity(),
+                        bb->m_action_controller->get_environment_angular_velocity(),
+                        bb->m_action_controller->get_environment_acceleration_coef(),
                         bb->m_action_controller->get_external_linear_acceleration(),
                         bb->m_action_controller->get_external_angular_acceleration(),
+                        nullptr,
                         nullptr
                         )
                 ? guard_valid_cost_addon : guard_invalid_cost_addon;
@@ -87,6 +92,9 @@ action_controller::intepolation_state::intepolation_state()
 
 action_controller::action_controller(blackboard_agent_weak_ptr const  blackboard_)
     : m_motion_object_motion()
+    , m_environment_linear_velocity(vector3_zero())
+    , m_environment_angular_velocity(vector3_zero())
+    , m_environment_acceleration_coef(0.0f)
     , m_external_linear_acceleration(vector3_zero())
     , m_external_angular_acceleration(vector3_zero())
 
@@ -276,21 +284,31 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
 
     // And finally, we update dynamics of agent's motion object (forces and torques).
     std::vector<skeletal_motion_templates::guarded_actions_ptr>  satisfied_guarded_actions;
-    if (detail::get_satisfied_motion_guarded_actions(
+    std::vector<scene::collicion_contant_info_ptr>  contacts_in_normal_cone;
+    bool const  has_satisfied_guard = detail::get_satisfied_motion_guarded_actions(
             m_current_intepolation_state.disjunction_of_guarded_actions,
             get_blackboard()->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map(),
             m_motion_object_motion,
             get_regulated_motion_desire_props(),
+            m_environment_linear_velocity,
+            m_environment_angular_velocity,
+            m_environment_acceleration_coef,
             m_external_linear_acceleration,
             m_external_angular_acceleration,
-            &satisfied_guarded_actions
-            ))
-    {
+            &satisfied_guarded_actions,
+            &contacts_in_normal_cone
+            );
+
+    compute_environment_motion(contacts_in_normal_cone);
+    if (has_satisfied_guard)
         execute_satisfied_motion_guarded_actions(
                 satisfied_guarded_actions,
                 time_step_in_seconds,
                 m_ideal_linear_velocity_in_world_space,
                 m_ideal_angular_velocity_in_world_space,
+                m_environment_linear_velocity,
+                m_environment_angular_velocity,
+                m_environment_acceleration_coef,
                 m_external_linear_acceleration,
                 m_external_angular_acceleration,
                 get_regulated_motion_desire_props(),
@@ -298,9 +316,45 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 m_motion_object_motion,
                 m_motion_action_data
                 );
-    }
     m_motion_object_motion.commit_velocities(get_blackboard()->m_scene, m_motion_object_motion.nid);
     m_motion_object_motion.commit_accelerations(get_blackboard()->m_scene, m_motion_object_motion.nid);
+}
+
+
+void  action_controller::compute_environment_motion(std::vector<scene::collicion_contant_info_ptr> const&  contacts_in_normal_cone)
+{
+    if (contacts_in_normal_cone.empty())
+        return;
+    clear_environment_motion();
+
+    float_32_bit const  max_accel = std::max(1.0f, length(m_external_linear_acceleration));
+
+    for (scene::collicion_contant_info_ptr  contact_ptr : contacts_in_normal_cone)
+    {
+        m_environment_linear_velocity += get_blackboard()->m_scene->get_linear_velocity_of_collider_at_point(
+                contact_ptr->other_coid,
+                contact_ptr->contact_point_in_world_space
+                );
+        m_environment_acceleration_coef +=
+                angeo::get_static_friction_coefficient(
+                        contact_ptr->self_material == angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING ?
+                                    angeo::COLLISION_MATERIAL_TYPE::LEATHER :
+                                    contact_ptr->self_material,
+                        contact_ptr->other_material
+                        )
+                * (contact_ptr->normal_force_magnitude / max_accel);
+    }
+    m_environment_acceleration_coef /= (float_32_bit)contacts_in_normal_cone.size();
+    m_environment_acceleration_coef = std::min(m_environment_acceleration_coef, 1.0f);
+    m_environment_linear_velocity /= (float_32_bit)contacts_in_normal_cone.size();
+}
+
+
+void  action_controller::clear_environment_motion()
+{
+    m_environment_linear_velocity = vector3_zero();
+    m_environment_angular_velocity = vector3_zero();
+    m_environment_acceleration_coef = 0.0f;
 }
 
 
@@ -346,11 +400,11 @@ float_32_bit  action_controller::compute_interpolation_speed() const
 
     float_32_bit const  linear_speed_coef = compute_speed_coef(
             length(m_motion_object_motion.velocity.m_linear),
-            length(m_ideal_linear_velocity_in_world_space)
+            length(m_ideal_linear_velocity_in_world_space + m_environment_linear_velocity)
             );
     float_32_bit const  angular_speed_coef = compute_speed_coef(
             length(m_motion_object_motion.velocity.m_angular),
-            length(m_ideal_angular_velocity_in_world_space)
+            length(m_ideal_angular_velocity_in_world_space + m_environment_angular_velocity)
             );
 
     float_32_bit const  raw_interpolation_speed =

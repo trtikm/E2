@@ -21,18 +21,27 @@ struct  scene
         collicion_contant_info(
                 vector3 const&  contact_point_in_world_space_,
                 vector3 const&  unit_normal_in_world_space_,
-                angeo::COLLISION_MATERIAL_TYPE const  material_,
-                float_32_bit const  normal_force_magnitude_
+                float_32_bit const  normal_force_magnitude_,
+                collision_object_id const  self_coid_,
+                angeo::COLLISION_MATERIAL_TYPE const  self_material_,
+                collision_object_id const  other_coid_,
+                angeo::COLLISION_MATERIAL_TYPE const  other_material_
                 )
             : contact_point_in_world_space(contact_point_in_world_space_)
             , unit_normal_in_world_space(unit_normal_in_world_space_)
-            , material(material_)
             , normal_force_magnitude(normal_force_magnitude_)
+            , self_coid(self_coid_)
+            , self_material(self_material_)
+            , other_coid(other_coid_)
+            , other_material(other_material_)
         {}
         vector3  contact_point_in_world_space;
         vector3  unit_normal_in_world_space;
-        angeo::COLLISION_MATERIAL_TYPE  material;
         float_32_bit  normal_force_magnitude;
+        collision_object_id  self_coid;
+        angeo::COLLISION_MATERIAL_TYPE  self_material;
+        collision_object_id  other_coid;
+        angeo::COLLISION_MATERIAL_TYPE  other_material;
     };
     using  collicion_contant_info_ptr = std::shared_ptr<collicion_contant_info const>;
 
@@ -199,6 +208,8 @@ struct  scene
     virtual matrix33  get_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid) const = 0;
     virtual void  set_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid, matrix33 const&  inverted_inertia_tensor) = 0;
     virtual void  erase_rigid_body_from_scene_node(node_id const&  nid) = 0;
+
+    virtual vector3  get_linear_velocity_of_collider_at_point(collision_object_id const  coid, vector3 const&  point_in_world_space) const = 0;
 
     virtual vector3  get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const = 0;
     virtual vector3  get_initial_external_angular_acceleration_at_point(vector3 const&  position_in_world_space) const = 0;

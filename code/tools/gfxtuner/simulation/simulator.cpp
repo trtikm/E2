@@ -1009,8 +1009,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     //    max_computation_time_in_seconds -= duration_of_last_simulation_step_in_seconds;
     //}
 
-    process_ai_requests();
     get_ai_simulator()->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
+    process_ai_requests();
 
     if (m_do_show_ai_action_controller_props)
     {
@@ -1118,12 +1118,13 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 
     struct  contact_props
     {
-        angeo::collision_object_id  other_coid;
-        bool  is_other_coid_tracked;
         vector3  contact_point;
         vector3  unit_normal;
-        angeo::COLLISION_MATERIAL_TYPE  material;
         float_32_bit  normal_force_magnitude;
+        angeo::collision_object_id  coid;
+        angeo::COLLISION_MATERIAL_TYPE  material;
+        angeo::collision_object_id  other_coid;
+        angeo::COLLISION_MATERIAL_TYPE  other_material;
     };
     std::unordered_map<angeo::collision_object_id, std::unordered_map<angeo::motion_constraint_system::constraint_id, contact_props> >
             ai_scene_binding_contacts;
@@ -1153,9 +1154,9 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     if (rb_1_it == m_binding_of_collision_objects.cend() || rb_2_it == m_binding_of_collision_objects.cend())
                     {
                         if (track_coid_1)
-                            ai_scene_binding->on_collision_contact(coid_1, contact_point, unit_normal, material_2, 0.0f, &coid_2);
+                            ai_scene_binding->on_collision_contact(contact_point, unit_normal, 0.0f, coid_1, material_1, coid_2, material_2);
                         if (track_coid_2)
-                            ai_scene_binding->on_collision_contact(coid_2, contact_point, -unit_normal, material_1, 0.0f, &coid_1);
+                            ai_scene_binding->on_collision_contact(contact_point, -unit_normal, 0.0f, coid_2, material_2, coid_1, material_1);
                         return true;
                     }
 
@@ -1191,20 +1192,22 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     if (track_coid_1)
                     {
                         auto&  info_ref = ai_scene_binding_contacts[coid_1][output_constraint_ids.front()];
-                        info_ref.other_coid = coid_2;
-                        info_ref.is_other_coid_tracked = track_coid_2;
                         info_ref.contact_point = contact_point;
                         info_ref.unit_normal = unit_normal;
-                        info_ref.material = material_2;
+                        info_ref.coid = coid_1;
+                        info_ref.material = material_1;
+                        info_ref.other_coid = coid_2;
+                        info_ref.other_material = material_2;
                     }
                     if (track_coid_2)
                     {
                         auto&  info_ref = ai_scene_binding_contacts[coid_2][output_constraint_ids.front()];
-                        info_ref.other_coid = coid_1;
-                        info_ref.is_other_coid_tracked = track_coid_1;
                         info_ref.contact_point = contact_point;
                         info_ref.unit_normal = -unit_normal;
-                        info_ref.material = material_1;
+                        info_ref.coid = coid_2;
+                        info_ref.material = material_2;
+                        info_ref.other_coid = coid_1;
+                        info_ref.other_material = material_1;
                     }
 
                     return true;
@@ -1216,12 +1219,13 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
     for (auto const&  coid_and_info : ai_scene_binding_contacts)
         for (auto const& constraint_id_and_info : coid_and_info.second)
             ai_scene_binding->on_collision_contact(
-                    coid_and_info.first,
                     constraint_id_and_info.second.contact_point,
                     constraint_id_and_info.second.unit_normal,
-                    constraint_id_and_info.second.material,
                     m_rigid_body_simulator_ptr->get_constraint_system().get_solution_of_constraint(constraint_id_and_info.first),
-                    constraint_id_and_info.second.is_other_coid_tracked ? &constraint_id_and_info.second.other_coid : nullptr
+                    constraint_id_and_info.second.coid,
+                    constraint_id_and_info.second.material,
+                    constraint_id_and_info.second.other_coid,
+                    constraint_id_and_info.second.other_material
                     );
 
     m_rigid_body_simulator_ptr->integrate_motion_of_rigid_bodies(time_to_simulate_in_seconds);
@@ -3257,6 +3261,17 @@ void  simulator::get_rigid_body_info(
     props.m_external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_ptr->id());
     props.m_mass_inverted = m_rigid_body_simulator_ptr->get_inverted_mass(rb_ptr->id());
     props.m_inertia_tensor_inverted = m_rigid_body_simulator_ptr->get_inverted_inertia_tensor_in_local_space(rb_ptr->id());
+}
+
+
+bool  simulator::get_rigid_body_of_collider(angeo::collision_object_id const  coid, angeo::rigid_body_id* const  output_rigid_body_id_ptr)
+{
+    auto const  rb_it = m_binding_of_collision_objects.find(coid);
+    if (rb_it == m_binding_of_collision_objects.cend())
+        return false;
+    if (output_rigid_body_id_ptr != nullptr)
+        *output_rigid_body_id_ptr = rb_it->second;
+    return true;
 }
 
 

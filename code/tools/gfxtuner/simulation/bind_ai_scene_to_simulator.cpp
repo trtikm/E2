@@ -410,6 +410,24 @@ vector3  bind_ai_scene_to_simulator::get_external_angular_acceleration_of_rigid_
 }
 
 
+vector3  bind_ai_scene_to_simulator::get_linear_velocity_of_collider_at_point(
+        collision_object_id const  coid,
+        vector3 const&  point_in_world_space
+        ) const
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    angeo::rigid_body_id  rb_id;
+    if (!m_simulator_ptr->get_rigid_body_of_collider(coid, &rb_id))
+        return vector3_zero();
+    return angeo::compute_velocity_of_point_of_rigid_body(
+            m_simulator_ptr->get_rigid_body_simulator()->get_position_of_mass_centre(rb_id),
+            m_simulator_ptr->get_rigid_body_simulator()->get_linear_velocity(rb_id),
+            m_simulator_ptr->get_rigid_body_simulator()->get_angular_velocity(rb_id),
+            point_in_world_space
+            );
+}
+
+
 void  bind_ai_scene_to_simulator::register_to_collision_contacts_stream(
         node_id const&  collider_nid,
         ai::object_id const&  oid
@@ -456,34 +474,21 @@ bool  bind_ai_scene_to_simulator::do_tracking_collision_contact_of_collision_obj
 
 
 void  bind_ai_scene_to_simulator::on_collision_contact(
+        vector3 const&  contact_point_in_world_space,
+        vector3 const&  unit_normal_in_world_space,
+        float_32_bit const  normal_force_magnitude,
         angeo::collision_object_id const  coid,
-        vector3 const&  contact_point_in_world_space,
-        vector3 const&  unit_normal_in_world_space,
         angeo::COLLISION_MATERIAL_TYPE const  material,
-        float_32_bit const  normal_force_magnitude,
-        angeo::collision_object_id const* const  other_coid_ptr
+        angeo::collision_object_id const  other_coid,
+        angeo::COLLISION_MATERIAL_TYPE const  other_material
         ) const
 {
-    on_collision_contact(
-            m_collision_contacts_stream.find(coid),
-            contact_point_in_world_space,
-            unit_normal_in_world_space,
-            material,
-            normal_force_magnitude,
-            other_coid_ptr == nullptr ? m_collision_contacts_stream.cend() : m_collision_contacts_stream.find(*other_coid_ptr)
-            );
-}
-
-
-void  bind_ai_scene_to_simulator::on_collision_contact(
-        collision_contacts_stream_type::const_iterator const  it,
-        vector3 const&  contact_point_in_world_space,
-        vector3 const&  unit_normal_in_world_space,
-        angeo::COLLISION_MATERIAL_TYPE const  material,
-        float_32_bit const  normal_force_magnitude,
-        collision_contacts_stream_type::const_iterator const  other_it
-        ) const
-{
+    collision_contacts_stream_type::const_iterator const  it = m_collision_contacts_stream.find(coid);
+    collision_contacts_stream_type::const_iterator const  other_it =
+            other_coid == angeo::get_invalid_collision_object_id() ?
+                    m_collision_contacts_stream.cend() :
+                    m_collision_contacts_stream.find(other_coid)
+                    ;
 
     ASSUMPTION(m_simulator_ptr != nullptr && it != m_collision_contacts_stream.cend());
 
@@ -491,8 +496,11 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
             std::make_shared<ai::scene::collicion_contant_info>(
                     contact_point_in_world_space,
                     unit_normal_in_world_space,
+                    normal_force_magnitude,
+                    coid,
                     material,
-                    normal_force_magnitude
+                    other_coid,
+                    other_material
                     );
 
     if (other_it == m_collision_contacts_stream.cend())

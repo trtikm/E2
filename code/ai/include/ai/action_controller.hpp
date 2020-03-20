@@ -42,6 +42,9 @@ struct  action_controller
 
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
     detail::rigid_body_motion const&  get_motion_object_motion() const { return m_motion_object_motion; }
+    vector3 const&  get_environment_linear_velocity() const { return m_environment_linear_velocity; }
+    vector3 const&  get_environment_angular_velocity() const { return m_environment_angular_velocity; }
+    float_32_bit  get_environment_acceleration_coef() const { return m_environment_acceleration_coef; }
     vector3 const&  get_external_linear_acceleration() const { return m_external_linear_acceleration; }
     vector3 const&  get_external_angular_acceleration() const { return m_external_angular_acceleration; }
     float_32_bit  get_total_time_till_destination_cursor_in_seconds() const { return m_total_interpolation_time_in_seconds; }
@@ -57,11 +60,31 @@ struct  action_controller
 
 protected:
 
+    // The motion of the agent in world space. The velocities and
+    // accelerations should be computed with consideration of
+    // velocity of the environment and external acceleration (see fields below).
     detail::rigid_body_motion  m_motion_object_motion;
+    // Linear and angular velocity of agent's reference frame attached
+    // to the environment. For example, when a humanoid agent stays on
+    // an escalator, then these represent the velocity of the stairs;
+    // when the agent in on a boat, airplain, or a car, then the velocities
+    // are those of the vehicles; when the agent is a fish in a river, then
+    // the velocities represent the flow of the water in its close proximity.
+    vector3  m_environment_linear_velocity;     
+    vector3  m_environment_angular_velocity;
+    // in range <0,1>; 0 means no fraction of agent's desired accel
+    // is used to affect agent's motion; the value 1 means that whole
+    // agent's desired accel affects its motion in the enviroment.
+    float_32_bit  m_environment_acceleration_coef;
+    // Totsal external forces acting on the agent from force/accel fields.
+    // For example: gravity force.
     vector3  m_external_linear_acceleration;
     vector3  m_external_angular_acceleration;
 
 private:
+
+    void  compute_environment_motion(std::vector<scene::collicion_contant_info_ptr> const& contacts_in_normal_cone);
+    void  clear_environment_motion();
 
     void  interpolate(float_32_bit const  interpolation_param);
     void  look_at_target(float_32_bit const  time_step_in_seconds, float_32_bit const  interpolation_param);

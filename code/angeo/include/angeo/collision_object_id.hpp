@@ -4,6 +4,7 @@
 #   include <angeo/collision_shape_id.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/hash_combine.hpp>
+#   include <limits>
 
 namespace angeo {
 
@@ -16,6 +17,13 @@ struct  collision_object_id
 
 
 static_assert(sizeof(collision_object_id) == sizeof(natural_32_bit), "The id must exactly fit to 32 bits.");
+
+
+inline  collision_object_id  get_invalid_collision_object_id()
+{
+    natural_32_bit const  value = std::numeric_limits<natural_32_bit>::max();
+    return *(collision_object_id const*)&value;
+}
 
 
 inline collision_object_id  make_collision_object_id(
