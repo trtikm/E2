@@ -83,6 +83,9 @@ struct bind_ai_scene_to_simulator : public ai::scene
     void  set_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid, matrix33 const&  inverted_inertia_tensor) override;
     void  erase_rigid_body_from_scene_node(node_id const&  nid) override;
 
+    node_id  get_scene_node_of_rigid_body_associated_with_collider(collision_object_id const  coid) const override;
+    record_id  get_scene_record_of_rigid_body_associated_with_collider(collision_object_id const  coid) const override;
+
     vector3  get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const override;
     vector3  get_initial_external_angular_acceleration_at_point(vector3 const&  position_in_world_space) const override;
 
@@ -109,6 +112,7 @@ struct bind_ai_scene_to_simulator : public ai::scene
             angeo::collision_object_id const  other_coid,
             angeo::COLLISION_MATERIAL_TYPE const  other_material
             ) const;
+
 
     angeo::collision_scene const&  get_collision_scene() const;
     void  get_coids_under_scene_node(scn::scene_node_ptr const  node_ptr, std::function<bool(collision_object_id)> const&  acceptor) const;

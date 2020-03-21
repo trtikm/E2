@@ -66,10 +66,10 @@ sensor::sensor(simulator* const  simulator_,
 
     , m_collider_nids(collider_nids_)
     , m_collision_contacts_buffer()
-    , m_touch_begin_ids()
-    , m_touching_ids()
-    , m_old_touching_ids()
-    , m_touch_end_ids()
+    , m_touch_begin()
+    , m_touching()
+    , m_old_touching()
+    , m_touch_end()
 {
     ASSUMPTION(
         m_simulator != nullptr &&
@@ -128,7 +128,7 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
     {
         float_32_bit const  period = m_cfg->get_float("period_in_seconds");
         if (period <= 0.0001f)
-            m_simulator->on_sensor_event(*this);
+            m_simulator->on_sensor_event(*this, {});
         else
         {
             float_32_bit&  consumed = m_cfg->get_float_ref("consumed_in_seconds");
@@ -136,52 +136,67 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
             while (consumed >= period)
             {
                 consumed -= period;
-                m_simulator->on_sensor_event(*this);
+                m_simulator->on_sensor_event(*this, {});
             }
         }
     }
     else
     {
-        for (collision_contact_record const& record : m_collision_contacts_buffer)
-            m_touching_ids.insert(record.other_id);
-
         auto const  get_other_sensor_ptr = [this](object_id const&  other_oid) -> sensor const* {
             return other_oid.valid() ? &m_simulator->get_sensors().at(other_oid.index) : nullptr;
         };
 
+        for (collision_contact_record const& record : m_collision_contacts_buffer)
+        {
+            if (record.other_id.valid())
+            {
+                sensor const* const  other_sensor_ptr = &m_simulator->get_sensors().at(record.other_id.index);
+                m_touching.insert({ other_sensor_ptr->get_self_rid(), other_sensor_ptr });
+            }
+            else
+            {
+                scene::record_id const  other_coid_rid =
+                    m_simulator->get_scene_ptr()->get_scene_record_of_rigid_body_associated_with_collider(
+                                record.contact_info->other_coid
+                                );
+                if (other_coid_rid.valid())
+                    m_touching.insert({ other_coid_rid, nullptr });
+            }
+        }
+
         if (get_kind() == SENSOR_KIND::TOUCH_BEGIN)
         {
-            for (object_id  id : m_touching_ids)
-                if (m_old_touching_ids.count(id) == 0UL)
-                    m_touch_begin_ids.insert(id);
-            if (!m_touch_begin_ids.empty())
+            for (auto const&  rid_and_sensor : m_touching)
+                if (m_old_touching.count(rid_and_sensor.first) == 0UL)
+                    m_touch_begin.insert(rid_and_sensor);
+            if (!m_touch_begin.empty())
             {
-                for (object_id const& other_oid : m_touch_begin_ids)
-                    m_simulator->on_sensor_event(*this, get_other_sensor_ptr(other_oid));
+                for (auto const&  rid_and_sensor : m_touch_begin)
+                    m_simulator->on_sensor_event(*this, { rid_and_sensor.second, &rid_and_sensor.first });
             }
-            m_touch_begin_ids.clear();
+            m_touch_begin.clear();
         }
         else if (get_kind() == SENSOR_KIND::TOUCH_END)
         {
-            for (object_id  id : m_old_touching_ids)
-                if (m_touching_ids.count(id) == 0UL)
-                    m_touch_end_ids.insert(id);
-            if (!m_touch_end_ids.empty())
+            for (auto const& rid_and_sensor : m_old_touching)
+                if (m_touching.count(rid_and_sensor.first) == 0UL)
+                    m_touch_end.insert(rid_and_sensor);
+            if (!m_touch_end.empty())
             {
-                for (object_id const& other_oid : m_touch_end_ids)
-                    m_simulator->on_sensor_event(*this, get_other_sensor_ptr(other_oid));
+                for (auto const&  rid_and_sensor : m_touch_end)
+                    m_simulator->on_sensor_event(*this, { rid_and_sensor.second, &rid_and_sensor.first });
             }
-            m_touch_end_ids.clear();
+            m_touch_end.clear();
         }
         else
         {
             INVARIANT(get_kind() == SENSOR_KIND::TOUCHING);
-            for (object_id const&  other_oid : m_touching_ids)
-                m_simulator->on_sensor_event(*this, get_other_sensor_ptr(other_oid));
+            for (auto const&  rid_and_sensor : m_touching)
+                m_simulator->on_sensor_event(*this, { rid_and_sensor.second, &rid_and_sensor.first });
         }
 
-        m_touching_ids.swap(m_old_touching_ids);
-        m_touching_ids.clear();
+        m_touching.swap(m_old_touching);
+        m_touching.clear();
     }
 
     m_collision_contacts_buffer.clear();
@@ -201,7 +216,7 @@ void  sensor::on_collision_contact(
     if (!m_owner_id.valid())
         return;
 
-    INVARIANT(!other_id.valid() || other_id.kind == OBJECT_KIND::SENSOR);
+    INVARIANT(other_id.valid() == other_collider_nid.valid() && (!other_id.valid() || other_id.kind == OBJECT_KIND::SENSOR));
 
     m_collision_contacts_buffer.push_back({
             collider_nid,

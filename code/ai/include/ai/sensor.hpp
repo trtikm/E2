@@ -32,6 +32,18 @@ struct  sensor
         scene::node_id  other_collider_nid;
     };
 
+    struct  other_object_info
+    {
+        other_object_info() : other_object_info(nullptr, nullptr) {}
+        other_object_info(sensor const* const  sensor_, scene::record_id const* const  rigid_body_id_)
+            : sensor(sensor_), rigid_body_id(rigid_body_id_)
+        {}
+        sensor const*  sensor;
+        scene::record_id const*  rigid_body_id;
+    };
+
+    using  touch_map = std::unordered_map<scene::record_id, sensor const*>;
+
     sensor(simulator* const  simulator_,
            SENSOR_KIND const  kind_,
            object_id const&  self_id_,
@@ -50,9 +62,9 @@ struct  sensor
     void  set_enabled(bool const  state) { m_enabled = state; m_collision_contacts_buffer.clear(); }
     property_map const&  get_config() const { return *m_cfg; }
     std::vector<collision_contact_record> const&  get_collision_contacts() const { return m_collision_contacts_buffer; }
-    std::unordered_set<object_id> const&  get_touch_begin_ids() const { return m_touch_begin_ids; }
-    std::unordered_set<object_id> const&  get_touching_ids() const { return m_touching_ids; }
-    std::unordered_set<object_id> const&  get_touch_end_ids() const { return m_touch_end_ids; }
+    touch_map const&  get_touch_begin() const { return m_touch_begin; }
+    touch_map const&  get_touching() const { return m_touching; }
+    touch_map const&  get_touch_end() const { return m_touch_end; }
 
     void  set_owner_id(object_id const&  id);
 
@@ -77,10 +89,10 @@ private:
 
     std::shared_ptr<std::vector<scene::node_id> >  m_collider_nids;
     std::vector<collision_contact_record>  m_collision_contacts_buffer;
-    std::unordered_set<object_id>  m_touch_begin_ids;
-    std::unordered_set<object_id>  m_touching_ids;
-    std::unordered_set<object_id>  m_old_touching_ids;
-    std::unordered_set<object_id>  m_touch_end_ids;
+    touch_map  m_touch_begin;
+    touch_map  m_touching;
+    touch_map  m_old_touching;
+    touch_map  m_touch_end;
 };
 
 

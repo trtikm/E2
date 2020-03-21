@@ -120,7 +120,7 @@ void  agents::on_collision_contact(
 }
 
 
-void  agents::on_sensor_event(agent_id const  id, sensor const&  s, sensor const* const  other)
+void  agents::on_sensor_event(agent_id const  id, sensor const&  s, sensor::other_object_info const&  other)
 {
     ASSUMPTION(id < m_agents.size() && m_agents.at(id) != nullptr);
     if (m_agents.at(id)->agent_ptr != nullptr)

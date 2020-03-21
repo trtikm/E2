@@ -121,6 +121,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/sensor_action.hpp
     ./src/sensor_action.cpp
+    ./include/ai/sensor_action_default_processor.hpp
+    ./src/sensor_action_default_processor.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

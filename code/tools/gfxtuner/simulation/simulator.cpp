@@ -1364,6 +1364,7 @@ void  simulator::process_ai_requests()
             scn::scene_node_ptr const  origin_node_ptr = get_scene_node(request->props.get_scene_node_id("origin_nid"));
             if (affected_node_ptr != nullptr && field_node_ptr != nullptr && origin_node_ptr != nullptr)
             {
+                angeo::rigid_body_id const  rb_id = scn::get_rigid_body(*affected_node_ptr)->id();
                 vector3  accel;
                 {
                     vector3  origin_delta =
@@ -1375,15 +1376,38 @@ void  simulator::process_ai_requests()
                         distance = 1e-3f;
                         origin_delta = distance * vector3_unit_z();
                     }
+                    float_32_bit const  min_radius = request->props.get_float("min_radius");
+                    if (distance < min_radius)
+                    {
+                        origin_delta *= (min_radius / distance);
+                        distance = min_radius;
+                    }
+                    float_32_bit  inverted_mass;
+                    {
+                        std::string const&  mass_usage_type_name = request->props.get_string("mass_usage");
+                        if (mass_usage_type_name == "NONE")
+                            inverted_mass = 1.0f;
+                        else
+                        {
+                            float_32_bit const  rb_mass_inv = m_rigid_body_simulator_ptr->get_inverted_mass(rb_id);
+                            if (mass_usage_type_name == "HEAVY")
+                                inverted_mass = rb_mass_inv == 0.0f ? 0.0f : 1.0f;
+                            else if (mass_usage_type_name == "ALL")
+                                inverted_mass = rb_mass_inv;
+                            else { UNREACHABLE(); }
+                        }
+                    }
                     float_32_bit const  magnitude =
-                            request->props.get_float("multiplier") * std::powf(distance, request->props.get_float("exponent"));
+                            inverted_mass *
+                            request->props.get_float("multiplier") *
+                            std::powf(distance, request->props.get_float("exponent"));
                     accel = (magnitude / distance) * origin_delta;
                 }
                 detail::update_rigid_body_external_acceleration(
                         m_rigid_bodies_external_linear_accelerations,
                         *m_rigid_body_simulator_ptr,
                         affected_node_ptr->get_id(),
-                        scn::get_rigid_body(*affected_node_ptr)->id(),
+                        rb_id,
                         field_node_ptr->get_id(),
                         accel
                         );
@@ -1394,12 +1418,28 @@ void  simulator::process_ai_requests()
             scn::scene_node_ptr const  affected_node_ptr = get_scene_node(request->affected_object_rid.get_node_id());
             if (affected_node_ptr != nullptr)
             {
-                vector3 const  accel = request->props.get_vector3();
+                angeo::rigid_body_id const  rb_id = scn::get_rigid_body(*affected_node_ptr)->id();
+                float_32_bit  inverted_mass;
+                {
+                    std::string const&  mass_usage_type_name = request->props.get_string("mass_usage");
+                    if (mass_usage_type_name == "NONE")
+                        inverted_mass = 1.0f;
+                    else
+                    {
+                        float_32_bit const  rb_mass_inv = m_rigid_body_simulator_ptr->get_inverted_mass(rb_id);
+                        if (mass_usage_type_name == "HEAVY")
+                            inverted_mass = rb_mass_inv == 0.0f ? 0.0f : 1.0f;
+                        else if (mass_usage_type_name == "ALL")
+                            inverted_mass = rb_mass_inv;
+                        else { UNREACHABLE(); }
+                    }
+                }
+                vector3 const  accel = inverted_mass * request->props.get_vector3();
                 detail::update_rigid_body_external_acceleration(
                         m_rigid_bodies_external_linear_accelerations,
                         *m_rigid_body_simulator_ptr,
                         affected_node_ptr->get_id(),
-                        scn::get_rigid_body(*affected_node_ptr)->id(),
+                        rb_id,
                         request->force_field_rid.get_node_id(),
                         accel
                         );
@@ -3272,6 +3312,13 @@ bool  simulator::get_rigid_body_of_collider(angeo::collision_object_id const  co
     if (output_rigid_body_id_ptr != nullptr)
         *output_rigid_body_id_ptr = rb_it->second;
     return true;
+}
+
+
+scn::scene_node_ptr  simulator::get_rigid_body_node(angeo::rigid_body_id const  rb_id) const
+{
+    auto const  it = m_binding_of_rigid_bodies.find(rb_id);
+    return it == m_binding_of_rigid_bodies.cend() ? nullptr : it->second;
 }
 
 

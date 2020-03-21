@@ -384,6 +384,28 @@ void  bind_ai_scene_to_simulator::erase_rigid_body_from_scene_node(node_id const
 }
 
 
+ai::scene::node_id  bind_ai_scene_to_simulator::get_scene_node_of_rigid_body_associated_with_collider(
+        collision_object_id const  coid
+        ) const
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    angeo::rigid_body_id  rb_id;
+    if (!m_simulator_ptr->get_rigid_body_of_collider(coid, &rb_id))
+        return {};
+    scn::scene_node_ptr const  node_ptr = m_simulator_ptr->get_rigid_body_node(rb_id);
+    INVARIANT(node_ptr != nullptr);
+    return node_ptr->get_id();
+}
+
+
+ai::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body_associated_with_collider(
+        collision_object_id const  coid
+        ) const
+{
+    return scn::make_rigid_body_record_id(get_scene_node_of_rigid_body_associated_with_collider(coid));
+}
+
+
 vector3  bind_ai_scene_to_simulator::get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const
 {
     return -9.81f * vector3_unit_z();

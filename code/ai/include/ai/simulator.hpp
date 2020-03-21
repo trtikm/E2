@@ -73,7 +73,7 @@ struct simulator
             scene::node_id const&  other_collider_nid
             );
 
-    void  on_sensor_event(sensor const&  s, sensor const* const  other = nullptr);
+    void  on_sensor_event(sensor const&  s, sensor::other_object_info const&  other);
 
     agents const&  get_agents() const { return m_agents; }
     devices const&  get_devices() const { return m_devices; }

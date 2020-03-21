@@ -209,6 +209,9 @@ struct  scene
     virtual void  set_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid, matrix33 const&  inverted_inertia_tensor) = 0;
     virtual void  erase_rigid_body_from_scene_node(node_id const&  nid) = 0;
 
+    virtual node_id  get_scene_node_of_rigid_body_associated_with_collider(collision_object_id const  coid) const = 0;
+    virtual record_id  get_scene_record_of_rigid_body_associated_with_collider(collision_object_id const  coid) const = 0;
+
     virtual vector3  get_linear_velocity_of_collider_at_point(collision_object_id const  coid, vector3 const&  point_in_world_space) const = 0;
 
     virtual vector3  get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const = 0;

@@ -1,5 +1,6 @@
 #include <ai/device.hpp>
 #include <ai/simulator.hpp>
+#include <ai/sensor_action_default_processor.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -67,93 +68,26 @@ void  device::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  device::on_sensor_event(sensor const&  s, sensor const* const  other)
+void  device::on_sensor_event(sensor const&  s, sensor::other_object_info const&  other)
 {
     auto const  actions_it = get_blackboard()->m_sensor_actions->find(s.get_self_rid());
     ASSUMPTION(actions_it != get_blackboard()->m_sensor_actions->end());
     for (sensor_action&  action : actions_it->second)
-        switch (action.kind)
-        {
-        case SENSOR_ACTION_KIND::BEGIN_OF_LIFE:
-            get_blackboard()->m_scene->accept(scene::create_request<scene::request_merge_scene>(action.props));
-            break;
+    {
+        // Here put processing of device-specific actions
 
-        case SENSOR_ACTION_KIND::ENABLE_SENSOR:
-            get_blackboard()->m_simulator_ptr->set_sensor_enabled(action.props.get_scene_record_id("sensor_rid"), true);
-            break;
-        case SENSOR_ACTION_KIND::DISABLE_SENSOR:
-            get_blackboard()->m_simulator_ptr->set_sensor_enabled(action.props.get_scene_record_id("sensor_rid"), false);
-            break;
+        // Here we process actions the default way (i.e. not specific to a device)
+        if (process_sensor_event_using_default_procedure(
+                get_blackboard()->m_self_rid,
+                action,
+                other,
+                get_blackboard()->m_simulator_ptr,
+                get_blackboard()->m_scene
+                ))
+            continue;
 
-        case SENSOR_ACTION_KIND::SET_LINEAR_VELOCITY:
-            get_blackboard()->m_scene->set_linear_velocity_of_rigid_body_of_scene_node(
-                    action.props.get_scene_node_id("rigid_body_nid"),
-                    action.props.get_vector3()
-                    );
-            break;
-        case SENSOR_ACTION_KIND::SET_ANGULAR_VELOCITY:
-            get_blackboard()->m_scene->set_angular_velocity_of_rigid_body_of_scene_node(
-                    action.props.get_scene_node_id("rigid_body_nid"),
-                    action.props.get_vector3()
-                    );
-            break;
-        case SENSOR_ACTION_KIND::SET_LINEAR_ACCELERATION:
-            get_blackboard()->m_scene->set_linear_acceleration_of_rigid_body_of_scene_node(
-                    action.props.get_scene_node_id("rigid_body_nid"),
-                    action.props.get_vector3()
-                    );
-            break;
-        case SENSOR_ACTION_KIND::SET_ANGULAR_ACCELERATION:
-            get_blackboard()->m_scene->set_angular_acceleration_of_rigid_body_of_scene_node(
-                    action.props.get_scene_node_id("rigid_body_nid"),
-                    action.props.get_vector3()
-                    );
-            break;
-
-        case SENSOR_ACTION_KIND::SET_MASS_INVERTED:
-            get_blackboard()->m_scene->set_inverted_mass_of_rigid_body_of_scene_node(
-                    action.props.get_scene_node_id("rigid_body_nid"),
-                    action.props.get_float("inverted_mass")
-                    );
-            break;
-        case SENSOR_ACTION_KIND::SET_INERTIA_TENSOR_INVERTED:
-            get_blackboard()->m_scene->set_inverted_inertia_tensor_of_rigid_body_of_scene_node(
-                    action.props.get_scene_node_id("rigid_body_nid"),
-                    action.props.get_matrix33()
-                    );
-            break;
-
-        case SENSOR_ACTION_KIND::UPDATE_RADIAL_FORCE_FIELD:
-            ASSUMPTION(other != nullptr);
-            get_blackboard()->m_scene->accept(scene::create_request<scene::request_update_radial_force_field>(
-                    other->get_self_rid(),
-                    get_blackboard()->m_self_rid,
-                    action.props
-                    ));
-            break;
-        case SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD:
-            ASSUMPTION(other != nullptr);
-            get_blackboard()->m_scene->accept(scene::create_request<scene::request_update_linear_force_field>(
-                    other->get_self_rid(),
-                    get_blackboard()->m_self_rid,
-                    action.props
-                    ));
-            break;
-        case SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD:
-            ASSUMPTION(other != nullptr);
-            get_blackboard()->m_scene->accept(scene::create_request<scene::request_leave_force_field>(
-                    other->get_self_rid(),
-                    get_blackboard()->m_self_rid
-                    ));
-            break;
-
-        case SENSOR_ACTION_KIND::END_OF_LIFE:
-            get_blackboard()->m_scene->accept(scene::create_request<scene::request_erase_nodes_tree>(
-                    get_blackboard()->m_self_rid.get_node_id())
-                    );
-            break;
-        default: UNREACHABLE(); break;
-        }
+        UNREACHABLE(); // If we get here, then we forgot to implement processing of the current action. FIX THAT!
+    }
 }
 
 

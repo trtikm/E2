@@ -48,7 +48,7 @@ struct  devices
             scene::node_id const&  other_collider_nid
             );
 
-    void  on_sensor_event(device_id const  id, sensor const&  s, sensor const* const  other = nullptr);
+    void  on_sensor_event(device_id const  id, sensor const&  s, sensor::other_object_info const&  other);
 
 private:
 

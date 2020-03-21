@@ -19,7 +19,7 @@ struct agent
 
     void  next_round(float_32_bit const  time_step_in_seconds);
 
-    void  on_sensor_event(sensor const&  s, sensor const* const  other = nullptr);
+    void  on_sensor_event(sensor const&  s, sensor::other_object_info const&  other);
 
     blackboard_agent_ptr  get_blackboard() { return m_blackboard; }
     blackboard_agent_const_ptr  get_blackboard() const { return m_blackboard; }

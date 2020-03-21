@@ -196,7 +196,7 @@ void  simulator::on_collision_contact(
 }
 
 
-void  simulator::on_sensor_event(sensor const&  s, sensor const* const  other)
+void  simulator::on_sensor_event(sensor const&  s, sensor::other_object_info const&  other)
 {
     switch (s.get_owner_id().kind)
     {

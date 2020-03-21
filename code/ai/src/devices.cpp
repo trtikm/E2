@@ -106,7 +106,7 @@ void  devices::on_collision_contact(
 }
 
 
-void  devices::on_sensor_event(device_id const  id, sensor const&  s, sensor const* const  other)
+void  devices::on_sensor_event(device_id const  id, sensor const&  s, sensor::other_object_info const&  other)
 {
     ASSUMPTION(id < m_devices.size() && m_devices.at(id) != nullptr);
     if (m_devices.at(id)->device_ptr != nullptr)

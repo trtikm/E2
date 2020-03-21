@@ -247,6 +247,7 @@ struct simulator : public qtgl::real_time_simulator
             );
 
     bool  get_rigid_body_of_collider(angeo::collision_object_id const  coid, angeo::rigid_body_id* const  output_rigid_body_id_ptr);
+    scn::scene_node_ptr  get_rigid_body_node(angeo::rigid_body_id const  rb_id) const;
 
     void  insert_agent(scn::scene_record_id const&  id, scn::agent_props const&  props);
     void  erase_agent(scn::scene_record_id const&  id);

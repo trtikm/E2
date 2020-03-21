@@ -43,14 +43,18 @@ static std::unordered_map<natural_8_bit, std::pair<std::string, std::string> > c
             "appearing in a force field region (i.e. colliding with a collider of a force\n"
             "field device). At each point in the field, the acceleration vector always aims at\n"
             "the center of the field, which is the origin of a given scene node under the device.\n"
-            "The magnitude of the acceleration vector is a function: A*x^E, where A and E\n"
-            "are custom numbers (constants) and x is the distance of the origin of the\n"
-            "rigid body's scene node from the center of the field."
+            "The magnitude of the acceleration vector is a function: m*A*x^E, where A and E\n"
+            "are custom numbers (constants), x is the distance of the origin of the\n"
+            "rigid body's scene node from the center of the field, and m is either the inverted\n"
+            "mass of the rigid body or 1.0, depending on the value of the property 'mass_usage'."
             } },
     { as_number(SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD), { "UPDATE_LINEAR_FORCE_FIELD",
             "Updates force field linear acceleration of a rigid body under an agent or device\n"
             "appearing in a force field region (i.e. colliding with a collider of a force\n"
-            "field device). At each point in the field, the acceleration vector is the same."
+            "field device). At each point in the field, the acceleration vector has the same\n"
+            "direction. The specified magnitude of the acceleration vector is either fixed,\n"
+            "or it can be scaled by the inverted mass of an affected rigid body, depending on\n"
+            "the value of the property 'mass_usage'."
             } },
     { as_number(SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD), { "LEAVE_FORCE_FIELD",
             "Removes the linear acceleration applied by a force field to a rigid\n"
@@ -287,6 +291,17 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map::default_config_records_map>
                 { "exponent", { property_map::make_float(1.0f), true,
                         "An exponent of the distance of the rigid body from the center of the force field.",
                         edit_order++} },
+                { "min_radius", { property_map::make_float(0.001f), true,
+                        "When actual distance of the mass center from the origin of the force field is less than\n"
+                        "the specified value, then the value is taken instead of the distance.",
+                        edit_order++} },
+                { "mass_usage", { property_map::make_string("HEAVY"), true,
+                        "Allows to control an application of the inverted mass of a rigid body in the force field.\n"
+                        "These three values are allowed:\n"
+                        "    NONE - the inverted mass will not be used for any rigid body in the field,\n"
+                        "    HEAVY - the inverted mass will only be used for rigid bodies with zero inverted mass,\n"
+                        "    ALL - the inverted mass will be used for each rigid body in the field.",
+                        edit_order++} },
                 } },
         { SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD, {
                 { "x", { property_map::make_float(0.0f), true,
@@ -297,6 +312,13 @@ std::unordered_map<SENSOR_ACTION_KIND, property_map::default_config_records_map>
                         edit_order++} },
                 { "z", { property_map::make_float(0.0f), true,
                         "z coordinate of the acceleration vector in world space.",
+                        edit_order++} },
+                { "mass_usage", { property_map::make_string("HEAVY"), true,
+                        "Allows to control an application of the inverted mass of a rigid body in the force field.\n"
+                        "These three values are allowed:\n"
+                        "    NONE - the inverted mass will not be used for any rigid body in the field,\n"
+                        "    HEAVY - the inverted mass will only be used for rigid bodies with zero inverted mass,\n"
+                        "    ALL - the inverted mass will be used for each rigid body in the field.",
                         edit_order++} },
                 } },
         { SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD, {
