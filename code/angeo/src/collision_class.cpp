@@ -51,10 +51,10 @@ bool  are_colliding(COLLISION_CLASS const  cc1, COLLISION_CLASS const  cc2)
 {
     static const bool  table[get_num_collision_classes()][get_num_collision_classes()] = {
         { true,  true,  false, true,  true,  false, false }, // COMMON_SCENE_OBJECT
-        { true,  true,  false, false, false, false, false }, // AGENT_MOTION_OBJECT
+        { true,  true,  false, false, true,  false, false }, // AGENT_MOTION_OBJECT
         { false, false, false, true,  true,  false, false }, // AGENT_BODY_PART
         { true,  false, true,  false, false, false, false }, // RAY_CAST_SIGHT
-        { true,  false, true,  false, false, false, true  }, // TRIGGER_GENERAL
+        { true,  true,  true,  false, false, false, true  }, // TRIGGER_GENERAL
         { false, false, false, false, false, false, true  }, // TRIGGER_SPECIAL
         { false, false, false, false, true,  true,  false }, // TRIGGER_ACTIVATOR
     };

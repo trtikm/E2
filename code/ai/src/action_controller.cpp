@@ -365,6 +365,7 @@ void  action_controller::synchronise_motion_object_motion_with_scene()
     m_motion_object_motion.update_frame_with_forward_and_up_directions(get_blackboard()->m_scene, get_blackboard()->m_motion_templates.directions());
     m_motion_object_motion.update_linear_velocity(get_blackboard()->m_scene);
     m_motion_object_motion.update_angular_velocity(get_blackboard()->m_scene);
+
     m_external_linear_acceleration =
         get_blackboard()->m_scene->get_external_linear_acceleration_of_rigid_body_of_scene_node(m_motion_object_motion.nid);
     m_external_angular_acceleration =
@@ -470,7 +471,14 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
                 get_blackboard()->m_scene,
                 m_motion_object_motion.nid,
                 m_current_intepolation_state.collider,
-                m_motion_object_motion
+                m_motion_object_motion.frame,
+                m_motion_object_motion.velocity,
+                {
+                    get_blackboard()->m_scene->get_initial_external_linear_acceleration_at_point(m_motion_object_motion.frame.origin()),
+                    get_blackboard()->m_scene->get_initial_external_angular_acceleration_at_point(m_motion_object_motion.frame.origin())
+                },
+                m_motion_object_motion.inverted_mass,
+                m_motion_object_motion.inverted_inertia_tensor
                 );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_self_id);
         m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_self_rid.get_node_id());

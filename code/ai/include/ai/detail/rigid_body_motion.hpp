@@ -50,6 +50,8 @@ struct  rigid_body_motion
     void  update_frame_with_forward_and_up_directions(scene_ptr const  s, skeletal_motion_templates::anim_space_directions const& directions);
     void  update_linear_velocity(scene_ptr const  s);
     void  update_angular_velocity(scene_ptr const  s);
+    void  update_linear_acceleration(scene_ptr const  s);
+    void  update_angular_acceleration(scene_ptr const  s);
 
     void  integrate(float_32_bit const  time_step_in_seconds);
 
@@ -78,7 +80,11 @@ void  create_collider_and_rigid_body_of_motion_scene_node(
         scene_ptr const  s,
         scene::node_id const&  motion_object_nid,
         skeletal_motion_templates::collider_ptr const&  collider_props,
-        rigid_body_motion const&  rb_motion
+        angeo::coordinate_system const&  frame,
+        angeo::linear_and_angular_vector const&  velocity,
+        angeo::linear_and_angular_vector const&  acceleration,
+        float_32_bit const  inverted_mass,
+        matrix33 const&  inverted_inertia_tensor
         );
 
 

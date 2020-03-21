@@ -112,7 +112,10 @@ void  agents::on_collision_contact(
         )
 {
     ASSUMPTION(id < m_agents.size() && m_agents.at(id) != nullptr);
-    if (m_agents.at(id)->agent_ptr != nullptr)
+    // Here we are only interested in real collision contacts.
+    // In other words, we ignore collisions with artificial colliders under sensors.
+    // That is, we need only those contacts where 'other_id' is NOT valid.
+    if (!other_id.valid() && m_agents.at(id)->agent_ptr != nullptr)
         m_agents.at(id)->agent_ptr->get_blackboard()->m_sensory_controller->get_collision_contacts()->on_collision_contact(
                 collider_nid,
                 contact_info

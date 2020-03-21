@@ -97,6 +97,16 @@ void  rigid_body_motion::update_angular_velocity(scene_ptr const  s)
     velocity.m_angular = s->get_angular_velocity_of_rigid_body_of_scene_node(nid);
 }
 
+void  rigid_body_motion::update_linear_acceleration(scene_ptr const  s)
+{
+    acceleration.m_linear = s->get_linear_acceleration_of_rigid_body_of_scene_node(nid);
+}
+
+void  rigid_body_motion::update_angular_acceleration(scene_ptr const  s)
+{
+    acceleration.m_angular = s->get_angular_acceleration_of_rigid_body_of_scene_node(nid);
+}
+
 void  rigid_body_motion::integrate(float_32_bit const  time_step_in_seconds)
 {
     velocity.m_linear += time_step_in_seconds * acceleration.m_linear;
@@ -151,7 +161,11 @@ void  create_collider_and_rigid_body_of_motion_scene_node(
         scene_ptr const  s,
         scene::node_id const&  motion_object_nid,
         skeletal_motion_templates::collider_ptr const&  collider_props,
-        rigid_body_motion const&  rb_motion
+        angeo::coordinate_system const&  frame,
+        angeo::linear_and_angular_vector const&  velocity,
+        angeo::linear_and_angular_vector const&  acceleration,
+        float_32_bit const  inverted_mass,
+        matrix33 const&  inverted_inertia_tensor
         )
 {
     if (auto const  capsule_ptr = std::dynamic_pointer_cast<skeletal_motion_templates::collider_capsule const>(collider_props))
@@ -170,15 +184,15 @@ void  create_collider_and_rigid_body_of_motion_scene_node(
     {
         NOT_IMPLEMENTED_YET();
     }
-    s->set_frame_of_scene_node(motion_object_nid, false, rb_motion.frame);
+    s->set_frame_of_scene_node(motion_object_nid, false, frame);
     s->insert_rigid_body_to_scene_node(
             motion_object_nid,
-            rb_motion.velocity.m_linear,
-            rb_motion.velocity.m_angular,
-            rb_motion.acceleration.m_linear,
-            rb_motion.acceleration.m_angular,
-            rb_motion.inverted_mass,
-            rb_motion.inverted_inertia_tensor
+            velocity.m_linear,
+            velocity.m_angular,
+            acceleration.m_linear,
+            acceleration.m_angular,
+            inverted_mass,
+            inverted_inertia_tensor
             );
 }
 
@@ -205,12 +219,22 @@ scene::node_id  create_motion_scene_node(
         )
 {
     s->insert_scene_node(motion_object_nid, frame_in_world_space, false);
-    rigid_body_motion  rb_motion(motion_object_nid, frame_in_world_space);
-    rb_motion.set_linear_acceleration(s->get_initial_external_linear_acceleration_at_point(frame_in_world_space.origin()));
-    rb_motion.set_angular_acceleration(s->get_initial_external_angular_acceleration_at_point(frame_in_world_space.origin()));
-    rb_motion.set_inverted_mass(mass_distribution);
-    rb_motion.set_inverted_inertia_tensor(mass_distribution);
-    create_collider_and_rigid_body_of_motion_scene_node(s, motion_object_nid, collider_props, rb_motion);
+    create_collider_and_rigid_body_of_motion_scene_node(
+            s,
+            motion_object_nid,
+            collider_props,
+            frame_in_world_space,
+            {
+                vector3_zero(),
+                vector3_zero()
+                },
+            {
+                s->get_initial_external_linear_acceleration_at_point(frame_in_world_space.origin()),
+                s->get_initial_external_angular_acceleration_at_point(frame_in_world_space.origin())
+                },
+            mass_distribution.mass_inverted,
+            mass_distribution.inertia_tensor_inverted
+            );
     return motion_object_nid;
 }
 
