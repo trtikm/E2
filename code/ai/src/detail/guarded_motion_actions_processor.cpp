@@ -353,12 +353,16 @@ void  execute_satisfied_motion_guarded_actions(
                     float_32_bit const  angular_speed =
                             std::min(action_ptr->max_angular_speed, speed_reduction_coef * angle_to_reduce / time_step_in_seconds);
                     vector3 const  desired_angular_velocity = (angular_speed / axis_vector_magnitude) * axis_vector;
-                    vector3 const  current_angular_velocity_in_axis =
-                        project_to_vector(environment_angular_velocity + motion_object_motion.velocity.m_angular, axis_vector);
+                    vector3 const  angular_velocity_to_cancel =
+                            (environment_angular_velocity + motion_object_motion.velocity.m_angular)
+                            - project_to_vector(environment_angular_velocity + motion_object_motion.velocity.m_angular,
+                                                motion_object_motion.up);
                     vector3 const  torque_from_velocity =
-                        (desired_angular_velocity - current_angular_velocity_in_axis) / time_step_in_seconds;
+                            (desired_angular_velocity - angular_velocity_to_cancel) / time_step_in_seconds;
                     vector3 const  torque_to_cancel =
-                        project_to_vector(external_angular_acceleration + motion_object_motion.acceleration.m_angular, axis_vector);
+                            (external_angular_acceleration + motion_object_motion.acceleration.m_angular)
+                            - project_to_vector(external_angular_acceleration + motion_object_motion.acceleration.m_angular,
+                                                motion_object_motion.up);
                     vector3  agent_angular_acceleration = torque_from_velocity - torque_to_cancel;
                     float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
                     if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
