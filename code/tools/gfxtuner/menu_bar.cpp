@@ -226,7 +226,7 @@ std::string  menu_bar::on_file_action_save_scene()
 std::string  menu_bar::on_file_action_save_as_scene()
 {
     boost::filesystem::path  output_dir =
-        get_current_scene_dir().empty() ? get_default_scene_root_dir() : get_current_scene_dir();
+        get_current_scene_dir().empty() ? get_default_scene_root_dir() : get_current_scene_dir().parent_path();
     QFileDialog  dialog(wnd());
     dialog.setDirectory(output_dir.string().c_str());
     dialog.setFileMode(QFileDialog::DirectoryOnly);
