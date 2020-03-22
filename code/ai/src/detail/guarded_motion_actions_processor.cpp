@@ -348,7 +348,7 @@ void  execute_satisfied_motion_guarded_actions(
                         axis_vector = motion_object_motion.forward;
                         axis_vector_magnitude = 1.0f;
                     }
-                    float_32_bit const  reduction_angle = 10.0f * PI() / 180.0f;
+                    float_32_bit const  reduction_angle = 1.0f * PI() / 180.0f;
                     float_32_bit const  speed_reduction_coef = angle_to_reduce < reduction_angle ? 0.5f : 1.0f;
                     float_32_bit const  angular_speed =
                             std::min(action_ptr->max_angular_speed, speed_reduction_coef * angle_to_reduce / time_step_in_seconds);
