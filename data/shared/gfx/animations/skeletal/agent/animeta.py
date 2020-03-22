@@ -1361,6 +1361,15 @@ motion_actions  <begin> <end>
         * 'cancel_gravity_accel':
             Applies a force that cancels the effect of the gravitational
             acceleration on the agent.
+        * 'rotate_up_vector_against_external_accel':
+            Applies a torque that maximises an angle between the up vector
+            of the agent and the external linear acceleration vector.
+            Used state variables:
+                - 'max_angular_speed'
+                        A maximal angular speed to be used for reduction of
+                        the angle between the vectors.
+                - 'max_angular_accel'
+                        maximal magnitude of the angular acceleration
     NOTE: In the end, each keyframe must have assigned at least one motion
           action.
     NOTE: Guards of all keyframes, which form a branching node in the animation
@@ -1455,6 +1464,9 @@ def command_motion_actions():
                     actions[-1].append(state.max_angular_accel)
                 elif action == "cancel_gravity_accel":
                     pass    # no arguments
+                elif action == "rotate_up_vector_against_external_accel":
+                    actions[-1].append(state.max_angular_speed)
+                    actions[-1].append(state.max_angular_accel)
                 else:
                     raise Exception("Unknown action name '" + str(action) + "'")
         else:
