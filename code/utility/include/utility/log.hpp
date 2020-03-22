@@ -2,6 +2,7 @@
 #   define UTILITY_LOG_HPP_INCLUDED
 
 #   include <utility/config.hpp>
+#   include <utility/msgstream.hpp>
 #   include <boost/log/sources/record_ostream.hpp>
 #   include <boost/log/sources/logger.hpp>
 #   include <boost/log/attributes/constant.hpp>
@@ -25,6 +26,7 @@
                                                                   add_default_file_extension,\
                                                                   minimal_severity_level);\
         }}}}}
+#   define SLOG(MSG) screen_text_logger::instance().append(msgstream() << MSG)
 
 
 enum logging_severity_level
@@ -49,5 +51,21 @@ struct logging_setup_caller
 private:
     std::string m_log_file_name;
 };
+
+
+struct  screen_text_logger
+{
+    static screen_text_logger&  instance();
+
+    void  set_max_text_size(unsigned int  max_size);
+
+    void  clear() { m_text.clear(); }
+    void  append(std::string const&  text) { m_text += text; }
+    std::string const&  text() const { return m_text;}
+
+private:
+    std::string  m_text;
+};
+
 
 #endif

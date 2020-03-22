@@ -25,6 +25,7 @@
 #include <utility/canonical_path.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/development.hpp>
+#include <utility/log.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -723,7 +724,10 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
             call_listeners(simulator_notifications::camera_orientation_updated());
 
         if (!time_config().is_paused())
+        {
+            screen_text_logger::instance().clear();
             perform_simulation_step(time_config().get_clipped_simulation_time_step_in_seconds(seconds_from_previous_call));
+        }
         else
             perform_scene_update(seconds_from_previous_call);
     }
@@ -833,62 +837,6 @@ render_text = !render_text;
 
 if (render_text)
 {
-    static std::string const  text =
-        "! \" # $ % & ' ( ) * + , - . \n"
-        "/ 0 1 2 3 4 5 6 7 8 9 : ; < \n"
-        "= > ? @ A B C D E F G H I J \n"
-        "K L M N O P Q R S T U V W X \n"
-        "Y Z [ \\ ] ^ _ ` a b c d e f \n"
-        "g h i j k l m n o p q r s t \n"
-        "u v w x y z { | } ~ \n"
-        "Hello World!\n"
-        "The proximity map provides fast search for objects distributed in 3D space.\n"
-        "A shape of an object is approximated by an axis aligned bounding box. The\n"
-        "map this assumes, there is a fast algorithm obtaining a bounding box for\n"
-        "any objects inserted into the map. Instead of requiring the type of objects\n"
-        "contain a method for obtaining a bounding box, the map rather accepts two\n"
-        "algorithms in the initialisation providing minimal and maximal corner points\n"
-        "of a bounding box for any object in the map. For example, let type of our\n"
-        "objects looks like this:\n"
-        "\n"
-        "     struct my_object3d_type\n"
-        "     {\n"
-        "         vector3 lo, hi; // min. and max. corner points of the bounding box.\n"
-        "     };\n"
-        "\n"
-        "Then we can initialise a proximity map of these objects as follows:\n"
-        "\n"
-        "     angeo::proximity_map<my_object3d_type*> map(\n"
-        "             [](my_object3d_type* obj) { return obj->lo; },  // getter for min. corner\n"
-        "             [](my_object3d_type* obj) { return obj->hi; }   // getter for max. corner\n"
-        "             );\n"
-        "\n"
-        "The typical usage of the map in a 3d simulation is as follows. In the initial\n"
-        "step, we insert objects into the map. \n"
-        "\n"
-        "     std::vector<my_object3d_type*>  my_objects_to_simulate;\n"
-        "     ...  // Create and initialise your objects\n"
-        "     for (my_object3d_type* obj :  my_objects_to_simulate)\n"
-        "         map.insert(obj);  // Insert objects into the map.\n"
-        "     map.rebalance();  // Optimize the map structure for subsequent search operations.\n"
-        "\n"
-        "In the update step of the simulation (from the current state to the next one)\n"
-        "you use the map to search for objects in desired space. For example, a search\n"
-        "for objects in a 3d space denoted by an axis aligned bounding box will look\n"
-        "like this:\n"
-        "\n"
-        "     vector3 query_bbox_min_corner, query_bbox_max_corner; // Defines 3d space where to search for objects\n"
-        "     ...  // Initialise the corner points to desired values.\n"
-        "     std::unordered_set<my_object3d_type*>  collected_objects;  // Will be filled in by found objects.\n"
-        "     map.find_by_bbox(\n"
-        "             query_bbox_min_corner,\n"
-        "             query_bbox_max_corner,\n"
-        "             [&collected_objects](my_object3d_type* obj) {\n"
-        "                 collected_objects.insert(obj);\n"
-        "                 return true; // Tell the map to continue the search for remaining objects (if any).\n"
-        "                              // The return value 'false' would instruct the map to terminate the search.\n"
-        "              });\n"
-        ;
     static float_32_bit  scale = 1.0f;
     static vector3  shift{0.0f, -1.0f, 0.0f};
     static vector3  ambient_colour{ 0.9f, 0.9f, 0.95f };
@@ -898,7 +846,7 @@ if (render_text)
         -m_camera->near_plane()
     };
     qtgl::batch const  text_batch = qtgl::create_text(
-        text,
+        screen_text_logger::instance().text(),
         m_font_props,
         (m_camera->right() - pos(0)) / scale
         );

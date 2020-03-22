@@ -129,3 +129,10 @@ logging_setup_caller::~logging_setup_caller()
          "</html>\n"
          ;
 }
+
+
+screen_text_logger&  screen_text_logger::instance()
+{
+    static screen_text_logger  logger;
+    return logger;
+}
