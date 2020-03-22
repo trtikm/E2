@@ -408,7 +408,7 @@ ai::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body
 
 vector3  bind_ai_scene_to_simulator::get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const
 {
-    return -9.81f * vector3_unit_z();
+    return vector3_zero();
 }
 
 
