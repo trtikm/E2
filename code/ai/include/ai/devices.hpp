@@ -32,7 +32,8 @@ struct  devices
 
     void  clear() { m_devices.clear(); }
 
-    bool  ready(device_id const  id) { return m_devices.at(id)->device_ptr.operator bool(); }
+    bool  valid(device_id const  id) { return id < m_devices.size() && m_devices.at(id).operator bool(); }
+    bool  ready(device_id const  id) { return valid(id) && m_devices.at(id)->device_ptr.operator bool(); }
     device&  at(device_id const  id) { return *m_devices.at(id)->device_ptr; }
     device const&  at(device_id const  id) const { return *m_devices.at(id)->device_ptr; }
 

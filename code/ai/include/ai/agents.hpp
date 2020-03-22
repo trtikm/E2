@@ -40,7 +40,8 @@ struct  agents
 
     natural_32_bit  size() const { return (natural_32_bit)m_agents.size(); }
 
-    bool  ready(agent_id const  id) const { return m_agents.at(id)->agent_ptr.operator bool(); }
+    bool  valid(agent_id const  id) const { return id < m_agents.size() && m_agents.at(id).operator bool(); }
+    bool  ready(agent_id const  id) const { return valid(id) && m_agents.at(id)->agent_ptr.operator bool(); }
     agent&  at(agent_id const  id) { return *m_agents.at(id)->agent_ptr; }
     agent const&  at(agent_id const  id) const { return *m_agents.at(id)->agent_ptr; }
 
