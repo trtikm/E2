@@ -353,6 +353,20 @@ struct  action_cancel_gravity_accel : public action
     bool  operator==(action_cancel_gravity_accel const&  other) const { return true; }
 };
 
+struct  action_rotate_up_vector_against_external_accel : public action
+{
+    float_32_bit  max_angular_speed;
+    float_32_bit  max_angular_accel;
+
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_rotate_up_vector_against_external_accel const&>(other); }
+    bool  operator==(action_rotate_up_vector_against_external_accel const&  other) const
+    {
+        return are_equal(max_angular_speed, other.max_angular_speed, 0.0001f) && are_equal(max_angular_accel, other.max_angular_accel, 0.0001f);
+    }
+};
+
 
 struct  guarded_actions
 {
@@ -835,6 +849,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  action_set_linear_velocity = detail::meta::action_set_linear_velocity;
     using  action_set_angular_velocity = detail::meta::action_set_angular_velocity;
     using  action_cancel_gravity_accel = detail::meta::action_cancel_gravity_accel;
+    using  action_rotate_up_vector_against_external_accel = detail::meta::action_rotate_up_vector_against_external_accel;
 
     modelspace  pose_frames() const { return resource().pose_frames; }
     bone_names  names() const { return resource().names; }

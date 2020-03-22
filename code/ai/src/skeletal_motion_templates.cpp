@@ -272,6 +272,7 @@ std::string const  action_dont_rotate::unique_name = "dont_rotate";
 std::string const  action_set_linear_velocity::unique_name = "set_linear_velocity";
 std::string const  action_set_angular_velocity::unique_name = "set_angular_velocity";
 std::string const  action_cancel_gravity_accel::unique_name = "cancel_gravity_accel";
+std::string const  action_rotate_up_vector_against_external_accel::unique_name = "rotate_up_vector_against_external_accel";
 
 
 template<typename data_type, typename base_data_type>
@@ -463,6 +464,14 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                     {
                         if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for meta action 'cancel_gravity_accel' at line " << line_index << "in the file '" << pathname << "'.");
                         skeletal_motion_templates::action_cancel_gravity_accel  action;
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
+                    else if (action_name == action_rotate_up_vector_against_external_accel::unique_name)
+                    {
+                        if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for meta action '" << action_name << "' at line " << line_index << " in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_rotate_up_vector_against_external_accel  action;
+                        action.max_angular_speed = params.at(0);
+                        action.max_angular_accel = params.at(1);
                         constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
                     }
                     else

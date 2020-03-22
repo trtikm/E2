@@ -334,6 +334,39 @@ void  execute_satisfied_motion_guarded_actions(
             {
                 motion_object_motion.acceleration.m_linear -= external_linear_acceleration;
             }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_rotate_up_vector_against_external_accel const>(action_props))
+            {
+                float_32_bit const  external_accel_magnitude = length(external_linear_acceleration);
+                if (external_accel_magnitude >= 0.001f)
+                {
+                    float_32_bit const  angle_to_reduce = angle(external_linear_acceleration, -motion_object_motion.up);
+                    if (angle_to_reduce > 0.001f)
+                    {
+                        vector3  axis_vector = cross_product(external_linear_acceleration, motion_object_motion.up);
+                        float_32_bit  axis_vector_magnitude = length(axis_vector);
+                        if (axis_vector_magnitude < 0.001f)
+                        {
+                            axis_vector = motion_object_motion.forward;
+                            axis_vector_magnitude = 1.0f;
+                        }
+                        float_32_bit const  angular_speed =
+                                std::min(action_ptr->max_angular_speed, angle_to_reduce / time_step_in_seconds);
+                        vector3 const  desired_angular_velocity = (angular_speed / axis_vector_magnitude) * axis_vector;
+                        vector3 const  current_angular_velocity_in_axis =
+                            project_to_vector(environment_angular_velocity + motion_object_motion.velocity.m_angular, axis_vector);
+                        vector3 const  torque_from_velocity =
+                            (desired_angular_velocity - current_angular_velocity_in_axis) / time_step_in_seconds;
+                        vector3 const  torque_to_cancel =
+                            project_to_vector(external_angular_acceleration + motion_object_motion.acceleration.m_angular, axis_vector);
+                        vector3  agent_angular_acceleration = torque_from_velocity - torque_to_cancel;
+                        float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+                        if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
+                            agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
+                        motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
+                    }
+                }
+            }
             else
                 NOT_IMPLEMENTED_YET();
     
