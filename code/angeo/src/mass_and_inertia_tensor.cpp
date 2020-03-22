@@ -88,11 +88,11 @@ float_32_bit  get_material_density(COLLISION_MATERIAL_TYPE const  material)
     case COLLISION_MATERIAL_TYPE::CONCRETE: return 2400.0f;
     case COLLISION_MATERIAL_TYPE::DIRT: return 1041.0f;
     case COLLISION_MATERIAL_TYPE::GLASS: return 1922.0f;
-    case COLLISION_MATERIAL_TYPE::GRASS: return 1.0f;
+    case COLLISION_MATERIAL_TYPE::GRASS: return 200.0f; // TODO: check that value.
     case COLLISION_MATERIAL_TYPE::GUM:return 769.0f;
     case COLLISION_MATERIAL_TYPE::ICE: return 916.7f;
-    case COLLISION_MATERIAL_TYPE::LEATHER: 600.0f; // TODO: check that value.
-    case COLLISION_MATERIAL_TYPE::MUD: return 1.0f;
+    case COLLISION_MATERIAL_TYPE::LEATHER: return 600.0f; // TODO: check that value.
+    case COLLISION_MATERIAL_TYPE::MUD: return 850.0f; // TODO: check that value.
     case COLLISION_MATERIAL_TYPE::PLASTIC: return 1175.0f;
     case COLLISION_MATERIAL_TYPE::RUBBER: return 400.0f;
     case COLLISION_MATERIAL_TYPE::STEEL: return 2403.0f;
