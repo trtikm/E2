@@ -1,0 +1,26 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+    "configurations": [
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "name": "AAA gfxtuner Debug @ !training_ground",
+            "projectTarget": "gfxtuner_Windows_Debug.exe (Install)",
+            "args": [
+                "--scene",
+                "gfxtuner/!training_ground"
+            ]
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "name": "AAA gfxtuner RelWithDebInfo @ !training_ground",
+            "projectTarget": "gfxtuner_Windows_RelWithDebInfo.exe (Install)",
+            "args": [
+                "--scene",
+                "gfxtuner/!training_ground"
+            ]
+        }
+    ]
+}

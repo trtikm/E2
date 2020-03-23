@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="async::detail::key_type">
+        <DisplayString>{m_data_type_name},{m_unique_id}</DisplayString>
+    </Type>
+
+    <Type Name="async::resource_accessor&lt;*&gt;">
+        <DisplayString Condition="m_data_ptr != 0">{(*m_data_ptr).first}</DisplayString>
+        <DisplayString Condition="m_data_ptr == 0">empty</DisplayString>
+        <Expand>
+            <Item Name="[key]" Condition="m_data_ptr != 0">(*m_data_ptr).first</Item>
+            <Item Name="[resource]" Condition="m_data_ptr != 0">*($T1*)(*((*m_data_ptr).second._Mypair._Myval2)).m_resource_ptr</Item>
+            <Item Name="[state]" Condition="m_data_ptr != 0">(*((*m_data_ptr).second._Mypair._Myval2)).m_load_state._Storage._Value</Item>
+            <Item Name="[errmsg]" Condition="m_data_ptr != 0">(*((*m_data_ptr).second._Mypair._Myval2)).m_error_message</Item>
+            <Item Name="[refcount]" Condition="m_data_ptr != 0">(*((*m_data_ptr).second._Mypair._Myval2)).m_ref_count._Storage._Value</Item>
+
+            <Item Name="[Xvalue]" Condition="m_data_ptr != 0">(*m_data_ptr).second._Mypair._Myval2</Item>
+        </Expand>
+    </Type>
+
+</AutoVisualizer>
