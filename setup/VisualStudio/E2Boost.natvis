@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="boost::property_tree::basic_ptree&lt;*&gt;">
+        <DisplayString>{m_data} {*static_cast&lt;boost::property_tree::ptree::subs::base_container*&gt;(m_children)}</DisplayString>
+        <Expand>
+            <Item Name="m_data">m_data</Item>
+            <Item Name="m_children">*static_cast&lt;boost::property_tree::ptree::subs::base_container*&gt;(m_children)</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="boost::multi_index::detail::header_holder&lt;boost::multi_index::detail::sequenced_index_node&lt;*&gt;*,*&gt;">
+        <DisplayString>{{ size={(($T2*)this)-&gt;node_count} }}</DisplayString>
+        <Expand>
+            <LinkedListItems>
+                <Size>(($T2*)this)-&gt;node_count</Size>
+                <HeadPointer>((boost::multi_index::detail::sequenced_index_node&lt;$T1&gt;*)(member))-&gt;next_</HeadPointer>
+                <NextPointer>next_</NextPointer>
+                <ValueNode>*reinterpret_cast&lt;$T2::value_type*&gt;(&amp;((boost::multi_index::detail::sequenced_index_node&lt;$T1&gt;*)this)-&gt;space)</ValueNode>
+            </LinkedListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="boost::any::holder&lt;*&gt;">
+        <DisplayString>{held}</DisplayString>
+        <Expand>
+            <ExpandedItem>held</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="boost::any">
+        <DisplayString Condition="content == 0">empty</DisplayString>
+        <DisplayString Condition="content != 0">any {*content}</DisplayString>
+        <Expand>
+            <Item Name="content" Condition="content != 0">*content</Item>
+        </Expand>
+    </Type>
+
+</AutoVisualizer>

@@ -3,6 +3,7 @@
 In order to maximise effectiveness of debugging E2 in Visual Studio it is
 highly recommeded to copy custom visualisers:
     ./E2.natvis
+    ./E2Boost.natvis
     .{Eigen-install-dir}/debug/msvc/eigen.natvis
 to the directory: 
     c:/Users/{your-user-name}/Documents/Visual Studio 2019/Visualizers
