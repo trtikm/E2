@@ -909,6 +909,25 @@ natural_32_bit  closest_points_of_triangle_and_line(
             return 1U;
         };
 
+    if (L1_inside_triagle && L2_inside_triagle)
+        return write_output_for_one_line_corner_point(
+                    line_point_1,
+                    dot_Tnormal_T1L1,
+                    0U,
+                    output_triangle_closest_point_1,
+                    output_triangle_shape_feature_id_1,
+                    output_line_closest_point_1,
+                    output_line_shape_feature_id_1
+                    ) +
+                write_output_for_one_line_corner_point(
+                    line_point_2,
+                    dot_Tnormal_T1L2,
+                    1U,
+                    output_triangle_closest_point_2,
+                    output_triangle_shape_feature_id_2,
+                    output_line_closest_point_2,
+                    output_line_shape_feature_id_2
+                    );
     if (L1_inside_triagle && L1_below_L2)
         return write_output_for_one_line_corner_point(
                     line_point_1,
@@ -928,25 +947,6 @@ natural_32_bit  closest_points_of_triangle_and_line(
                     output_triangle_shape_feature_id_1,
                     output_line_closest_point_1,
                     output_line_shape_feature_id_1
-                    );
-    if (L1_inside_triagle && L2_inside_triagle)
-        return write_output_for_one_line_corner_point(
-                    line_point_1,
-                    dot_Tnormal_T1L1,
-                    0U,
-                    output_triangle_closest_point_1,
-                    output_triangle_shape_feature_id_1,
-                    output_line_closest_point_1,
-                    output_line_shape_feature_id_1
-                    ) +
-                write_output_for_one_line_corner_point(
-                    line_point_2,
-                    dot_Tnormal_T1L2,
-                    1U,
-                    output_triangle_closest_point_2,
-                    output_triangle_shape_feature_id_2,
-                    output_line_closest_point_2,
-                    output_line_shape_feature_id_2
                     );
 
     vector3  triangle_closest_points[3];
