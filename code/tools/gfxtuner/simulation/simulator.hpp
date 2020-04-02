@@ -103,7 +103,7 @@ struct simulator : public qtgl::real_time_simulator
     scn::scene_node_ptr  get_scene_node(scn::scene_node_id const&  id) const
     { return get_scene().get_scene_node(id); }
 
-    void  accept_ai_request(ai::scene::request_ptr const  request);
+    void  accept_ai_request(ai::scene::request_ptr const  request, bool const  delay_processing_to_next_time_step);
 
     scn::scene_node_ptr  insert_scene_simulation_node(scn::scene_node_id const& id);
 
@@ -346,7 +346,7 @@ private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
-    void  process_ai_requests();
+    void  process_ai_requests(std::vector<ai::scene::request_ptr>&  ai_requests, float_64_bit const  time_to_simulate_in_seconds);
     scn::scene_node_ptr  import_scene(
             std::string const&  scene_id,
             scn::scene_node_id const&  parent_id,
@@ -519,7 +519,8 @@ private:
     std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> >  m_rigid_bodies_external_linear_accelerations;
     std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> >  m_rigid_bodies_external_angular_accelerations;
     std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
-    std::vector<ai::scene::request_ptr>  m_ai_requests;
+    std::vector<ai::scene::request_ptr>  m_ai_requests_immediate;
+    std::vector<ai::scene::request_ptr>  m_ai_requests_delayed;
 
     // Debugging
 

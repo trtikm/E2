@@ -496,7 +496,8 @@ simulator::simulator()
     , m_rigid_bodies_external_linear_accelerations()
     , m_rigid_bodies_external_angular_accelerations()
     , m_ai_simulator_ptr(std::make_shared<ai::simulator>(std::make_shared<bind_ai_scene_to_simulator>(this)))
-    , m_ai_requests()
+    , m_ai_requests_immediate()
+    , m_ai_requests_delayed()
 
     // Debugging
 
@@ -957,9 +958,6 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     //    max_computation_time_in_seconds -= duration_of_last_simulation_step_in_seconds;
     //}
 
-    get_ai_simulator()->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
-    process_ai_requests();
-
     if (m_do_show_ai_action_controller_props)
     {
         ai::agents const&  agents = get_ai_simulator()->get_agents();
@@ -1162,6 +1160,10 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                 },
             true
             );
+
+    get_ai_simulator()->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
+    process_ai_requests(m_ai_requests_immediate, time_to_simulate_in_seconds);
+
     m_rigid_body_simulator_ptr->solve_constraint_system(time_to_simulate_in_seconds, time_to_simulate_in_seconds);
 
     for (auto const&  coid_and_info : ai_scene_binding_contacts)
@@ -1224,15 +1226,20 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
         rb_node_ptr->relocate(origin, orientation);
         update_collider_locations_in_subtree(rb_node_ptr);
     }
+
+    process_ai_requests(m_ai_requests_delayed, time_to_simulate_in_seconds);
 }
 
 
-void  simulator::process_ai_requests()
+void  simulator::process_ai_requests(
+        std::vector<ai::scene::request_ptr>&  ai_requests,
+        float_64_bit const  time_to_simulate_in_seconds
+        )
 {
     TMPROF_BLOCK();
 
-    std::vector<ai::scene::request_ptr>  requests(m_ai_requests.rbegin(), m_ai_requests.rend());
-    m_ai_requests.clear();
+    std::vector<ai::scene::request_ptr>  requests(ai_requests.rbegin(), ai_requests.rend());
+    ai_requests.clear();
 
     while (!requests.empty())
     {
@@ -1405,6 +1412,35 @@ void  simulator::process_ai_requests()
                         request->force_field_rid.get_node_id()
                         );
         }
+        else if (auto const  request = ai::scene::cast<ai::scene::request_insert_rigid_body_constraint>(requests.back()))
+        {
+            scn::scene_node_ptr const  other_node_ptr = find_nearest_rigid_body_node(request->other_rb_nid);
+            if (other_node_ptr != nullptr)
+            {
+                scn::rigid_body const* const  other_rb_ptr = scn::get_rigid_body(*other_node_ptr);
+                if (other_rb_ptr != nullptr)
+                {
+                    angeo::rigid_body_id const  other_rb_id = other_rb_ptr->id();
+
+                    scn::scene_node_ptr const  self_node_ptr = find_nearest_rigid_body_node(request->self_rb_nid);
+                    ASSUMPTION(self_node_ptr != nullptr && scn::has_rigid_body(*self_node_ptr));
+                    angeo::rigid_body_id const  self_rb_id = scn::get_rigid_body(*self_node_ptr)->id();
+
+                    m_rigid_body_simulator_ptr->get_constraint_system().insert_constraint(
+                            self_rb_id,
+                            request->self_linear_component,
+                            request->self_angular_component,
+                            other_rb_id,
+                            request->other_linear_component,
+                            request->other_angular_component,
+                            request->bias,
+                            [request](std::vector<float_32_bit> const&) { return request->variable_lower_bound; },
+                            [request](std::vector<float_32_bit> const&) { return request->variable_upper_bound; },
+                            request->variable_initial_value
+                            );
+                }
+            }
+        }
         else
         {
             UNREACHABLE();
@@ -1412,7 +1448,7 @@ void  simulator::process_ai_requests()
         requests.pop_back();
     }
 
-    INVARIANT(m_ai_requests.empty());
+    INVARIANT(ai_requests.empty());
 }
 
 
@@ -2594,9 +2630,9 @@ void  simulator::render_ai_action_controller_props(
 }
 
 
-void  simulator::accept_ai_request(ai::scene::request_ptr const  request)
+void  simulator::accept_ai_request(ai::scene::request_ptr const  request, bool const  delay_processing_to_next_time_step)
 {
-    m_ai_requests.push_back(request);
+    (delay_processing_to_next_time_step ? &m_ai_requests_delayed : &m_ai_requests_immediate)->push_back(request);
 }
 
 
@@ -3762,7 +3798,8 @@ void  simulator::clear_scene()
     m_cache_of_batches_of_ai_agents.sight_frustum_batches.clear();
 
     get_ai_simulator()->clear();
-    m_ai_requests.clear();
+    m_ai_requests_immediate.clear();
+    m_ai_requests_delayed.clear();
 
     m_rigid_body_simulator_ptr->clear();
     m_binding_of_rigid_bodies.clear();

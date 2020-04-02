@@ -6,6 +6,7 @@
 #   include <ai/property_map.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <memory>
+#   include <functional>
 
 namespace ai {
 
@@ -79,72 +80,110 @@ struct  scene
     struct  request_erase_nodes_tree : public request
     {
         // Pass a root node of scene sub-tree to be erased. The sub-tree MUST represent either agent, device, or a sensor.
-        request_erase_nodes_tree(scene::node_id const&  root_nid_) : root_nid(root_nid_) {}
-        scene::node_id  root_nid;
+        request_erase_nodes_tree(node_id const&  root_nid_) : root_nid(root_nid_) {}
+        node_id  root_nid;
     };
     using  request_erase_nodes_tree_ptr = std::shared_ptr<request_erase_nodes_tree const>;
 
     struct  request_update_radial_force_field : public request
     {
         request_update_radial_force_field(
-                scene::record_id const&  affected_object_rid_,
-                scene::record_id const&  force_field_rid_,
+                record_id const&  affected_object_rid_,
+                record_id const&  force_field_rid_,
                 property_map const&  props_
                 )
             : affected_object_rid(affected_object_rid_)
             , force_field_rid(force_field_rid_)
             , props(props_.clone())
         {}
-        scene::record_id  affected_object_rid;
-        scene::record_id  force_field_rid;
+        record_id  affected_object_rid;
+        record_id  force_field_rid;
         property_map  props;
     };
     using  request_update_radial_force_field_ptr = std::shared_ptr<request_update_radial_force_field const>;
 
     struct  request_erase_radial_force_field : public request
     {
-        request_erase_radial_force_field(scene::record_id const&  affected_object_rid_, scene::record_id const&  force_field_rid_)
+        request_erase_radial_force_field(record_id const&  affected_object_rid_, record_id const&  force_field_rid_)
             : affected_object_rid(affected_object_rid_)
             , force_field_rid(force_field_rid_)
         {}
-        scene::record_id  affected_object_rid;
-        scene::record_id  force_field_rid;
+        record_id  affected_object_rid;
+        record_id  force_field_rid;
     };
     using  request_erase_radial_force_field_ptr = std::shared_ptr<request_erase_radial_force_field const>;
 
     struct  request_update_linear_force_field : public request
     {
         request_update_linear_force_field(
-                scene::record_id const&  affected_object_rid_,
-                scene::record_id const&  force_field_rid_,
+                record_id const&  affected_object_rid_,
+                record_id const&  force_field_rid_,
                 property_map const&  props_
                 )
             : affected_object_rid(affected_object_rid_)
             , force_field_rid(force_field_rid_)
             , props(props_.clone())
         {}
-        scene::record_id  affected_object_rid;
-        scene::record_id  force_field_rid;
+        record_id  affected_object_rid;
+        record_id  force_field_rid;
         property_map  props;
     };
     using  request_update_linear_force_field_ptr = std::shared_ptr<request_update_linear_force_field const>;
 
     struct  request_leave_force_field : public request
     {
-        request_leave_force_field(scene::record_id const&  affected_object_rid_, scene::record_id const&  force_field_rid_)
+        request_leave_force_field(record_id const&  affected_object_rid_, record_id const&  force_field_rid_)
             : affected_object_rid(affected_object_rid_)
             , force_field_rid(force_field_rid_)
         {}
-        scene::record_id  affected_object_rid;
-        scene::record_id  force_field_rid;
+        record_id  affected_object_rid;
+        record_id  force_field_rid;
     };
     using  request_leave_force_field_ptr = std::shared_ptr<request_leave_force_field const>;
+
+    struct  request_insert_rigid_body_constraint : public request
+    {
+        request_insert_rigid_body_constraint(
+                node_id const&  self_rb_nid_,
+                vector3 const&  self_linear_component_,
+                vector3 const&  self_angular_component_,
+                node_id const&  other_rb_nid_,
+                vector3 const&  other_linear_component_,
+                vector3 const&  other_angular_component_,
+                float_32_bit const  bias_,
+                float_32_bit const  variable_lower_bound_,
+                float_32_bit const  variable_upper_bound_,
+                float_32_bit const  variable_initial_value_
+                )
+            : self_rb_nid(self_rb_nid_)
+            , self_linear_component(self_linear_component_)
+            , self_angular_component(self_angular_component_)
+            , other_rb_nid(other_rb_nid_)
+            , other_linear_component(other_linear_component_)
+            , other_angular_component(other_angular_component_)
+            , bias(bias_)
+            , variable_lower_bound(variable_lower_bound_)
+            , variable_upper_bound(variable_upper_bound_)
+            , variable_initial_value(variable_initial_value_)
+        {}
+        node_id  self_rb_nid;
+        vector3  self_linear_component;
+        vector3  self_angular_component;
+        node_id  other_rb_nid;
+        vector3  other_linear_component;
+        vector3  other_angular_component;
+        float_32_bit  bias;
+        float_32_bit  variable_lower_bound;
+        float_32_bit  variable_upper_bound;
+        float_32_bit  variable_initial_value;
+    };
+    using  request_insert_rigid_body_constraint_ptr = std::shared_ptr<request_insert_rigid_body_constraint const>;
 
     virtual ~scene() = 0 {}
 
     // Accepts a passed request. However, the request may NOT be resolved during any time step of the ai module.
     // So, the implemtation must save the request and resolve it after the time step of the ai module completes.
-    virtual void  accept(request_ptr) = 0;
+    virtual void  accept(request_ptr, bool delay_processing_to_next_time_step) = 0;
 
     // When an agent wants to create auxiliary scene nodes outside the subtree under its agent node,
     // then he should use this method to obtain a 'standard' auxiliary root node of the passed name
@@ -161,12 +200,16 @@ struct  scene
             node_id const&  nid,
             bool const  frame_in_parent_space,      // When false, then the frame will be in the world space
             angeo::coordinate_system&  frame
-            ) = 0;
+            ) const = 0;
     virtual void  set_frame_of_scene_node(
             node_id const&  nid,
             bool const  frame_is_in_parent_space,   // When false, then the frame is assumed in the world space
             angeo::coordinate_system const&  frame
             ) = 0;
+    virtual vector3  get_origin_of_scene_node(
+            node_id const&  nid,
+            bool const  frame_in_parent_space       // When false, then the frame will be in the world space
+            ) const = 0;
     // ASSUMPTION: The erased node must have NO children and NO record (in any folder).
     virtual void  erase_scene_node(node_id const&  nid) = 0;
 
@@ -211,8 +254,11 @@ struct  scene
 
     virtual node_id  get_scene_node_of_rigid_body_associated_with_collider(collision_object_id const  coid) const = 0;
     virtual record_id  get_scene_record_of_rigid_body_associated_with_collider(collision_object_id const  coid) const = 0;
+    virtual node_id  get_scene_node_of_rigid_body_associated_with_collider_node(node_id const&  collider_node_id) const = 0;
+    virtual record_id  get_scene_record_of_rigid_body_associated_with_collider_node(node_id const&  collider_node_id) const = 0;
 
     virtual vector3  get_linear_velocity_of_collider_at_point(collision_object_id const  coid, vector3 const&  point_in_world_space) const = 0;
+    virtual vector3  get_linear_velocity_of_rigid_body_at_point(node_id const&  rb_nid, vector3 const&  point_in_world_space) const = 0;
 
     virtual vector3  get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const = 0;
     virtual vector3  get_initial_external_angular_acceleration_at_point(vector3 const&  position_in_world_space) const = 0;

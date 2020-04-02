@@ -25,7 +25,7 @@ struct bind_ai_scene_to_simulator : public ai::scene
         m_simulator_ptr = nullptr;
     }
 
-    void  accept(request_ptr const  req);
+    void  accept(request_ptr const  req, bool const  delay_processing_to_next_time_step);
 
     node_id  get_aux_root_node(ai::OBJECT_KIND const  kind, node_id const&  nid, std::string const&  aux_root_node_name) override;
 
@@ -39,12 +39,16 @@ struct bind_ai_scene_to_simulator : public ai::scene
             node_id const&  nid,
             bool const  frame_in_parent_space,      // When false, then the frame will be in the world space
             angeo::coordinate_system&  frame
-            ) override;
+            ) const override;
     void  set_frame_of_scene_node(
             node_id const&  nid,
             bool const  frame_is_in_parent_space,   // When false, then the frame is assumed in the world space
             angeo::coordinate_system const&  frame
             ) override;
+    vector3  get_origin_of_scene_node(
+            node_id const&  nid,
+            bool const  frame_in_parent_space       // When false, then the frame will be in the world space
+            ) const override;
     void  erase_scene_node(node_id const&  nid) override;
 
     void  insert_collision_capsule_to_scene_node(
@@ -85,6 +89,8 @@ struct bind_ai_scene_to_simulator : public ai::scene
 
     node_id  get_scene_node_of_rigid_body_associated_with_collider(collision_object_id const  coid) const override;
     record_id  get_scene_record_of_rigid_body_associated_with_collider(collision_object_id const  coid) const override;
+    node_id  get_scene_node_of_rigid_body_associated_with_collider_node(node_id const&  collider_node_id) const override;
+    record_id  get_scene_record_of_rigid_body_associated_with_collider_node(node_id const&  collider_node_id) const override;
 
     vector3  get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const override;
     vector3  get_initial_external_angular_acceleration_at_point(vector3 const&  position_in_world_space) const override;
@@ -93,6 +99,7 @@ struct bind_ai_scene_to_simulator : public ai::scene
     vector3  get_external_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) const override;
 
     vector3  get_linear_velocity_of_collider_at_point(collision_object_id const  coid, vector3 const&  point_in_world_space) const override;
+    vector3  get_linear_velocity_of_rigid_body_at_point(node_id const&  rb_nid, vector3 const&  point_in_world_space) const override;
 
     void  register_to_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.

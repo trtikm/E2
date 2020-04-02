@@ -20,7 +20,7 @@ bool  process_sensor_event_using_default_procedure(
     switch (action.kind)
     {
     case SENSOR_ACTION_KIND::BEGIN_OF_LIFE:
-        scene->accept(scene::create_request<scene::request_merge_scene>(action.props));
+        scene->accept(scene::create_request<scene::request_merge_scene>(action.props), true);
         return true;
 
     case SENSOR_ACTION_KIND::ENABLE_SENSOR:
@@ -74,7 +74,8 @@ bool  process_sensor_event_using_default_procedure(
             other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
             self_rid,
             action.props
-            ));
+            ),
+            false);
         return true;
     case SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD:
         ASSUMPTION(other.sensor != nullptr || other.rigid_body_id != nullptr);
@@ -82,20 +83,23 @@ bool  process_sensor_event_using_default_procedure(
             other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
             self_rid,
             action.props
-            ));
+            ),
+            false);
         return true;
     case SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD:
         ASSUMPTION(other.sensor != nullptr || other.rigid_body_id != nullptr);
         scene->accept(scene::create_request<scene::request_leave_force_field>(
             other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
             self_rid
-            ));
+            ),
+            false);
         return true;
 
     case SENSOR_ACTION_KIND::END_OF_LIFE:
         scene->accept(scene::create_request<scene::request_erase_nodes_tree>(
-            self_rid.get_node_id())
-        );
+            self_rid.get_node_id()
+            ),
+            true);
         return true;
     default: return false;
     }

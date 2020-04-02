@@ -38,10 +38,10 @@ void  relocate_node(scn::scene_node_ptr const  node_ptr, angeo::coordinate_syste
 }
 
 
-void  bind_ai_scene_to_simulator::accept(request_ptr const  req)
+void  bind_ai_scene_to_simulator::accept(request_ptr const  req, bool const  delay_processing_to_next_time_step)
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
-    m_simulator_ptr->accept_ai_request(req);
+    m_simulator_ptr->accept_ai_request(req, delay_processing_to_next_time_step);
 }
 
 
@@ -91,7 +91,7 @@ void  bind_ai_scene_to_simulator::get_frame_of_scene_node(
         node_id const&  nid,
         bool const  frame_in_parent_space,
         angeo::coordinate_system&  frame
-        )
+        ) const
 {
     ASSUMPTION(m_simulator_ptr != nullptr && (!frame_in_parent_space || nid.path().size() > 1UL));
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
@@ -131,6 +131,26 @@ void  bind_ai_scene_to_simulator::set_frame_of_scene_node(
         INVARIANT(!node_ptr->has_parent());
         m_simulator_ptr->get_rigid_body_simulator()->set_position_of_mass_centre(rb_ptr->id(), node_ptr->get_coord_system()->origin());
         m_simulator_ptr->get_rigid_body_simulator()->set_orientation(rb_ptr->id(), node_ptr->get_coord_system()->orientation());
+    }
+}
+
+
+vector3  bind_ai_scene_to_simulator::get_origin_of_scene_node(
+        node_id const&  nid,
+        bool const  frame_in_parent_space
+        ) const
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    if (frame_in_parent_space || !node_ptr->has_parent())
+        return node_ptr->get_coord_system()->origin();
+    else
+    {
+        vector3  u;
+        matrix33  R;
+        decompose_matrix44(node_ptr->get_world_matrix(), u, R);
+        return u;
     }
 }
 
@@ -406,6 +426,23 @@ ai::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body
 }
 
 
+ai::scene::node_id  bind_ai_scene_to_simulator::get_scene_node_of_rigid_body_associated_with_collider_node(
+        node_id const&  collider_node_id
+        ) const
+{
+    scn::scene_node_ptr const  node_ptr = m_simulator_ptr->find_nearest_rigid_body_node(collider_node_id);
+    return node_ptr == nullptr ? node_id{} : node_ptr->get_id();
+}
+
+
+ai::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body_associated_with_collider_node(
+        node_id const& collider_node_id
+        ) const
+{
+    return scn::make_rigid_body_record_id(get_scene_node_of_rigid_body_associated_with_collider_node(collider_node_id));
+}
+
+
 vector3  bind_ai_scene_to_simulator::get_initial_external_linear_acceleration_at_point(vector3 const&  position_in_world_space) const
 {
     return vector3_zero();
@@ -441,6 +478,26 @@ vector3  bind_ai_scene_to_simulator::get_linear_velocity_of_collider_at_point(
     angeo::rigid_body_id  rb_id;
     if (!m_simulator_ptr->get_rigid_body_of_collider(coid, &rb_id))
         return vector3_zero();
+    return angeo::compute_velocity_of_point_of_rigid_body(
+            m_simulator_ptr->get_rigid_body_simulator()->get_position_of_mass_centre(rb_id),
+            m_simulator_ptr->get_rigid_body_simulator()->get_linear_velocity(rb_id),
+            m_simulator_ptr->get_rigid_body_simulator()->get_angular_velocity(rb_id),
+            point_in_world_space
+            );
+}
+
+
+vector3  bind_ai_scene_to_simulator::get_linear_velocity_of_rigid_body_at_point(
+        node_id const&  rb_nid,
+        vector3 const&  point_in_world_space
+        ) const
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    scn::scene_node_ptr const  node_ptr = m_simulator_ptr->get_scene_node(rb_nid);
+    ASSUMPTION(node_ptr != nullptr);
+    scn::rigid_body const* const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    angeo::rigid_body_id const  rb_id = rb_ptr->id();
     return angeo::compute_velocity_of_point_of_rigid_body(
             m_simulator_ptr->get_rigid_body_simulator()->get_position_of_mass_centre(rb_id),
             m_simulator_ptr->get_rigid_body_simulator()->get_linear_velocity(rb_id),
