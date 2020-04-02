@@ -61,7 +61,7 @@ widgets::widgets(program_window* const  wnd)
     , m_save_record_handlers()
 
     , m_processing_selection_change(false)
-    , m_is_coord_system_pos_changed_enabled(true)
+    , m_is_coord_system_pos_change_processing_disabled(false)
 
     , m_save_commit_id(scn::get_invalid_scene_history_commit_id())
 
@@ -1725,7 +1725,7 @@ tree_widget_item*  widgets::import_scene_node(
 
 void  widgets::on_coord_system_pos_changed()
 {
-    if (!m_is_coord_system_pos_changed_enabled)
+    if (m_is_coord_system_pos_change_processing_disabled)
         return;
 
     vector3 const  pos(m_coord_system_pos_x->text().toFloat(),
@@ -1754,6 +1754,9 @@ void  widgets::on_coord_system_pos_changed()
 
 void  widgets::on_coord_system_rot_changed()
 {
+    if (m_is_coord_system_pos_change_processing_disabled)
+        return;
+
     quaternion  q(m_coord_system_rot_w->text().toFloat(),
                   m_coord_system_rot_x->text().toFloat(),
                   m_coord_system_rot_y->text().toFloat(),
@@ -1787,6 +1790,9 @@ void  widgets::on_coord_system_rot_changed()
 
 void  widgets::on_coord_system_rot_tait_bryan_changed()
 {
+    if (m_is_coord_system_pos_change_processing_disabled)
+        return;
+
     quaternion  q = rotation_matrix_to_quaternion(yaw_pitch_roll_to_rotation(
         m_coord_system_yaw->text().toFloat() * PI() / 180.0f,
         m_coord_system_pitch->text().toFloat() * PI() / 180.0f,
@@ -2458,7 +2464,7 @@ void  widgets::update_coord_system_location_widgets()
 
 void  widgets::enable_coord_system_location_widgets(bool const  state, bool const  read_only)
 {
-    lock_bool const  _(&m_is_coord_system_pos_changed_enabled);
+    lock_bool const  _(&m_is_coord_system_pos_change_processing_disabled);
 
     m_coord_system_pos_x->setEnabled(state);
     m_coord_system_pos_y->setEnabled(state);
