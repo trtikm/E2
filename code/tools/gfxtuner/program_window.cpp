@@ -48,6 +48,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     , m_glwindow()
     , m_idleTimerId(-1)
     , m_is_this_first_timer_event(true)
+    , m_focus_lost_counter(0U)
 
     , m_gl_window_widget(m_glwindow.create_widget_container())
 
@@ -180,6 +181,16 @@ void program_window::timerEvent(QTimerEvent* const  event)
         // Process pending requests, which are independet on current tab.
 
         m_tab_scene_widgets.process_pending_scene_load_requst_if_any();
+
+        // Try to retrieve lost focus, if lost
+        if (m_focus_lost_counter > 0U)
+        {
+            --m_focus_lost_counter;
+            if (m_focus_lost_counter > 0)
+                set_focus_to_widgets();
+            else
+                set_focus_to_glwindow();
+        }
     }
 }
 
@@ -238,6 +249,11 @@ void  program_window::on_tab_changed(int const  tab_index)
     {
         // Nothing to do...
     }
+}
+
+void  program_window::print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show)
+{
+    m_status_bar.print_status_message(msg, num_miliseconds_to_show);
 }
 
 void  program_window::set_title(std::string const&  text)

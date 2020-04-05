@@ -30,12 +30,13 @@ struct program_window : public QMainWindow
     boost::property_tree::ptree&  ptree() { return *m_ptree; }
     qtgl::window<simulator>&  glwindow() noexcept { return m_glwindow; }
 
-    void  print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show=2000)
-    { m_status_bar.print_status_message(msg, num_miliseconds_to_show); }
+    void  print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show = 2000);
 
     void  set_title(std::string const&  text = "");
+
     void  set_focus_to_glwindow();
     void  set_focus_to_widgets();
+    void  notify_focus_lost() { m_focus_lost_counter = 2; }
 
 public slots:
 
@@ -173,6 +174,7 @@ private:
     qtgl::window<simulator>  m_glwindow;
     int  m_idleTimerId;
     bool  m_is_this_first_timer_event;
+    natural_8_bit  m_focus_lost_counter;
 
     QWidget*  m_gl_window_widget;
 
