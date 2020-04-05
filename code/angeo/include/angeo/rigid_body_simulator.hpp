@@ -18,24 +18,20 @@ struct  rigid_body_simulator
 {
     struct  computation_statistics
     {
-        computation_statistics()
-            : m_num_rigid_bodies(0U)
-            , m_contact_cache_size(0U)
-            , m_num_contact_cache_hits(0U)
-            , m_num_contact_cache_misses(0U)
-            , m_performed_simulation_steps(0UL)
-            , m_duration_of_rigid_body_update_in_seconds(0.0)
-            , m_duration_of_contact_cache_update_in_seconds(0.0)
-        {}
-
+        computation_statistics();
         natural_32_bit  m_num_rigid_bodies;
         natural_32_bit  m_contact_cache_size;
         natural_32_bit  m_num_contact_cache_hits;
         natural_32_bit  m_num_contact_cache_misses;
+        natural_32_bit  m_custom_constraints_cache_size;
+        natural_32_bit  m_num_custom_constraints_cache_hits;
+        natural_32_bit  m_num_custom_constraints_cache_misses;
         natural_64_bit  m_performed_simulation_steps;
         float_64_bit  m_duration_of_rigid_body_update_in_seconds;
         float_64_bit  m_duration_of_contact_cache_update_in_seconds;
     };
+
+    rigid_body_simulator();
 
     rigid_body_id  insert_rigid_body(
             vector3 const&  position_of_mass_centre,
@@ -136,6 +132,31 @@ struct  rigid_body_simulator
                                     // in 'friction_info_ptr->m_unit_tangent_plane_vectors' one friction constraint).
             );
 
+    using custom_constraint_id = natural_32_bit;
+
+    custom_constraint_id  gen_fresh_custom_constraint_id();
+    void  release_generated_custom_constraint_id(custom_constraint_id const  id);
+
+    void  insert_custom_constraint(
+            custom_constraint_id const  id,
+            rigid_body_id const  rb_0,
+            vector3 const&  linear_component_0,
+            vector3 const&  angular_component_0,
+            rigid_body_id const  rb_1,
+            vector3 const&  linear_component_1,
+            vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            motion_constraint_system::variable_bound_getter const&  variable_lower_bound = variable_bound_getter_ZERO,
+            motion_constraint_system::variable_bound_getter const&  variable_upper_bound = variable_bound_getter_MAX,
+            float_32_bit const  initial_value_for_cache_miss = 0.0f
+            );
+
+    void  clear_cache_of_custom_constraint(custom_constraint_id const  id) { m_custom_constraints_cache.erase(id); }
+
+    static float_32_bit  variable_bound_getter_MIN(std::vector<float_32_bit> const&) { return -std::numeric_limits<float_32_bit>::max(); }
+    static float_32_bit  variable_bound_getter_ZERO(std::vector<float_32_bit> const&) { return 0.0f; }
+    static float_32_bit  variable_bound_getter_MAX(std::vector<float_32_bit> const&) { return std::numeric_limits<float_32_bit>::max(); }
+
     void  solve_constraint_system(
             float_32_bit const  time_step_in_seconds,
             float_32_bit const  max_computation_time_in_seconds
@@ -169,6 +190,13 @@ private:
     { m_invalidated_rigid_bodies_in_contact_cache.insert(rb_id); }
     void  update_contact_cache();
 
+    float_32_bit  read_custom_constraints_cache(
+            custom_constraint_id const  id,
+            pair_of_rigid_body_ids const&  rb_ids,
+            float_32_bit const  value_on_cache_miss
+            ) const;
+    void  update_custom_constraints_cache();
+
     mutable computation_statistics  m_statistics;
 
     motion_constraint_system  m_constraint_system;
@@ -180,6 +208,11 @@ private:
     std::unordered_set<rigid_body_id>  m_invalidated_rigid_bodies_in_contact_cache;
     std::unordered_map<motion_constraint_system::constraint_id, std::pair<contact_id, natural_32_bit> >
             m_from_constraints_to_contact_ids;
+
+    std::unordered_map<custom_constraint_id, std::pair<float_32_bit, pair_of_rigid_body_ids> >  m_custom_constraints_cache;
+    std::unordered_map<motion_constraint_system::constraint_id, custom_constraint_id>  m_from_constraints_to_custom_constraint_ids;
+    std::unordered_set<custom_constraint_id>  m_released_custom_constraint_ids;
+    custom_constraint_id  m_max_generated_custom_constraint_id;
 
     // All the vectors below have the same size.
 

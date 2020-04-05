@@ -39,6 +39,40 @@ vector3  compute_relative_tangent_plane_velocity_of_point_of_rigid_bodies(
 namespace angeo {
 
 
+rigid_body_simulator::computation_statistics::computation_statistics()
+    : m_num_rigid_bodies(0U)
+    , m_contact_cache_size(0U)
+    , m_num_contact_cache_hits(0U)
+    , m_num_contact_cache_misses(0U)
+    , m_custom_constraints_cache_size(0U)
+    , m_num_custom_constraints_cache_hits(0U)
+    , m_num_custom_constraints_cache_misses(0U)
+    , m_performed_simulation_steps(0UL)
+    , m_duration_of_rigid_body_update_in_seconds(0.0)
+    , m_duration_of_contact_cache_update_in_seconds(0.0)
+{}
+
+
+rigid_body_simulator::rigid_body_simulator()
+    : m_statistics()
+
+    , m_constraint_system()
+
+    , m_contact_cache()
+    , m_invalidated_rigid_bodies_in_contact_cache()
+    , m_from_constraints_to_contact_ids()
+
+    , m_custom_constraints_cache()
+    , m_from_constraints_to_custom_constraint_ids()
+    , m_released_custom_constraint_ids()
+    , m_max_generated_custom_constraint_id(0U)
+
+    , m_rigid_bodies()
+    , m_inverted_inertia_tensors() 
+    , m_invalid_rigid_body_ids()
+{}
+
+
 rigid_body_id  rigid_body_simulator::insert_rigid_body(
         vector3 const&  position_of_mass_centre,
         quaternion const&  orientation,
@@ -229,6 +263,59 @@ void  rigid_body_simulator::insert_contact_constraints(
 }
 
 
+rigid_body_simulator::custom_constraint_id  rigid_body_simulator::gen_fresh_custom_constraint_id()
+{
+    if (m_released_custom_constraint_ids.empty())
+        return ++m_max_generated_custom_constraint_id;
+    auto const  it = m_released_custom_constraint_ids.begin();
+    custom_constraint_id const  id = *it;
+    m_released_custom_constraint_ids.erase(it);
+    return id;
+}
+
+
+void  rigid_body_simulator::release_generated_custom_constraint_id(custom_constraint_id const  constraint_id)
+{
+    ASSUMPTION(constraint_id > 0U && constraint_id <= m_max_generated_custom_constraint_id);
+    m_released_custom_constraint_ids.insert(constraint_id);
+}
+
+
+void  rigid_body_simulator::insert_custom_constraint(
+        custom_constraint_id const  id,
+        rigid_body_id const  rb_0,
+        vector3 const&  linear_component_0,
+        vector3 const&  angular_component_0,
+        rigid_body_id const  rb_1,
+        vector3 const&  linear_component_1,
+        vector3 const&  angular_component_1,
+        float_32_bit const  bias,
+        motion_constraint_system::variable_bound_getter const&  variable_lower_bound,
+        motion_constraint_system::variable_bound_getter const&  variable_upper_bound,
+        float_32_bit const  initial_value_for_cache_miss
+        )
+{
+    TMPROF_BLOCK();
+
+    rigid_body const&  rb0 = m_rigid_bodies.at(rb_0);
+    rigid_body const&  rb1 = m_rigid_bodies.at(rb_1);
+    motion_constraint_system::constraint_id const  cid =
+            get_constraint_system().insert_constraint(
+                    rb_0,
+                    linear_component_0,
+                    angular_component_0,
+                    rb_1,
+                    linear_component_1,
+                    angular_component_1,
+                    bias,
+                    variable_lower_bound,
+                    variable_upper_bound,
+                    read_custom_constraints_cache(id, { rb_0, rb_1 }, initial_value_for_cache_miss)
+                    );
+    m_from_constraints_to_custom_constraint_ids.insert({ cid, id });
+}
+
+
 void  rigid_body_simulator::solve_constraint_system(
         float_32_bit const  time_step_in_seconds,
         float_32_bit const  max_computation_time_in_seconds
@@ -297,6 +384,7 @@ void  rigid_body_simulator::prepare_contact_cache_and_constraint_system_for_next
     std::chrono::high_resolution_clock::time_point const  contact_cache_start_time_point = std::chrono::high_resolution_clock::now();
 
     update_contact_cache();
+    update_custom_constraints_cache();
     get_constraint_system().clear();
 
     std::chrono::high_resolution_clock::time_point const  end_time_point = std::chrono::high_resolution_clock::now();
@@ -385,6 +473,44 @@ void  rigid_body_simulator::update_contact_cache()
     m_from_constraints_to_contact_ids.clear();
 
     m_statistics.m_contact_cache_size = (natural_32_bit)m_contact_cache.size();
+}
+
+
+float_32_bit  rigid_body_simulator::read_custom_constraints_cache(
+        custom_constraint_id const  id,
+        pair_of_rigid_body_ids const&  rb_ids,
+        float_32_bit const  value_on_cache_miss
+        ) const
+{
+    TMPROF_BLOCK();
+
+    auto const  it = m_custom_constraints_cache.find(id);
+    if (it == m_custom_constraints_cache.cend() || it->second.second != rb_ids)
+    {
+        ++m_statistics.m_num_contact_cache_misses;
+        return value_on_cache_miss;
+    }
+    ++m_statistics.m_num_custom_constraints_cache_hits;
+    return it->second.first;
+}
+
+
+void  rigid_body_simulator::update_custom_constraints_cache()
+{
+    TMPROF_BLOCK();
+
+    m_custom_constraints_cache.clear();
+    for (auto const& cid_and_id : m_from_constraints_to_custom_constraint_ids)
+        m_custom_constraints_cache.insert({
+                cid_and_id.second,
+                {
+                    get_constraint_system().get_solution_of_constraint(cid_and_id.first),
+                    get_constraint_system().get_rigid_bodies_of_constraint(cid_and_id.first)
+                }
+                });
+    m_from_constraints_to_custom_constraint_ids.clear();
+
+    m_statistics.m_custom_constraints_cache_size = (natural_32_bit)m_custom_constraints_cache.size();
 }
 
 
