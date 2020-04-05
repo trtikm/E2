@@ -92,7 +92,7 @@ keyboard_key_name  KEY_CAPSLOCK();
 keyboard_key_name  KEY_LEFT();
 keyboard_key_name  KEY_RIGHT();
 keyboard_key_name  KEY_UP();
-keyboard_key_name  KEY_DOWM();
+keyboard_key_name  KEY_DOWN();
 
 keyboard_key_name  KEY_PAGEUP();
 keyboard_key_name  KEY_PAGEDOWN();

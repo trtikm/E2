@@ -85,7 +85,7 @@ keyboard_key_name  KEY_CAPSLOCK() { return "CAPSLOCK"; }
 keyboard_key_name  KEY_LEFT() { return "LEFT"; }
 keyboard_key_name  KEY_RIGHT() { return "RIGHT"; }
 keyboard_key_name  KEY_UP() { return "UP"; }
-keyboard_key_name  KEY_DOWM() { return "DOWN"; }
+keyboard_key_name  KEY_DOWN() { return "DOWN"; }
 
 keyboard_key_name  KEY_PAGEUP() { return "PAGEUP"; }
 keyboard_key_name  KEY_PAGEDOWN() { return "PAGEDOWN"; }

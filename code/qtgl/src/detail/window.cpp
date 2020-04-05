@@ -51,7 +51,7 @@ std::unordered_map<int,keyboard_key_name> const&  qtkey_to_keyname()
         { Qt::Key_Left,         KEY_LEFT() },
         { Qt::Key_Up,           KEY_UP() },
         { Qt::Key_Right,        KEY_RIGHT() },
-        { Qt::Key_Down,         KEY_DOWM() },
+        { Qt::Key_Down,         KEY_DOWN() },
         { Qt::Key_PageUp,       KEY_PAGEUP() },
         { Qt::Key_PageDown,     KEY_PAGEDOWN() },
         { Qt::Key_CapsLock,     KEY_CAPSLOCK() },
