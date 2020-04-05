@@ -210,8 +210,8 @@ void  decompose_matrix44(
         vector3&  origin,
         matrix33&  rot_matrix
         );
-inline quaternion  angle_axis_to_quaternion(scalar const  angle, vector3 const&  axis) {
-    return quaternion(Eigen::AngleAxis<scalar>(angle,axis));
+inline quaternion  angle_axis_to_quaternion(scalar const  angle, vector3 const&  unit_axis) {
+    return quaternion(Eigen::AngleAxis<scalar>(angle,unit_axis));
 }
 inline scalar quaternion_to_angle_axis(quaternion const& q, vector3&  axis) {
     Eigen::AngleAxis<scalar> tmp(q);
@@ -224,6 +224,9 @@ void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitc
 inline vector3  translation_vector(matrix44 const&  M) { return vector3(M(0, 3), M(1, 3), M(2, 3)); }
 matrix33&  rotation_matrix(matrix44 const&  M, matrix33&  R);
 matrix33  rotation_matrix(matrix44 const&  M);
+inline matrix33  angle_axis_to_rotation_matrix(scalar const  angle, vector3 const& unit_axis) {
+    return quaternion_to_rotation_matrix(angle_axis_to_quaternion(angle, unit_axis));
+}
 
 //template<typename T, int nrows, int ncols>
 //inline Eigen::ArrayWrapper< Eigen::Matrix<T, nrows, ncols> > as_array(Eigen::Matrix<T, nrows, ncols> const&  u)
