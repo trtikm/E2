@@ -165,6 +165,7 @@ struct scene_node final
     void  rotate(quaternion const&  rotation) { angeo::rotate(*m_coord_system, rotation); invalidate_world_matrix(); }
     void  set_origin(vector3 const&  new_origin) { m_coord_system->set_origin(new_origin); invalidate_world_matrix(); }
     void  set_orientation(quaternion const&  new_orientation) { m_coord_system->set_orientation(new_orientation); invalidate_world_matrix(); }
+    void  relocate(angeo::coordinate_system const& new_coord_system) { relocate(new_coord_system.origin(), new_coord_system.orientation()); }
     void  relocate(vector3 const&  new_origin, quaternion const&  new_orientation)
     {
         m_coord_system->set_origin(new_origin); m_coord_system->set_orientation(new_orientation); invalidate_world_matrix();
