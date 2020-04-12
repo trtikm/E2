@@ -2,11 +2,13 @@
 #   define AI_ACTION_CONTROLLER_HPP_INCLUDED
 
 #   include <ai/blackboard_agent.hpp>
-#   include <ai/action_regulator.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/motion_desire_props.hpp>
 #   include <ai/detail/rigid_body_motion.hpp>
 #   include <ai/detail/guarded_motion_actions_processor.hpp>
+#   include <ai/detail/action_controller_interpolator_animation.hpp>
+#   include <ai/detail/action_controller_interpolator_look_at.hpp>
+#   include <ai/detail/action_controller_interpolator_matter.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <string>
@@ -47,16 +49,11 @@ struct  action_controller
     float_32_bit  get_environment_acceleration_coef() const { return m_environment_acceleration_coef; }
     vector3 const&  get_external_linear_acceleration() const { return m_external_linear_acceleration; }
     vector3 const&  get_external_angular_acceleration() const { return m_external_angular_acceleration; }
-    float_32_bit  get_total_time_till_destination_cursor_in_seconds() const { return m_total_interpolation_time_in_seconds; }
-    float_32_bit  get_consumed_time_till_destination_cursor_in_seconds() const { return m_consumed_time_in_seconds; }
+    float_32_bit  get_interpolation_parameter() const { return m_interpolator_animation.get_interpolation_parameter(); }
     skeletal_motion_templates::motion_template_cursor const&  get_destination_cursor() const { return m_dst_cursor; }
     vector3 const&  get_ideal_linear_velocity_in_world_space() const { return m_ideal_linear_velocity_in_world_space; }
     vector3 const&  get_ideal_angular_velocity_in_world_space() const { return m_ideal_angular_velocity_in_world_space; }
-    skeletal_motion_templates::free_bones_for_look_at_ptr  get_free_bones_for_look_at() const { return m_current_intepolation_state.free_bones_look_at; }
-
-    motion_desire_props const&  get_regulated_motion_desire_props() const { return m_regulator.get_motion_desire_props(); }
-
-    float_32_bit  compute_interpolation_speed() const;
+    skeletal_motion_templates::free_bones_for_look_at_ptr  get_free_bones_for_look_at() const { return m_interpolator_look_at.get_current_bones(); }
 
 protected:
 
@@ -86,25 +83,16 @@ private:
     void  compute_environment_motion(std::vector<scene::collicion_contant_info_ptr> const& contacts_in_normal_cone);
     void  clear_environment_motion();
 
-    void  interpolate(float_32_bit const  interpolation_param);
-    void  look_at_target(float_32_bit const  time_step_in_seconds, float_32_bit const  interpolation_param);
-
     blackboard_agent_weak_ptr  m_blackboard;
-    action_regulator  m_regulator;
 
-    float_32_bit  m_total_interpolation_time_in_seconds;
-    float_32_bit  m_consumed_time_in_seconds;
-
-    intepolation_state  m_src_intepolation_state;
-    intepolation_state  m_current_intepolation_state;
-    bool  m_use_inverted_collider_center_offset_interpolation;
+    detail::action_controller_interpolator_animation  m_interpolator_animation;
+    detail::action_controller_interpolator_look_at  m_interpolator_look_at;
+    detail::action_controller_interpolator_matter  m_interpolator_matter;
 
     skeletal_motion_templates::motion_template_cursor  m_dst_cursor;
-    std::vector<angeo::coordinate_system>  m_dst_frames;
+
     vector3  m_ideal_linear_velocity_in_world_space;
     vector3  m_ideal_angular_velocity_in_world_space;
-    vector3  m_collider_center_offset_in_reference_frame;
-
     detail::motion_action_persistent_data_map  m_motion_action_data;
 };
 

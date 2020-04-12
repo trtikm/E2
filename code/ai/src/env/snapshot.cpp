@@ -31,7 +31,6 @@ snapshot::snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr)
     angeo::to_base_matrix(motion.frame, to_agent_space_matrix);
 
     desire_computed_by_cortex = bb->m_cortex->get_motion_desire_props();
-    regulated_desire = actions.get_regulated_motion_desire_props();
 
     forward = transform_vector(motion.forward, to_agent_space_matrix);
     up = transform_vector(motion.up, to_agent_space_matrix);
@@ -46,8 +45,7 @@ snapshot::snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr)
     ideal_linear_velocity = transform_vector(actions.get_ideal_linear_velocity_in_world_space(), to_agent_space_matrix);
     ideal_angular_velocity = transform_vector(actions.get_ideal_angular_velocity_in_world_space(), to_agent_space_matrix);
 
-    interpolation_param_till_destination_cursor =
-            actions.get_consumed_time_till_destination_cursor_in_seconds() / actions.get_total_time_till_destination_cursor_in_seconds();
+    interpolation_param_till_destination_cursor = actions.get_interpolation_parameter();
     destination_cursor = actions.get_destination_cursor();
 
     camera_origin = transform_point(camera_frame.origin(), to_agent_space_matrix);

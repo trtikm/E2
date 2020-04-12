@@ -16,7 +16,6 @@ struct  snapshot
     // All vectors are in agent's local frame!
 
     motion_desire_props  desire_computed_by_cortex;
-    motion_desire_props  regulated_desire;
 
     vector3  forward;
     vector3  up;

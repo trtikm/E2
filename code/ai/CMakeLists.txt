@@ -42,8 +42,15 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/action_controller.hpp
     ./src/action_controller.cpp
-    ./include/ai/action_regulator.hpp
-    ./src/action_regulator.cpp
+
+    ./include/ai/detail/action_controller_interpolator.hpp
+    ./src/detail/action_controller_interpolator.cpp
+    ./include/ai/detail/action_controller_interpolator_animation.hpp
+    ./src/detail/action_controller_interpolator_animation.cpp
+    ./include/ai/detail/action_controller_interpolator_look_at.hpp
+    ./src/detail/action_controller_interpolator_look_at.cpp
+    ./include/ai/detail/action_controller_interpolator_matter.hpp
+    ./src/detail/action_controller_interpolator_matter.cpp
 
     ./include/ai/input_devices.hpp
 

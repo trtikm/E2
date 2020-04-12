@@ -46,7 +46,6 @@ private:
     // DATA:
 
     layer_props  desire_computed_by_cortex;
-    layer_props  regulated_desire;
     layer_props  motion;
     layer_props  camera;
     layer_props  collision_contacts;

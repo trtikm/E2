@@ -19,13 +19,6 @@ snapshot_encoder::snapshot_encoder(blackboard_agent_const_ptr const  blackboard_
             0U, 0U,                     // i.e. encoders are NOT stored in a grid
             {}                          // encoders (they are all inserted later)
         }
-    , regulated_desire
-        {
-            { true, 0U, 100U },         // SIGN_AND_GEOMETRY_INFO ('num_units' variable is initialised later)
-            START_LAYER_INDEX + 1U,     // INDEX
-            0U, 0U,                     // i.e. encoders are NOT stored in a grid
-            {}                          // encoders (they are all inserted later)
-        }
     , motion
         {
             { true, 0U, 100U },         // SIGN_AND_GEOMETRY_INFO ('num_units' variable is initialised later)
@@ -96,36 +89,6 @@ snapshot_encoder::snapshot_encoder(blackboard_agent_const_ptr const  blackboard_
     desire_computed_by_cortex.encoders.push_back({ 8U, -50.0f, 50.0f, 0.001f, 60.0f });  // z
 
     compute_num_units(desire_computed_by_cortex);
-
-
-    // --- regulated_desire ---------------------------------------------------------------------
-
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // x
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // y
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // z
-
-    // linear_velocity_unit_direction_in_local_space (3 floats)
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // x
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // y
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // z
-
-    // linear_speed  (1 float)
-    regulated_desire.encoders.push_back({ 8U, -10.0f, 10.0f, 0.001f, 60.0f });
-
-    // angular_velocity_unit_axis_in_local_space (3 floats)
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // x
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // y
-    regulated_desire.encoders.push_back({ 8U, -1.0f, 1.0f, 0.001f, 60.0f });  // z
-
-    // angular_speed  (1 float)
-    regulated_desire.encoders.push_back({ 8U, -6.28f, 6.28f, 0.001f, 60.0f });
-
-    // look_at_target_in_local_space (3 floats)
-    regulated_desire.encoders.push_back({ 8U, -50.0f, 50.0f, 0.001f, 60.0f });  // x
-    regulated_desire.encoders.push_back({ 8U, -50.0f, 50.0f, 0.001f, 60.0f });  // y
-    regulated_desire.encoders.push_back({ 8U, -50.0f, 50.0f, 0.001f, 60.0f });  // z
-
-    compute_num_units(regulated_desire);
 
 
     // --- motion ---------------------------------------------------------------------
@@ -331,18 +294,6 @@ void  snapshot_encoder::next_round(
     updater.end();
 
 
-    // --- regulated_desire ---------------------------------------------------------------------
-
-    updater.begin(regulated_desire);
-    updater.update_next(ss.regulated_desire.forward_unit_vector_in_local_space);
-    updater.update_next(ss.regulated_desire.linear_velocity_unit_direction_in_local_space);
-    updater.update_next(ss.regulated_desire.linear_speed);
-    updater.update_next(ss.regulated_desire.angular_velocity_unit_axis_in_local_space);
-    updater.update_next(ss.regulated_desire.angular_speed);
-    updater.update_next(ss.regulated_desire.look_at_target_in_local_space);
-    updater.end();
-
-
     // --- motion ---------------------------------------------------------------------
 
     updater.begin(motion);
@@ -389,7 +340,6 @@ void  snapshot_encoder::next_round(
 void  snapshot_encoder::get_layers_configs(std::vector<netlab::simple::network_layer::config::sign_and_geometry>&  configs) const
 {
     configs.push_back(desire_computed_by_cortex.SIGN_AND_GEOMETRY_INFO);
-    configs.push_back(regulated_desire.SIGN_AND_GEOMETRY_INFO);
     configs.push_back(motion.SIGN_AND_GEOMETRY_INFO);
     configs.push_back(camera.SIGN_AND_GEOMETRY_INFO);
     configs.push_back(collision_contacts.SIGN_AND_GEOMETRY_INFO);
