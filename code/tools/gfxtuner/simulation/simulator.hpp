@@ -2,7 +2,6 @@
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
 #   include <scene/scene.hpp>
-#   include <scene/scene.hpp>
 #   include <scene/scene_node_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/scene_record_id.hpp>
