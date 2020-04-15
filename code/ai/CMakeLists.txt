@@ -52,6 +52,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/detail/action_controller_interpolator_matter.hpp
     ./src/detail/action_controller_interpolator_matter.cpp
 
+    ./include/ai/detail/action_controller_roller.hpp
+    ./src/detail/action_controller_roller.cpp
+
     ./include/ai/input_devices.hpp
 
     ./include/ai/blackboard.hpp
