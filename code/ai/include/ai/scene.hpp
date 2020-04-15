@@ -5,6 +5,7 @@
 #   include <ai/object_id.hpp>
 #   include <ai/property_map.hpp>
 #   include <angeo/coordinate_system.hpp>
+#   include <angeo/rigid_body_simulator.hpp>
 #   include <memory>
 #   include <functional>
 
@@ -16,6 +17,7 @@ struct  scene
     using  node_id = scene_node_id;
     using  record_id = scene_record_id;
     using  collision_object_id = scene_collision_object_id;
+    using  custom_constraint_id = angeo::rigid_body_simulator::custom_constraint_id;
 
     struct  collicion_contant_info
     {
@@ -214,6 +216,14 @@ struct  scene
     virtual void  erase_scene_node(node_id const&  nid) = 0;
 
     // ASSUMPTION: A scene node may have at most one collider.
+    virtual void  insert_collision_sphere_to_scene_node(
+            node_id const&  nid,
+            float_32_bit const  radius,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
+            bool const  as_dynamic
+            ) = 0;
     virtual void  insert_collision_capsule_to_scene_node(
             node_id const&  nid,
             float_32_bit const  half_distance_between_end_points,
@@ -278,6 +288,34 @@ struct  scene
     virtual angeo::collision_scene const&  get_collision_scene() const = 0;
     virtual void  get_coids_under_scene_node(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const = 0;
     virtual void  get_coids_under_scene_node_subtree(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const = 0;
+
+    virtual custom_constraint_id  acquire_fresh_custom_constraint_id() = 0;
+    virtual void  release_generated_custom_constraint_id(custom_constraint_id const  ccid) = 0;
+    virtual void  insert_custom_constraint(
+            custom_constraint_id const  ccid,
+            node_id const&  rb_nid_0,
+            vector3 const&  linear_component_0,
+            vector3 const&  angular_component_0,
+            node_id const&  rb_nid_1,
+            vector3 const&  linear_component_1,
+            vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            float_32_bit const  variable_lower_bound,
+            float_32_bit const  variable_upper_bound,
+            float_32_bit const  initial_value_for_cache_miss = 0.0f
+            ) = 0;
+    virtual void  insert_immediate_constraint(
+            node_id const&  rb_nid_0,
+            vector3 const&  linear_component_0,
+            vector3 const&  angular_component_0,
+            node_id const&  rb_nid_1,
+            vector3 const&  linear_component_1,
+            vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            float_32_bit const  variable_lower_bound,
+            float_32_bit const  variable_upper_bound,
+            float_32_bit const  initial_value = 0.0f
+            ) = 0;
 };
 
 

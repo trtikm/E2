@@ -173,6 +173,28 @@ void  bind_ai_scene_to_simulator::erase_scene_node(node_id const&  nid)
 }
 
 
+void  bind_ai_scene_to_simulator::insert_collision_sphere_to_scene_node(
+        node_id const&  nid,
+        float_32_bit const  radius,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
+        bool const  as_dynamic
+        )
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    ASSUMPTION(m_simulator_ptr->find_nearest_rigid_body_node(m_simulator_ptr->get_scene_node(nid)) == nullptr);
+    m_simulator_ptr->insert_collision_sphere_to_scene_node(
+            radius,
+            material,
+            collision_class,
+            density_multiplier,
+            as_dynamic,
+            scn::make_collider_record_id(nid, angeo::as_string(angeo::COLLISION_SHAPE_TYPE::SPHERE))
+            );
+}
+
+
 void  bind_ai_scene_to_simulator::insert_collision_capsule_to_scene_node(
         node_id const&  nid,
         float_32_bit const  half_distance_between_end_points,
@@ -640,4 +662,94 @@ void  bind_ai_scene_to_simulator::get_coids_under_scene_node_subtree(node_id con
         get_coids_under_scene_node(node_ptr, acceptor);
         node_ptr->foreach_child([this, &acceptor](scn::scene_node_ptr const  n) { get_coids_under_scene_node(n, acceptor); return true; }, true);
     }
+}
+
+
+bind_ai_scene_to_simulator::custom_constraint_id  bind_ai_scene_to_simulator::acquire_fresh_custom_constraint_id()
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->gen_fresh_custom_constraint_id();
+}
+
+
+void  bind_ai_scene_to_simulator::release_generated_custom_constraint_id(custom_constraint_id const  ccid)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->release_generated_custom_constraint_id(ccid);
+}
+
+
+void  bind_ai_scene_to_simulator::insert_custom_constraint(
+        custom_constraint_id const  ccid,
+        node_id const&  rb_nid_0,
+        vector3 const&  linear_component_0,
+        vector3 const&  angular_component_0,
+        node_id const&  rb_nid_1,
+        vector3 const&  linear_component_1,
+        vector3 const&  angular_component_1,
+        float_32_bit const  bias,
+        float_32_bit const  variable_lower_bound,
+        float_32_bit const  variable_upper_bound,
+        float_32_bit const  initial_value_for_cache_miss
+        )
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    scn::scene_node_ptr const  rb_0_node_ptr = m_simulator_ptr->get_scene_node(rb_nid_0);
+    ASSUMPTION(rb_0_node_ptr != nullptr);
+    scn::scene_node_ptr const  rb_1_node_ptr = m_simulator_ptr->get_scene_node(rb_nid_1);
+    ASSUMPTION(rb_1_node_ptr != nullptr);
+    scn::rigid_body const* const  rb_0 = scn::get_rigid_body(*rb_0_node_ptr);
+    ASSUMPTION(rb_0 != nullptr);
+    scn::rigid_body const* const  rb_1 = scn::get_rigid_body(*rb_1_node_ptr);
+    ASSUMPTION(rb_1 != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->insert_custom_constraint(
+            ccid,
+            rb_0->id(),
+            linear_component_0,
+            angular_component_0,
+            rb_1->id(),
+            linear_component_1,
+            angular_component_1,
+            bias,
+            [variable_lower_bound](std::vector<float_32_bit> const&) { return variable_lower_bound; },
+            [variable_upper_bound](std::vector<float_32_bit> const&) { return variable_upper_bound; },
+            initial_value_for_cache_miss
+            );
+}
+
+
+void  bind_ai_scene_to_simulator::insert_immediate_constraint(
+        node_id const&  rb_nid_0,
+        vector3 const&  linear_component_0,
+        vector3 const&  angular_component_0,
+        node_id const&  rb_nid_1,
+        vector3 const&  linear_component_1,
+        vector3 const&  angular_component_1,
+        float_32_bit const  bias,
+        float_32_bit const  variable_lower_bound,
+        float_32_bit const  variable_upper_bound,
+        float_32_bit const  initial_value
+        )
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    scn::scene_node_ptr const  rb_0_node_ptr = m_simulator_ptr->get_scene_node(rb_nid_0);
+    ASSUMPTION(rb_0_node_ptr != nullptr);
+    scn::scene_node_ptr const  rb_1_node_ptr = m_simulator_ptr->get_scene_node(rb_nid_1);
+    ASSUMPTION(rb_1_node_ptr != nullptr);
+    scn::rigid_body const* const  rb_0 = scn::get_rigid_body(*rb_0_node_ptr);
+    ASSUMPTION(rb_0 != nullptr);
+    scn::rigid_body const* const  rb_1 = scn::get_rigid_body(*rb_1_node_ptr);
+    ASSUMPTION(rb_1 != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->get_constraint_system().insert_constraint(
+            rb_0->id(),
+            linear_component_0,
+            angular_component_0,
+            rb_1->id(),
+            linear_component_1,
+            angular_component_1,
+            bias,
+            [variable_lower_bound](std::vector<float_32_bit> const&) { return variable_lower_bound; },
+            [variable_upper_bound](std::vector<float_32_bit> const&) { return variable_upper_bound; },
+            initial_value
+            );
 }

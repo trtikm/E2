@@ -51,6 +51,14 @@ struct bind_ai_scene_to_simulator : public ai::scene
             ) const override;
     void  erase_scene_node(node_id const&  nid) override;
 
+    void  insert_collision_sphere_to_scene_node(
+            node_id const&  nid,
+            float_32_bit const  radius,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
+            bool const  as_dynamic
+            ) override;
     void  insert_collision_capsule_to_scene_node(
             node_id const&  nid,
             float_32_bit const  half_distance_between_end_points,
@@ -125,6 +133,34 @@ struct bind_ai_scene_to_simulator : public ai::scene
     void  get_coids_under_scene_node(scn::scene_node_ptr const  node_ptr, std::function<bool(collision_object_id)> const&  acceptor) const;
     void  get_coids_under_scene_node(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const;
     void  get_coids_under_scene_node_subtree(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const;
+
+    custom_constraint_id  acquire_fresh_custom_constraint_id() override;
+    void  release_generated_custom_constraint_id(custom_constraint_id const  ccid) override;
+    void  insert_custom_constraint(
+            custom_constraint_id const  ccid,
+            node_id const&  rb_nid_0,
+            vector3 const&  linear_component_0,
+            vector3 const&  angular_component_0,
+            node_id const&  rb_nid_1,
+            vector3 const&  linear_component_1,
+            vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            float_32_bit const  variable_lower_bound,
+            float_32_bit const  variable_upper_bound,
+            float_32_bit const  initial_value_for_cache_miss
+            ) override;
+    void  insert_immediate_constraint(
+            node_id const&  rb_nid_0,
+            vector3 const&  linear_component_0,
+            vector3 const&  angular_component_0,
+            node_id const&  rb_nid_1,
+            vector3 const&  linear_component_1,
+            vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            float_32_bit const  variable_lower_bound,
+            float_32_bit const  variable_upper_bound,
+            float_32_bit const  initial_value
+            ) override;
 
 private:
 
