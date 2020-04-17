@@ -46,11 +46,10 @@ struct  action_controller_roller  final
     ~action_controller_roller();
 
     void  next_round(
-            float_32_bit const  time_step_in_seconds,
+            bool const  apply_upper_joint,
             vector3 const&  desired_forward_unit_vector_in_local_space,
             vector3 const&  desired_linear_velocity_in_local_space,
-            vector3 const&  desired_jump_velocity_in_local_space,
-            std::vector<scene::collicion_contant_info> const&  collision_contacts
+            vector3 const&  desired_jump_velocity_in_local_space
             );
 
     scene::node_id const&  get_roller_nid() const { return m_roller_nid; }
@@ -62,18 +61,15 @@ private:
 
     blackboard_agent_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
+    void  synchronise_with_scene();
+
+    void  get_from_agent_frame_matrix(matrix44&  from_agent_frame_matrix) const;
+
     void  set_desire_frame(vector3 const&  desired_forward_in_world_space);
 
-    void  filter_contacts(
-            std::vector<scene::collicion_contant_info> const&  src_contacts,
-            std::vector<scene::collicion_contant_info>&  filtered_contacts  // cannot alias with src_contacts!
-            ) const;
-    void  get_foot_contacts(
-            std::vector<scene::collicion_contant_info> const&  src_contacts,
-            std::vector<scene::collicion_contant_info>&  foot_contacts      // cannot alias with src_contacts!
-            ) const;
+    void  filter_contacts(scene::node_id const&  nid, std::vector<scene::collicion_contant_info_ptr>&  contacts) const;
 
-    vector3  compute_environment_angular_velocity(std::vector<scene::collicion_contant_info> const&  contacts) const;
+    vector3  compute_environment_angular_velocity(std::vector<scene::collicion_contant_info_ptr> const&  contacts) const;
 
     void  set_roller_angular_velocity(
             vector3 const&  desired_linear_velocity_in_world_space,
@@ -82,7 +78,7 @@ private:
 
     void  insert_jump_constraints_between_roller_body_and_floor(
             vector3 const&  desired_jump_velocity_in_world_space,
-            std::vector<scene::collicion_contant_info> const&  foot_contacts
+            std::vector<scene::collicion_contant_info_ptr> const&  roller_contacts
             );
 
     void  insert_lower_joint_between_roller_and_body() const;

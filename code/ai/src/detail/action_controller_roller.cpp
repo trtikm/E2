@@ -1,5 +1,6 @@
 #include <ai/detail/action_controller_roller.hpp>
 #include <ai/skeletal_motion_templates.hpp>
+#include <ai/sensory_controller.hpp>
 #include <angeo/utility.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -177,57 +178,63 @@ action_controller_roller::~action_controller_roller()
 
 
 void  action_controller_roller::next_round(
-        float_32_bit const  time_step_in_seconds,
+        bool const  apply_upper_joint,
         vector3 const&  desired_forward_unit_vector_in_local_space,
         vector3 const&  desired_linear_velocity_in_local_space,
-        vector3 const&  desired_jump_velocity_in_local_space,
-        std::vector<scene::collicion_contant_info> const&  collision_contacts
+        vector3 const&  desired_jump_velocity_in_local_space
         )
 {
     TMPROF_BLOCK();
 
-    {
-        angeo::coordinate_system  tmp;
-
-        get_blackboard()->m_scene->get_frame_of_scene_node(m_roller_nid, false, tmp);
-        m_roller_frame = tmp;
-
-        get_blackboard()->m_scene->get_frame_of_scene_node(m_body_nid, false, tmp);
-        m_body_frame = tmp;
-    }
+    synchronise_with_scene();
 
     matrix44  from_agent_frame_matrix;
-    {
-        angeo::coordinate_system  agent_frame;
-        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_self_rid.get_node_id(), false, agent_frame);
-        angeo::from_base_matrix(agent_frame, from_agent_frame_matrix);
-    }
+    get_from_agent_frame_matrix(from_agent_frame_matrix);
 
     set_desire_frame(transform_vector(desired_forward_unit_vector_in_local_space, from_agent_frame_matrix));
 
-    std::vector<scene::collicion_contant_info>  contacts;
-    filter_contacts(collision_contacts, contacts);
-
-    std::vector<scene::collicion_contant_info>  foot_contacts;
-    get_foot_contacts(contacts, foot_contacts);
+    std::vector<scene::collicion_contant_info_ptr>  roller_contacts;
+    filter_contacts(m_roller_nid, roller_contacts);
+    std::vector<scene::collicion_contant_info_ptr>  body_contacts;
+    filter_contacts(m_body_nid, body_contacts);
 
     set_roller_angular_velocity(
             transform_vector(desired_linear_velocity_in_local_space, from_agent_frame_matrix),
-            compute_environment_angular_velocity(foot_contacts)
+            compute_environment_angular_velocity(roller_contacts)
             );
 
-    if (!foot_contacts.empty()
+    if (!roller_contacts.empty()
             && length_squared(desired_jump_velocity_in_local_space) >= 1e-6f
             && angle(m_body_frame.basis_vector_z(), m_desire_frame.basis_vector_z()) <= m_config.JUMP_CONE_ANGLE)
         insert_jump_constraints_between_roller_body_and_floor(
                     transform_vector(desired_jump_velocity_in_local_space, from_agent_frame_matrix),
-                    foot_contacts
+                    roller_contacts
                     );
 
     insert_lower_joint_between_roller_and_body();
-    if (!contacts.empty())
+    if (apply_upper_joint && (!roller_contacts.empty() || !body_contacts.empty()))
         insert_upper_joint_between_roller_and_body();
     insert_roller_and_body_spin_motor();
+}
+
+
+void  action_controller_roller::synchronise_with_scene()
+{
+    angeo::coordinate_system  tmp;
+
+    get_blackboard()->m_scene->get_frame_of_scene_node(m_roller_nid, false, tmp);
+    m_roller_frame = tmp;
+
+    get_blackboard()->m_scene->get_frame_of_scene_node(m_body_nid, false, tmp);
+    m_body_frame = tmp;
+}
+
+
+void  action_controller_roller::get_from_agent_frame_matrix(matrix44&  from_agent_frame_matrix) const
+{
+    angeo::coordinate_system  agent_frame;
+    get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_self_rid.get_node_id(), false, agent_frame);
+    angeo::from_base_matrix(agent_frame, from_agent_frame_matrix);
 }
 
 
@@ -246,57 +253,25 @@ void  action_controller_roller::set_desire_frame(vector3 const&  desired_forward
 }
 
 
-void  action_controller_roller::filter_contacts(
-        std::vector<scene::collicion_contant_info> const&  src_contacts,
-        std::vector<scene::collicion_contant_info>&  filtered_contacts   // cannot alias with src_contacts!
-        ) const
+void  action_controller_roller::filter_contacts(scene::node_id const&  nid, std::vector<scene::collicion_contant_info_ptr>&  contacts) const
 {
-    for (auto const&  contact : src_contacts)
-    {
-        scene::node_id const  self_nid =
-                get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(contact.self_coid);
-        if (!self_nid.valid())
-            continue;
-        scene::node_id const  other_nid =
-                get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(contact.other_coid);
-        if (!other_nid.valid())
-            continue;
-        if (self_nid == m_roller_nid || self_nid == m_body_nid)
-            filtered_contacts.push_back(contact);
-        else if (other_nid == m_roller_nid || other_nid == m_body_nid)
-            filtered_contacts.push_back({
-                contact.contact_point_in_world_space,
-                -contact.unit_normal_in_world_space,
-                0.0f,
-                contact.other_coid,
-                contact.other_material,
-                contact.self_coid,
-                contact.self_material
-                });
-    }
-}
-
-
-void  action_controller_roller::get_foot_contacts(
-        std::vector<scene::collicion_contant_info> const&  src_contacts,
-        std::vector<scene::collicion_contant_info>&  foot_contacts
-        ) const
-{
-    for (auto const& contact : src_contacts)
-        if (get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(contact.self_coid) == m_roller_nid)
-            foot_contacts.push_back(contact);
+    auto const begin_and_end = 
+            get_blackboard()->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map().equal_range(nid);
+    for (auto it = begin_and_end.first; it != begin_and_end.second; ++it)
+        if (it->second.data->other_collider_nid.valid())
+            contacts.push_back(it->second.data);
 }
 
 
 vector3  action_controller_roller::compute_environment_angular_velocity(
-        std::vector<scene::collicion_contant_info> const&  contacts
+        std::vector<scene::collicion_contant_info_ptr> const&  contacts
         ) const
 {
     vector3  environment_angular_velocity = vector3_zero();
-    for (scene::collicion_contant_info const&  info : contacts)
+    for (scene::collicion_contant_info_ptr  info : contacts)
         environment_angular_velocity +=
                 get_blackboard()->m_scene->get_angular_velocity_of_rigid_body_of_scene_node(
-                        get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(info.other_coid)
+                        get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(info->other_coid)
                         );
     if (!contacts.empty())
         environment_angular_velocity /= (float_32_bit)contacts.size();
@@ -330,13 +305,13 @@ void  action_controller_roller::set_roller_angular_velocity(
 
 void  action_controller_roller::insert_jump_constraints_between_roller_body_and_floor(
         vector3 const&  desired_jump_velocity_in_world_space,
-        std::vector<scene::collicion_contant_info> const&  foot_contacts
+        std::vector<scene::collicion_contant_info_ptr> const&  roller_contacts
         )
 {
     std::unordered_set<scene::node_id>  floor_nids;
-    for (scene::collicion_contant_info const&  info : foot_contacts)
-        if (dot_product(info.contact_point_in_world_space, desired_jump_velocity_in_world_space) > 0.0f)
-            floor_nids.insert(get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(info.other_coid));
+    for (scene::collicion_contant_info_ptr  info : roller_contacts)
+        if (dot_product(info->contact_point_in_world_space, desired_jump_velocity_in_world_space) > 0.0f)
+            floor_nids.insert(get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(info->other_coid));
 
     float_32_bit const  bias = length(desired_jump_velocity_in_world_space);
     vector3  unit_constraint_vector = (1.0f / bias) * desired_jump_velocity_in_world_space;
