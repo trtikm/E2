@@ -68,10 +68,7 @@ struct  sensory_controller_collision_contacts final
     config const&  get_config() const { return m_config; }
 
     void  next_round();
-    void  on_collision_contact(
-            scene::node_id const&  collider_nid,
-            scene::collicion_contant_info_ptr const  contact_info
-            );
+    void  on_collision_contact(scene::collicion_contant_info_ptr const  contact_info);
 
 private:
     blackboard_agent_weak_ptr  m_blackboard;

@@ -51,10 +51,7 @@ void  sensory_controller_collision_contacts::next_round()
 }
 
 
-void  sensory_controller_collision_contacts::on_collision_contact(
-        scene::node_id const&  collider_nid,
-        scene::collicion_contant_info_ptr const  contact_info
-        )
+void  sensory_controller_collision_contacts::on_collision_contact(scene::collicion_contant_info_ptr const  contact_info)
 {
     auto const&  motion_ref = get_blackboard()->m_action_controller->get_motion_object_motion();
     vector3 const  contact_vector = point3_to_orthonormal_base(
@@ -88,7 +85,7 @@ void  sensory_controller_collision_contacts::on_collision_contact(
     };
 
     m_collision_contacts.back().insert({
-            collider_nid,
+            contact_info->self_collider_nid,
             collicion_contact_info {
                 to_cell_coord_in_01(raw_cell_coords_in_01(0)),
                 to_cell_coord_in_01(raw_cell_coords_in_01(1)),

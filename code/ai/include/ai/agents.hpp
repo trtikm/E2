@@ -54,13 +54,7 @@ struct  agents
             input_devices::window_props const&  window
             );
 
-    void  on_collision_contact(
-            agent_id const  id,
-            scene::node_id const&  collider_nid,
-            scene::collicion_contant_info_ptr const  contact_info,
-            object_id const&  other_id,
-            scene::node_id const&  other_collider_nid
-            );
+    void  on_collision_contact(agent_id const  id, scene::collicion_contant_info_ptr const  contact_info, object_id const&  other_id);
 
     void  on_sensor_event(agent_id const  id, sensor const& s, sensor::other_object_info const&  other);
 

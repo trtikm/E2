@@ -25,24 +25,30 @@ struct  scene
                 vector3 const&  contact_point_in_world_space_,
                 vector3 const&  unit_normal_in_world_space_,
                 float_32_bit const  normal_force_magnitude_,
+                node_id const&  self_collider_nid_,
                 collision_object_id const  self_coid_,
                 angeo::COLLISION_MATERIAL_TYPE const  self_material_,
+                node_id const&  other_collider_nid_,
                 collision_object_id const  other_coid_,
                 angeo::COLLISION_MATERIAL_TYPE const  other_material_
                 )
             : contact_point_in_world_space(contact_point_in_world_space_)
             , unit_normal_in_world_space(unit_normal_in_world_space_)
             , normal_force_magnitude(normal_force_magnitude_)
+            , self_collider_nid(self_collider_nid_)
             , self_coid(self_coid_)
             , self_material(self_material_)
+            , other_collider_nid(other_collider_nid_)
             , other_coid(other_coid_)
             , other_material(other_material_)
         {}
         vector3  contact_point_in_world_space;
         vector3  unit_normal_in_world_space;
         float_32_bit  normal_force_magnitude;
+        node_id  self_collider_nid;
         collision_object_id  self_coid;
         angeo::COLLISION_MATERIAL_TYPE  self_material;
+        node_id  other_collider_nid;
         collision_object_id  other_coid;
         angeo::COLLISION_MATERIAL_TYPE  other_material;
     };

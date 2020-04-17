@@ -90,13 +90,7 @@ void  devices::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  devices::on_collision_contact(
-        device_id const  id,
-        scene::node_id const&  collider_nid,
-        scene::collicion_contant_info_ptr const  contact_info,
-        object_id const&  other_id,
-        scene::node_id const&  other_collider_nid
-        )
+void  devices::on_collision_contact(device_id const  id, scene::collicion_contant_info_ptr const  contact_info, object_id const&  other_id)
 {
     ASSUMPTION(id < m_devices.size() && m_devices.at(id) != nullptr);
     if (m_devices.at(id)->device_ptr != nullptr)

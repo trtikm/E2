@@ -34,15 +34,11 @@ std::unordered_map<SENSOR_KIND, property_map::default_config_records_map> const&
 
 
 sensor::collision_contact_record::collision_contact_record(
-        scene::node_id const&  collider_nid_,
         scene::collicion_contant_info_ptr const  contact_info_,
-        object_id const&  other_id_,
-        scene::node_id const&  other_collider_nid_
+        object_id const&  other_id_
         )
-    : collider_nid(collider_nid_)
-    , contact_info(contact_info_)
+    : contact_info(contact_info_)
     , other_id(other_id_)
-    , other_collider_nid(other_collider_nid_)
 {}
 
 
@@ -203,12 +199,7 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  sensor::on_collision_contact(
-        scene::node_id const&  collider_nid,
-        scene::collicion_contant_info_ptr const  contact_info,
-        object_id const&  other_id,
-        scene::node_id const&  other_collider_nid
-        )
+void  sensor::on_collision_contact(scene::collicion_contant_info_ptr const  contact_info, object_id const&  other_id)
 {
     if (!is_enabled())
         return;
@@ -216,12 +207,7 @@ void  sensor::on_collision_contact(
     if (!m_owner_id.valid())
         return;
 
-    m_collision_contacts_buffer.push_back({
-            collider_nid,
-            contact_info,
-            other_id,
-            other_collider_nid
-            });
+    m_collision_contacts_buffer.push_back({ contact_info, other_id });
 }
 
 

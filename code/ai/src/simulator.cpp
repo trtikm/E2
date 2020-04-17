@@ -172,24 +172,18 @@ void  simulator::next_round(
 }
 
 
-void  simulator::on_collision_contact(
-        object_id const&  id,
-        scene::node_id const&  collider_nid,
-        scene::collicion_contant_info_ptr const  contact_info,
-        object_id const&  other_id,
-        scene::node_id const&  other_collider_nid
-        )
+void  simulator::on_collision_contact(object_id const&  id, scene::collicion_contant_info_ptr const  contact_info, object_id const&  other_id)
 {
     switch (id.kind)
     {
     case OBJECT_KIND::AGENT:
-        m_agents.on_collision_contact(id.index, collider_nid, contact_info, other_id, other_collider_nid);
+        m_agents.on_collision_contact(id.index, contact_info, other_id);
         break;
     case OBJECT_KIND::DEVICE:
-        m_devices.on_collision_contact(id.index, collider_nid, contact_info, other_id, other_collider_nid);
+        m_devices.on_collision_contact(id.index, contact_info, other_id);
         break;
     case OBJECT_KIND::SENSOR:
-        m_sensors.on_collision_contact(id.index, collider_nid, contact_info, other_id, other_collider_nid);
+        m_sensors.on_collision_contact(id.index, contact_info, other_id);
         break;
     default: UNREACHABLE();
     }

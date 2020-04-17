@@ -146,17 +146,11 @@ void  sensors::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  sensors::on_collision_contact(
-        sensor_id const  id,
-        scene::node_id const&  collider_nid,
-        scene::collicion_contant_info_ptr const  contact_info,
-        object_id const&  other_id,
-        scene::node_id const&  other_collider_nid
-        )
+void  sensors::on_collision_contact(sensor_id const  id, scene::collicion_contant_info_ptr const  contact_info, object_id const&  other_id)
 {
     ASSUMPTION(id < m_sensors.size() && m_sensors.at(id) != nullptr);
     if (m_sensors.at(id)->sensor_ptr != nullptr)
-        m_sensors.at(id)->sensor_ptr->on_collision_contact(collider_nid, contact_info, other_id, other_collider_nid);
+        m_sensors.at(id)->sensor_ptr->on_collision_contact(contact_info, other_id);
 }
 
 

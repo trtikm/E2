@@ -19,17 +19,9 @@ struct  sensor
 {
     struct  collision_contact_record
     {
-        collision_contact_record(
-                scene::node_id const&  collider_nid_,
-                scene::collicion_contant_info_ptr const  contact_info_,
-                object_id const&  other_id_,
-                scene::node_id const&  other_collider_nid_
-                );
-
-        scene::node_id  collider_nid;
+        collision_contact_record(scene::collicion_contant_info_ptr const  contact_info_, object_id const&  other_id_);
         scene::collicion_contant_info_ptr  contact_info;
         object_id  other_id;
-        scene::node_id  other_collider_nid;
     };
 
     struct  other_object_info
@@ -70,12 +62,7 @@ struct  sensor
 
     void  next_round(float_32_bit const  time_step_in_seconds);
 
-    void  on_collision_contact(
-            scene::node_id const&  collider_nid,
-            scene::collicion_contant_info_ptr const  contact_info,
-            object_id const&  other_id,
-            scene::node_id const&  other_collider_nid
-            );
+    void  on_collision_contact(scene::collicion_contant_info_ptr const  contact_info, object_id const&  other_id);
 
 private:
     simulator*  m_simulator;

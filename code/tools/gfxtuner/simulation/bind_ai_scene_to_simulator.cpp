@@ -598,35 +598,21 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
                     contact_point_in_world_space,
                     unit_normal_in_world_space,
                     normal_force_magnitude,
+                    it->second.first,
                     coid,
                     material,
+                    other_it != m_collision_contacts_stream.cend() ? other_it->second.first : node_id{},
                     other_coid,
                     other_material
                     );
 
     if (other_it == m_collision_contacts_stream.cend())
-    {
         for (auto const&  oid : it->second.second)
-            m_simulator_ptr->get_ai_simulator()->on_collision_contact(
-                    oid,
-                    it->second.first,
-                    collision_info,
-                    ai::object_id::make_invalid(),
-                    node_id{}
-                    );
-    }
+            m_simulator_ptr->get_ai_simulator()->on_collision_contact(oid, collision_info, ai::object_id::make_invalid());
     else
-    {
         for (auto const&  oid : it->second.second)
             for (auto const& other_oid : other_it->second.second)
-                m_simulator_ptr->get_ai_simulator()->on_collision_contact(
-                        oid,
-                        it->second.first,
-                        collision_info,
-                        other_oid,
-                        other_it->second.first
-                        );
-    }
+                m_simulator_ptr->get_ai_simulator()->on_collision_contact(oid, collision_info, other_oid);
 }
 
 

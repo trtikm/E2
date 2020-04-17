@@ -103,23 +103,14 @@ void  agents::next_round(
 }
 
 
-void  agents::on_collision_contact(
-        agent_id const  id,
-        scene::node_id const&  collider_nid,
-        scene::collicion_contant_info_ptr const  contact_info,
-        object_id const&  other_id,
-        scene::node_id const&  other_collider_nid
-        )
+void  agents::on_collision_contact(agent_id const  id, scene::collicion_contant_info_ptr const  contact_info, object_id const&  other_id)
 {
     ASSUMPTION(id < m_agents.size() && m_agents.at(id) != nullptr);
     // Here we are only interesting real collision contacts.
     // In other words, we ignore collisions with artificial colliders under sensors.
     // That is, we need only those contacts where 'other_id' is NOT valid.
     if (!other_id.valid() && m_agents.at(id)->agent_ptr != nullptr)
-        m_agents.at(id)->agent_ptr->get_blackboard()->m_sensory_controller->get_collision_contacts()->on_collision_contact(
-                collider_nid,
-                contact_info
-                );
+        m_agents.at(id)->agent_ptr->get_blackboard()->m_sensory_controller->get_collision_contacts()->on_collision_contact(contact_info);
 }
 
 
