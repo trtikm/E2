@@ -50,14 +50,7 @@ void  action_controller_interpolator_animation::set_target(
             );
 
     m_src_offset = m_current_offset;
-    skeletal_motion_templates::collider_ptr const  collider_ptr =
-            get_blackboard()->m_motion_templates.at(cursor.motion_name).colliders.at(cursor.keyframe_index);
-    if (auto const  ptr = std::dynamic_pointer_cast<skeletal_motion_templates::collider_capsule const>(collider_ptr))
-        m_dst_offset = ptr->length + ptr->radius;
-    else
-    {
-        NOT_IMPLEMENTED_YET();
-    }
+    m_dst_offset = get_blackboard()->m_motion_templates.at(cursor.motion_name).bboxes.at(cursor.keyframe_index)(2);
 }
 
 

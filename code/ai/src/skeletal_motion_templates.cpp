@@ -32,35 +32,6 @@ std::unique_ptr<boost::property_tree::ptree>  load_ptree(boost::filesystem::path
 }
 
 
-void  open_file_stream_for_reading(std::ifstream&  istr, boost::filesystem::path const&  pathname)
-{
-    if (!boost::filesystem::is_regular_file(pathname))
-        throw std::runtime_error(msgstream() << "Cannot access file '" << pathname << "'.");
-    if (boost::filesystem::file_size(pathname) < 4ULL)
-        throw std::runtime_error(msgstream() << "The file '" << pathname << "' is invalid (wrong size).");
-
-    istr.open(pathname.string(), std::ios_base::binary);
-    if (!istr.good())
-        throw std::runtime_error(msgstream() << "Cannot open file '" << pathname << "'.");
-}
-
-
-natural_32_bit  read_num_records(std::ifstream&  istr, boost::filesystem::path const&  pathname)
-{
-    natural_32_bit  num_records;
-    {
-        std::string  line;
-        if (!read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read number of records in the file '" << pathname << "'.");
-        std::istringstream istr(line);
-        istr >> num_records;
-        if (num_records == 0U)
-            throw std::runtime_error(msgstream() << "The the file '" << pathname << "' does not contain any records.");
-    }
-    return num_records;
-}
-
-
 template<typename elem_type, typename param_type>
 void  read_meta_data_records(
         boost::filesystem::path const&  pathname,
@@ -80,11 +51,11 @@ void  read_meta_data_records(
     TMPROF_BLOCK();
 
     std::ifstream  istr;
-    open_file_stream_for_reading(istr, pathname);
+    angeo::open_file_stream_for_reading(istr, pathname);
 
     natural_32_bit  line_index = 0U;
 
-    natural_32_bit const  num_records = read_num_records(istr, pathname);
+    natural_32_bit const  num_records = angeo::read_num_records(istr, pathname);
     ++line_index;
 
     if (output_flat != nullptr)
@@ -186,92 +157,6 @@ void  read_meta_data_records(
 namespace ai { namespace detail { namespace meta {
 
 
-mass_distributions_data::mass_distributions_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : data()
-{
-    TMPROF_BLOCK();
-
-    read_meta_data_records<mass_distribution_ptr, float_32_bit>(
-            finaliser->get_key().get_unique_id(),
-            [](std::vector<mass_distribution_ptr>&  output,
-               std::string const&  keyword,
-               std::vector<float_32_bit> const&  params,
-               boost::filesystem::path const&  pathname,
-               natural_32_bit const  line_index,
-               mass_distribution_ptr&  last
-               ) -> void
-            {
-                if (params.size() != 10UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for mass_distribution at line " << line_index << "in the file '" << pathname << "'.");
-                mass_distribution  md;
-                md.mass_inverted = params.at(0);
-                for (int i = 0; i != 3; ++i)
-                    for (int j = 0; j != 3; ++j)
-                        md.inertia_tensor_inverted(i, j) = params.at(1 + 3 * i + j);
-                last = last != nullptr && *last == md ? last : std::make_shared<skeletal_motion_templates::mass_distribution>(md);
-                output.push_back(last);
-            },
-            false,
-            &data,
-            nullptr
-            );
-}
-
-mass_distributions_data::~mass_distributions_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
-colliders_data::colliders_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : data()
-{
-    TMPROF_BLOCK();
-
-    read_meta_data_records<collider_ptr, float_32_bit>(
-            finaliser->get_key().get_unique_id(),
-            [](std::vector<collider_ptr>&  output,
-               std::string const&  keyword,
-               std::vector<float_32_bit> const&  params,
-               boost::filesystem::path const&  pathname,
-               natural_32_bit const  line_index,
-               collider_ptr&  last
-               ) -> void
-            {
-                if (keyword == "capsule")
-                {
-                    if (params.size() != 3UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for capsule at line " << line_index << "in the file '" << pathname << "'.");
-                    skeletal_motion_templates::collider_capsule  collider;
-                    collider.length = params.at(0);
-                    collider.radius = params.at(1);
-                    collider.weight = params.at(2);
-                    last = last != nullptr && *last == collider ? last : std::make_shared<skeletal_motion_templates::collider_capsule>(collider);
-                    output.push_back(last);
-                }
-                else
-                    NOT_IMPLEMENTED_YET();
-            },
-            false,
-            &data,
-            nullptr
-            );
-}
-
-colliders_data::~colliders_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
 bool  free_bones_for_look_at::operator==(free_bones_for_look_at const&  other) const
 {
     if (this == &other) return true;
@@ -352,10 +237,10 @@ bone_names_data::bone_names_data(async::finalise_load_on_destroy_ptr const  fina
     boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
 
     std::ifstream  istr;
-    open_file_stream_for_reading(istr, pathname);
+    angeo::open_file_stream_for_reading(istr, pathname);
 
     std::unordered_set<std::string>  visited;
-    for (natural_32_bit i = 0U, num_names = read_num_records(istr, pathname); i != num_names; ++i)
+    for (natural_32_bit i = 0U, num_names = angeo::read_num_records(istr, pathname); i != num_names; ++i)
     {
         std::string  line;
         if (!read_line(istr, line))
@@ -388,10 +273,10 @@ bone_hierarchy_data::bone_hierarchy_data(async::finalise_load_on_destroy_ptr con
     boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
 
     std::ifstream  istr;
-    open_file_stream_for_reading(istr, pathname);
+    angeo::open_file_stream_for_reading(istr, pathname);
 
     std::unordered_set<std::string>  visited;
-    for (natural_32_bit i = 0U, n = read_num_records(istr, pathname); i != n; ++i)
+    for (natural_32_bit i = 0U, n = angeo::read_num_records(istr, pathname); i != n; ++i)
     {
         std::string  line;
         if (!read_line(istr, line))
@@ -431,9 +316,9 @@ bone_lengths_data::bone_lengths_data(async::finalise_load_on_destroy_ptr const  
     boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
 
     std::ifstream  istr;
-    open_file_stream_for_reading(istr, pathname);
+    angeo::open_file_stream_for_reading(istr, pathname);
 
-    for (natural_32_bit i = 0U, n = read_num_records(istr, pathname); i != n; ++i)
+    for (natural_32_bit i = 0U, n = angeo::read_num_records(istr, pathname); i != n; ++i)
     {
         std::string  line;
         if (!read_line(istr, line))
@@ -571,10 +456,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The 'keyframes' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.reference_frames.empty())
                         throw std::runtime_error(msgstream() << "The 'reference_frames' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.mass_distributions.empty())
-                        throw std::runtime_error(msgstream() << "The 'mass_distributions' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.colliders.empty())
-                        throw std::runtime_error(msgstream() << "The 'colliders' were not loaded to 'motions_map[" << entry.first << "]'.");
+                    if (record.bboxes.empty())
+                        throw std::runtime_error(msgstream() << "The 'bboxes' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.free_bones.empty())
                         throw std::runtime_error(msgstream() << "The 'free_bones' were not loaded to 'motions_map[" << entry.first << "]'.");
 
@@ -582,10 +465,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes is less than 2 in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.reference_frames.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'reference_frames' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.mass_distributions.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'mass_distributions' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.colliders.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'colliders' differ in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.bboxes.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'bboxes' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.free_bones.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'free_bones' differ in 'motions_map[" << entry.first << "]'.");
                 }
@@ -615,7 +496,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
         if (boost::filesystem::is_regular_file(pathname / "imports.txt"))
         {
             std::ifstream  istr;
-            open_file_stream_for_reading(istr, pathname / "imports.txt");
+            angeo::open_file_stream_for_reading(istr, pathname / "imports.txt");
             for (std::string  line = read_line(istr); !line.empty(); line = read_line(istr))
             {
                 boost::algorithm::trim(line);
@@ -651,7 +532,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
         if (initial_motion_template.motion_name.empty() && boost::filesystem::is_regular_file(pathname / "initial_motion_template.txt"))
         {
             std::ifstream  istr;
-            open_file_stream_for_reading(istr, pathname / "initial_motion_template.txt");
+            angeo::open_file_stream_for_reading(istr, pathname / "initial_motion_template.txt");
             initial_motion_template.motion_name = read_line(istr);
             std::string const index_string = read_line(istr);
             initial_motion_template.keyframe_index = std::atoi(index_string.c_str());
@@ -807,29 +688,35 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             else
             {
                 motion_template&  record = motions_map[dir_name];
-                bool  has_keyframes = false;
-                for (boost::filesystem::directory_entry& animation_entry : boost::filesystem::directory_iterator(entry_pathname))
-                    if (boost::filesystem::is_regular_file(animation_entry.path()))
-                    {
-                        if (has_keyframes == false)
-                        {
-                            std::string const  filename = animation_entry.path().filename().string();
-                            std::string const  extension = animation_entry.path().filename().extension().string();
-                            if (filename.find("keyframe") == 0UL && extension == ".txt")
-                                has_keyframes = true;
-                        }
 
-                        if (record.reference_frames.empty() && boost::filesystem::is_regular_file(entry_pathname / "meta_reference_frames.txt"))
-                            record.reference_frames = meta::reference_frames(entry_pathname / "meta_reference_frames.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::reference_frames");
-                        if (record.mass_distributions.empty() && boost::filesystem::is_regular_file(entry_pathname / "meta_mass_distributions.txt"))
-                            record.mass_distributions = meta::mass_distributions(entry_pathname / "meta_mass_distributions.txt", 1U, ultimate_finaliser);
-                        if (record.colliders.empty() && boost::filesystem::is_regular_file(entry_pathname / "meta_motion_colliders.txt"))
-                            record.colliders = meta::colliders(entry_pathname / "meta_motion_colliders.txt", 1U, ultimate_finaliser);
-                        if (record.free_bones.empty() && boost::filesystem::is_regular_file(entry_pathname / "meta_free_bones.txt"))
-                            record.free_bones = meta::free_bones(entry_pathname / "meta_free_bones.txt", 1U, ultimate_finaliser);
-                    }
-                if (has_keyframes)
+                if (boost::filesystem::is_regular_file(entry_pathname / "keyframe0.txt"))
                     record.keyframes = keyframes(entry_pathname, 1U, ultimate_finaliser);
+
+                if (boost::filesystem::is_directory(entry_pathname / "!meta"))
+                {
+                    boost::filesystem::path const  meta_pathname = entry_pathname / "!meta";
+
+                    if (record.reference_frames.empty() && boost::filesystem::is_regular_file(meta_pathname / "reference_frames.txt"))
+                        record.reference_frames = meta::reference_frames(meta_pathname / "reference_frames.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::reference_frames");
+
+                    if (record.bboxes.empty() && boost::filesystem::is_regular_file(meta_pathname / "bboxes.txt"))
+                    {
+                        boost::filesystem::path const  bboxes_pathname = meta_pathname / "bboxes.txt";
+                        std::ifstream  istr;
+                        angeo::open_file_stream_for_reading(istr, bboxes_pathname);
+                        natural_32_bit  num_bboxes = angeo::read_num_records(istr, bboxes_pathname);
+                        for (natural_32_bit i = 0U, line_number = 0U; i != num_bboxes; ++i)
+                        {
+                            vector3  sizes;
+                            line_number = angeo::read_vector3(sizes, istr, line_number, pathname);
+                            record.bboxes.push_back(sizes);
+                        }
+                        istr.close();
+                    }
+
+                    if (record.free_bones.empty() && boost::filesystem::is_regular_file(meta_pathname / "free_bones.txt"))
+                        record.free_bones = meta::free_bones(meta_pathname / "free_bones.txt", 1U, ultimate_finaliser);
+                }
             }
         }
     }

@@ -95,9 +95,6 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/env/sinet/number_decoder.hpp 
     ./src/env/sinet/number_decoder.cpp 
 
-    ./include/ai/detail/collider_utils.hpp
-    ./src/detail/collider_utils.cpp
-
     ./include/ai/device_id.hpp
 
     ./include/ai/device_kind.hpp

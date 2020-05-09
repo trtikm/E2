@@ -51,6 +51,35 @@ void  compute_tangent_space_of_unit_vector(
 }
 
 
+void  open_file_stream_for_reading(std::ifstream&  istr, boost::filesystem::path const&  pathname)
+{
+    if (!boost::filesystem::is_regular_file(pathname))
+        throw std::runtime_error(msgstream() << "Cannot access file '" << pathname << "'.");
+    if (boost::filesystem::file_size(pathname) < 4ULL)
+        throw std::runtime_error(msgstream() << "The file '" << pathname << "' is invalid (wrong size).");
+
+    istr.open(pathname.string(), std::ios_base::binary);
+    if (!istr.good())
+        throw std::runtime_error(msgstream() << "Cannot open file '" << pathname << "'.");
+}
+
+
+natural_32_bit  read_num_records(std::ifstream&  istr, boost::filesystem::path const&  pathname)
+{
+    natural_32_bit  num_records;
+    {
+        std::string  line;
+        if (!read_line(istr,line))
+            throw std::runtime_error(msgstream() << "Cannot read number of records in the file '" << pathname << "'.");
+        std::istringstream istr(line);
+        istr >> num_records;
+        if (num_records == 0U)
+            throw std::runtime_error(msgstream() << "The the file '" << pathname << "' does not contain any records.");
+    }
+    return num_records;
+}
+
+
 natural_32_bit  read_scalar(
         float_32_bit&  output,
         std::ifstream&  istr,
@@ -161,16 +190,7 @@ natural_32_bit  read_all_coord_systems(
 {
     TMPROF_BLOCK();
 
-    natural_32_bit  num_coord_systems;
-    {
-        std::string  line;
-        if (!read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read number of coord. systems in the file '" << pathname << "'.");
-        std::istringstream sstr(line);
-        sstr >> num_coord_systems;
-        if (num_coord_systems == 0U)
-            throw std::runtime_error(msgstream() << "The the file '" << pathname << "' does not contain any coodinate system.");
-    }
+    natural_32_bit const  num_coord_systems = read_num_records(istr, pathname);
     read_coord_systems(istr, pathname, num_coord_systems, coord_systems);
     return num_coord_systems;
 }

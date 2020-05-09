@@ -44,6 +44,12 @@ void  compute_tangent_space_of_unit_vector(
         );
 
 
+void  open_file_stream_for_reading(std::ifstream&  istr, boost::filesystem::path const&  pathname);
+
+
+natural_32_bit  read_num_records(std::ifstream&  istr, boost::filesystem::path const&  pathname = "");
+
+
 natural_32_bit  read_scalar(
         float_32_bit&  output,
         std::ifstream&  istr,

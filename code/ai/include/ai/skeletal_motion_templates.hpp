@@ -57,117 +57,6 @@ using  reference_frames = qtgl::modelspace;
 namespace ai { namespace detail { namespace meta {
 
 
-struct  mass_distribution
-{
-    float_32_bit  mass_inverted;
-    matrix33  inertia_tensor_inverted;
-
-    bool  operator==(mass_distribution const&  other) const
-    {
-        return this == &other || (are_equal(mass_inverted, other.mass_inverted, 0.0001f) &&
-                                  are_equal_33(inertia_tensor_inverted, other.inertia_tensor_inverted, 0.0001f));
-    }
-    bool  operator!=(mass_distribution const&  other) const { return !(*this == other); }
-};
-using  mass_distribution_ptr = std::shared_ptr<mass_distribution const>;
-
-
-struct  mass_distributions_data
-{
-    explicit mass_distributions_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~mass_distributions_data();
-
-    std::vector<mass_distribution_ptr>  data;
-};
-
-struct  mass_distributions : public async::resource_accessor<mass_distributions_data>
-{
-    mass_distributions() : async::resource_accessor<mass_distributions_data>() {}
-    mass_distributions(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<mass_distributions_data>(
-    { "ai::skeletal_motion_templates::meta::mass_distributions",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-    std::vector<mass_distribution_ptr> const&  data() const { return resource().data; }
-    mass_distribution_ptr  at(natural_32_bit const  index) const { return data().at(index); }
-    std::size_t size() const { return data().size(); }
-};
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
-struct  collider
-{
-    float_32_bit  weight;
-
-    virtual  ~collider() {}
-    bool  operator==(collider const&  other) const
-    {
-        if (this == &other) return true;
-        if (!are_equal(weight, other.weight, 0.0001f)) return false;
-        return typeid(*this) == typeid(other) && equals(other);
-    }
-    bool  operator!=(collider const&  other) const { return !(*this == other); }
-
-protected:
-    virtual bool  equals(collider const&  other) const = 0;
-};
-using  collider_ptr = std::shared_ptr<collider const>;
-
-struct  collider_capsule : public collider
-{
-    float_32_bit  length;
-    float_32_bit  radius;
-
-    bool  equals(collider const&  other) const override { return *this == dynamic_cast<collider_capsule const&>(other); }
-    bool  operator==(collider_capsule const&  other) const
-    {
-        return are_equal(length, other.length, 0.0001f) && are_equal(radius, other.radius, 0.0001f);
-    }
-};
-
-struct  colliders_data
-{
-    explicit colliders_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~colliders_data();
-
-    std::vector<collider_ptr>  data;
-};
-
-struct  colliders : public async::resource_accessor<colliders_data>
-{
-    colliders() : async::resource_accessor<colliders_data>() {}
-    colliders(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<colliders_data>(
-    { "ai::skeletal_motion_templates::meta::colliders",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-    std::vector<collider_ptr> const&  data() const { return resource().data; }
-    collider_ptr  at(natural_32_bit const  index) const { return data().at(index); }
-    std::size_t size() const { return data().size(); }
-};
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
 struct  free_bones_for_look_at
 {
 	std::vector<natural_32_bit>  all_bones;
@@ -348,43 +237,6 @@ struct  bone_joints : public async::resource_accessor<bone_joints_data>
 namespace ai { namespace detail {
 
 
-struct  anim_space_directions_data
-{
-    explicit anim_space_directions_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~anim_space_directions_data();
-
-    vector3  forward;   // unit vector.
-    vector3  up;        // unit vector.
-};
-
-struct  anim_space_directions : public async::resource_accessor<anim_space_directions_data>
-{
-    anim_space_directions() : async::resource_accessor<anim_space_directions_data>() {}
-    anim_space_directions(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<anim_space_directions_data>(
-    { "ai::skeletal_motion_templates::anim_space_directions",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-
-    // Unit vector
-    vector3 const&  forward() const { return resource().forward; }
-
-    // Unit vector
-    vector3 const&  up() const { return resource().up; }
-};
-
-
-}}
-
-namespace ai { namespace detail {
-
-
 struct  motion_object_binding
 {
     struct speed_sensitivity
@@ -448,8 +300,7 @@ struct  motion_template
 {
     keyframes  keyframes;
     meta::reference_frames  reference_frames;
-    meta::mass_distributions  mass_distributions;
-    meta::colliders  colliders;
+    std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
 	meta::free_bones  free_bones;
 };
 
@@ -543,18 +394,10 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  bone_hierarchy = detail::bone_hierarchy;
     using  bone_lengths = detail::bone_lengths;
 	using  bone_joints = detail::bone_joints;
-	using  anim_space_directions = detail::anim_space_directions;
 
     using  motion_template = detail::motion_template;
 
-    using  mass_distribution = detail::meta::mass_distribution;
-    using  mass_distribution_ptr = detail::meta::mass_distribution_ptr;
-
     using  free_bones_for_look_at_ptr = detail::meta::free_bones_for_look_at_ptr;
-
-    using  collider = detail::meta::collider;
-    using  collider_ptr = detail::meta::collider_ptr;
-    using  collider_capsule = detail::meta::collider_capsule;
 
     modelspace  pose_frames() const { return resource().pose_frames; }
     bone_names  names() const { return resource().names; }
