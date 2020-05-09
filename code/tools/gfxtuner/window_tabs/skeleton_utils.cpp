@@ -23,7 +23,7 @@ void  insert_skeleton_joint_nodes(
     for (natural_32_bit i = 0U; i != skeleton_props->skeletal_motion_templates.pose_frames().size(); ++i)
     {
         scn::scene_node_id const  bone_node_id =
-                inserted_nodes.at(skeleton_props->skeletal_motion_templates.hierarchy().parents().at(i) + 1).first
+                inserted_nodes.at(skeleton_props->skeletal_motion_templates.parents().at(i) + 1).first
                 / skeleton_props->skeletal_motion_templates.names().at(i);
         if (w->wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(bone_node_id)))
         {
@@ -46,7 +46,7 @@ void  insert_skeleton_joint_nodes(
                             skeleton_props->skeletal_motion_templates.pose_frames().at(i).origin(),
                             skeleton_props->skeletal_motion_templates.pose_frames().at(i).orientation(),
                             w->get_node_icon(),
-                            inserted_nodes.at(skeleton_props->skeletal_motion_templates.hierarchy().parents().at(i) + 1).second
+                            inserted_nodes.at(skeleton_props->skeletal_motion_templates.parents().at(i) + 1).second
                             );
             w->get_scene_history()->insert<scn::scene_history_coord_system_insert>(
                     bone_node_id,
@@ -71,7 +71,7 @@ void  reset_skeleton_joint_nodes(
     {
         angeo::coordinate_system const&  bone_pose_coord_system = skeleton_props->skeletal_motion_templates.pose_frames().at(i);
         scn::scene_node_id const  bone_node_id =
-            processed_nodes.at(skeleton_props->skeletal_motion_templates.hierarchy().parents().at(i) + 1)
+            processed_nodes.at(skeleton_props->skeletal_motion_templates.parents().at(i) + 1)
             / skeleton_props->skeletal_motion_templates.names().at(i);
         scn::scene_node_ptr const  bone_node_ptr = w->wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(bone_node_id));
         w->get_scene_history()->insert<scn::scene_history_coord_system_relocate>(

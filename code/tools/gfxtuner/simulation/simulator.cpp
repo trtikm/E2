@@ -95,7 +95,7 @@ void  skeleton_enumerate_nodes_of_bones(
     {
         scn::scene_node_ptr  child_node_ptr = nullptr;
         {
-            scn::scene_node_ptr const  parent_node_ptr = nodes.at(motion_templates.hierarchy().parents().at(bone) + 1);
+            scn::scene_node_ptr const  parent_node_ptr = nodes.at(motion_templates.parents().at(bone) + 1);
             if (parent_node_ptr != nullptr)
             {
                 auto const  child_node_it = parent_node_ptr->find_child(motion_templates.names().at(bone));
@@ -103,7 +103,7 @@ void  skeleton_enumerate_nodes_of_bones(
                     child_node_ptr = child_node_it->second;
             }
         }
-        if (callback(bone, child_node_ptr, motion_templates.hierarchy().parents().at(bone) >= 0) == false)
+        if (callback(bone, child_node_ptr, motion_templates.parents().at(bone) >= 0) == false)
             break;
         nodes.push_back(child_node_ptr);
     }
@@ -969,7 +969,7 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                 {
                     scn::scene_node_id const  raw_bone_id = detail::skeleton_build_scene_node_id_of_bones(
                             bone,
-                            blackboard->m_motion_templates.hierarchy().parents(),
+                            blackboard->m_motion_templates.parents(),
                             blackboard->m_motion_templates.names()
                             );
                     scn::scene_node_id const  bone_id =
@@ -1975,8 +1975,8 @@ void  simulator::render_scene_batches(
                         for (natural_32_bit  bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
                         {
                             angeo::to_base_matrix(motion_templates.pose_frames().at(bone), to_bone_matrices.at(bone));
-                            if (motion_templates.hierarchy().parents().at(bone) >= 0)
-                                to_bone_matrices.at(bone) *= to_bone_matrices.at(motion_templates.hierarchy().parents().at(bone));
+                            if (motion_templates.parents().at(bone) >= 0)
+                                to_bone_matrices.at(bone) *= to_bone_matrices.at(motion_templates.parents().at(bone));
                         }
                     }
 
@@ -2002,9 +2002,9 @@ void  simulator::render_scene_batches(
                                         // of the inconsistency. The code is not optimal (slow) though.
                                         matrix44 result;
                                         angeo::from_base_matrix(motion_templates.pose_frames().at(bone), result);
-                                        for (integer_32_bit  bone_idx = motion_templates.hierarchy().parents().at(bone);
+                                        for (integer_32_bit  bone_idx = motion_templates.parents().at(bone);
                                              bone_idx >= 0;
-                                             bone_idx = motion_templates.hierarchy().parents().at(bone_idx))
+                                             bone_idx = motion_templates.parents().at(bone_idx))
                                         {
                                             matrix44 M;
                                             angeo::from_base_matrix(motion_templates.pose_frames().at(bone_idx), M);

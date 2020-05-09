@@ -230,49 +230,6 @@ free_bones_data::~free_bones_data()
 namespace ai { namespace detail {
 
 
-bone_hierarchy_data::bone_hierarchy_data(async::finalise_load_on_destroy_ptr const  finaliser)
-{
-    TMPROF_BLOCK();
-
-    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
-
-    std::ifstream  istr;
-    angeo::open_file_stream_for_reading(istr, pathname);
-
-    std::unordered_set<std::string>  visited;
-    for (natural_32_bit i = 0U, n = angeo::read_num_records(istr, pathname); i != n; ++i)
-    {
-        std::string  line;
-        if (!read_line(istr, line))
-            throw std::runtime_error(msgstream() << "Cannot read parent #" << i << " in the file '" << pathname << "'.");
-        integer_32_bit  parent_index;
-        {
-            std::istringstream sstr(line);
-            sstr >> parent_index;
-        }
-        if (parent_index < -1)
-            throw std::runtime_error(msgstream() << "Wrong parent bone index " << parent_index << " for bone #" << i << " in the file '"
-                                                 << pathname << "'. E.i. the bones were not saved in the topological order.");
-        if (parent_index >(integer_32_bit)i)
-            throw std::runtime_error(msgstream() << "Bone #" << i << " comes before its parent bone #" << parent_index << " in the file '"
-                                                 << pathname << "'. E.i. the bones were not saved in the topological order.");
-        parents.push_back(parent_index);
-    }
-
-    angeo::skeleton_compute_child_bones(parents, children);
-}
-
-bone_hierarchy_data::~bone_hierarchy_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-}}
-
-namespace ai { namespace detail {
-
-
 bone_lengths_data::bone_lengths_data(async::finalise_load_on_destroy_ptr const  finaliser)
 {
     TMPROF_BLOCK();
@@ -389,7 +346,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     throw std::runtime_error("The 'pose_frames' were not loaded.");
                 if (names.empty())
                     throw std::runtime_error("The 'names' were not loaded.");
-                if (hierarchy.empty())
+                if (hierarchy.parents.empty())
                     throw std::runtime_error("The 'hierarchy' was not loaded.");
                 if (lengths.empty())
                     throw std::runtime_error("The 'lengths' were not loaded.");
@@ -402,14 +359,14 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     throw std::runtime_error("The 'pose_frames' is empty.");
                 if (pose_frames.size() != names.size())
                     throw std::runtime_error("The size of 'pose_frames' and 'names' are different.");
-                if (pose_frames.size() != hierarchy.parents().size())
-                    throw std::runtime_error("The size of 'pose_frames' and 'hierarchy.parents()' are different.");
+                if (pose_frames.size() != hierarchy.parents.size())
+                    throw std::runtime_error("The size of 'pose_frames' and 'hierarchy.parents' are different.");
                 if (pose_frames.size() != lengths.size())
                     throw std::runtime_error("The size of 'pose_frames' and 'lengths' are different.");
                 if (joints.size() != names.size())
                     throw std::runtime_error("The size of 'joints' and 'names' are different.");
 
-                if (hierarchy.parent(0U) != -1)
+                if (hierarchy.parents.at(0U) != -1)
                     throw std::runtime_error("Invariant failure: hierarchy.parent(0) != -1.");
 
                 for (auto const&  entry : motions_map)
@@ -495,8 +452,36 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (hierarchy.empty() && boost::filesystem::is_regular_file(pathname / "parents.txt"))
-            hierarchy = bone_hierarchy(pathname / "parents.txt", 10U, ultimate_finaliser);
+        if (hierarchy.parents.empty() && boost::filesystem::is_regular_file(pathname / "parents.txt"))
+        {
+            boost::filesystem::path  parents_pathname = pathname / "parents.txt";
+
+            std::ifstream  istr;
+            angeo::open_file_stream_for_reading(istr, parents_pathname);
+
+            std::unordered_set<std::string>  visited;
+            for (natural_32_bit i = 0U, n = angeo::read_num_records(istr, parents_pathname); i != n; ++i)
+            {
+                std::string  line;
+                if (!read_line(istr, line))
+                    throw std::runtime_error(msgstream() << "Cannot read parent #" << i << " in the file '" << parents_pathname << "'.");
+                integer_32_bit  parent_index;
+                {
+                    std::istringstream sstr(line);
+                    sstr >> parent_index;
+                }
+                if (parent_index < -1)
+                    throw std::runtime_error(msgstream() << "Wrong parent bone index " << parent_index << " for bone #" << i << " in the file '"
+                                                         << parents_pathname << "'. E.i. the bones were not saved in the topological order.");
+                if (parent_index >(integer_32_bit)i)
+                    throw std::runtime_error(msgstream() << "Bone #" << i << " comes before its parent bone #" << parent_index << " in the file '"
+                                                         << parents_pathname << "'. E.i. the bones were not saved in the topological order.");
+                hierarchy.parents.push_back(parent_index);
+            }
+
+            angeo::skeleton_compute_child_bones(hierarchy.parents, hierarchy.children);
+        }
+
         if (lengths.empty() && boost::filesystem::is_regular_file(pathname / "lengths.txt"))
             lengths = bone_lengths(pathname / "lengths.txt", 10U, ultimate_finaliser);
         if (joints.empty() && boost::filesystem::is_regular_file(pathname / "joints.txt"))

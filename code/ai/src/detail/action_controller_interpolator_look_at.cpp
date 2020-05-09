@@ -61,7 +61,7 @@ void  action_controller_interpolator_look_at::interpolate(
         for (auto bone : m_dst_bones->all_bones)
             bones_to_consider.insert(bone);
 
-    auto const&  parents = get_blackboard()->m_motion_templates.hierarchy().parents();
+    auto const&  parents = get_blackboard()->m_motion_templates.parents();
 
     vector3  target;
     {

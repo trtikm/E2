@@ -91,45 +91,6 @@ struct  free_bones : public async::resource_accessor<free_bones_data>
 namespace ai { namespace detail {
 
 
-struct  bone_hierarchy_data
-{
-    explicit bone_hierarchy_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~bone_hierarchy_data();
-
-    // INVARIANT(parents.at(0)==-1); The first bone must be the 'pivot/root' bone of the skeleton, like 'hips'.
-    std::vector<integer_32_bit>  parents;
-    std::vector<std::vector<integer_32_bit> >  children;
-};
-
-struct  bone_hierarchy : public async::resource_accessor<bone_hierarchy_data>
-{
-    bone_hierarchy() : async::resource_accessor<bone_hierarchy_data>() {}
-    bone_hierarchy(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<bone_hierarchy_data>(
-    { "ai::skeletal_motion_templates::bone_hierarchy",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-
-    // INVARIANT(parents.at(0)==-1); The first bone must be the 'pivot/root' bone of the skeleton, like 'hips'.
-    std::vector<integer_32_bit> const&  parents() const { return resource().parents; }
-    integer_32_bit  parent(natural_32_bit const  index) const { return parents().at(index); }
-
-    std::vector<std::vector<integer_32_bit> > const&  children() const { return resource().children; }
-    std::vector<integer_32_bit> const&  children_at(natural_32_bit const  index) const { return children().at(index); }
-};
-
-
-}}
-
-namespace ai { namespace detail {
-
-
 struct  bone_lengths_data
 {
     explicit bone_lengths_data(async::finalise_load_on_destroy_ptr const  finaliser);
@@ -273,6 +234,16 @@ struct  skeletal_motion_templates_data
 {
     using  bone_names = std::vector<std::string>;
 
+    struct  bone_hierarchy
+    {
+        using  parents_vector = std::vector<integer_32_bit>;
+        using  children_vector = std::vector<std::vector<integer_32_bit> >;
+
+        // INVARIANT(parents.at(0)==-1); The first bone must be the 'pivot/root' bone of the skeleton, like 'hips'.
+        parents_vector  parents;
+        children_vector  children;
+    };
+
     struct  loop_target
     {
         natural_32_bit  index;
@@ -343,7 +314,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  free_bones_for_look_at_ptr = detail::meta::free_bones_for_look_at_ptr;
 
     using  bone_names = detail::skeletal_motion_templates_data::bone_names;
-    using  bone_hierarchy = detail::bone_hierarchy;
+    using  bone_hierarchy = detail::skeletal_motion_templates_data::bone_hierarchy;
     using  bone_lengths = detail::bone_lengths;
     using  bone_joints = detail::bone_joints;
 
@@ -357,8 +328,10 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  motion_object_binding = detail::motion_object_binding;
 
     reference_frames  pose_frames() const { return resource().pose_frames; }
-    bone_names  names() const { return resource().names; }
-    bone_hierarchy  hierarchy() const { return resource().hierarchy; }
+    bone_names const&  names() const { return resource().names; }
+    bone_hierarchy const&  hierarchy() const { return resource().hierarchy; }
+    bone_hierarchy::parents_vector const&  parents() const { return hierarchy().parents; }
+    bone_hierarchy::children_vector const&  children() const { return hierarchy().children; }
     bone_lengths  lengths() const { return resource().lengths; }
 	bone_joints  joints() const { return resource().joints; }
 

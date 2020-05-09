@@ -45,7 +45,7 @@ void  action_controller_interpolator_animation::set_target(
                                                                                                  .get_coord_systems(),
             get_blackboard()->m_motion_templates.at(cursor.motion_name).reference_frames.at(cursor.keyframe_index),
             get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
-            get_blackboard()->m_motion_templates.hierarchy().parents(),
+            get_blackboard()->m_motion_templates.parents(),
             m_dst_frames
             );
 
@@ -59,7 +59,7 @@ void  action_controller_interpolator_animation::commit() const
     TMPROF_BLOCK();
 
     vector3 const  origin_offset(0.0f, 0.0f, m_current_offset - m_reference_offset);
-    auto const&  parents = get_blackboard()->m_motion_templates.hierarchy().parents();
+    auto const&  parents = get_blackboard()->m_motion_templates.parents();
     for (natural_32_bit bone = 0; bone != m_current_frames.size(); ++bone)
         get_blackboard()->m_scene->set_frame_of_scene_node(
                 get_blackboard()->m_bone_nids.at(bone),

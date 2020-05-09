@@ -33,7 +33,7 @@ void  blackboard::initialise_bone_nids()
         scene::node_id::path_type  path;
         for (integer_32_bit parent_bone = (integer_32_bit)bone;
                 parent_bone >= 0;
-                parent_bone = m_motion_templates.hierarchy().parents().at(parent_bone))
+                parent_bone = m_motion_templates.parents().at(parent_bone))
             path.push_back(m_motion_templates.names().at(parent_bone));
         std::reverse(path.begin(), path.end());
         m_bone_nids.at(bone) = m_self_rid.get_node_id() / scene::node_id(path);
