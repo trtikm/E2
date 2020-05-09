@@ -17,22 +17,6 @@ struct  snapshot
 
     motion_desire_props  desire_computed_by_cortex;
 
-    vector3  forward;
-    vector3  up;
-
-    vector3  linear_velocity;
-    vector3  angular_velocity;
-    vector3  linear_acceleration;
-    vector3  angular_acceleration;
-
-    vector3  external_linear_acceleration;
-
-    vector3  ideal_linear_velocity;
-    vector3  ideal_angular_velocity;
-
-    float_32_bit  interpolation_param_till_destination_cursor;
-    skeletal_motion_templates::motion_template_cursor  destination_cursor;
-
     vector3  camera_origin;
     vector3  camera_x_axis;
     vector3  camera_y_axis;

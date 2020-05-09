@@ -6,6 +6,7 @@
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
+#include <utility/log.hpp>
 
 namespace ai { namespace detail {
 
@@ -29,8 +30,15 @@ action_controller_roller::action_controller_roller(blackboard_agent_weak_ptr con
             angeo::COLLISION_MATERIAL_TYPE::WOOD,           // BODY_MATERIAL
             angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT,    // BODT_COLLISION_CLASS
 
-            PI() / 18.0f,       // JUMP_CONE_ANGLE
-            5000.0f,            // JUMP_MAX_FORCE_MAGNITUDE
+            0.1f,               // MAX_NO_CONTACT_SECONDS_FOR_DESIRE_FRAME_UPDATE
+
+            0.825f,             // AGENT_FRAME_ORIGIN_Z_OFFSET_FROM_BOTTOM
+
+            10000.0f,           // JUMP_MAX_FORCE_MAGNITUDE
+
+            PI() / 9.0f,        // MAX_RUN_STRAIGHT_POSE_ANGLE
+            PI() / 18.0f,       // MAX_JUMP_STRAIGHT_POSE_ANGLE
+            PI() / 18.0f,       // MAX_JUMP_ANGULAR_SPEED
 
             2.0f,               // UPPER_JOINT_REDUCTION_SPEED
             0.2f,               // UPPER_JOINT_SLOW_DOWN_DISTANCE
@@ -53,13 +61,9 @@ action_controller_roller::action_controller_roller(blackboard_agent_weak_ptr con
             get_blackboard()->m_scene->get_aux_root_node(
                     OBJECT_KIND::AGENT,
                     get_blackboard()->m_self_rid.get_node_id(),
-                    "motion_object.roller"
+                    "motion_object.body"
                     )
             )
-
-    , m_roller_frame()
-    , m_body_frame()
-    , m_desire_frame()
 
     , m_ccid_lower_joint_roller_and_body{
             get_blackboard()->m_scene->acquire_fresh_custom_constraint_id(),
@@ -72,33 +76,38 @@ action_controller_roller::action_controller_roller(blackboard_agent_weak_ptr con
             get_blackboard()->m_scene->acquire_fresh_custom_constraint_id()
             }
     , m_ccid_body_spin{ get_blackboard()->m_scene->acquire_fresh_custom_constraint_id() }
+
+    , m_roller_frame()
+    , m_body_frame()
+    , m_agent_frame()
+    , m_desire_frame()
+    , m_roller_contacts()
+    , m_all_contacts()
+    , m_seconds_since_last_contact(0.0f)
+    , m_environment_linear_velocity(vector3_zero())
+    , m_environment_angular_velocity(vector3_zero())
+    , m_angle_to_straight_pose(0.0f)
+    , m_prev_angle_to_straight_pose(0.0f)
+    , m_linear_velocity(vector3_zero())
+    , m_angular_velocity(vector3_zero())
 {
-    vector3  origin, forward, up;
     {
-        angeo::coordinate_system  agent_frame;
-        {
-            angeo::coordinate_system  tmp;
-            get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_bone_nids.front(), false, tmp);
-            agent_frame.set_origin(tmp.origin());
-            get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_self_rid.get_node_id(), false, tmp);
-            agent_frame.set_orientation(tmp.orientation());
-        }
-
-        origin = agent_frame.origin();
-
-        matrix44  W;
-        angeo::from_base_matrix(agent_frame, W);
-
-        forward = transform_vector(get_blackboard()->m_motion_templates.directions().forward(), W);
-        up = transform_vector(get_blackboard()->m_motion_templates.directions().up(), W);
+        angeo::coordinate_system  tmp;
+        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_self_rid.get_node_id(), false, tmp);
+        m_agent_frame = tmp;
+        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_bone_nids.front(), false, tmp);
+        m_agent_frame.set_origin(tmp.origin());
     }
 
     if (!get_blackboard()->m_scene->has_scene_node(m_roller_nid))
     {
-        m_roller_frame.set_origin(origin - (0.5f * m_config.ROLLER_RADIUS + m_config.BODY_EXCENTRICITY) * up);
-        m_roller_frame.set_basis_vector_y(-forward);
-        m_roller_frame.set_basis_vector_z(up);
-        m_roller_frame.set_basis_vector_x(normalised(cross_product(m_roller_frame.basis_vector_y(), m_roller_frame.basis_vector_z())));
+        m_roller_frame.set_origin(
+                m_agent_frame.origin() -
+                (m_config.AGENT_FRAME_ORIGIN_Z_OFFSET_FROM_BOTTOM - m_config.ROLLER_RADIUS) * m_agent_frame.basis_vector_z()
+                );
+        m_roller_frame.set_basis_vector_x(m_agent_frame.basis_vector_x());
+        m_roller_frame.set_basis_vector_y(m_agent_frame.basis_vector_y());
+        m_roller_frame.set_basis_vector_z(m_agent_frame.basis_vector_z());
 
         angeo::coordinate_system  tmp(m_roller_frame);
         get_blackboard()->m_scene->insert_scene_node(m_roller_nid, tmp, false);
@@ -125,10 +134,13 @@ action_controller_roller::action_controller_roller(blackboard_agent_weak_ptr con
 
     if (!get_blackboard()->m_scene->has_scene_node(m_body_nid))
     {
-        m_body_frame.set_origin(origin + (0.5f * m_config.ROLLER_RADIUS) * up);
-        m_body_frame.set_basis_vector_y(-forward);
-        m_body_frame.set_basis_vector_z(up);
-        m_body_frame.set_basis_vector_x(normalised(cross_product(m_body_frame.basis_vector_y(), m_body_frame.basis_vector_z())));
+        m_body_frame.set_origin(
+                m_roller_frame.origin() +
+                (m_config.ROLLER_RADIUS + m_config.BODY_EXCENTRICITY) * m_roller_frame.basis_vector_z()
+                );
+        m_body_frame.set_basis_vector_x(m_roller_frame.basis_vector_x());
+        m_body_frame.set_basis_vector_y(m_roller_frame.basis_vector_y());
+        m_body_frame.set_basis_vector_z(m_roller_frame.basis_vector_z());
 
         angeo::coordinate_system  tmp(m_body_frame);
         get_blackboard()->m_scene->insert_scene_node(m_body_nid, tmp, false);
@@ -154,7 +166,10 @@ action_controller_roller::action_controller_roller(blackboard_agent_weak_ptr con
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_body_nid, get_blackboard()->m_self_id);
     }
 
-    set_desire_frame(forward);
+    get_blackboard()->m_scene->enable_colliding_colliders_of_scene_nodes(m_roller_nid, m_body_nid, false);
+
+    m_desire_frame = m_roller_frame;
+    set_desire_frame();
 }
 
 
@@ -170,6 +185,9 @@ action_controller_roller::~action_controller_roller()
     get_blackboard()->m_scene->unregister_from_collision_contacts_stream(m_body_nid, get_blackboard()->m_self_id);
 
     get_blackboard()->m_scene->erase_rigid_body_from_scene_node(m_roller_nid);
+    get_blackboard()->m_scene->erase_rigid_body_from_scene_node(m_body_nid);
+
+    get_blackboard()->m_scene->erase_collision_object_from_scene_node(m_roller_nid);
     get_blackboard()->m_scene->erase_collision_object_from_scene_node(m_body_nid);
 
     get_blackboard()->m_scene->erase_scene_node(m_roller_nid);
@@ -177,49 +195,10 @@ action_controller_roller::~action_controller_roller()
 }
 
 
-void  action_controller_roller::next_round(
-        bool const  apply_upper_joint,
-        vector3 const&  desired_forward_unit_vector_in_local_space,
-        vector3 const&  desired_linear_velocity_in_local_space,
-        vector3 const&  desired_jump_velocity_in_local_space
-        )
+void  action_controller_roller::synchronise_with_scene()
 {
     TMPROF_BLOCK();
 
-    synchronise_with_scene();
-
-    matrix44  from_agent_frame_matrix;
-    get_from_agent_frame_matrix(from_agent_frame_matrix);
-
-    set_desire_frame(transform_vector(desired_forward_unit_vector_in_local_space, from_agent_frame_matrix));
-
-    std::vector<scene::collicion_contant_info_ptr>  roller_contacts;
-    filter_contacts(m_roller_nid, roller_contacts);
-    std::vector<scene::collicion_contant_info_ptr>  body_contacts;
-    filter_contacts(m_body_nid, body_contacts);
-
-    set_roller_angular_velocity(
-            transform_vector(desired_linear_velocity_in_local_space, from_agent_frame_matrix),
-            compute_environment_angular_velocity(roller_contacts)
-            );
-
-    if (!roller_contacts.empty()
-            && length_squared(desired_jump_velocity_in_local_space) >= 1e-6f
-            && angle(m_body_frame.basis_vector_z(), m_desire_frame.basis_vector_z()) <= m_config.JUMP_CONE_ANGLE)
-        insert_jump_constraints_between_roller_body_and_floor(
-                    transform_vector(desired_jump_velocity_in_local_space, from_agent_frame_matrix),
-                    roller_contacts
-                    );
-
-    insert_lower_joint_between_roller_and_body();
-    if (apply_upper_joint && (!roller_contacts.empty() || !body_contacts.empty()))
-        insert_upper_joint_between_roller_and_body();
-    insert_roller_and_body_spin_motor();
-}
-
-
-void  action_controller_roller::synchronise_with_scene()
-{
     angeo::coordinate_system  tmp;
 
     get_blackboard()->m_scene->get_frame_of_scene_node(m_roller_nid, false, tmp);
@@ -227,30 +206,82 @@ void  action_controller_roller::synchronise_with_scene()
 
     get_blackboard()->m_scene->get_frame_of_scene_node(m_body_nid, false, tmp);
     m_body_frame = tmp;
-}
 
-
-void  action_controller_roller::get_from_agent_frame_matrix(matrix44&  from_agent_frame_matrix) const
-{
-    angeo::coordinate_system  agent_frame;
-    get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_self_rid.get_node_id(), false, agent_frame);
-    angeo::from_base_matrix(agent_frame, from_agent_frame_matrix);
-}
-
-
-void  action_controller_roller::set_desire_frame(vector3 const&  desired_forward_in_world_space)
-{
-    vector3 const  total_external_accel =
-            get_blackboard()->m_scene->get_external_linear_acceleration_of_rigid_body_of_scene_node(m_roller_nid) +
-            get_blackboard()->m_scene->get_external_linear_acceleration_of_rigid_body_of_scene_node(m_body_nid)
-            ;
-    m_desire_frame.set_basis_vector_z(-normalised(total_external_accel));
-    m_desire_frame.set_basis_vector_x(normalised(cross_product(desired_forward_in_world_space, m_desire_frame.basis_vector_z())));
-    m_desire_frame.set_basis_vector_y(normalised(cross_product(m_desire_frame.basis_vector_z(), m_desire_frame.basis_vector_x())));
-    m_desire_frame.set_origin(
-            m_roller_frame.origin() + 2.0f * (m_config.ROLLER_RADIUS + m_config.BODY_EXCENTRICITY) * m_desire_frame.basis_vector_z()
+    m_agent_frame.set_origin(
+            m_roller_frame.origin() +
+            (m_config.AGENT_FRAME_ORIGIN_Z_OFFSET_FROM_BOTTOM - m_config.ROLLER_RADIUS) * m_body_frame.basis_vector_z()
             );
+    m_agent_frame.set_basis_vector_x(m_body_frame.basis_vector_x());
+    m_agent_frame.set_basis_vector_y(m_body_frame.basis_vector_y());
+    m_agent_frame.set_basis_vector_z(m_body_frame.basis_vector_z());
+    get_blackboard()->m_scene->set_frame_of_scene_node(get_blackboard()->m_self_rid.get_node_id(), false, m_agent_frame);
+
+    m_roller_contacts.clear();
+    filter_contacts(m_roller_nid, m_roller_contacts);
+    m_all_contacts = m_roller_contacts;
+    filter_contacts(m_body_nid, m_all_contacts);
+
+    if (!m_all_contacts.empty())
+    {
+        m_seconds_since_last_contact = 0.0f;
+        m_environment_linear_velocity = compute_environment_linear_velocity();
+        m_environment_angular_velocity = compute_environment_angular_velocity();
+    }
+    m_external_linear_acceleration =
+            0.5f * (get_blackboard()->m_scene->get_external_linear_acceleration_of_rigid_body_of_scene_node(m_roller_nid) +
+                    get_blackboard()->m_scene->get_external_linear_acceleration_of_rigid_body_of_scene_node(m_body_nid) );
+
+    set_desire_frame();
+
+    m_prev_angle_to_straight_pose = m_angle_to_straight_pose;
+    m_angle_to_straight_pose = angle(m_body_frame.basis_vector_z(), m_desire_frame.basis_vector_z());
+
+    m_linear_velocity = get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_roller_nid) -
+                        get_environment_linear_velocity();
+    m_angular_velocity = get_blackboard()->m_scene->get_angular_velocity_of_rigid_body_of_scene_node(m_body_nid) -
+                         get_environment_angular_velocity();
 }
+
+
+void  action_controller_roller::apply_desire(
+        float_32_bit const  time_step_in_seconds,
+        float_32_bit const  desired_ccw_angular_speed,
+        vector3 const&  desired_linear_velocity_in_local_space,
+        vector3 const&  desired_jump_velocity_in_local_space,
+        bool const  disable_upper_joint
+        )
+{
+    TMPROF_BLOCK();
+
+    if (get_seconds_since_last_contact() <= m_config.MAX_NO_CONTACT_SECONDS_FOR_DESIRE_FRAME_UPDATE)
+        rotate_desired_frame(time_step_in_seconds, desired_ccw_angular_speed);
+
+    set_roller_angular_velocity(
+            get_angle_to_straight_pose() <= m_config.MAX_RUN_STRAIGHT_POSE_ANGLE ?
+                    angeo::vector3_from_coordinate_system(desired_linear_velocity_in_local_space, m_desire_frame) :
+                    vector3_zero()
+            );
+
+    if (!m_roller_contacts.empty()
+            && get_angle_to_straight_pose() <= m_config.MAX_JUMP_STRAIGHT_POSE_ANGLE
+            && length_squared(desired_jump_velocity_in_local_space) >= 1e-6f
+            && std::fabs(m_angle_to_straight_pose - m_prev_angle_to_straight_pose) / time_step_in_seconds
+                    <= m_config.MAX_JUMP_ANGULAR_SPEED
+            )
+        insert_jump_constraints_between_roller_body_and_floor(
+                    angeo::vector3_from_coordinate_system(desired_jump_velocity_in_local_space, m_desire_frame)
+                    );
+
+    insert_lower_joint_between_roller_and_body();
+    if (!disable_upper_joint && !m_all_contacts.empty())
+        insert_upper_joint_between_roller_and_body();
+    insert_roller_and_body_spin_motor();
+
+    m_seconds_since_last_contact += time_step_in_seconds;
+}
+
+
+// Sub-routines colled from  synchronise_with_scene()
 
 
 void  action_controller_roller::filter_contacts(scene::node_id const&  nid, std::vector<scene::collicion_contant_info_ptr>&  contacts) const
@@ -258,31 +289,81 @@ void  action_controller_roller::filter_contacts(scene::node_id const&  nid, std:
     auto const begin_and_end = 
             get_blackboard()->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map().equal_range(nid);
     for (auto it = begin_and_end.first; it != begin_and_end.second; ++it)
-        if (it->second.data->other_collider_nid.valid())
-            contacts.push_back(it->second.data);
+        contacts.push_back(it->second.data);
 }
 
 
-vector3  action_controller_roller::compute_environment_angular_velocity(
-        std::vector<scene::collicion_contant_info_ptr> const&  contacts
-        ) const
+vector3  action_controller_roller::compute_environment_linear_velocity() const
+{
+    vector3  environment_linear_velocity = vector3_zero();
+    for (scene::collicion_contant_info_ptr  info : m_all_contacts)
+        environment_linear_velocity +=
+                get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_at_point(
+                        get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(info->other_coid),
+                        m_roller_frame.origin()
+                        );
+    if (!m_all_contacts.empty())
+        environment_linear_velocity /= (float_32_bit)m_all_contacts.size();
+    return  environment_linear_velocity;
+}
+
+
+vector3  action_controller_roller::compute_environment_angular_velocity() const
 {
     vector3  environment_angular_velocity = vector3_zero();
-    for (scene::collicion_contant_info_ptr  info : contacts)
+    for (scene::collicion_contant_info_ptr  info : m_all_contacts)
         environment_angular_velocity +=
                 get_blackboard()->m_scene->get_angular_velocity_of_rigid_body_of_scene_node(
                         get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(info->other_coid)
                         );
-    if (!contacts.empty())
-        environment_angular_velocity /= (float_32_bit)contacts.size();
+    if (!m_all_contacts.empty())
+        environment_angular_velocity /= (float_32_bit)m_all_contacts.size();
     return  environment_angular_velocity;
 }
 
 
-void  action_controller_roller::set_roller_angular_velocity(
-        vector3 const&  desired_linear_velocity_in_world_space,
-        vector3 const&  environment_angular_velocity
-        ) const
+void  action_controller_roller::set_desire_frame()
+{
+    float_32_bit const  external_accel_magnitude = length(m_external_linear_acceleration);
+
+    m_desire_frame.set_basis_vector_z(
+            external_accel_magnitude < 0.0001f ?
+                    m_desire_frame.basis_vector_z() :
+                    (-1.0f / external_accel_magnitude) * m_external_linear_acceleration
+            );
+    m_desire_frame.set_basis_vector_x(normalised(cross_product(m_desire_frame.basis_vector_y(), m_desire_frame.basis_vector_z())));
+    m_desire_frame.set_basis_vector_y(normalised(cross_product(m_desire_frame.basis_vector_z(), m_desire_frame.basis_vector_x())));
+    m_desire_frame.set_origin(
+            m_roller_frame.origin() +
+            (2.0f * (m_config.ROLLER_RADIUS + m_config.BODY_EXCENTRICITY) + 0.05f) * m_desire_frame.basis_vector_z()
+            );
+}
+
+
+// Sub-routines colled from  apply_desire()
+
+
+void  action_controller_roller::rotate_desired_frame(float_32_bit const  time_step_in_seconds, float_32_bit const  desired_ccw_angular_speed)
+{
+    float_32_bit const  environment_angular_velocity_magnitude = length(m_environment_angular_velocity);
+    matrix33 const  environment_rotation =
+            environment_angular_velocity_magnitude > 0.00001f ?
+                    angle_axis_to_rotation_matrix(
+                            environment_angular_velocity_magnitude * time_step_in_seconds,
+                            (1.0f / environment_angular_velocity_magnitude) * m_environment_angular_velocity
+                            ) :
+                    matrix33_identity();
+    matrix33 const  desired_rotation =
+            angle_axis_to_rotation_matrix(desired_ccw_angular_speed * time_step_in_seconds, m_desire_frame.basis_vector_z());
+
+    vector3 const  rotated_y_axis = environment_rotation * desired_rotation * m_desire_frame.basis_vector_y();
+
+    m_desire_frame.set_basis_vector_x(normalised(cross_product(rotated_y_axis, m_desire_frame.basis_vector_z())));
+    m_desire_frame.set_basis_vector_y(normalised(cross_product(m_desire_frame.basis_vector_z(), m_desire_frame.basis_vector_x())));
+}
+
+
+void  action_controller_roller::set_roller_angular_velocity(vector3 const&  desired_linear_velocity_in_world_space) const
 {
     vector3  angular_velocity;
     {
@@ -298,19 +379,18 @@ void  action_controller_roller::set_roller_angular_velocity(
     }
     get_blackboard()->m_scene->set_angular_velocity_of_rigid_body_of_scene_node(
             m_roller_nid,
-            angular_velocity + environment_angular_velocity
+            angular_velocity + m_environment_angular_velocity
             );
 }
 
 
 void  action_controller_roller::insert_jump_constraints_between_roller_body_and_floor(
-        vector3 const&  desired_jump_velocity_in_world_space,
-        std::vector<scene::collicion_contant_info_ptr> const&  roller_contacts
-        )
+        vector3 const&  desired_jump_velocity_in_world_space
+        ) const
 {
     std::unordered_set<scene::node_id>  floor_nids;
-    for (scene::collicion_contant_info_ptr  info : roller_contacts)
-        if (dot_product(info->contact_point_in_world_space, desired_jump_velocity_in_world_space) > 0.0f)
+    for (scene::collicion_contant_info_ptr  info : m_roller_contacts)
+        if (dot_product(info->unit_normal_in_world_space, desired_jump_velocity_in_world_space) > 0.0f)
             floor_nids.insert(get_blackboard()->m_scene->get_scene_node_of_rigid_body_associated_with_collider(info->other_coid));
 
     float_32_bit const  bias = length(desired_jump_velocity_in_world_space);

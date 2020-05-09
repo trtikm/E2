@@ -62,6 +62,7 @@ bool are_equal_44(matrix44 const&  left, matrix44 const&  right, float_32_bit co
 inline vector2  vector2_zero() { return vector2::Zero(); }
 inline vector2  vector2_unit_x() { return vector2::UnitX(); }
 inline vector2  vector2_unit_y() { return vector2::UnitY(); }
+inline vector2  vector2_unit(natural_8_bit const  idx) { return idx == 0U ? vector2_unit_x() : vector2_unit_y(); }
 inline scalar  dot_product_2d(vector2 const& u, vector2 const& v) { return u.dot(v); }
 inline scalar  length_squared_2d(vector2 const& u) { return dot_product_2d(u,u); }
 inline scalar  length_2d(vector2 const& u) { return u.norm(); }
@@ -78,6 +79,15 @@ inline vector3  vector3_zero() { return vector3::Zero(); }
 inline vector3  vector3_unit_x() { return vector3::UnitX(); }
 inline vector3  vector3_unit_y() { return vector3::UnitY(); }
 inline vector3  vector3_unit_z() { return vector3::UnitZ(); }
+inline vector3  vector3_unit(natural_8_bit const  idx)
+{
+    switch (idx)
+    {
+    case 0U: return vector3_unit_x();
+    case 1U: return vector3_unit_y();
+    default: return vector3_unit_z();
+    }
+}
 inline scalar  dot_product(vector3 const& u, vector3 const& v) { return u.dot(v); }
 inline vector3  cross_product(vector3 const& u, vector3 const& v) { return u.cross(v); }
 inline scalar  length_squared(vector3 const& u) { return dot_product(u,u); }
@@ -117,6 +127,16 @@ inline vector4  vector4_unit_x() { return vector4::UnitX(); }
 inline vector4  vector4_unit_y() { return vector4::UnitY(); }
 inline vector4  vector4_unit_z() { return vector4::UnitZ(); }
 inline vector4  vector4_unit_w() { return vector4::UnitW(); }
+inline vector4  vector4_unit(natural_8_bit const  idx)
+{
+    switch (idx)
+    {
+    case 0U: return vector4_unit_x();
+    case 1U: return vector4_unit_y();
+    case 2U: return vector4_unit_z();
+    default: return vector4_unit_w();
+    }
+}
 
 inline vector6  vector6_zero() { return vector6::Zero(); }
 

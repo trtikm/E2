@@ -45,6 +45,7 @@ namespace ai {
 
 cortex_random::cortex_random(blackboard_agent_weak_ptr const  blackboard_)
     : cortex(blackboard_)
+    , m_seconds_till_change(0.0f)
     , m_generator()
 {}
 
@@ -53,12 +54,16 @@ void  cortex_random::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    m_motion_desire_props.forward_unit_vector_in_local_space = detail::gen_random_unit_vector(-1.0f, 1.0f, m_generator);
-    m_motion_desire_props.linear_velocity_unit_direction_in_local_space = detail::gen_random_unit_vector(-1.0f, 1.0f, m_generator);
-    m_motion_desire_props.linear_speed = get_random_float_32_bit_in_range(0.0f, 10.0f, m_generator);
-    m_motion_desire_props.angular_velocity_unit_axis_in_local_space = detail::gen_random_unit_vector(-1.0f, 1.0f, m_generator);
-    m_motion_desire_props.angular_speed = get_random_float_32_bit_in_range(0.0f, 10.0f, m_generator);
-    m_motion_desire_props.look_at_target_in_local_space = detail::gen_random_vector(-50.0f, 50.0f, m_generator);
+    m_seconds_till_change -= time_step_in_seconds;
+    if (m_seconds_till_change > 0.0f)
+        return;
+    m_seconds_till_change = get_random_float_32_bit_in_range(0.0f, 2.0f, m_generator);
+
+    m_motion_desire_props.speed(DESIRE_COORD::FORWARD) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.speed(DESIRE_COORD::LEFT) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.speed(DESIRE_COORD::UP) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.speed(DESIRE_COORD::TURN_CCW) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.look_at_target = detail::gen_random_vector(-50.0f, 50.0f, m_generator);
 }
 
 

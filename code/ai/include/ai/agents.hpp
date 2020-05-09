@@ -62,6 +62,7 @@ private:
 
     struct  agent_props
     {
+        bool  ready() const;
         std::unique_ptr<agent>  agent_ptr;
         scene::record_id  agent_rid;
         skeletal_motion_templates  motion_templates;

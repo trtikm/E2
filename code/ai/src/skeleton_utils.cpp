@@ -59,4 +59,51 @@ void  interpolate_keyframes_spherical(
 }
 
 
+std::pair<natural_32_bit, float_32_bit>  get_motion_template_transition_props(
+        skeletal_motion_templates::transitions_map const&  transition_props,
+        skeletal_motion_templates::motion_template_cursor const  src_template,
+        std::string const&  dst_template_name,
+        std::pair<natural_32_bit, float_32_bit> const&  default_props
+        )
+{
+    std::pair<std::string, std::string>  key = { src_template.motion_name, dst_template_name };
+    std::array<natural_32_bit, 2U>  indices;
+    auto  it = transition_props.find(key);
+    if (it == transition_props.cend())
+    {
+        key = { dst_template_name, src_template.motion_name };
+        it = transition_props.find(key);
+        if (it == transition_props.cend() || !it->second.is_bidirectional || it->second.transitions.empty() )
+            return default_props;
+        indices = { 1U, 0U };
+    }
+    else if (it->second.transitions.empty())
+        return default_props;
+    else
+        indices = { 0U, 1U };
+
+    auto const  get_distance = [](natural_32_bit const  a, natural_32_bit const  b) -> natural_32_bit {
+        return (natural_32_bit)std::abs(((integer_32_bit)a) - ((integer_32_bit)b));
+    };
+
+    std::vector<skeletal_motion_templates::transition_info> const&  transitions = it->second.transitions;
+
+    natural_32_bit  smallest_distance =
+            get_distance(src_template.keyframe_index, transitions.front().keyframe_indices.at(indices.front()));
+    natural_32_bit  best_index = 0U;
+    for (natural_32_bit  i = 1U; i < transitions.size(); ++i)
+    {
+        natural_32_bit const  distance =
+                get_distance(src_template.keyframe_index, transitions.at(i).keyframe_indices.at(indices.front()));
+        if (distance < smallest_distance)
+        {
+            smallest_distance = distance;
+            best_index = i;
+        }
+    }
+
+    return { transitions.at(best_index).keyframe_indices.at(indices.back()), transitions.at(best_index).seconds_to_interpolate };
+}
+
+
 }

@@ -16,7 +16,14 @@ using  coordinate_system_const_ptr = std::shared_ptr<coordinate_system const>;
 
 struct  coordinate_system_explicit
 {
-    coordinate_system_explicit() {}
+    coordinate_system_explicit()
+        : coordinate_system_explicit(
+                vector3_zero(),
+                vector3_unit_x(),
+                vector3_unit_y(),
+                vector3_unit_z()
+                )
+    {}
 
     coordinate_system_explicit(
             vector3 const&  origin_,
@@ -73,6 +80,27 @@ inline void  to_base_matrix(coordinate_system_explicit const&  coord_system, mat
             coord_system.basis_vector_y(),
             coord_system.basis_vector_z(),
             output);
+}
+
+inline vector3  vector3_from_coordinate_system(vector3 const&  u, coordinate_system_explicit const&  cse)
+{
+    return vector3_from_orthonormal_base(u, cse.basis_vector_x(), cse.basis_vector_y(), cse.basis_vector_z());
+}
+
+
+inline vector3  vector3_to_coordinate_system(vector3 const&  u, coordinate_system_explicit const&  cse)
+{
+    return vector3_to_orthonormal_base(u, cse.basis_vector_x(), cse.basis_vector_y(), cse.basis_vector_z());
+}
+
+inline vector3  point3_from_coordinate_system(vector3 const&  p, coordinate_system_explicit const&  cse)
+{
+    return point3_from_orthonormal_base(p, cse.origin(), cse.basis_vector_x(), cse.basis_vector_y(), cse.basis_vector_z());
+}
+
+inline vector3  point3_to_coordinate_system(vector3 const&  p, coordinate_system_explicit const&  cse)
+{
+    return point3_to_orthonormal_base(p, cse.origin(), cse.basis_vector_x(), cse.basis_vector_y(), cse.basis_vector_z());
 }
 
 

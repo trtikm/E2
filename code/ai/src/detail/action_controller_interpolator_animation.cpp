@@ -8,33 +8,37 @@
 namespace ai { namespace detail {
 
 
-action_controller_interpolator_animation::action_controller_interpolator_animation(blackboard_agent_weak_ptr const  blackboard_)
-    : action_controller_interpolator(blackboard_)
+action_controller_interpolator_animation::action_controller_interpolator_animation(
+        action_controller_interpolator const* const  interpolator_,
+        skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor,
+        float_32_bit const  reference_offset
+        )
+    : action_controller_interpolator_shared(interpolator_)
     , m_src_frames()
     , m_current_frames()
     , m_dst_frames()
+    , m_reference_offset(reference_offset)
+    , m_src_offset()
+    , m_current_offset()
+    , m_dst_offset()
 {
-    ASSUMPTION(get_blackboard() != nullptr && !get_blackboard()->m_motion_templates.empty());
-    set_target({ get_blackboard()->m_motion_templates.transitions().initial_motion_name(), 0U }, 0.0f);
+    set_target(initial_template_cursor);
     m_src_frames = m_current_frames = m_dst_frames;
+    m_src_offset = m_current_offset = m_dst_offset;
 }
 
 
-void  action_controller_interpolator_animation::next_round(float_32_bit const  time_step_in_seconds)
+void  action_controller_interpolator_animation::interpolate(float_32_bit const  interpolation_param)
 {
-    if (done()) return;
-    float_32_bit const  interpolation_param = action_controller_interpolator::next_round(time_step_in_seconds);
-
     interpolate_keyframes_spherical(m_src_frames, m_dst_frames, interpolation_param, m_current_frames);
+    m_current_offset = m_src_offset + interpolation_param * (m_dst_offset - m_src_offset);
 }
 
 
 void  action_controller_interpolator_animation::set_target(
-        skeletal_motion_templates::motion_template_cursor const&  cursor,
-        float_32_bit const  interpolation_time_in_seconds)
+        skeletal_motion_templates::motion_template_cursor const&  cursor
+        )
 {
-    action_controller_interpolator::reset_time(interpolation_time_in_seconds);
-
     m_src_frames = m_current_frames;
     transform_keyframes_to_reference_frame(
             get_blackboard()->m_motion_templates.at(cursor.motion_name).keyframes.get_keyframes().at(cursor.keyframe_index)
@@ -44,13 +48,24 @@ void  action_controller_interpolator_animation::set_target(
             get_blackboard()->m_motion_templates.hierarchy().parents(),
             m_dst_frames
             );
+
+    m_src_offset = m_current_offset;
+    skeletal_motion_templates::collider_ptr const  collider_ptr =
+            get_blackboard()->m_motion_templates.at(cursor.motion_name).colliders.at(cursor.keyframe_index);
+    if (auto const  ptr = std::dynamic_pointer_cast<skeletal_motion_templates::collider_capsule const>(collider_ptr))
+        m_dst_offset = ptr->length + ptr->radius;
+    else
+    {
+        NOT_IMPLEMENTED_YET();
+    }
 }
 
 
-void  action_controller_interpolator_animation::commit(vector3 const&  origin_offset) const
+void  action_controller_interpolator_animation::commit() const
 {
     TMPROF_BLOCK();
 
+    vector3 const  origin_offset(0.0f, 0.0f, m_current_offset - m_reference_offset);
     auto const&  parents = get_blackboard()->m_motion_templates.hierarchy().parents();
     for (natural_32_bit bone = 0; bone != m_current_frames.size(); ++bone)
         get_blackboard()->m_scene->set_frame_of_scene_node(

@@ -4,6 +4,7 @@
 #   include <angeo/coordinate_system.hpp>
 #   include <angeo/tensor_math.hpp>
 #	include <angeo/skeleton_kinematics.hpp>
+#   include <angeo/linear_segment_curve.hpp>
 #   include <qtgl/keyframe.hpp>
 #   include <qtgl/modelspace.hpp>
 #   include <utility/async_resource_load.hpp>
@@ -158,282 +159,6 @@ struct  colliders : public async::resource_accessor<colliders_data>
     {}
     std::vector<collider_ptr> const&  data() const { return resource().data; }
     collider_ptr  at(natural_32_bit const  index) const { return data().at(index); }
-    std::size_t size() const { return data().size(); }
-};
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
-struct  constraint
-{
-    virtual ~constraint() = 0 {}
-    bool  operator==(constraint const&  other) const
-    {
-        if (this == &other) return true;
-        return typeid(*this) == typeid(other) && equals(other);
-    }
-    bool  operator!=(constraint const&  other) const { return !(*this == other); }
-protected:
-    virtual bool  equals(constraint const&  other) const { return false; }
-};
-using  constraint_ptr = std::shared_ptr<constraint const>;
-
-struct  constraint_contact_normal_cone : public constraint
-{
-    vector3  unit_axis;
-    float_32_bit  angle_in_radians;
-
-    bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_contact_normal_cone const&>(other); }
-    bool  operator==(constraint_contact_normal_cone const&  other) const
-    {
-        return are_equal_3d(unit_axis, other.unit_axis, 0.0001f) && are_equal(angle_in_radians, other.angle_in_radians, 0.0001f);
-    }
-};
-
-struct  constraint_has_any_contact : public constraint
-{
-    bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_has_any_contact const&>(other); }
-    bool  operator==(constraint_has_any_contact const&  other) const { return true; }
-};
-
-struct  constraint_linear_velocity_in_falling_cone : public constraint
-{
-    float_32_bit  cone_angle_in_radians;
-    float_32_bit  min_linear_speed;
-
-    bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_linear_velocity_in_falling_cone const&>(other); }
-    bool  operator==(constraint_linear_velocity_in_falling_cone const&  other) const
-    {
-        return are_equal(cone_angle_in_radians, other.cone_angle_in_radians, 0.0001f) && are_equal(min_linear_speed, other.min_linear_speed, 0.0001f);
-    }
-};
-
-struct  constraint_is_falling_linear_velocity : public constraint
-{
-    float_32_bit  min_falling_speed;
-
-    bool  equals(constraint const& other) const override { return *this == dynamic_cast<constraint_is_falling_linear_velocity const&>(other); }
-    bool  operator==(constraint_is_falling_linear_velocity const&  other) const
-    {
-        return are_equal(min_falling_speed, other.min_falling_speed, 0.0001f);
-    }
-};
-
-struct  constraint_desired_forward_vector_inside_cone : public constraint
-{
-    vector3  unit_axis;
-    float_32_bit  angle_in_radians;
-
-    bool  equals(constraint const& other) const override { return *this == dynamic_cast<constraint_desired_forward_vector_inside_cone const&>(other); }
-    bool  operator==(constraint_desired_forward_vector_inside_cone const& other) const
-    {
-        return are_equal_3d(unit_axis, other.unit_axis, 0.0001f) && are_equal(angle_in_radians, other.angle_in_radians, 0.0001f);
-    }
-};
-
-struct  constraint_always : public constraint
-{
-    bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_always const&>(other); }
-    bool  operator==(constraint_always const&  other) const { return true; }
-};
-
-
-struct  action
-{
-    virtual ~action() = 0 {}
-    bool  operator==(action const&  other) const
-    {
-        if (this == &other) return true;
-        return typeid(*this) == typeid(other) && equals(other);
-    }
-    bool  operator!=(action const&  other) const { return !(*this == other); }
-    virtual std::string const&  get_unique_name() const = 0;
-protected:
-    virtual bool  equals(action const&  other) const { return false; }
-};
-using  action_ptr = std::shared_ptr<action const>;
-
-struct  action_none : public action
-{
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_none const&>(other); }
-    bool  operator==(action_none const&  other) const { return true; }
-};
-
-struct  action_move_forward_with_ideal_speed : public action
-{
-    float_32_bit  max_linear_accel;
-    float_32_bit  motion_error_multiplier;
-
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-};
-
-struct  action_rotate_forward_vector_towards_desired_linear_velocity : public action
-{
-    float_32_bit  max_angular_speed;
-    float_32_bit  max_angular_accel;
-    float_32_bit  min_linear_speed;
-
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-};
-
-struct  action_turn_around : public action
-{
-    float_32_bit  max_angular_accel;
-
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_turn_around const&>(other); }
-    bool  operator==(action_turn_around const&  other) const { return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f); }
-};
-
-struct  action_dont_move : public action
-{
-    float_32_bit  max_linear_accel;
-    float_32_bit  radius;
-
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_dont_move const&>(other); }
-    bool  operator==(action_dont_move const&  other) const
-    {
-        return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f) && are_equal(radius, other.radius, 0.0001f);
-    }
-};
-
-struct  action_dont_rotate : public action
-{
-    float_32_bit  max_angular_accel;
-
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_dont_rotate const&>(other); }
-    bool  operator==(action_dont_rotate const&  other) const { return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f); }
-};
-
-struct  action_set_linear_velocity : public action
-{
-    vector3  linear_velocity;
-    float_32_bit  max_linear_accel;
-
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_set_linear_velocity const&>(other); }
-    bool  operator==(action_set_linear_velocity const&  other) const
-    {
-        return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f) && are_equal_3d(linear_velocity, other.linear_velocity, 0.0001f);
-    }
-};
-
-struct  action_set_angular_velocity : public action
-{
-    vector3  angular_velocity;
-    float_32_bit  max_angular_accel;
-
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-    bool  equals(action const& other) const override { return *this == dynamic_cast<action_set_angular_velocity const&>(other); }
-    bool  operator==(action_set_angular_velocity const& other) const
-    {
-        return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f) && are_equal_3d(angular_velocity, other.angular_velocity, 0.0001f);
-    }
-};
-
-struct  action_cancel_gravity_accel : public action
-{
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_cancel_gravity_accel const&>(other); }
-    bool  operator==(action_cancel_gravity_accel const&  other) const { return true; }
-};
-
-struct  action_rotate_up_vector_against_external_accel : public action
-{
-    float_32_bit  max_angular_speed;
-    float_32_bit  max_angular_accel;
-
-    static std::string const  unique_name;
-    std::string const&  get_unique_name() const override { return unique_name; }
-    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_rotate_up_vector_against_external_accel const&>(other); }
-    bool  operator==(action_rotate_up_vector_against_external_accel const&  other) const
-    {
-        return are_equal(max_angular_speed, other.max_angular_speed, 0.0001f) && are_equal(max_angular_accel, other.max_angular_accel, 0.0001f);
-    }
-};
-
-
-struct  guarded_actions
-{
-    // 'actions' may only be applied, when
-    //      none of the 'predicates_positive' is false
-    //      and
-    //      none of the 'predicates_negative' is true.
-
-    std::vector<constraint_ptr>  predicates_positive;
-    std::vector<constraint_ptr>  predicates_negative;
-    std::vector<action_ptr>  actions;
-
-    bool  operator==(guarded_actions const&  other) const
-    {
-        if (this == &other) return true;
-        if (predicates_positive.size() != other.predicates_positive.size()
-            || predicates_negative.size() != other.predicates_negative.size()
-            || actions.size() != other.actions.size())
-            return false;
-        for (natural_64_bit  i = 0UL, n = predicates_positive.size(); i != n; ++i)
-            if (*predicates_positive.at(i) != *other.predicates_positive.at(i))
-                return false;
-        for (natural_64_bit  i = 0UL, n = predicates_negative.size(); i != n; ++i)
-            if (*predicates_negative.at(i) != *other.predicates_negative.at(i))
-                return false;
-        for (natural_64_bit  i = 0UL, n = actions.size(); i != n; ++i)
-            if (*actions.at(i) != *other.actions.at(i))
-                return false;
-        return true;
-    }
-    bool  operator!=(guarded_actions const&  other) const
-    {
-        return !(*this == other);
-    }
-};
-using  guarded_actions_ptr = std::shared_ptr<guarded_actions const>;
-
-
-struct  motion_actions_data
-{
-    using  disjunction_of_guarded_actions = std::vector<guarded_actions_ptr>;
-
-    explicit  motion_actions_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~motion_actions_data();
-
-    std::vector<disjunction_of_guarded_actions>  data;
-};
-
-
-struct  motion_actions : public async::resource_accessor<motion_actions_data>
-{
-    using  disjunction_of_guarded_actions = motion_actions_data::disjunction_of_guarded_actions;
-
-    motion_actions() : async::resource_accessor<motion_actions_data>() {}
-    motion_actions(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<motion_actions_data>(
-    { "ai::skeletal_motion_templates::meta::motion_actions",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-    std::vector<disjunction_of_guarded_actions> const&  data() const { return resource().data; }
-    disjunction_of_guarded_actions const&  at(natural_32_bit const  index) const { return data().at(index); }
     std::size_t size() const { return data().size(); }
 };
 
@@ -660,6 +385,62 @@ struct  anim_space_directions : public async::resource_accessor<anim_space_direc
 namespace ai { namespace detail {
 
 
+struct  motion_object_binding
+{
+    struct speed_sensitivity
+    {
+        float_32_bit  sum() const { return linear + angular; }
+
+        // Both members must be in <0,1>; 0 means not sensitive at all.
+        float_32_bit  linear;
+        float_32_bit  angular;
+    };
+
+    struct  motion_match_def
+    {
+        angeo::linear_segment_curve  seconds_since_last_contact;
+        angeo::linear_segment_curve  angle_to_straight_pose;
+        vector3  ideal_linear_velocity_dir;
+        angeo::linear_segment_curve  linear_velocity_dir;
+        angeo::linear_segment_curve  linear_velocity_mag;
+        angeo::linear_segment_curve  angular_speed;
+    };
+
+
+    struct  desire_match_def
+    {
+        angeo::linear_segment_curve  speed_forward;
+        angeo::linear_segment_curve  speed_left;
+        angeo::linear_segment_curve  speed_up;
+        angeo::linear_segment_curve  speed_turn_ccw;
+    };
+
+
+    struct  binding_info
+    {
+        speed_sensitivity  speedup_sensitivity;
+        motion_match_def  motion_matcher;
+        desire_match_def  desire_matcher;
+        bool  disable_upper_joint;
+    };
+
+    using  binding_info_vector = std::vector<std::pair<std::string, binding_info> >;
+    using  transition_penalties_map = std::unordered_map<std::pair<std::string, std::string>, float_32_bit>;
+    using  desire_to_speed_convertor_curves = std::vector<angeo::linear_segment_curve>;
+
+    //explicit  motion_object_binding(boost::property_tree::ptree const&  root);
+
+    binding_info_vector  binding_infos;
+    transition_penalties_map  transition_penalties;
+    desire_to_speed_convertor_curves  desire_to_speed_convertors;
+};
+
+
+}}
+
+namespace ai { namespace detail {
+
+
 using  keyframe = qtgl::keyframe;
 using  keyframes = qtgl::keyframes;
 
@@ -669,76 +450,7 @@ struct  motion_template
     meta::reference_frames  reference_frames;
     meta::mass_distributions  mass_distributions;
     meta::colliders  colliders;
-    meta::motion_actions  actions;
 	meta::free_bones  free_bones;
-};
-
-
-}}
-
-namespace ai { namespace detail {
-
-
-struct  motion_template_transitions_data
-{
-    explicit motion_template_transitions_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~motion_template_transitions_data();
-
-    using  property_tree = boost::property_tree::ptree;
-
-    struct  transition_info
-    {
-        motion_template_cursor  cursor;
-        float_32_bit  time_in_seconds;
-        property_tree const*  guard;
-        property_tree const*  desire;
-    };
-
-    void  find_targets(
-            motion_template_cursor const&  cursor,
-            std::unordered_map<std::string, motion_template> const&  motions_map,
-            std::vector<transition_info>&  output
-            ) const;
-
-    void  __check_loaded_data__(std::unordered_map<std::string, motion_template> const&  motions_map) const;
-
-    property_tree  data;
-    std::unordered_map<std::string, property_tree const*>  data_lookup;
-    property_tree  mock;
-    std::string  initial_motion_name;
-};
-
-struct  motion_template_transitions : public async::resource_accessor<motion_template_transitions_data>
-{
-    motion_template_transitions() : async::resource_accessor<motion_template_transitions_data>() {}
-    motion_template_transitions(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<motion_template_transitions_data>(
-    { "ai::skeletal_motion_templates::motion_template_transitions",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-
-    using  transition_info = motion_template_transitions_data::transition_info;
-    using  property_tree = motion_template_transitions_data::property_tree;
-
-    std::string const&  initial_motion_name() const { return resource().initial_motion_name; }
-
-    void  find_targets(
-            motion_template_cursor const&  cursor,
-            std::unordered_map<std::string, motion_template> const&  motions_map,
-            std::vector<transition_info>&  output
-            ) const
-    { resource().find_targets(cursor, motions_map, output); }
-
-    property_tree const&  get_transitions_mock() const { return resource().mock; }
-
-    void  __check_loaded_data__(std::unordered_map<std::string, motion_template> const&  motions_map) const
-    { resource().__check_loaded_data__(motions_map); }
 };
 
 
@@ -751,9 +463,27 @@ struct  skeletal_motion_templates_data
 {
     using  modelspace = qtgl::modelspace; 
 
-    using  guarded_actions_ptr = detail::meta::guarded_actions_ptr;
-    using  action_ptr = detail::meta::action_ptr;
-    using  disjunction_of_guarded_actions = detail::meta::motion_actions::disjunction_of_guarded_actions;
+    struct  loop_target
+    {
+        natural_32_bit  index;
+        float_32_bit  seconds_to_interpolate;
+    };
+
+    struct  transition_info
+    {
+        std::array<natural_32_bit, 2U>  keyframe_indices;
+        float_32_bit  seconds_to_interpolate;
+    };
+
+    struct  transition
+    {
+        bool  is_bidirectional;
+        std::vector<transition_info>  transitions;
+    };
+
+    using  transitions_map = std::unordered_map<std::pair<std::string, std::string>, transition>;
+
+    using  motion_object_binding_map = std::unordered_map<std::string, detail::motion_object_binding>;
 
     modelspace  pose_frames;
     bone_names  names;
@@ -761,13 +491,12 @@ struct  skeletal_motion_templates_data
     bone_lengths  lengths;
 	bone_joints  joints;
 
-    // NOTE: 'anim' space is the space in which pose bones without a parent are defined. In other words, it is the common frame of reference
-    //       of coord. systems of all pose bones without parent bones. Note also that all keyframes are defined in this 'anim' space.
-    // NOTE: The two vectors below should also represent forward and up directions in each meta-reference-frame of each keyframe.
-    anim_space_directions  directions;
-
     std::unordered_map<std::string, motion_template>  motions_map;
-    motion_template_transitions  transitions;
+    std::unordered_map<std::string, loop_target>  loop_targets;
+    motion_template_cursor  initial_motion_template;
+    transitions_map  transitions;
+    std::pair<natural_32_bit, float_32_bit>  default_transition_props;
+    motion_object_binding_map  motion_object_bindings;
 
     explicit skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~skeletal_motion_templates_data();
@@ -803,8 +532,12 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  keyframes = detail::keyframes;
     using  modelspace = detail::skeletal_motion_templates_data::modelspace;
 
-    using  transition_info = detail::motion_template_transitions::transition_info;
-    using  property_tree = detail::motion_template_transitions_data::property_tree;
+    using  transition_info = detail::skeletal_motion_templates_data::transition_info;
+    using  transition = detail::skeletal_motion_templates_data::transition;
+    using  transitions_map = detail::skeletal_motion_templates_data::transitions_map;
+    using  loop_target = detail::skeletal_motion_templates_data::loop_target;
+    using  motion_object_binding_map = detail::skeletal_motion_templates_data::motion_object_binding_map;
+    using  motion_object_binding = detail::motion_object_binding;
 
     using  bone_names = detail::bone_names;
     using  bone_hierarchy = detail::bone_hierarchy;
@@ -812,13 +545,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 	using  bone_joints = detail::bone_joints;
 	using  anim_space_directions = detail::anim_space_directions;
 
-    using  motion_template_transitions = detail::motion_template_transitions;
-
     using  motion_template = detail::motion_template;
-
-    using  guarded_actions_ptr = detail::skeletal_motion_templates_data::guarded_actions_ptr;
-    using  action_ptr = detail::skeletal_motion_templates_data::action_ptr;
-    using  disjunction_of_guarded_actions = detail::skeletal_motion_templates_data::disjunction_of_guarded_actions;
 
     using  mass_distribution = detail::meta::mass_distribution;
     using  mass_distribution_ptr = detail::meta::mass_distribution_ptr;
@@ -829,43 +556,19 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  collider_ptr = detail::meta::collider_ptr;
     using  collider_capsule = detail::meta::collider_capsule;
 
-    using  constraint = detail::meta::constraint;
-    using  constraint_ptr = detail::meta::constraint_ptr;
-    using  constraint_contact_normal_cone = detail::meta::constraint_contact_normal_cone;
-    using  constraint_has_any_contact = detail::meta::constraint_has_any_contact;
-    using  constraint_linear_velocity_in_falling_cone = detail::meta::constraint_linear_velocity_in_falling_cone;
-    using  constraint_is_falling_linear_velocity = detail::meta::constraint_is_falling_linear_velocity;
-    using  constraint_desired_forward_vector_inside_cone = detail::meta::constraint_desired_forward_vector_inside_cone;
-    using  constraint_always = detail::meta::constraint_always;
-
-    using  action = detail::meta::action;
-    using  action_ptr = detail::meta::action_ptr;
-    using  action_none = detail::meta::action_none;
-    using  action_move_forward_with_ideal_speed = detail::meta::action_move_forward_with_ideal_speed;
-    using  action_rotate_forward_vector_towards_desired_linear_velocity = detail::meta::action_rotate_forward_vector_towards_desired_linear_velocity;
-    using  action_turn_around = detail::meta::action_turn_around;
-    using  action_dont_move = detail::meta::action_dont_move;
-    using  action_dont_rotate = detail::meta::action_dont_rotate;
-    using  action_set_linear_velocity = detail::meta::action_set_linear_velocity;
-    using  action_set_angular_velocity = detail::meta::action_set_angular_velocity;
-    using  action_cancel_gravity_accel = detail::meta::action_cancel_gravity_accel;
-    using  action_rotate_up_vector_against_external_accel = detail::meta::action_rotate_up_vector_against_external_accel;
-
     modelspace  pose_frames() const { return resource().pose_frames; }
     bone_names  names() const { return resource().names; }
     bone_hierarchy  hierarchy() const { return resource().hierarchy; }
     bone_lengths  lengths() const { return resource().lengths; }
 	bone_joints  joints() const { return resource().joints; }
-	anim_space_directions  directions() const { return resource().directions; }
 
     std::unordered_map<std::string, motion_template> const&  motions_map() const { return resource().motions_map; }
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }
-    motion_template_transitions  transitions() const { return resource().transitions; }
-
-    void  get_successor_keyframes(motion_template_cursor const& cursor, std::vector<transition_info>&  output) const
-    { transitions().find_targets(cursor, motions_map(), output); }
-
-    property_tree const&  get_transitions_mock() const { return transitions().get_transitions_mock(); }
+    std::unordered_map<std::string, loop_target> const&  loop_targets() const { return resource().loop_targets; };
+    motion_template_cursor const&  initial_motion_template() const { return resource().initial_motion_template; }
+    transitions_map const&  transitions() const { return resource().transitions; }
+    std::pair<natural_32_bit, float_32_bit> const&  default_transition_props() const { return resource().default_transition_props; }
+    motion_object_binding_map const&  motion_object_bindings() const { return resource().motion_object_bindings; }
 };
 
 

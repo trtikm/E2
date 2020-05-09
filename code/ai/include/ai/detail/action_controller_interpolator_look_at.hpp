@@ -12,19 +12,20 @@
 namespace ai { namespace detail {
 
 
-struct  action_controller_interpolator_look_at  final : public action_controller_interpolator
+struct  action_controller_interpolator_look_at  final : public action_controller_interpolator_shared
 {
-    explicit action_controller_interpolator_look_at(blackboard_agent_weak_ptr const  blackboard_);
-    void  next_round(
+    explicit action_controller_interpolator_look_at(
+            action_controller_interpolator const* const  interpolator_,
+            skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor
+            );
+    void  interpolate(
             float_32_bit const  time_step_in_seconds,
-            vector3 const&  look_at_target_from_cortex,
-            angeo::coordinate_system const&  agent_frame,
+            float_32_bit const  interpolation_param,
+            vector3 const&  look_at_target_in_agent_space,
+            angeo::coordinate_system_explicit const&  agent_frame,
             std::vector<angeo::coordinate_system>&  frames_to_update
             );
-    void  set_target(
-            skeletal_motion_templates::motion_template_cursor const&  cursor,
-            float_32_bit const  interpolation_time_in_seconds
-            );
+    void  set_target(skeletal_motion_templates::motion_template_cursor const&  cursor);
 
     void  commit() const { /* nothing to commit acctualy. */ }
 
@@ -33,7 +34,7 @@ struct  action_controller_interpolator_look_at  final : public action_controller
 private:
     void  update_look_at_target_in_local_space(
             vector3 const&  look_at_target_from_cortex,
-            angeo::coordinate_system const&  agent_frame,
+            angeo::coordinate_system_explicit const&  agent_frame,
             ai::sensory_controller_sight::camera_perspective_ptr const  camera
             );
 

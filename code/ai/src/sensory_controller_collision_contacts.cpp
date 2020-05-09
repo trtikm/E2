@@ -53,14 +53,8 @@ void  sensory_controller_collision_contacts::next_round()
 
 void  sensory_controller_collision_contacts::on_collision_contact(scene::collicion_contant_info_ptr const  contact_info)
 {
-    auto const&  motion_ref = get_blackboard()->m_action_controller->get_motion_object_motion();
-    vector3 const  contact_vector = point3_to_orthonormal_base(
-            contact_info->contact_point_in_world_space,
-            motion_ref.frame.origin(),
-            motion_ref.forward,
-            cross_product(motion_ref.up, motion_ref.forward),
-            motion_ref.up
-            );
+    auto const&  agent_frame = get_blackboard()->m_action_controller->get_agent_frame();
+    vector3 const  contact_vector = angeo::point3_to_coordinate_system(contact_info->contact_point_in_world_space, agent_frame);
     float_32_bit const  len = length(contact_vector);
     vector2 const  raw_cell_coords_in_m1p1(
             std::atan2f(contact_vector(1), contact_vector(0)) / PI(),

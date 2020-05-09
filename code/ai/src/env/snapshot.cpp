@@ -22,38 +22,25 @@ snapshot::snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr)
     blackboard_agent_const_ptr const  bb = blackboard_ptr.lock();
     ASSUMPTION(bb != nullptr);
     action_controller const&  actions = *bb->m_action_controller;
-    detail::rigid_body_motion const&  motion = actions.get_motion_object_motion();
     ASSUMPTION(bb->m_sensory_controller->get_sight() != nullptr);
     sensory_controller_ray_cast_sight_const_ptr const  sight_ptr = as<sensory_controller_ray_cast_sight const>(bb->m_sensory_controller->get_sight());
     ASSUMPTION(sight_ptr != nullptr);
     angeo::coordinate_system const&  camera_frame = *sight_ptr->get_camera()->coordinate_system();
     matrix44  to_agent_space_matrix;
-    angeo::to_base_matrix(motion.frame, to_agent_space_matrix);
+    angeo::to_base_matrix(actions.get_agent_frame(), to_agent_space_matrix);
 
     desire_computed_by_cortex = bb->m_cortex->get_motion_desire_props();
-
-    forward = transform_vector(motion.forward, to_agent_space_matrix);
-    up = transform_vector(motion.up, to_agent_space_matrix);
-
-    linear_velocity = transform_vector(motion.velocity.m_linear, to_agent_space_matrix);
-    angular_velocity = transform_vector(motion.velocity.m_angular, to_agent_space_matrix);
-    linear_acceleration = transform_vector(motion.acceleration.m_linear, to_agent_space_matrix);
-    angular_acceleration = transform_vector(motion.acceleration.m_angular, to_agent_space_matrix);
-
-    external_linear_acceleration = transform_vector(actions.get_external_linear_acceleration(), to_agent_space_matrix);
-
-    ideal_linear_velocity = transform_vector(actions.get_ideal_linear_velocity_in_world_space(), to_agent_space_matrix);
-    ideal_angular_velocity = transform_vector(actions.get_ideal_angular_velocity_in_world_space(), to_agent_space_matrix);
-
-    interpolation_param_till_destination_cursor = actions.get_interpolation_parameter();
-    destination_cursor = actions.get_destination_cursor();
 
     camera_origin = transform_point(camera_frame.origin(), to_agent_space_matrix);
     camera_x_axis = transform_vector(angeo::axis_x(camera_frame), to_agent_space_matrix);
     camera_y_axis = transform_vector(angeo::axis_y(camera_frame), to_agent_space_matrix);
     camera_z_axis = transform_vector(angeo::axis_z(camera_frame), to_agent_space_matrix);
 
-    auto const  begin_and_end = bb->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map().equal_range(motion.nid);
+    auto  begin_and_end = bb->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map().equal_range(actions.get_roller_nid());
+    for (auto it = begin_and_end.first; it != begin_and_end.second; ++it)
+        collision_contact_events.push_back({ it->second.cell_x, it->second.cell_y, it->second.contact_point_in_local_space });
+
+    begin_and_end = bb->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map().equal_range(actions.get_body_nid());
     for (auto it = begin_and_end.first; it != begin_and_end.second; ++it)
         collision_contact_events.push_back({ it->second.cell_x, it->second.cell_y, it->second.contact_point_in_local_space });
 

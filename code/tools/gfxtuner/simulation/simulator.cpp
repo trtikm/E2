@@ -965,71 +965,6 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
             if (agents.ready(agent_id))
             {
                 ai::blackboard_agent_const_ptr const  blackboard = agents.at(agent_id).get_blackboard();
-
-                scn::scene_node_ptr const  node_ptr = get_scene_node(blackboard->m_action_controller->get_motion_object_node_id());
-
-                matrix44  motion_object_from_base_matrix;
-                angeo::from_base_matrix(*node_ptr->get_coord_system(), motion_object_from_base_matrix);
-
-                if (auto const  rb_ptr = scn::get_rigid_body(*node_ptr))
-                {
-                    vector3 const  motion_object_forward_direction_in_world_space =
-                        transform_vector(blackboard->m_motion_templates.directions().forward(), motion_object_from_base_matrix);
-                    vector3 const  motion_object_up_direction_in_world_space =
-                        transform_vector(blackboard->m_motion_templates.directions().up(), motion_object_from_base_matrix);
-
-                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                            node_ptr->get_coord_system()->origin(),
-                            node_ptr->get_coord_system()->origin() + motion_object_forward_direction_in_world_space
-                            });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.75f, 0.75f, 1.0f}); // AQUA
-
-                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                            node_ptr->get_coord_system()->origin(),
-                            node_ptr->get_coord_system()->origin() + motion_object_up_direction_in_world_space
-                            });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.5f, 0.75f, 1.0f}); // AZURE
-
-                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                            node_ptr->get_coord_system()->origin() + 0.0025f * vector3_unit_z(),
-                            node_ptr->get_coord_system()->origin() + 0.0025f * vector3_unit_z()
-                                + m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id())
-                            });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 0.25f, 1.0f}); // YELLOW
-
-                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                            node_ptr->get_coord_system()->origin() - 0.0025f * motion_object_forward_direction_in_world_space,
-                            node_ptr->get_coord_system()->origin() - 0.0025f * motion_object_forward_direction_in_world_space
-                                + m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id())
-                            });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 0.25f, 1.0f}); // ORANGE
-                }
-
-                m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                        node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z(),
-                        node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z()
-                            + transform_vector(blackboard->m_cortex->get_motion_desire_props().forward_unit_vector_in_local_space,
-                                               motion_object_from_base_matrix)
-                        });
-                m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 1.0f, 1.0f}); // WHITE
-
-                m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                        node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z(),
-                        node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z()
-                            + 0.75f * transform_vector(blackboard->m_cortex->get_motion_desire_props().linear_velocity_unit_direction_in_local_space,
-                                                       motion_object_from_base_matrix)
-                        });
-                m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 1.0f, 1.0f}); // PINK
-
-                m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                        node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z(),
-                        node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z()
-                            + blackboard->m_cortex->get_motion_desire_props().linear_speed
-                                * transform_vector(blackboard->m_cortex->get_motion_desire_props().linear_velocity_unit_direction_in_local_space,
-                                                   motion_object_from_base_matrix)
-                        });
-                m_cache_of_batches_of_ai_agents.lines->second.push_back({0.75f, 0.25f, 0.75f, 1.0f}); // PURPLE
-
                 for (natural_32_bit  bone : blackboard->m_action_controller->get_free_bones_for_look_at()->end_effector_bones)
                 {
                     scn::scene_node_id const  raw_bone_id = detail::skeleton_build_scene_node_id_of_bones(
@@ -1080,9 +1015,9 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     angeo::COLLISION_MATERIAL_TYPE const  material_2 = m_collision_scene_ptr->get_material(coid_2);
 
                     if (ai_scene_binding->do_tracking_collision_contact_of_collision_object(coid_1))
-                        ai_scene_binding->on_collision_contact(contact_point, unit_normal, 0.0f, coid_1, material_1, coid_2, material_2);
+                        ai_scene_binding->on_collision_contact(contact_point, unit_normal, coid_1, material_1, coid_2, material_2);
                     if (ai_scene_binding->do_tracking_collision_contact_of_collision_object(coid_2))
-                        ai_scene_binding->on_collision_contact(contact_point, -unit_normal, 0.0f, coid_2, material_2, coid_1, material_1);
+                        ai_scene_binding->on_collision_contact(contact_point, -unit_normal, coid_2, material_2, coid_1, material_1);
 
                     auto const  rb_1_it = m_binding_of_collision_objects.find(coid_1);
                     auto const  rb_2_it = m_binding_of_collision_objects.find(coid_2);

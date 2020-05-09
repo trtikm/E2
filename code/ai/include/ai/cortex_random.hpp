@@ -16,6 +16,7 @@ struct  cortex_random : public cortex
     void  next_round(float_32_bit const  time_step_in_seconds);
 
 private:
+    float_32_bit  m_seconds_till_change;
     random_generator_for_natural_32_bit  m_generator;
 };
 

@@ -10,20 +10,31 @@
 namespace ai { namespace detail {
 
 
-struct  action_controller_interpolator_animation  final : public action_controller_interpolator
+struct  action_controller_interpolator_animation  final : public action_controller_interpolator_shared
 {
-    explicit action_controller_interpolator_animation(blackboard_agent_weak_ptr const  blackboard_);
+    explicit action_controller_interpolator_animation(
+            action_controller_interpolator const* const  interpolator_,
+            skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor,
+            float_32_bit const  reference_offset
+            );
 
-    void  next_round(float_32_bit const  time_step_in_seconds);
-    void  set_target(skeletal_motion_templates::motion_template_cursor const&  cursor, float_32_bit const  interpolation_time_in_seconds);
+    void  interpolate(float_32_bit const  interpolation_param);
+    void  set_target(skeletal_motion_templates::motion_template_cursor const&  cursor);
+
     std::vector<angeo::coordinate_system>& get_current_frames_ref() { return m_current_frames; }
 
-    void  commit(vector3 const&  origin_offset = vector3_zero()) const;
+    void  commit() const;
 
 private:
     std::vector<angeo::coordinate_system>  m_src_frames;
     std::vector<angeo::coordinate_system>  m_current_frames;
     std::vector<angeo::coordinate_system>  m_dst_frames;
+
+    float_32_bit  m_reference_offset;
+
+    float_32_bit  m_src_offset;
+    float_32_bit  m_current_offset;
+    float_32_bit  m_dst_offset;
 };
 
 

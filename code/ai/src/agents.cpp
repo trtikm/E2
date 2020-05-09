@@ -10,6 +10,12 @@
 namespace ai {
 
 
+bool  agents::agent_props::ready() const
+{
+    return motion_templates.loaded_successfully();
+}
+
+
 agents::agents(simulator* const  simulator_, scene_ptr const  scene_)
     : m_agents()
     , m_simulator(simulator_)
@@ -97,7 +103,7 @@ void  agents::next_round(
         if (props != nullptr)
             if (props->agent_ptr != nullptr)
                 props->agent_ptr->next_round(time_step_in_seconds);
-            else if (props->motion_templates.loaded_successfully())
+            else if (props->ready())
                 construct_agent(id, *props);
     }
 }

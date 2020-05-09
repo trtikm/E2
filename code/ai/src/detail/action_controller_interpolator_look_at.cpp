@@ -10,8 +10,11 @@
 namespace ai { namespace detail {
 
 
-action_controller_interpolator_look_at::action_controller_interpolator_look_at(blackboard_agent_weak_ptr const  blackboard_)
-    : action_controller_interpolator(blackboard_)
+action_controller_interpolator_look_at::action_controller_interpolator_look_at(
+        action_controller_interpolator const* const  interpolator_,
+        skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor
+        )
+    : action_controller_interpolator_shared(interpolator_)
 
     , m_src_bones()
     , m_current_bones()
@@ -20,23 +23,20 @@ action_controller_interpolator_look_at::action_controller_interpolator_look_at(b
     , m_look_at_target_in_local_space(vector3_zero())
     , m_target_pose_reached(true)
 {
-    ASSUMPTION(get_blackboard() != nullptr && !get_blackboard()->m_motion_templates.empty());
-    set_target({ get_blackboard()->m_motion_templates.transitions().initial_motion_name(), 0U }, 0.0f);
+    set_target(initial_template_cursor);
     m_src_bones = m_current_bones = m_dst_bones;
 }
 
 
-void  action_controller_interpolator_look_at::next_round(
+void  action_controller_interpolator_look_at::interpolate(
         float_32_bit const  time_step_in_seconds,
-        vector3 const&  look_at_target_from_cortex,
-        angeo::coordinate_system const&  agent_frame,
+        float_32_bit const  interpolation_param,
+        vector3 const&  look_at_target_in_agent_space,
+        angeo::coordinate_system_explicit const&  agent_frame,
         std::vector<angeo::coordinate_system>&  frames_to_update
         )
 {
     TMPROF_BLOCK();
-
-    if (done()) return;
-    float_32_bit const  interpolation_param = action_controller_interpolator::next_round(time_step_in_seconds);
 
     if (m_current_bones->all_bones.empty() && m_dst_bones->all_bones.empty())
         return;
@@ -50,7 +50,7 @@ void  action_controller_interpolator_look_at::next_round(
     if (camera == nullptr)
         return;
 
-    update_look_at_target_in_local_space(look_at_target_from_cortex, agent_frame, camera);
+    update_look_at_target_in_local_space(look_at_target_in_agent_space, agent_frame, camera);
 
     // We setup data for the look-at algo.
 
@@ -146,11 +146,9 @@ void  action_controller_interpolator_look_at::next_round(
 
 
 void  action_controller_interpolator_look_at::set_target(
-        skeletal_motion_templates::motion_template_cursor const&  cursor,
-        float_32_bit const  interpolation_time_in_seconds
+        skeletal_motion_templates::motion_template_cursor const&  cursor
         )
 {
-    action_controller_interpolator::reset_time(interpolation_time_in_seconds);
     m_src_bones = m_current_bones;
     m_dst_bones = get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).free_bones.look_at().at(cursor.keyframe_index);
 }
@@ -158,7 +156,7 @@ void  action_controller_interpolator_look_at::set_target(
 
 void  action_controller_interpolator_look_at::update_look_at_target_in_local_space(
         vector3 const&  look_at_target_from_cortex,
-        angeo::coordinate_system const&  agent_frame,
+        angeo::coordinate_system_explicit const&  agent_frame,
         ai::sensory_controller_sight::camera_perspective_ptr const  camera
         )
 {

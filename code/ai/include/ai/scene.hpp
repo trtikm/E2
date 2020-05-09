@@ -24,7 +24,6 @@ struct  scene
         collicion_contant_info(
                 vector3 const&  contact_point_in_world_space_,
                 vector3 const&  unit_normal_in_world_space_,
-                float_32_bit const  normal_force_magnitude_,
                 node_id const&  self_collider_nid_,
                 collision_object_id const  self_coid_,
                 angeo::COLLISION_MATERIAL_TYPE const  self_material_,
@@ -34,7 +33,6 @@ struct  scene
                 )
             : contact_point_in_world_space(contact_point_in_world_space_)
             , unit_normal_in_world_space(unit_normal_in_world_space_)
-            , normal_force_magnitude(normal_force_magnitude_)
             , self_collider_nid(self_collider_nid_)
             , self_coid(self_coid_)
             , self_material(self_material_)
@@ -44,7 +42,6 @@ struct  scene
         {}
         vector3  contact_point_in_world_space;
         vector3  unit_normal_in_world_space;
-        float_32_bit  normal_force_magnitude;
         node_id  self_collider_nid;
         collision_object_id  self_coid;
         angeo::COLLISION_MATERIAL_TYPE  self_material;
@@ -240,6 +237,8 @@ struct  scene
             bool const  as_dynamic
             ) = 0;
     virtual void  erase_collision_object_from_scene_node(node_id const&  nid) = 0;
+
+    virtual  void  enable_colliding_colliders_of_scene_nodes(node_id const& nid_1, node_id const& nid_2, bool const  state) = 0;
 
     // ASSUMPTION: Each scene node may have at most one rigid body in its subtree (where the node is the root node of the subtree).
     virtual void  insert_rigid_body_to_scene_node(

@@ -243,6 +243,14 @@ void  snapshot_encoder::next_round(
             update_next(value(2));
         };
 
+        void update_next(vector4 const& value)
+        {
+            update_next(value(0));
+            update_next(value(1));
+            update_next(value(2));
+            update_next(value(3));
+        };
+
         void  begin_grid_cell(natural_16_bit const  x, natural_16_bit const  y)
         {
             ASSUMPTION(x < props->NUM_GRID_CELLS_ALONG_ANY_AXIS && y < props->NUM_GRID_CELLS_ALONG_ANY_AXIS);
@@ -285,28 +293,8 @@ void  snapshot_encoder::next_round(
     // --- desire_computed_by_cortex ---------------------------------------------------------------------
 
     updater.begin(desire_computed_by_cortex);
-    updater.update_next(ss.desire_computed_by_cortex.forward_unit_vector_in_local_space);
-    updater.update_next(ss.desire_computed_by_cortex.linear_velocity_unit_direction_in_local_space);
-    updater.update_next(ss.desire_computed_by_cortex.linear_speed);
-    updater.update_next(ss.desire_computed_by_cortex.angular_velocity_unit_axis_in_local_space);
-    updater.update_next(ss.desire_computed_by_cortex.angular_speed);
-    updater.update_next(ss.desire_computed_by_cortex.look_at_target_in_local_space);
-    updater.end();
-
-
-    // --- motion ---------------------------------------------------------------------
-
-    updater.begin(motion);
-    updater.update_next(ss.forward);
-    updater.update_next(ss.up);
-    updater.update_next(ss.linear_velocity);
-    updater.update_next(ss.angular_velocity);
-    updater.update_next(ss.linear_acceleration);
-    updater.update_next(ss.angular_acceleration);
-    updater.update_next(ss.external_linear_acceleration);
-    updater.update_next(ss.ideal_linear_velocity);
-    updater.update_next(ss.ideal_angular_velocity);
-    updater.update_next(ss.interpolation_param_till_destination_cursor);
+    updater.update_next(ss.desire_computed_by_cortex.speed);
+    updater.update_next(ss.desire_computed_by_cortex.look_at_target);
     updater.end();
 
 

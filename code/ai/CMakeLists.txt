@@ -45,15 +45,18 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/detail/action_controller_interpolator.hpp
     ./src/detail/action_controller_interpolator.cpp
+    ./include/ai/detail/action_controller_interpolator_composed.hpp
+    ./src/detail/action_controller_interpolator_composed.cpp
     ./include/ai/detail/action_controller_interpolator_animation.hpp
     ./src/detail/action_controller_interpolator_animation.cpp
     ./include/ai/detail/action_controller_interpolator_look_at.hpp
     ./src/detail/action_controller_interpolator_look_at.cpp
-    ./include/ai/detail/action_controller_interpolator_matter.hpp
-    ./src/detail/action_controller_interpolator_matter.cpp
 
     ./include/ai/detail/action_controller_roller.hpp
     ./src/detail/action_controller_roller.cpp
+
+    ./include/ai/detail/interpolation_speed_solver.hpp
+    ./src/detail/interpolation_speed_solver.cpp
 
     ./include/ai/input_devices.hpp
 
@@ -91,18 +94,6 @@ add_library(${THIS_TARGET_NAME}
     ./src/env/sinet/motion_desire_decoder.cpp
     ./include/ai/env/sinet/number_decoder.hpp 
     ./src/env/sinet/number_decoder.cpp 
-
-    ./include/ai/detail/rigid_body_motion.hpp
-    ./src/detail/rigid_body_motion.cpp
-
-    ./include/ai/detail/guarded_motion_actions_processor.hpp 
-    ./src/detail/guarded_motion_actions_processor.cpp 
-    
-    ./include/ai/detail/ideal_velocity_buider.hpp 
-    ./src/detail/ideal_velocity_buider.cpp 
-
-    ./include/ai/detail/expression_evaluator.hpp
-    ./src/detail/expression_evaluator.cpp
 
     ./include/ai/detail/collider_utils.hpp
     ./src/detail/collider_utils.cpp

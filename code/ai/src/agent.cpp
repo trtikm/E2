@@ -49,7 +49,10 @@ void  agent::create_modules(blackboard_agent_ptr const  bb, input_devices_ptr co
                         bb,
                         sensory_controller_collision_contacts::config()
                         ),
-                nullptr
+                std::make_shared<sensory_controller_sight>(
+                        bb,
+                        sensory_controller_sight::camera_config()
+                        )
                 );
         bb->m_action_controller = std::make_shared<action_controller>(bb);
         break;
@@ -134,9 +137,9 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    // We need to synchronise motion object (located in the action controller) with the scene
-    // as it can be used by any controllers in their next_round functions.
-    get_blackboard()->m_action_controller->synchronise_motion_object_motion_with_scene();
+    // We need to synchronise motion object, called roller (and located in the action controller),
+    // with the scene as it can be used by any controllers in their next_round functions.
+    get_blackboard()->m_action_controller->synchronise_with_scene();
 
     // The update order of agent's modules is important and mandatory.
     get_blackboard()->m_sensory_controller->next_round(time_step_in_seconds);

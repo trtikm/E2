@@ -6,16 +6,27 @@
 namespace ai {
 
 
+struct DESIRE_COORD
+{
+    static natural_8_bit constexpr  FORWARD     = 0U;
+    static natural_8_bit constexpr  LEFT        = 1U;
+    static natural_8_bit constexpr  UP          = 2U;
+    static natural_8_bit constexpr  TURN_CCW    = 3U;
+};
+
+
+
 struct  motion_desire_props
 {
     motion_desire_props();
 
-    vector3  forward_unit_vector_in_local_space;
-    vector3  linear_velocity_unit_direction_in_local_space;
-    float_32_bit  linear_speed;
-    vector3  angular_velocity_unit_axis_in_local_space;
-    float_32_bit  angular_speed;
-    vector3  look_at_target_in_local_space;
+    // Values of all fields are in cortex's LOGICAL space which lies inside agent's local space.
+    // The struct DESIRE_COORD defines an interpretation of coordinates in the logical space
+    // in agent space. Action controller is responsible for correct transformation of these
+    // values to the agent's local space (and back).
+
+    vector4  speed;
+    vector3  look_at_target;
 };
 
 

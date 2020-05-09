@@ -70,6 +70,8 @@ struct bind_ai_scene_to_simulator : public ai::scene
             ) override;
     void  erase_collision_object_from_scene_node(node_id const&  nid) override;
 
+    void  enable_colliding_colliders_of_scene_nodes(node_id const&  nid_1, node_id const&  nid_2, bool const  state) override;
+
     void  insert_rigid_body_to_scene_node(
             node_id const&  nid,
             vector3 const&  linear_velocity,
@@ -121,7 +123,6 @@ struct bind_ai_scene_to_simulator : public ai::scene
     void  on_collision_contact(
             vector3 const&  contact_point_in_world_space,
             vector3 const&  unit_normal_in_world_space,
-            float_32_bit const  normal_force_magnitude,
             angeo::collision_object_id const  coid,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::collision_object_id const  other_coid,

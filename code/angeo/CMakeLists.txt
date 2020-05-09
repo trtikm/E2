@@ -61,6 +61,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/angeo/skeleton_kinematics.hpp
     ./src/skeleton_kinematics.cpp
+
+    ./include/angeo/linear_segment_curve.hpp
+    ./src/linear_segment_curve.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

@@ -116,12 +116,6 @@ void  sensory_controller_ray_cast_sight::next_round(float_32_bit const  time_ste
     if (get_camera() == nullptr)
         return;
 
-    std::unordered_set<scene::collision_object_id>  ignored;
-    get_blackboard()->m_scene->get_coids_under_scene_node_subtree(
-            get_blackboard()->m_action_controller->get_motion_object_node_id(),
-            [&ignored](scene::collision_object_id const  coid) { ignored.insert(coid); return true; }
-            );
-
     matrix44  W;
     angeo::from_base_matrix(*get_camera()->coordinate_system(), W);
 
@@ -152,7 +146,7 @@ void  sensory_controller_ray_cast_sight::next_round(float_32_bit const  time_ste
         float_32_bit const  ray_length = get_camera()->far_plane();
         scene::collision_object_id  nearest_coid;
         float_32_bit  parameter_to_nearest_coid;
-        if (!get_blackboard()->m_scene->get_collision_scene().ray_cast(ray_origin, ray_unit_direction, ray_length, true, true, &nearest_coid, &parameter_to_nearest_coid, &ignored))
+        if (!get_blackboard()->m_scene->get_collision_scene().ray_cast(ray_origin, ray_unit_direction, ray_length, true, true, &nearest_coid, &parameter_to_nearest_coid, nullptr))
             continue;
 
         m_ray_casts_in_time.insert({

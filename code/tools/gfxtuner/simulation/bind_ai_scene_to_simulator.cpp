@@ -234,6 +234,25 @@ void  bind_ai_scene_to_simulator::erase_collision_object_from_scene_node(node_id
 }
 
 
+void  bind_ai_scene_to_simulator::enable_colliding_colliders_of_scene_nodes(
+        node_id const&  nid_1,
+        node_id const&  nid_2,
+        bool const  state)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_1_ptr = m_simulator_ptr->get_scene_node(nid_1);
+    auto const  collider_1_ptr = scn::get_collider(*node_1_ptr);
+    ASSUMPTION(collider_1_ptr != nullptr && collider_1_ptr->ids().size() == 1UL);
+    auto const  node_2_ptr = m_simulator_ptr->get_scene_node(nid_2);
+    auto const  collider_2_ptr = scn::get_collider(*node_2_ptr);
+    ASSUMPTION(collider_2_ptr != nullptr && collider_2_ptr->ids().size() == 1UL);
+    if (state)
+        m_simulator_ptr->get_collision_scene()->enable_colliding(collider_1_ptr->id(), collider_2_ptr->id());
+    else
+        m_simulator_ptr->get_collision_scene()->disable_colliding(collider_1_ptr->id(), collider_2_ptr->id());
+}
+
+
 void  bind_ai_scene_to_simulator::insert_rigid_body_to_scene_node(
         node_id const&  nid,
         vector3 const&  linear_velocity,
@@ -577,7 +596,6 @@ bool  bind_ai_scene_to_simulator::do_tracking_collision_contact_of_collision_obj
 void  bind_ai_scene_to_simulator::on_collision_contact(
         vector3 const&  contact_point_in_world_space,
         vector3 const&  unit_normal_in_world_space,
-        float_32_bit const  normal_force_magnitude,
         angeo::collision_object_id const  coid,
         angeo::COLLISION_MATERIAL_TYPE const  material,
         angeo::collision_object_id const  other_coid,
@@ -597,7 +615,6 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
             std::make_shared<ai::scene::collicion_contant_info>(
                     contact_point_in_world_space,
                     unit_normal_in_world_space,
-                    normal_force_magnitude,
                     it->second.first,
                     coid,
                     material,

@@ -32,13 +32,15 @@ motion_desire_decoder::motion_desire_decoder(motion_desire_props&  props, natura
         register_number(u(2));
     };
 
-    register_vector(props.forward_unit_vector_in_local_space);
-    register_vector(props.forward_unit_vector_in_local_space);
-    register_vector(props.linear_velocity_unit_direction_in_local_space);
-    register_number(props.linear_speed);
-    register_vector(props.angular_velocity_unit_axis_in_local_space);
-    register_number(props.angular_speed);
-    register_vector(props.look_at_target_in_local_space);
+    auto register_vector4 = [&register_number](vector4&  u) -> void {
+        register_number(u(0));
+        register_number(u(1));
+        register_number(u(2));
+        register_number(u(3));
+    };
+
+    register_vector4(props.speed);
+    register_vector(props.look_at_target);
 
     INVARIANT(SEPARATOR_UNIT_INDICES.size() == decoders.size() + 1UL);
 }
