@@ -1207,16 +1207,10 @@ def save_coord_systems_of_bones(
 
 def save_keyframe_coord_systems_of_bones(
         armature,       # An instance of "bpy.types.Armature".
-        export_info     # A dictionary holding properties related to the export.
+        export_info     # A dictionary holding properties related to the export. Will be extended (side-effect!)
         ):
     """
-    This function exports coordinate systems of all keyframes of an animation of the bones of the passed armature.
-    The function also updates "export_info" so that 'export_info["keyframe_coord_systems"]' is a list of the pathnames
-    of the exported files (one file per keyframe).
     IMPORTANT: Depends on data computed by functions 'save_hierarchy_of_bones' and 'save_coord_systems_of_bones' above!
-    :param obj: An instance of "bpy.types.Armature".
-    :param export_info: A dictionary holding properties related to the export.
-    :return: None
     """
     with TimeProf.instance().start("save_keyframe_coord_systems_of_bones"):
 
@@ -1373,65 +1367,11 @@ def save_keyframe_coord_systems_of_bones(
 
             meta_object.animation_data.action = meta_action
 
-            class meta_irregular_data_tracker:
-                def __init__(self):
-                    self.collider_weight = 1.0
-                    self.inverted_mass = 0.016667
-                    self.inverted_inertia_tensor = self.get_default_inverted_inertia_tensor()
-
-                def on_frame(self, frame):
-                    if frame in meta_keyframes:
-                        # Here we read information from the custom properties of the 'meta_object'
-                        if "e2_collider_weight" in meta_object:
-                            self.collider_weight = meta_object["e2_collider_weight"]
-                        if "e2_inverted_mass" in meta_object:
-                            self.inverted_mass = meta_object["e2_inverted_mass"]
-                        self.inverted_inertia_tensor = self.get_default_inverted_inertia_tensor()
-                        for i in range(3):
-                            for j in range(3):
-                                key = "e2_inverted_inertia" + str(i) + str(j)
-                                if key in meta_object:
-                                    self.inverted_inertia_tensor[i][j] = meta_object[key]
-
-                @staticmethod
-                def get_default_inverted_inertia_tensor():
-                    return [
-                        [0.0, 0.0, 0.0],
-                        [0.0, 0.0, 0.0],
-                        [0.0, 0.0, 1.0]
-                    ]
-
-            class collision_shape:
-                def __init__(self, scale_of_cube_with_edges_long_2_meters):
-                    self.radius = max(abs(scale_of_cube_with_edges_long_2_meters[0]), abs(scale_of_cube_with_edges_long_2_meters[1]))
-                    self.length = abs(scale_of_cube_with_edges_long_2_meters[2]) - self.radius
-                    if self.length > 0.001:
-                        self.shape = "capsule"
-                    else:
-                        self.shape = "sphere"
-
-                def save(self, f):
-                    f.write("@" + self.shape + "\n")
-                    if self.shape == "capsule":
-                        f.write(float_to_string(self.length) + "\n")
-                        f.write(float_to_string(self.radius) + "\n")
-                    elif self.shape == "sphere":
-                        f.write(float_to_string(self.radius) + "\n")
-                    else:
-                        print("ERROR: UNEXPECTED! Collider with unknown shape '" + str(self.shape) + "'")
-                        print("       => the saved file will NOT be correct!")
-
-            data_tracker = meta_irregular_data_tracker()
-
             meta_coord_systems_of_frames = {}
-            meta_colliders = {}
-            meta_inverted_masses = {}
-            meta_inverted_innertia_tensors = {}
+            meta_bboxes = {}
 
             for frame in keyframes:
                 scene.frame_set(frame)
-
-                data_tracker.on_frame(frame)
 
                 t = time_of_time_point(start_frame, frame)
 
@@ -1439,12 +1379,7 @@ def save_keyframe_coord_systems_of_bones(
                     "position": meta_object.location.copy(),
                     "orientation": meta_object.rotation_quaternion.copy()
                 }
-                meta_colliders[t] = {
-                    "collider": collision_shape(meta_object.scale.copy()),
-                    "weight": data_tracker.collider_weight
-                }
-                meta_inverted_masses[t] = data_tracker.inverted_mass
-                meta_inverted_innertia_tensors[t] = data_tracker.inverted_inertia_tensor
+                meta_bboxes[t] = [meta_object.scale[0], meta_object.scale[1], meta_object.scale[2]]
 
             # Next we save the computed meta-data of individual frames to disc.
 
@@ -1454,7 +1389,11 @@ def save_keyframe_coord_systems_of_bones(
 
             current_export_list = export_info["meta"][action_name]
 
-            current_export_list.append(os.path.join(keyframes_output_dir, "meta_reference_frames.txt"))
+            keyframes_meta_output_dir = keyframes_output_dir + "/!meta"
+            if not os.path.isdir(keyframes_meta_output_dir):
+                os.makedirs(keyframes_meta_output_dir)
+
+            current_export_list.append(os.path.join(keyframes_meta_output_dir, "reference_frames.txt"))
             print("Saving keyframe meta-data file " + os.path.relpath(current_export_list[-1], export_info["root_dir"]))
             with open(current_export_list[-1], "w") as f:
                 f.write(str(len(meta_coord_systems_of_frames)) + "\n")
@@ -1465,32 +1404,13 @@ def save_keyframe_coord_systems_of_bones(
                     for i in range(4):
                         f.write(float_to_string(system["orientation"][i]) + "\n")
 
-            current_export_list.append(os.path.join(keyframes_output_dir, "meta_motion_colliders.txt"))
+            current_export_list.append(os.path.join(keyframes_meta_output_dir, "bboxes.txt"))
             print("Saving keyframe meta-data file " + os.path.relpath(current_export_list[-1], export_info["root_dir"]))
             with open(current_export_list[-1], "w") as f:
-                f.write(str(len(meta_colliders)) + "\n")
-                frame_idx = 0
-                for time_stamp in sorted(meta_colliders.keys()):
-                    f.write("%% " + str(frame_idx) + "\n")
-                    collider_and_weight = meta_colliders[time_stamp]
-                    collider_and_weight["collider"].save(f)
-                    f.write(float_to_string(collider_and_weight["weight"]) + "\n")
-                    frame_idx += 1
-
-            current_export_list.append(os.path.join(keyframes_output_dir, "meta_mass_distributions.txt"))
-            print("Saving keyframe meta-data file " + os.path.relpath(current_export_list[-1], export_info["root_dir"]))
-            with open(current_export_list[-1], "w") as f:
-                f.write(str(len(meta_inverted_masses)) + "\n")
-                frame_idx = 0
-                for time_stamp in sorted(meta_inverted_masses.keys()):
-                    f.write("%% " + str(frame_idx) + "\n")
-                    f.write("@_\n")
-                    f.write(float_to_string(meta_inverted_masses[time_stamp]) + "\n")
-                    tensors = meta_inverted_innertia_tensors[time_stamp]
+                f.write(str(len(meta_bboxes)) + "\n")
+                for time_stamp in sorted(meta_bboxes.keys()):
                     for i in range(3):
-                        for j in range(3):
-                            f.write(float_to_string(tensors[i][j]) + "\n")
-                    frame_idx += 1
+                        f.write(float_to_string(meta_bboxes[time_stamp][i]) + "\n")
 
         if meta_object is not None:
             meta_object.animation_data.action = old_meta_object_action
@@ -1565,154 +1485,6 @@ def save_skeleton_template_files(
                         f.write("        max_angular_speed " + float_to_string(bone["e2_joint_max_angular_speed"][i]) + "\n")
                         f.write("    }\n")
                 f.write("}\n")
-
-        export_info["directions"] = os.path.join(output_dir, "directions.txt")
-        print("Saving skeleton template file " + os.path.relpath(export_info["directions"], export_info["root_dir"]))
-        with open(export_info["directions"], "w") as f:
-            for kwd, default_coord in [("fwd", [0.0, -1.0, 0.0]), ("up", [0.0, 0.0, 1.0])]:
-                for i in range(3):
-                    key = "e2_" + kwd + "_dir" + str(i)
-                    f.write(float_to_string(armature[key] if key in armature else default_coord[i]) + "\n")
-
-        if "keyframes" in export_info:
-            export_info["transitions"] = os.path.join(output_dir, "transitions.json")
-            print("Saving skeleton template file " + os.path.relpath(export_info["transitions"], export_info["root_dir"]))
-            with open(export_info["transitions"], "w") as f:
-                f.write("{\n")
-                anim_names = sorted(list(export_info["keyframes"].keys()))
-                for anim_name in anim_names:
-                    f.write("    \"" + anim_name + "\": {")
-                    f.write(
-"""
-        "defaults": {
-            "guard": {"valid": 0.0, "invalid": 0.0},
-            "desire": [
-                {"expression": ["angle01", "forward_unit_vector", "up"], "value": 0.5},
-                {"expression": ["angle01", "forward_unit_vector", "linear_velocity_unit_direction"], "value": 0.0},
-                {"expression": "linear_speed", "value": 0.5},
-                {"expression": "angular_speed", "value": 0.0}
-            ]
-        },
-        "loops": [{"from": [-1], "to": [0], "time": 0.041667}],
-        "successors": [{"range": [0, -2]}],
-        "exits": {
-"""
-                    )
-                    for other_anim_name in anim_names:
-                        if other_anim_name != anim_name:
-                            f.write("            \"" + other_anim_name + "\": [{\"range\": [0, -1], \"to\": [0], \"time\": 0.15}]")
-                            f.write(("," if other_anim_name != anim_names[-1] else "") + "\n")
-                    f.write("    }" + ("," if anim_name != anim_names[-1] else "") + "\n")
-                f.write("}\n")
-            export_info["transitions_mock"] = os.path.join(output_dir, "transitions.mock.json")
-            print("Saving skeleton template file " + os.path.relpath(export_info["transitions_mock"], export_info["root_dir"]))
-            with open(export_info["transitions_mock"], "w") as f:
-                f.write(
-# This is the default cortex mock configuration file.
-"""
-[
-    {
-        "down": ["UP"],
-        "up": ["DOWN"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["rotate_towards", "forward_unit_vector", "forward", ["*", 1.57, "dt"]]}
-        ]
-    },
-    {
-        "down": ["DOWN"],
-        "up": ["UP"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["rotate_towards", "forward_unit_vector", "forward", ["*", 1.57, "dt"]]}
-        ]
-    },
-
-    {
-        "down": ["LEFT"],
-        "up": ["RIGHT"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["rotate", "forward_unit_vector", "up", ["*", 3.1415, "dt"]]}
-        ]
-    },
-    {
-        "down": ["RIGHT"],
-        "up": ["LEFT"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["rotate", "forward_unit_vector", "down", ["*", 3.1415, "dt"]]}
-        ]
-    },
-    {
-        "down": ["DOWN"],
-        "up": ["UP"],
-        "assignments": [
-            {"var": "angular_velocity_unit_axis", "value": ["scale", ["sign", ["dot", "forward_unit_vector", "left"]], "up"]},
-            {"var": "linear_speed", "value": 0.0},
-            {"var": "angular_speed", "value": 1.0}
-        ]
-    },
-
-    {
-        "down": [],
-        "up": ["UP", "DOWN"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
-            {"var": "linear_speed", "value": 0.0},
-            {"var": "angular_speed", "value": 0.0}
-        ]
-    },
-
-
-    {
-        "down": ["UP"],
-        "up": ["DOWN", "?SHIFT", "?CTRL"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
-            {"var": "linear_velocity_unit_direction", "value": "forward_unit_vector"},
-            {"var": "linear_speed", "value": 0.5},
-            {"var": "angular_speed", "value": 0.0}
-        ]
-    },
-    {
-        "down": ["UP", "?CTRL"],
-        "up": ["DOWN", "?SHIFT"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
-            {"var": "linear_velocity_unit_direction", "value": ["add", "forward_unit_vector", "up"]},
-            {"var": "linear_speed", "value": 0.5},
-            {"var": "angular_speed", "value": 0.0}
-        ]
-    },
-
-    {
-        "down": ["UP", "?SHIFT"],
-        "up": ["DOWN", "?CTRL"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
-            {"var": "linear_velocity_unit_direction", "value": "forward_unit_vector"},
-            {"var": "linear_speed", "value": 0.75},
-            {"var": "angular_speed", "value": 0.0}
-        ]
-    },
-    {
-        "down": ["UP", "?SHIFT", "?CTRL"],
-        "up": ["DOWN"],
-        "assignments": [
-            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
-            {"var": "linear_velocity_unit_direction", "value": ["add", "forward_unit_vector", "up"]},
-            {"var": "linear_speed", "value": 1.0},
-            {"var": "angular_speed", "value": 0.0}
-        ]
-    },
-
-    {
-        "down": [],
-        "up": [],
-        "assignments": [
-            {"var": "look_at_target", "value": ["add", ["scale", ["+", 1.0, "linear_speed"], "forward_unit_vector"], "up"]}
-        ]
-    }
-]
-"""
-                )
 
 
 def save_batch(
