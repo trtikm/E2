@@ -230,97 +230,6 @@ free_bones_data::~free_bones_data()
 namespace ai { namespace detail {
 
 
-bone_lengths_data::bone_lengths_data(async::finalise_load_on_destroy_ptr const  finaliser)
-{
-    TMPROF_BLOCK();
-
-    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
-
-    std::ifstream  istr;
-    angeo::open_file_stream_for_reading(istr, pathname);
-
-    for (natural_32_bit i = 0U, n = angeo::read_num_records(istr, pathname); i != n; ++i)
-    {
-        std::string  line;
-        if (!read_line(istr, line))
-            throw std::runtime_error(msgstream() << "Cannot read length #" << i << " in the file '" << pathname << "'.");
-        boost::algorithm::trim(line);
-
-        float_32_bit  length;
-        {
-            std::istringstream sstr(line);
-            sstr >> length;
-        }
-        if (length < 0.001f)
-            throw std::runtime_error(msgstream() << "Wrong value " << length << " for length #" << i << " in the file '" << pathname << "'.");
-
-        data.push_back(length);
-    }
-}
-
-bone_lengths_data::~bone_lengths_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-}}
-
-namespace ai { namespace detail {
-
-
-bone_joints_data::bone_joints_data(async::finalise_load_on_destroy_ptr const  finaliser)
-	: data()
-{
-    TMPROF_BLOCK();
-
-    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
-	std::unique_ptr<boost::property_tree::ptree> const  ptree(new boost::property_tree::ptree);
-	if (!boost::filesystem::is_regular_file(pathname))
-		throw std::runtime_error(msgstream() << "Cannot access the file '" << pathname << "'.");
-	boost::property_tree::read_info(pathname.string(), *ptree);
-	data.resize(ptree->size());
-	natural_32_bit i = 0U;
-	for (boost::property_tree::ptree::value_type const& bone_and_props : *ptree)
-	{
-		std::vector<angeo::joint_rotation_props>&  data_at_i = data.at(i);
-		data_at_i.resize(bone_and_props.second.size());
-		natural_32_bit j = 0U;
-		for (boost::property_tree::ptree::value_type const& none_and_props : bone_and_props.second)
-		{
-			boost::property_tree::ptree const&  joint_ptree = none_and_props.second;
-			angeo::joint_rotation_props&  joint = data_at_i.at(j);
-			joint.m_axis = vector3(joint_ptree.get<float_32_bit>("axis.x"),
-								   joint_ptree.get<float_32_bit>("axis.y"),
-								   joint_ptree.get<float_32_bit>("axis.z"));
-			joint.m_axis_in_parent_space = joint_ptree.get<bool>("axis_in_parent_space");
-			joint.m_zero_angle_direction = vector3(joint_ptree.get<float_32_bit>("zero_angle_direction.x"),
-												   joint_ptree.get<float_32_bit>("zero_angle_direction.y"),
-												   joint_ptree.get<float_32_bit>("zero_angle_direction.z"));
-			joint.m_direction = vector3(joint_ptree.get<float_32_bit>("direction.x"),
-										joint_ptree.get<float_32_bit>("direction.y"),
-										joint_ptree.get<float_32_bit>("direction.z"));
-			joint.m_max_angle = joint_ptree.get<float_32_bit>("max_angle");
-			joint.m_stiffness_with_parent_bone = joint_ptree.get<float_32_bit>("stiffness_with_parent_bone");
-			joint.m_max_angular_speed = joint_ptree.get<float_32_bit>("max_angular_speed");
-
-			++j;
-		}
-		++i;
-	}
-}
-
-bone_joints_data::~bone_joints_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-}}
-
-namespace ai { namespace detail {
-
-
 skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : pose_frames()
     , names()
@@ -431,7 +340,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
 
         if (names.empty() && boost::filesystem::is_regular_file(pathname / "names.txt"))
         {
-            boost::filesystem::path  names_pathname = pathname / "names.txt";
+            boost::filesystem::path const  names_pathname = pathname / "names.txt";
 
             std::ifstream  istr;
             angeo::open_file_stream_for_reading(istr, names_pathname);
@@ -454,7 +363,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
 
         if (hierarchy.parents.empty() && boost::filesystem::is_regular_file(pathname / "parents.txt"))
         {
-            boost::filesystem::path  parents_pathname = pathname / "parents.txt";
+            boost::filesystem::path const  parents_pathname = pathname / "parents.txt";
 
             std::ifstream  istr;
             angeo::open_file_stream_for_reading(istr, parents_pathname);
@@ -483,9 +392,65 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
         }
 
         if (lengths.empty() && boost::filesystem::is_regular_file(pathname / "lengths.txt"))
-            lengths = bone_lengths(pathname / "lengths.txt", 10U, ultimate_finaliser);
+        {
+            boost::filesystem::path const  lengths_pathname = pathname / "lengths.txt";
+            std::ifstream  istr;
+            angeo::open_file_stream_for_reading(istr, lengths_pathname);
+
+            for (natural_32_bit i = 0U, n = angeo::read_num_records(istr, lengths_pathname); i != n; ++i)
+            {
+                std::string  line;
+                if (!read_line(istr, line))
+                    throw std::runtime_error(msgstream() << "Cannot read length #" << i << " in the file '" << lengths_pathname << "'.");
+                boost::algorithm::trim(line);
+
+                float_32_bit  length;
+                {
+                    std::istringstream sstr(line);
+                    sstr >> length;
+                }
+                if (length < 0.001f)
+                    throw std::runtime_error(msgstream() << "Wrong value " << length << " for length #" << i << " in the file '" << lengths_pathname << "'.");
+
+                lengths.push_back(length);
+            }
+        }
+
         if (joints.empty() && boost::filesystem::is_regular_file(pathname / "joints.txt"))
-            joints = bone_joints(pathname / "joints.txt", 10U, ultimate_finaliser);
+        {
+            boost::filesystem::path const  joints_pathname = pathname / "joints.txt";
+            
+            std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(joints_pathname);
+	        joints.resize(ptree->size());
+	        natural_32_bit i = 0U;
+	        for (boost::property_tree::ptree::value_type const&  bone_and_props : *ptree)
+	        {
+		        std::vector<angeo::joint_rotation_props>&  data_at_i = joints.at(i);
+		        data_at_i.resize(bone_and_props.second.size());
+		        natural_32_bit j = 0U;
+		        for (boost::property_tree::ptree::value_type const&  none_and_props : bone_and_props.second)
+		        {
+			        boost::property_tree::ptree const&  joint_ptree = none_and_props.second;
+			        angeo::joint_rotation_props&  joint = data_at_i.at(j);
+			        joint.m_axis = vector3(joint_ptree.get<float_32_bit>("axis.x"),
+								           joint_ptree.get<float_32_bit>("axis.y"),
+								           joint_ptree.get<float_32_bit>("axis.z"));
+			        joint.m_axis_in_parent_space = joint_ptree.get<bool>("axis_in_parent_space");
+			        joint.m_zero_angle_direction = vector3(joint_ptree.get<float_32_bit>("zero_angle_direction.x"),
+												           joint_ptree.get<float_32_bit>("zero_angle_direction.y"),
+												           joint_ptree.get<float_32_bit>("zero_angle_direction.z"));
+			        joint.m_direction = vector3(joint_ptree.get<float_32_bit>("direction.x"),
+										        joint_ptree.get<float_32_bit>("direction.y"),
+										        joint_ptree.get<float_32_bit>("direction.z"));
+			        joint.m_max_angle = joint_ptree.get<float_32_bit>("max_angle");
+			        joint.m_stiffness_with_parent_bone = joint_ptree.get<float_32_bit>("stiffness_with_parent_bone");
+			        joint.m_max_angular_speed = joint_ptree.get<float_32_bit>("max_angular_speed");
+
+			        ++j;
+		        }
+		        ++i;
+	        }
+        }
 
         if (boost::filesystem::is_regular_file(pathname / "loop_targets.txt"))
         {

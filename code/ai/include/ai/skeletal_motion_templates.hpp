@@ -91,70 +91,16 @@ struct  free_bones : public async::resource_accessor<free_bones_data>
 namespace ai { namespace detail {
 
 
-struct  bone_lengths_data
+struct  motion_template
 {
-    explicit bone_lengths_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~bone_lengths_data();
+    using  keyframes_type = qtgl::keyframes;
+    using  reference_frames_type = qtgl::modelspace;
 
-    std::vector<float_32_bit>  data;
+    keyframes_type  keyframes;
+    reference_frames_type  reference_frames;
+    std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
+	meta::free_bones  free_bones;
 };
-
-struct  bone_lengths : public async::resource_accessor<bone_lengths_data>
-{
-    bone_lengths() : async::resource_accessor<bone_lengths_data>() {}
-    bone_lengths(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<bone_lengths_data>(
-    { "ai::skeletal_motion_templates::bone_lengths",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-    std::vector<float_32_bit> const&  data() const { return resource().data; }
-    float_32_bit  at(natural_32_bit const  index) const { return data().at(index); }
-    std::size_t size() const { return data().size(); }
-};
-
-
-}}
-
-namespace ai { namespace detail {
-
-
-struct  bone_joints_data
-{
-    explicit bone_joints_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~bone_joints_data();
-
-    std::vector<std::vector<angeo::joint_rotation_props> >  data;
-};
-
-struct  bone_joints : public async::resource_accessor<bone_joints_data>
-{
-	bone_joints() : async::resource_accessor<bone_joints_data>() {}
-	bone_joints(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<bone_joints_data>(
-			{ "ai::skeletal_motion_templates::bone_joints",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-	std::vector<std::vector<angeo::joint_rotation_props> > const&  data() const { return resource().data; }
-	std::vector<angeo::joint_rotation_props>  at(natural_32_bit const  index) const { return data().at(index); }
-    std::size_t size() const { return data().size(); }
-};
-
-
-}}
-
-namespace ai { namespace detail {
 
 
 struct  motion_object_binding
@@ -208,31 +154,11 @@ struct  motion_object_binding
 };
 
 
-}}
-
-namespace ai { namespace detail {
-
-
-struct  motion_template
-{
-    using  keyframes_type = qtgl::keyframes;
-    using  reference_frames_type = qtgl::modelspace;
-
-    keyframes_type  keyframes;
-    reference_frames_type  reference_frames;
-    std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
-	meta::free_bones  free_bones;
-};
-
-
-}}
-
-namespace ai { namespace detail {
-
-
 struct  skeletal_motion_templates_data
 {
     using  bone_names = std::vector<std::string>;
+    using  bone_lengths = std::vector<float_32_bit>;
+    using  bone_joints = std::vector<std::vector<angeo::joint_rotation_props> >;
 
     struct  bone_hierarchy
     {
@@ -315,8 +241,8 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     using  bone_names = detail::skeletal_motion_templates_data::bone_names;
     using  bone_hierarchy = detail::skeletal_motion_templates_data::bone_hierarchy;
-    using  bone_lengths = detail::bone_lengths;
-    using  bone_joints = detail::bone_joints;
+    using  bone_lengths = detail::skeletal_motion_templates_data::bone_lengths;
+    using  bone_joints = detail::skeletal_motion_templates_data::bone_joints;
 
     using  motion_template = detail::motion_template;
 
@@ -332,8 +258,8 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     bone_hierarchy const&  hierarchy() const { return resource().hierarchy; }
     bone_hierarchy::parents_vector const&  parents() const { return hierarchy().parents; }
     bone_hierarchy::children_vector const&  children() const { return hierarchy().children; }
-    bone_lengths  lengths() const { return resource().lengths; }
-	bone_joints  joints() const { return resource().joints; }
+    bone_lengths const&  lengths() const { return resource().lengths; }
+	bone_joints const&  joints() const { return resource().joints; }
 
     std::unordered_map<std::string, motion_template> const&  motions_map() const { return resource().motions_map; }
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }

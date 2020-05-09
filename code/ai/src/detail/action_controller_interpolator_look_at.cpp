@@ -105,7 +105,7 @@ void  action_controller_interpolator_look_at::interpolate(
             look_at_targets,
             get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
             parents,
-            get_blackboard()->m_motion_templates.joints().data(),
+            get_blackboard()->m_motion_templates.joints(),
             bones_to_consider,
             &bones_to_rotate
             );
@@ -123,7 +123,7 @@ void  action_controller_interpolator_look_at::interpolate(
             frames,
             target_frames,
             get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
-            get_blackboard()->m_motion_templates.joints().data(),
+            get_blackboard()->m_motion_templates.joints(),
             bones_to_rotate,
             time_step_in_seconds
             );
