@@ -1,8 +1,6 @@
 #include <ai/skeletal_motion_templates.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <ai/cortex.hpp>
-#include <ai/cortex_mock.hpp>
-#include <angeo/skeleton_kinematics.hpp>
 #include <angeo/utility.hpp>
 #include <utility/read_line.hpp>
 #include <utility/hash_combine.hpp>
@@ -15,7 +13,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/info_parser.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <unordered_set>
 #include <deque>
 
@@ -32,202 +29,18 @@ std::unique_ptr<boost::property_tree::ptree>  load_ptree(boost::filesystem::path
 }
 
 
-template<typename elem_type, typename param_type>
-void  read_meta_data_records(
-        boost::filesystem::path const&  pathname,
-        std::function<void(
-                std::vector<elem_type>&,
-                std::string const&,
-                std::vector<param_type> const&,
-                boost::filesystem::path const&,
-                natural_32_bit,
-                elem_type&)
-                > const&  back_inserter,
-        bool const  inform_about_keyframe_end,
-        std::vector<elem_type>* const  output_flat,
-        std::vector<std::vector<elem_type> >* const  output_composed
-        )
-{
-    TMPROF_BLOCK();
-
-    std::ifstream  istr;
-    angeo::open_file_stream_for_reading(istr, pathname);
-
-    natural_32_bit  line_index = 0U;
-
-    natural_32_bit const  num_records = angeo::read_num_records(istr, pathname);
-    ++line_index;
-
-    if (output_flat != nullptr)
-        output_flat->clear();
-    if (output_composed != nullptr)
-        output_composed->clear();
-
-    std::string  keyword;
-    std::vector<param_type>  params;
-
-    elem_type  last;
-    bool  starting_first_elem = true;
-
-    while (true)
-    {
-        std::string  line = read_line(istr);
-        if (line.empty())
-            break;
-        ++line_index;
-
-        boost::algorithm::trim(line);
-        if (line.empty() || (line.size() >= 2U && line.at(0) == '%' && line.at(1) == '%')) // Skip empty and comment lines.
-            continue;
-
-        if (line.front() == '+' || line.front() == '-' || std::isdigit(line.front(), std::locale::classic()))
-        {
-            if (keyword.empty())
-                throw std::runtime_error(msgstream() << "Number is not expected at line " << line_index << "in the file '" << pathname << "'.");
-
-            std::istringstream sstr(line);
-            param_type  value;
-            sstr >> value;
-            params.push_back(value);
-        }
-        else
-        {
-            if (!keyword.empty())
-            {
-                if (output_flat != nullptr)
-                    back_inserter(*output_flat, keyword, params, pathname, line_index, last);
-                if (output_composed != nullptr)
-                    back_inserter(output_composed->back(), keyword, params, pathname, line_index, last);
-
-                keyword.clear();
-                params.clear();
-            }
-
-            if (line.front() == '@')
-            {
-                if (inform_about_keyframe_end && !starting_first_elem)
-                {
-                    if (output_flat != nullptr)
-                        back_inserter(*output_flat, "<<@>>", {}, pathname, line_index, last);
-                    if (output_composed != nullptr)
-                        back_inserter(output_composed->back(), "<<@>>", {}, pathname, line_index, last);
-                }
-                starting_first_elem = false;
-
-                if (output_composed != nullptr)
-                    output_composed->push_back({});
-                line = line.substr(1U);
-            }
-            else if ((output_flat != nullptr && output_flat->empty()) || (output_composed != nullptr && output_composed->empty()))
-                throw std::runtime_error(msgstream() << "A keyword without '@' prefix is not expected at line " << line_index << "in the file '" << pathname << "'.");
-
-            keyword = line;
-        }
-    }
-
-    if (!keyword.empty())
-    {
-        if (output_flat != nullptr)
-            back_inserter(*output_flat, keyword, params, pathname, line_index, last);
-        if (output_composed != nullptr)
-            back_inserter(output_composed->back(), keyword, params, pathname, line_index, last);
-    }
-
-    if (inform_about_keyframe_end)
-    {
-        if (output_flat != nullptr)
-            back_inserter(*output_flat, "<<@>>", {}, pathname, line_index, last);
-        if (output_composed != nullptr)
-            back_inserter(output_composed->back(), "<<@>>", {}, pathname, line_index, last);
-    }
-
-    if (output_flat != nullptr && num_records != output_flat->size())
-        throw std::runtime_error(msgstream() << "The first line in the file '" << pathname << "' says there is "
-                                             << num_records << " records, but there was " << output_flat->size()
-                                             << " actually encountered in the file.");
-    if (output_composed != nullptr && num_records != output_composed->size())
-        throw std::runtime_error(msgstream() << "The first line in the file '" << pathname << "' says there is "
-                                             << num_records << " records, but there was " << output_composed->size()
-                                             << " actually encountered in the file.");
-}
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
-bool  free_bones_for_look_at::operator==(free_bones_for_look_at const&  other) const
-{
-    if (this == &other) return true;
-    if (all_bones.size() != other.all_bones.size() || end_effector_bones.size() != other.end_effector_bones.size())
-    {
-        return false;
-    }
-    for (natural_32_bit i = 0; i != all_bones.size(); ++i)
-    {
-        if (all_bones.at(i) != other.all_bones.at(i))
-        {
-            return false;
-        }
-    }
-    for (natural_32_bit i = 0; i != end_effector_bones.size(); ++i)
-    {
-        if (end_effector_bones.at(i) != other.end_effector_bones.at(i))
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-free_bones_data::free_bones_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : look_at()
-{
-    TMPROF_BLOCK();
-
-    read_meta_data_records<free_bones_for_look_at_ptr, natural_32_bit>(
-            finaliser->get_key().get_unique_id(),
-            [](std::vector<free_bones_for_look_at_ptr>&  output,
-               std::string const&  keyword,
-               std::vector<natural_32_bit> const&  params,
-               boost::filesystem::path const&  pathname,
-               natural_32_bit const  line_index,
-               free_bones_for_look_at_ptr&  last
-               ) -> void
-            {
-                if (params.size() % 2UL != 0UL)
-                    throw std::runtime_error(msgstream() << "Wrong number of parameters around line " << line_index << "in the file '" << pathname << "'. Expected is even number of params.");
-                if (keyword == "look_at")
-                {
-                    free_bones_for_look_at  record;
-                    for (natural_32_bit i = 0U; i < params.size(); i += 2)
-                    {
-                        record.all_bones.push_back(params.at(i));
-                        if (params.at(i + 1U) == 1U)
-                            record.end_effector_bones.push_back(params.at(i));
-                    }
-                    last = last != nullptr && *last == record ? last : std::make_shared<free_bones_for_look_at>(record);
-                    output.push_back(last);
-                }
-                else
-                    throw std::runtime_error(msgstream() << "Unknown keyword " << keyword << " around line " << line_index << "in the file '" << pathname << "'. Expected is even number of params.");
-            },
-            false,
-            &look_at,
-            nullptr
-            );
-}
-
-free_bones_data::~free_bones_data()
-{
-    TMPROF_BLOCK();
-}
-
-
 }}}
 
 namespace ai { namespace detail {
+
+
+std::size_t  motion_template_cursor::hasher::operator()(motion_template_cursor const&  value) const
+{
+    std::size_t seed = 0;
+    ::hash_combine(seed, value.motion_name);
+    ::hash_combine(seed, value.keyframe_index);
+    return seed;
+}
 
 
 skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser)
@@ -249,7 +62,16 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
     async::finalise_load_on_destroy_ptr const  ultimate_finaliser = async::finalise_load_on_destroy::create(
             [this](async::finalise_load_on_destroy_ptr) -> void {
 
-                // All data are loaded. So, let's check for their consistency.
+                // All data are loaded. Let's apply post-load setup.
+            
+                for (auto&  entry : motions_map)
+                {
+                    motion_template&  record = entry.second;
+                    if ((natural_32_bit)record.look_at.size() < record.keyframes.num_keyframes())
+                        record.look_at.resize(record.keyframes.num_keyframes());
+                }                
+
+                // And now let's check for consistency of loaded data.
 
                 if (pose_frames.empty())
                     throw std::runtime_error("The 'pose_frames' were not loaded.");
@@ -288,8 +110,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The 'reference_frames' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.bboxes.empty())
                         throw std::runtime_error(msgstream() << "The 'bboxes' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.free_bones.empty())
-                        throw std::runtime_error(msgstream() << "The 'free_bones' were not loaded to 'motions_map[" << entry.first << "]'.");
+                    if (record.look_at.empty())
+                        throw std::runtime_error(msgstream() << "The 'look_at' were not loaded to 'motions_map[" << entry.first << "]'.");
 
                     if (record.keyframes.num_keyframes() < 2U)
                         throw std::runtime_error(msgstream() << "The count of keyframes is less than 2 in 'motions_map[" << entry.first << "]'.");
@@ -297,8 +119,12 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'reference_frames' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.bboxes.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'bboxes' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.free_bones.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'free_bones' differ in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.look_at.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'look_at' differ in 'motions_map[" << entry.first << "]'.");
+                    for (auto const  data_ptr : record.look_at)
+                        for (natural_32_bit  bone_index : data_ptr->all_bones)
+                            if (bone_index >= (natural_32_bit)names.size())
+                                throw std::runtime_error(msgstream() << "The 'look_at' data contain wrong bone index " << bone_index << " in 'motions_map[" << entry.first << "]'.");
                 }
             },
             finaliser
@@ -650,8 +476,28 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         istr.close();
                     }
 
-                    if (record.free_bones.empty() && boost::filesystem::is_regular_file(meta_pathname / "free_bones.txt"))
-                        record.free_bones = meta::free_bones(meta_pathname / "free_bones.txt", 1U, ultimate_finaliser);
+                    if (record.look_at.empty() && boost::filesystem::is_regular_file(meta_pathname / "free_bones_look_at.txt"))
+                    {
+                        std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(meta_pathname / "free_bones_look_at.txt");
+                        for (boost::property_tree::ptree::value_type const&  void_and_data : *ptree)
+                        {
+                            auto const  data_ptr = std::make_shared<motion_template::free_bones_for_look_at>();
+                            for (boost::property_tree::ptree::value_type const&  void_and_info : void_and_data.second.get_child("bones"))
+                            {
+                                data_ptr->all_bones.push_back(void_and_info.second.get<natural_32_bit>("bone_index"));
+                                if (void_and_info.second.get<bool>("is_end_effector"))
+                                    data_ptr->end_effector_bones.push_back(data_ptr->all_bones.back());
+                            }
+                            for (boost::property_tree::ptree::value_type const& void_and_range : void_and_data.second.get_child("keyframe_ranges"))
+                            {
+                                natural_32_bit const  n = void_and_range.second.get<natural_32_bit>("last");
+                                if (n >= (natural_32_bit)record.look_at.size())
+                                    record.look_at.resize(n + 1U);
+                                for (natural_32_bit  i = void_and_range.second.get<natural_32_bit>("first"); i <= n; ++i)
+                                    record.look_at.at(i) = data_ptr;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -667,19 +513,3 @@ skeletal_motion_templates_data::~skeletal_motion_templates_data()
 
 
 }}
-
-namespace ai {
-
-
-std::size_t skeletal_motion_templates::motion_template_cursor::hasher::operator()(
-        skeletal_motion_templates::motion_template_cursor const&  value
-        ) const
-{
-    std::size_t seed = 0;
-    ::hash_combine(seed, value.motion_name);
-    ::hash_combine(seed, value.keyframe_index);
-    return seed;
-}
-
-
-}

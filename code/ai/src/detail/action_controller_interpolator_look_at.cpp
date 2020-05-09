@@ -150,7 +150,7 @@ void  action_controller_interpolator_look_at::set_target(
         )
 {
     m_src_bones = m_current_bones;
-    m_dst_bones = get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).free_bones.look_at().at(cursor.keyframe_index);
+    m_dst_bones = get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).look_at.at(cursor.keyframe_index);
 }
 
 

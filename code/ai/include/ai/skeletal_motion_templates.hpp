@@ -44,62 +44,24 @@ struct  motion_template_cursor
 };
 
 
-}}
-
-namespace ai { namespace detail { namespace meta {
-
-
-struct  free_bones_for_look_at
-{
-	std::vector<natural_32_bit>  all_bones;
-	std::vector<natural_32_bit>  end_effector_bones;
-
-    bool  operator==(free_bones_for_look_at const&  other) const;
-    bool  operator!=(free_bones_for_look_at const&  other) const { return !(*this == other); }
-};
-using  free_bones_for_look_at_ptr = std::shared_ptr<free_bones_for_look_at const>;
-
-struct  free_bones_data
-{
-    explicit free_bones_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~free_bones_data();
-
-    std::vector<free_bones_for_look_at_ptr>  look_at;
-};
-
-struct  free_bones : public async::resource_accessor<free_bones_data>
-{
-	free_bones() : async::resource_accessor<free_bones_data>() {}
-	free_bones(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<free_bones_data>(
-			{ "ai::skeletal_motion_templates::meta::free_bones",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-    std::vector<free_bones_for_look_at_ptr> const& look_at() const { return resource().look_at; }
-    std::size_t size() const { return look_at().size(); }
-};
-
-
-}}}
-
-namespace ai { namespace detail {
-
-
 struct  motion_template
 {
     using  keyframes_type = qtgl::keyframes;
     using  reference_frames_type = qtgl::modelspace;
 
+    struct  free_bones_for_look_at
+    {
+        std::vector<natural_32_bit>  all_bones;
+        std::vector<natural_32_bit>  end_effector_bones;
+    };
+    using  free_bones_for_look_at_ptr = std::shared_ptr<free_bones_for_look_at const>;
+
+    using  look_at_info = std::vector<free_bones_for_look_at_ptr>;
+
     keyframes_type  keyframes;
     reference_frames_type  reference_frames;
     std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
-	meta::free_bones  free_bones;
+    look_at_info  look_at;
 };
 
 
@@ -237,7 +199,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     using  keyframes = detail::motion_template::keyframes_type;
     using  reference_frames = detail::motion_template::reference_frames_type;
-    using  free_bones_for_look_at_ptr = detail::meta::free_bones_for_look_at_ptr;
+    using  free_bones_for_look_at_ptr = detail::motion_template::free_bones_for_look_at_ptr;
 
     using  bone_names = detail::skeletal_motion_templates_data::bone_names;
     using  bone_hierarchy = detail::skeletal_motion_templates_data::bone_hierarchy;
