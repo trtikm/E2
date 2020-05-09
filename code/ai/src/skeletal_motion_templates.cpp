@@ -230,42 +230,6 @@ free_bones_data::~free_bones_data()
 namespace ai { namespace detail {
 
 
-bone_names_data::bone_names_data(async::finalise_load_on_destroy_ptr const  finaliser)
-{
-    TMPROF_BLOCK();
-
-    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
-
-    std::ifstream  istr;
-    angeo::open_file_stream_for_reading(istr, pathname);
-
-    std::unordered_set<std::string>  visited;
-    for (natural_32_bit i = 0U, num_names = angeo::read_num_records(istr, pathname); i != num_names; ++i)
-    {
-        std::string  line;
-        if (!read_line(istr, line))
-            throw std::runtime_error(msgstream() << "Cannot read name #" << i << " in the file '" << pathname << "'.");
-        boost::algorithm::trim(line);
-
-        if (visited.count(line) != 0UL)
-            throw std::runtime_error(msgstream() << "Duplicate bone name '" << line << "' at line #" << i << " in the file '" << pathname << "'.");
-        visited.insert(line);
-
-        data.push_back(line);
-    }
-}
-
-bone_names_data::~bone_names_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-}}
-
-namespace ai { namespace detail {
-
-
 bone_hierarchy_data::bone_hierarchy_data(async::finalise_load_on_destroy_ptr const  finaliser)
 {
     TMPROF_BLOCK();
@@ -506,9 +470,31 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
         }
 
         if (pose_frames.empty() && boost::filesystem::is_regular_file(pathname / "pose.txt"))
-            pose_frames = modelspace(pathname / "pose.txt", 10U, ultimate_finaliser);
+            pose_frames = motion_template::reference_frames_type(pathname / "pose.txt", 10U, ultimate_finaliser);
+
         if (names.empty() && boost::filesystem::is_regular_file(pathname / "names.txt"))
-            names = bone_names(pathname / "names.txt", 10U, ultimate_finaliser);
+        {
+            boost::filesystem::path  names_pathname = pathname / "names.txt";
+
+            std::ifstream  istr;
+            angeo::open_file_stream_for_reading(istr, names_pathname);
+
+            std::unordered_set<std::string>  visited;
+            for (natural_32_bit i = 0U, num_names = angeo::read_num_records(istr, names_pathname); i != num_names; ++i)
+            {
+                std::string  line;
+                if (!read_line(istr, line))
+                    throw std::runtime_error(msgstream() << "Cannot read name #" << i << " in the file '" << names_pathname << "'.");
+                boost::algorithm::trim(line);
+
+                if (visited.count(line) != 0UL)
+                    throw std::runtime_error(msgstream() << "Duplicate bone name '" << line << "' at line #" << i << " in the file '" << names_pathname << "'.");
+                visited.insert(line);
+
+                names.push_back(line);
+            }
+        }
+
         if (hierarchy.empty() && boost::filesystem::is_regular_file(pathname / "parents.txt"))
             hierarchy = bone_hierarchy(pathname / "parents.txt", 10U, ultimate_finaliser);
         if (lengths.empty() && boost::filesystem::is_regular_file(pathname / "lengths.txt"))
@@ -690,14 +676,14 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                 motion_template&  record = motions_map[dir_name];
 
                 if (boost::filesystem::is_regular_file(entry_pathname / "keyframe0.txt"))
-                    record.keyframes = keyframes(entry_pathname, 1U, ultimate_finaliser);
+                    record.keyframes = motion_template::keyframes_type(entry_pathname, 1U, ultimate_finaliser);
 
                 if (boost::filesystem::is_directory(entry_pathname / "!meta"))
                 {
                     boost::filesystem::path const  meta_pathname = entry_pathname / "!meta";
 
                     if (record.reference_frames.empty() && boost::filesystem::is_regular_file(meta_pathname / "reference_frames.txt"))
-                        record.reference_frames = meta::reference_frames(meta_pathname / "reference_frames.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::reference_frames");
+                        record.reference_frames = motion_template::reference_frames_type(meta_pathname / "reference_frames.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::reference_frames");
 
                     if (record.bboxes.empty() && boost::filesystem::is_regular_file(meta_pathname / "bboxes.txt"))
                     {

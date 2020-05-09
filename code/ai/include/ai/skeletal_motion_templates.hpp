@@ -49,14 +49,6 @@ struct  motion_template_cursor
 namespace ai { namespace detail { namespace meta {
 
 
-using  reference_frames = qtgl::modelspace;
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
 struct  free_bones_for_look_at
 {
 	std::vector<natural_32_bit>  all_bones;
@@ -95,39 +87,6 @@ struct  free_bones : public async::resource_accessor<free_bones_data>
 
 
 }}}
-
-namespace ai { namespace detail {
-
-
-struct  bone_names_data
-{
-    explicit bone_names_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~bone_names_data();
-
-    std::vector<std::string>  data;
-};
-
-struct  bone_names : public async::resource_accessor<bone_names_data>
-{
-    bone_names() : async::resource_accessor<bone_names_data>() {}
-    bone_names(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<bone_names_data>(
-    { "ai::skeletal_motion_templates::bone_names",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-    std::vector<std::string> const&  data() const { return resource().data; }
-    std::string const&  at(natural_32_bit const  index) const { return data().at(index); }
-    std::size_t size() const { return data().size(); }
-};
-
-
-}}
 
 namespace ai { namespace detail {
 
@@ -293,13 +252,13 @@ struct  motion_object_binding
 namespace ai { namespace detail {
 
 
-using  keyframe = qtgl::keyframe;
-using  keyframes = qtgl::keyframes;
-
 struct  motion_template
 {
-    keyframes  keyframes;
-    meta::reference_frames  reference_frames;
+    using  keyframes_type = qtgl::keyframes;
+    using  reference_frames_type = qtgl::modelspace;
+
+    keyframes_type  keyframes;
+    reference_frames_type  reference_frames;
     std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
 	meta::free_bones  free_bones;
 };
@@ -312,7 +271,7 @@ namespace ai { namespace detail {
 
 struct  skeletal_motion_templates_data
 {
-    using  modelspace = qtgl::modelspace; 
+    using  bone_names = std::vector<std::string>;
 
     struct  loop_target
     {
@@ -336,7 +295,7 @@ struct  skeletal_motion_templates_data
 
     using  motion_object_binding_map = std::unordered_map<std::string, detail::motion_object_binding>;
 
-    modelspace  pose_frames;
+    motion_template::reference_frames_type  pose_frames;
     bone_names  names;
     bone_hierarchy  hierarchy;
     bone_lengths  lengths;
@@ -379,9 +338,16 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     using  motion_template_cursor = detail::motion_template_cursor;
 
-    using  keyframe = detail::keyframe;
-    using  keyframes = detail::keyframes;
-    using  modelspace = detail::skeletal_motion_templates_data::modelspace;
+    using  keyframes = detail::motion_template::keyframes_type;
+    using  reference_frames = detail::motion_template::reference_frames_type;
+    using  free_bones_for_look_at_ptr = detail::meta::free_bones_for_look_at_ptr;
+
+    using  bone_names = detail::skeletal_motion_templates_data::bone_names;
+    using  bone_hierarchy = detail::bone_hierarchy;
+    using  bone_lengths = detail::bone_lengths;
+    using  bone_joints = detail::bone_joints;
+
+    using  motion_template = detail::motion_template;
 
     using  transition_info = detail::skeletal_motion_templates_data::transition_info;
     using  transition = detail::skeletal_motion_templates_data::transition;
@@ -390,16 +356,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  motion_object_binding_map = detail::skeletal_motion_templates_data::motion_object_binding_map;
     using  motion_object_binding = detail::motion_object_binding;
 
-    using  bone_names = detail::bone_names;
-    using  bone_hierarchy = detail::bone_hierarchy;
-    using  bone_lengths = detail::bone_lengths;
-	using  bone_joints = detail::bone_joints;
-
-    using  motion_template = detail::motion_template;
-
-    using  free_bones_for_look_at_ptr = detail::meta::free_bones_for_look_at_ptr;
-
-    modelspace  pose_frames() const { return resource().pose_frames; }
+    reference_frames  pose_frames() const { return resource().pose_frames; }
     bone_names  names() const { return resource().names; }
     bone_hierarchy  hierarchy() const { return resource().hierarchy; }
     bone_lengths  lengths() const { return resource().lengths; }
