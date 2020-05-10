@@ -129,8 +129,8 @@ action_controller_roller::action_controller_roller(blackboard_agent_weak_ptr con
                 m_config.ROLLER_MASS_INVERTED,
                 matrix33_zero()
                 );
-        get_blackboard()->m_scene->register_to_collision_contacts_stream(m_roller_nid, get_blackboard()->m_self_id);
     }
+    get_blackboard()->m_scene->register_to_collision_contacts_stream(m_roller_nid, get_blackboard()->m_self_id);
 
     if (!get_blackboard()->m_scene->has_scene_node(m_body_nid))
     {
@@ -163,8 +163,8 @@ action_controller_roller::action_controller_roller(blackboard_agent_weak_ptr con
                 m_config.BODY_MASS_INVERTED,
                 m_config.BODY_INERTIA_TENSOR_INVERTED
                 );
-        get_blackboard()->m_scene->register_to_collision_contacts_stream(m_body_nid, get_blackboard()->m_self_id);
     }
+    get_blackboard()->m_scene->register_to_collision_contacts_stream(m_body_nid, get_blackboard()->m_self_id);
 
     get_blackboard()->m_scene->enable_colliding_colliders_of_scene_nodes(m_roller_nid, m_body_nid, false);
 
@@ -447,7 +447,7 @@ void  action_controller_roller::insert_lower_joint_between_roller_and_body() con
                 );
     }
     float_32_bit const  bias[3] {
-            joint_separation_distance,
+            10.0f * joint_separation_distance,
             0.0f,
             0.0f
             };
