@@ -135,12 +135,12 @@ void  action_controller_interpolator_look_at::interpolate(
     float_32_bit const  src_param = m_current_bones->all_bones.empty() ? 0.0f : 1.0f;
     float_32_bit const  dst_param = m_dst_bones->all_bones.empty() ? 0.0f : 1.0f;
     float_32_bit const  param = src_param + interpolation_param * (dst_param - src_param);
-    for (auto bone : bones_to_consider)
+    for (auto const&  bone_and_rotations : bones_to_rotate)
         angeo::interpolate_spherical(
-            frames_to_update.at(bone),
-            frames.at(bone),
+            frames_to_update.at(bone_and_rotations.first),
+            frames.at(bone_and_rotations.first),
             param,
-            frames_to_update.at(bone)
+            frames_to_update.at(bone_and_rotations.first)
             );
 }
 

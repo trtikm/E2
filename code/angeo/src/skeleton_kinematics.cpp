@@ -395,7 +395,6 @@ bool  skeleton_rotate_bones_towards_target_pose(
 
         auto const&  rotations = rotation_props.at(bone_and_rotations.first);
 
-        coordinate_system  result_cs = pose_frames.at(bone_and_rotations.first);
         for (natural_32_bit  idx : bone_and_rotations.second)
         {
             joint_rotation_props const&  rot_props = rotations.at(idx);
@@ -428,10 +427,7 @@ bool  skeleton_rotate_bones_towards_target_pose(
             }
 
             rotate(frame, angle_axis_to_quaternion(angle, axis));
-            rotate(result_cs, angle_axis_to_quaternion(angle + current_angle, axis));
         }
-
-        frame.set_orientation(result_cs.orientation());
     }
     return target_pose_reached;
 }

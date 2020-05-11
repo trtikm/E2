@@ -19,7 +19,7 @@ struct  joint_rotation_props
     float_32_bit  m_max_angle;          // In range <0, 2*PI>; Defines an interval <-m_max_angle/2, +m_max_angle/2> of allowed
                                         // rotation angles along m_axis from m_zero_angle_direction to m_direction (projected to
                                         // the rotation plane).
-    float_32_bit  m_stiffness_with_parent_bone;    // In range <0,1>; How a rotation of a bone affect a rotation of the parent bone.
+    float_32_bit  m_stiffness_with_parent_bone;    // In range <0,1>; How a rotation of the bone correlates with a rotation of the parent bone.
     float_32_bit  m_max_angular_speed;  // in rad/s; must be a positive number.
 };
 
