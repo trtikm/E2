@@ -27,6 +27,7 @@ struct  motion_desire_props
 
     vector4  speed;
     vector3  look_at_target;
+    vector3  aim_at_target;
 };
 
 

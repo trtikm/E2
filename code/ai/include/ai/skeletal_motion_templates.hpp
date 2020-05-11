@@ -58,10 +58,15 @@ struct  motion_template
 
     using  look_at_info = std::vector<free_bones_for_look_at_ptr>;
 
+    using  free_bones_for_aim_at = free_bones_for_look_at;
+    using  free_bones_for_aim_at_ptr = std::shared_ptr<free_bones_for_aim_at const>;
+    using  aim_at_info = std::vector<free_bones_for_aim_at_ptr>;
+
     keyframes_type  keyframes;
     reference_frames_type  reference_frames;
     std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
     look_at_info  look_at;
+    aim_at_info  aim_at;
 };
 
 
@@ -200,6 +205,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  keyframes = detail::motion_template::keyframes_type;
     using  reference_frames = detail::motion_template::reference_frames_type;
     using  free_bones_for_look_at_ptr = detail::motion_template::free_bones_for_look_at_ptr;
+    using  free_bones_for_aim_at_ptr = detail::motion_template::free_bones_for_aim_at_ptr;
 
     using  bone_names = detail::skeletal_motion_templates_data::bone_names;
     using  bone_hierarchy = detail::skeletal_motion_templates_data::bone_hierarchy;

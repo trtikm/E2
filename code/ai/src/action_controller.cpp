@@ -250,6 +250,9 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
             desire.look_at_target(DESIRE_COORD::LEFT) * vector3_unit_x()
                 - desire.look_at_target(DESIRE_COORD::FORWARD) * vector3_unit_y()
                 + desire.look_at_target(DESIRE_COORD::UP) * vector3_unit_z(),
+            desire.aim_at_target(DESIRE_COORD::LEFT) * vector3_unit_x()
+                - desire.aim_at_target(DESIRE_COORD::FORWARD) * vector3_unit_y()
+                + desire.aim_at_target(DESIRE_COORD::UP) * vector3_unit_z(),
             m_roller.get_agent_frame()
             );
     m_interpolator.commit();

@@ -69,7 +69,9 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     motion_template&  record = entry.second;
                     if ((natural_32_bit)record.look_at.size() < record.keyframes.num_keyframes())
                         record.look_at.resize(record.keyframes.num_keyframes());
-                }                
+                    if ((natural_32_bit)record.aim_at.size() < record.keyframes.num_keyframes())
+                        record.aim_at.resize(record.keyframes.num_keyframes());
+                }
 
                 // And now let's check for consistency of loaded data.
 
@@ -122,9 +124,17 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     if (record.keyframes.num_keyframes() != record.look_at.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'look_at' differ in 'motions_map[" << entry.first << "]'.");
                     for (auto const  data_ptr : record.look_at)
-                        for (natural_32_bit  bone_index : data_ptr->all_bones)
-                            if (bone_index >= (natural_32_bit)names.size())
-                                throw std::runtime_error(msgstream() << "The 'look_at' data contain wrong bone index " << bone_index << " in 'motions_map[" << entry.first << "]'.");
+                        if (data_ptr != nullptr)
+                            for (natural_32_bit  bone_index : data_ptr->all_bones)
+                                if (bone_index >= (natural_32_bit)names.size())
+                                    throw std::runtime_error(msgstream() << "The 'look_at' data contain wrong bone index " << bone_index << " in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.aim_at.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'aim_at' differ in 'motions_map[" << entry.first << "]'.");
+                    for (auto const  data_ptr : record.aim_at)
+                        if (data_ptr != nullptr)
+                            for (natural_32_bit  bone_index : data_ptr->all_bones)
+                                if (bone_index >= (natural_32_bit)names.size())
+                                    throw std::runtime_error(msgstream() << "The 'aim_at' data contain wrong bone index " << bone_index << " in 'motions_map[" << entry.first << "]'.");
                 }
             },
             finaliser
@@ -495,6 +505,29 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                                     record.look_at.resize(n + 1U);
                                 for (natural_32_bit  i = void_and_range.second.get<natural_32_bit>("first"); i <= n; ++i)
                                     record.look_at.at(i) = data_ptr;
+                            }
+                        }
+                    }
+
+                    if (record.aim_at.empty() && boost::filesystem::is_regular_file(meta_pathname / "free_bones_aim_at.txt"))
+                    {
+                        std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(meta_pathname / "free_bones_aim_at.txt");
+                        for (boost::property_tree::ptree::value_type const&  void_and_data : *ptree)
+                        {
+                            auto const  data_ptr = std::make_shared<motion_template::free_bones_for_aim_at>();
+                            for (boost::property_tree::ptree::value_type const&  void_and_info : void_and_data.second.get_child("bones"))
+                            {
+                                data_ptr->all_bones.push_back(void_and_info.second.get<natural_32_bit>("bone_index"));
+                                if (void_and_info.second.get<bool>("is_end_effector"))
+                                    data_ptr->end_effector_bones.push_back(data_ptr->all_bones.back());
+                            }
+                            for (boost::property_tree::ptree::value_type const& void_and_range : void_and_data.second.get_child("keyframe_ranges"))
+                            {
+                                natural_32_bit const  n = void_and_range.second.get<natural_32_bit>("last");
+                                if (n >= (natural_32_bit)record.aim_at.size())
+                                    record.aim_at.resize(n + 1U);
+                                for (natural_32_bit  i = void_and_range.second.get<natural_32_bit>("first"); i <= n; ++i)
+                                    record.aim_at.at(i) = data_ptr;
                             }
                         }
                     }

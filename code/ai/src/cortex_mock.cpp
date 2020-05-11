@@ -42,6 +42,7 @@ void  cortex_mock::next_round(float_32_bit const  time_step_in_seconds)
     }
 
     m_motion_desire_props.look_at_target = 5.0f * vector3_unit(DESIRE_COORD::FORWARD);
+    m_motion_desire_props.aim_at_target = 0.3f * vector3_unit(DESIRE_COORD::FORWARD) + 0.3f * vector3_unit(DESIRE_COORD::UP);
 }
 
 

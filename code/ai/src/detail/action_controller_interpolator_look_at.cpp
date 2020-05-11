@@ -38,10 +38,12 @@ void  action_controller_interpolator_look_at::interpolate(
 {
     TMPROF_BLOCK();
 
+    m_current_bones = (interpolation_param < 0.5f) ? m_src_bones : m_dst_bones;
+
+    if (m_current_bones == nullptr || m_dst_bones == nullptr)
+        return;
     if (m_current_bones->all_bones.empty() && m_dst_bones->all_bones.empty())
         return;
-
-    m_current_bones = (interpolation_param < 0.5f) ? m_src_bones : m_dst_bones;
 
     ai::sensory_controller_sight_ptr const  sight = get_blackboard()->m_sensory_controller->get_sight();
     if (sight == nullptr)

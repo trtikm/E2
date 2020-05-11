@@ -51,6 +51,8 @@ add_library(${THIS_TARGET_NAME}
     ./src/detail/action_controller_interpolator_animation.cpp
     ./include/ai/detail/action_controller_interpolator_look_at.hpp
     ./src/detail/action_controller_interpolator_look_at.cpp
+    ./include/ai/detail/action_controller_interpolator_aim_at.hpp
+    ./src/detail/action_controller_interpolator_aim_at.cpp
 
     ./include/ai/detail/action_controller_roller.hpp
     ./src/detail/action_controller_roller.cpp
