@@ -86,6 +86,7 @@ action_controller_roller::action_controller_roller(blackboard_agent_weak_ptr con
     , m_seconds_since_last_contact(0.0f)
     , m_environment_linear_velocity(vector3_zero())
     , m_environment_angular_velocity(vector3_zero())
+    , m_external_linear_acceleration(vector3_zero())
     , m_angle_to_straight_pose(0.0f)
     , m_prev_angle_to_straight_pose(0.0f)
     , m_linear_velocity(vector3_zero())
