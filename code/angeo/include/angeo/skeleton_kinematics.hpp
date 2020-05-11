@@ -31,6 +31,26 @@ using  bone_look_at_targets =
             > >;
 
 
+struct  aim_at_target
+{
+    enum  KIND
+    {
+        AXIS_X = 0,
+        AXIS_Y = 1,
+        AXIS_Z = 2,
+        ORIGIN = 3
+    } kind;
+    vector3  value;         // A desired position/orientation of a related end-effector bone.
+};
+
+
+struct  aim_at_goal         // defines a constraint to a position/orientation of the related end-effector bone.
+{
+    natural_32_bit  bone;   // must be an end-effector bone.
+    aim_at_target  target;
+};
+
+
 void  skeleton_look_at(
         std::vector<coordinate_system>&  output_frames,     // output coordinate systems of bones rotated so that they look at the target.
         bone_look_at_targets const&  look_at_targets,       // the targets to look at.
@@ -44,11 +64,21 @@ void  skeleton_look_at(
         );
 
 
+void  skeleton_aim_at(
+        std::vector<coordinate_system>&  output_frames,     // output coordinate systems of bones rotated so that they aim at the passed targets.
+        std::vector<aim_at_goal> const&  goals,             // aim at goals.
+        std::vector<coordinate_system> const&  pose_frames, // pose coordinate systems of bones, i.e. in a neutral position from which to start the look at algo; DO NOT PASS THE CURRENT COORDINATE SYSTEMS OF BONES.
+        std::vector<integer_32_bit> const&  parents,        // value -1 at index 'i' means, the bone 'i' does not have a parent
+        std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.
+        std::unordered_set<integer_32_bit> const&  bones_to_consider,	// bones to be considered in the algo; i.e. a subset of 'parents' parameter.
+        std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >* const  involved_rotations_of_bones = nullptr
+        );
+
+
 // Returns true if the target pose was reached and false otherwise.
 bool  skeleton_rotate_bones_towards_target_pose(
         std::vector<coordinate_system>&  frames,    // coordinate systems of bones in the current pose which (some of them) will be moved towards the target pose frames 'target_pose_frames'.
         std::vector<coordinate_system> const&  target_pose_frames,  // coordinate systems of bones in the target pose.
-        std::vector<coordinate_system> const&  pose_frames,
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.
         std::unordered_map<integer_32_bit, std::vector<natural_32_bit> > const&  bones_to_rotate,
         float_32_bit const  dt

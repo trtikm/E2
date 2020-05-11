@@ -376,10 +376,25 @@ void  skeleton_look_at(
 }
 
 
+void  skeleton_aim_at(
+        std::vector<coordinate_system>&  output_frames,
+        std::vector<aim_at_goal> const&  goals,
+        std::vector<coordinate_system> const&  pose_frames,
+        std::vector<integer_32_bit> const&  parents,
+        std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
+        std::unordered_set<integer_32_bit> const&  bones_to_consider,
+        std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >* const  involved_rotations_of_bones
+        )
+{
+    TMPROF_BLOCK();
+
+    // TODO!
+}
+
+
 bool  skeleton_rotate_bones_towards_target_pose(
         std::vector<coordinate_system>&  frames,
         std::vector<coordinate_system> const&  target_pose_frames,
-        std::vector<coordinate_system> const&  pose_frames,
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
         std::unordered_map<integer_32_bit, std::vector<natural_32_bit> > const&  bones_to_rotate,
         float_32_bit const  dt

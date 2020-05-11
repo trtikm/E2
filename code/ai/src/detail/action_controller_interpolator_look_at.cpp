@@ -38,11 +38,10 @@ void  action_controller_interpolator_look_at::interpolate(
 {
     TMPROF_BLOCK();
 
-    m_current_bones = (interpolation_param < 0.5f) ? m_src_bones : m_dst_bones;
+    ASSUMPTION(frames_to_update.size() == get_blackboard()->m_motion_templates.names().size());
 
-    if (m_current_bones == nullptr || m_dst_bones == nullptr)
-        return;
-    if (m_current_bones->all_bones.empty() && m_dst_bones->all_bones.empty())
+    m_current_bones = (interpolation_param < 0.5f) ? m_src_bones : m_dst_bones;
+    if (m_current_bones == nullptr || m_current_bones->all_bones.empty() || m_current_bones->end_effector_bones.empty())
         return;
 
     ai::sensory_controller_sight_ptr const  sight = get_blackboard()->m_sensory_controller->get_sight();
@@ -59,9 +58,6 @@ void  action_controller_interpolator_look_at::interpolate(
     std::unordered_set<integer_32_bit>  bones_to_consider;
     for (auto bone : m_current_bones->all_bones)
         bones_to_consider.insert(bone);
-    if (m_current_bones != m_dst_bones)
-        for (auto bone : m_dst_bones->all_bones)
-            bones_to_consider.insert(bone);
 
     auto const&  parents = get_blackboard()->m_motion_templates.parents();
 
@@ -94,9 +90,6 @@ void  action_controller_interpolator_look_at::interpolate(
     angeo::bone_look_at_targets  look_at_targets;
     for (auto bone : m_current_bones->end_effector_bones)
         look_at_targets.insert({ (integer_32_bit)bone, { vector3_unit_y(), target } });
-    if (m_current_bones != m_dst_bones)
-        for (auto bone : m_dst_bones->end_effector_bones)
-            look_at_targets.insert({ (integer_32_bit)bone, { vector3_unit_y(), target } });
 
     // Now execute the look-at algo for the prepared data.
 
@@ -112,38 +105,22 @@ void  action_controller_interpolator_look_at::interpolate(
             &bones_to_rotate
             );
 
-    std::vector<angeo::coordinate_system>  frames;
-    frames.resize(get_blackboard()->m_motion_templates.names().size());
     for (auto const& bone_and_anges : bones_to_rotate)
         get_blackboard()->m_scene->get_frame_of_scene_node(
             get_blackboard()->m_bone_nids.at(bone_and_anges.first),
             true,
-            frames.at(bone_and_anges.first)
+            frames_to_update.at(bone_and_anges.first)
             );
 
     bool const target_pose_reached = angeo::skeleton_rotate_bones_towards_target_pose(
-            frames,
+            frames_to_update,
             target_frames,
-            get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
             get_blackboard()->m_motion_templates.joints(),
             bones_to_rotate,
             time_step_in_seconds
             );
     if (target_pose_reached)
         m_target_pose_reached = true;;
-
-    // And write results to the vector 'm_current_intepolation_state.frames' of final frames.
-
-    float_32_bit const  src_param = m_current_bones->all_bones.empty() ? 0.0f : 1.0f;
-    float_32_bit const  dst_param = m_dst_bones->all_bones.empty() ? 0.0f : 1.0f;
-    float_32_bit const  param = src_param + interpolation_param * (dst_param - src_param);
-    for (auto const&  bone_and_rotations : bones_to_rotate)
-        angeo::interpolate_spherical(
-            frames_to_update.at(bone_and_rotations.first),
-            frames.at(bone_and_rotations.first),
-            param,
-            frames_to_update.at(bone_and_rotations.first)
-            );
 }
 
 
