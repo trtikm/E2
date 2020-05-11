@@ -250,10 +250,7 @@ def get_object_rotation_quaternion(obj):
         if obj.rotation_mode == 'QUATERNION':
             return obj.rotation_quaternion
         elif obj.rotation_mode == "AXIS_ANGLE":
-            return mathutils.Quaternion(
-                (obj.rotation_axis_angle[0], obj.rotation_axis_angle[1], obj.rotation_axis_angle[2]),
-                obj.rotation_axis_angle[3]
-                )
+            return mathutils.Quaternion(mathutils.Vector(obj.rotation_axis_angle[1:3]), obj.rotation_axis_angle[0])
         else:
             return mathutils.Euler(
                 (obj.rotation_euler[0], obj.rotation_euler[1], obj.rotation_euler[2]),
@@ -1430,11 +1427,13 @@ def save_skeleton_template_files(
         with open(export_info["joints"], "w") as f:
             coord_systems = export_info["armature"]["bone_local_coord_systems"]
             joint_props_keys = [
-                "e2_joint_axis",
-                "e2_joint_axis_in_parent_space",
-                "e2_joint_max_angle",
-                "e2_joint_stiffness_with_parent_bone",
-                "e2_joint_max_angular_speed",
+                "e2_joint_axis",                        # Indices of axis vectors
+                "e2_joint_axis_in_parent_space",        # Bools (i.e. zeros and ones); relates to 'e2_joint_axis'
+                "e2_joint_zero_angle_direction",        # Indices of axis vectors; always in bone's parent cood system
+                "e2_joint_direction",                   # Scalars; multipliers of 'e2_joint_max_angle'; so, they define vectors in bone's cood system
+                "e2_joint_max_angle",                   # Scalars
+                "e2_joint_stiffness_with_parent_bone",  # Scalars
+                "e2_joint_max_angular_speed",           # Scalars
                 ]
             axis_vectors = [vector3_axis_x(), vector3_axis_y(), vector3_axis_z()]
             for bone_idx, bone in enumerate(armature.pose.bones):
@@ -1452,12 +1451,8 @@ def save_skeleton_template_files(
                                 u = W * mathutils.Vector((u[0], u[1], u[2], 0.0))
                             return u
 
-                        def get_complementary_axis_index():
-                            for k, idx in enumerate(bone["e2_joint_axis"]):
-                                if k != i and idx != bone["e2_joint_axis"][i]:
-                                    return idx
-                            assert len(bone["e2_joint_axis"]) == 1
-                            return (bone["e2_joint_axis"][0] + 1) % len(axis_vectors)
+                        def rotate_vector(vec, axis, angle):
+                            return mathutils.Matrix.Rotation(angle, 3, mathutils.Vector(axis)) * mathutils.Vector(vec)
 
                         def write_coords(u):
                             f.write("        {\n")
@@ -1466,20 +1461,20 @@ def save_skeleton_template_files(
                             f.write("            z " + float_to_string(u[2]) + "\n")
                             f.write("        }\n")
 
-                        j = get_complementary_axis_index()
-
                         f.write("    \"\"\n")
                         f.write("    {\n")
                         f.write("        axis\n")
-                        vec = get_axis_vector(bone["e2_joint_axis"][i], bone["e2_joint_axis_in_parent_space"][i] != 0)
-                        write_coords(vec)
+                        rot_axis = get_axis_vector(bone["e2_joint_axis"][i], int(bone["e2_joint_axis_in_parent_space"][i]) != 0)
+                        write_coords(rot_axis)
                         f.write("        axis_in_parent_space " + ("true" if bone["e2_joint_axis_in_parent_space"][i] else "false") + "\n")
                         f.write("        zero_angle_direction\n")
-                        vec = get_axis_vector(j, True)
-                        write_coords(vec)
+                        zero_dir = get_axis_vector(bone["e2_joint_zero_angle_direction"][i], True)
+                        write_coords(zero_dir)
                         f.write("        direction\n")
-                        vec = get_axis_vector(j, False)
-                        write_coords(vec)
+                        current_dir = rotate_vector(get_axis_vector(bone["e2_joint_zero_angle_direction"][i], False),
+                                                    get_axis_vector(bone["e2_joint_axis"][i], False),
+                                                    bone["e2_joint_direction"][i] * 0.5 * bone["e2_joint_max_angle"][i])
+                        write_coords(current_dir)
                         f.write("        max_angle " + float_to_string(bone["e2_joint_max_angle"][i]) + "\n")
                         f.write("        stiffness_with_parent_bone " + float_to_string(bone["e2_joint_stiffness_with_parent_bone"][i]) + "\n")
                         f.write("        max_angular_speed " + float_to_string(bone["e2_joint_max_angular_speed"][i]) + "\n")
