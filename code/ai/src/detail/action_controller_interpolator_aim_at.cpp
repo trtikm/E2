@@ -46,7 +46,7 @@ void  action_controller_interpolator_aim_at::interpolate(
 
     auto const&  parents = get_blackboard()->m_motion_templates.parents();
 
-    vector3 const  target = angeo::vector3_from_coordinate_system(aim_at_target_in_agent_space, agent_frame);
+    vector3 const  target = angeo::point3_from_coordinate_system(aim_at_target_in_agent_space, agent_frame);
     std::vector<angeo::aim_at_goal>  goals;
     for (natural_32_bit bone : m_current_bones->end_effector_bones)
         goals.push_back({ bone, { angeo::aim_at_target::ORIGIN, target }});
