@@ -44,7 +44,7 @@ keyboard_key_name  KEY_Z() { return "Z"; }
 
 keyboard_key_name  KEY_LAPOSTROPH() { return "`"; }
 keyboard_key_name  KEY_RAPOSTROPH() { return "'"; }
-keyboard_key_name  KEY_UNDERSCORE() { return "_"; }
+keyboard_key_name  KEY_MINUS() { return "-"; }
 keyboard_key_name  KEY_EQUAL() { return "="; }
 keyboard_key_name  KEY_LBRACKET() { return "["; }
 keyboard_key_name  KEY_RBRACKET() { return "]"; }

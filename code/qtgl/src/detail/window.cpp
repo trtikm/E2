@@ -73,6 +73,7 @@ std::unordered_map<int,keyboard_key_name> const&  qtkey_to_keyname()
         { Qt::Key_F12,          KEY_F12() },
         { Qt::Key_Space,        KEY_SPACE() },
         { Qt::Key_Comma,        KEY_COMMA() },
+        { Qt::Key_Minus,        KEY_MINUS() },
         { Qt::Key_Period,       KEY_DOT() },
         { Qt::Key_Slash,        KEY_SLASH() },
         { Qt::Key_0,            KEY_0() },
@@ -113,7 +114,8 @@ std::unordered_map<int,keyboard_key_name> const&  qtkey_to_keyname()
         { Qt::Key_Y,            KEY_Y() },
         { Qt::Key_Z,            KEY_Z() },
         { Qt::Key_Backslash,    KEY_BACKSLASH() },
-        { Qt::Key_Underscore,   KEY_UNDERSCORE() },
+        { Qt::Key_QuoteLeft,    KEY_LAPOSTROPH() },
+        { Qt::Key_Apostrophe,   KEY_RAPOSTROPH() },
     };
     return ktn;
 }

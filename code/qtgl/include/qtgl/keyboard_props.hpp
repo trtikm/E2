@@ -51,7 +51,7 @@ keyboard_key_name  KEY_Z();
 
 keyboard_key_name  KEY_LAPOSTROPH();
 keyboard_key_name  KEY_RAPOSTROPH();
-keyboard_key_name  KEY_UNDERSCORE();
+keyboard_key_name  KEY_MINUS();
 keyboard_key_name  KEY_EQUAL();
 keyboard_key_name  KEY_LBRACKET();
 keyboard_key_name  KEY_RBRACKET();
