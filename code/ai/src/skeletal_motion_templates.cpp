@@ -519,7 +519,27 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                             {
                                 data_ptr->all_bones.push_back(void_and_info.second.get<natural_32_bit>("bone_index"));
                                 if (void_and_info.second.get<bool>("is_end_effector"))
-                                    data_ptr->end_effector_bones.push_back(data_ptr->all_bones.back());
+                                {
+                                    motion_template::free_bones_for_aim_at::end_effector_constraints_map&  constraints_map =
+                                            data_ptr->end_effector_bones[data_ptr->all_bones.back()];
+                                    for (boost::property_tree::ptree::value_type const&  id_and_constraints :
+                                         void_and_info.second.get_child("constraint_props"))
+                                    {
+                                        motion_template::free_bones_for_aim_at::end_effector_constraints  constraints;
+                                        if (id_and_constraints.second.count("point_match_constraints") != 0UL)
+                                            for (boost::property_tree::ptree::value_type const&  id_and_point :
+                                                    id_and_constraints.second.get_child("point_match_constraints"))
+                                                constraints.point_match_constraints.insert({
+                                                        id_and_point.first,
+                                                        {
+                                                            id_and_point.second.get<float_32_bit>("x"),
+                                                            id_and_point.second.get<float_32_bit>("y"),
+                                                            id_and_point.second.get<float_32_bit>("z"),
+                                                        }
+                                                        });
+                                        constraints_map.insert({ id_and_constraints.first, constraints });
+                                    }
+                                }
                             }
                             for (boost::property_tree::ptree::value_type const& void_and_range : void_and_data.second.get_child("keyframe_ranges"))
                             {

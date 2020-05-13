@@ -378,7 +378,7 @@ void  skeleton_look_at(
 
 void  skeleton_aim_at(
         std::vector<coordinate_system>&  output_frames,
-        std::vector<aim_at_goal> const&  goals,
+        std::unordered_map<natural_32_bit, aim_at_end_effector_constraints>  const&  constraints,
         std::vector<coordinate_system> const&  pose_frames,
         std::vector<integer_32_bit> const&  parents,
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props,

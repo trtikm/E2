@@ -58,7 +58,18 @@ struct  motion_template
 
     using  look_at_info = std::vector<free_bones_for_look_at_ptr>;
 
-    using  free_bones_for_aim_at = free_bones_for_look_at;
+    struct  free_bones_for_aim_at
+    {
+        struct  end_effector_constraints
+        {
+            std::unordered_map<std::string, vector3>  point_match_constraints;
+        };
+        using  end_effector_constraints_map = std::unordered_map<std::string, end_effector_constraints>;
+        using  end_effector_bones_map = std::unordered_map<natural_32_bit, end_effector_constraints_map>;
+
+        std::vector<natural_32_bit>  all_bones;
+        end_effector_bones_map  end_effector_bones;
+    };
     using  free_bones_for_aim_at_ptr = std::shared_ptr<free_bones_for_aim_at const>;
     using  aim_at_info = std::vector<free_bones_for_aim_at_ptr>;
 

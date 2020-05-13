@@ -31,23 +31,15 @@ using  bone_look_at_targets =
             > >;
 
 
-struct  aim_at_target
+struct  aim_at_end_effector_constraints
 {
-    enum  KIND
+    struct  point_match_constraint
     {
-        AXIS_X = 0,
-        AXIS_Y = 1,
-        AXIS_Z = 2,
-        ORIGIN = 3
-    } kind;
-    vector3  value;         // A desired position/orientation of a related end-effector bone.
-};
+        vector3  target_in_world_space;
+        vector3  point_in_bone_space;
+    };
 
-
-struct  aim_at_goal         // defines a constraint to a position/orientation of the related end-effector bone.
-{
-    natural_32_bit  bone;   // must be an end-effector bone.
-    aim_at_target  target;
+    std::vector<point_match_constraint>  point_match_constraints;
 };
 
 
@@ -66,7 +58,7 @@ void  skeleton_look_at(
 
 void  skeleton_aim_at(
         std::vector<coordinate_system>&  output_frames,     // output coordinate systems of bones rotated so that they aim at the passed targets.
-        std::vector<aim_at_goal> const&  goals,             // aim at goals.
+        std::unordered_map<natural_32_bit, aim_at_end_effector_constraints>  const&  constraints,  // aim at constraints to be satisfied (i.e. minimise the error in satisfying them).
         std::vector<coordinate_system> const&  pose_frames, // pose coordinate systems of bones, i.e. in a neutral position from which to start the look at algo; DO NOT PASS THE CURRENT COORDINATE SYSTEMS OF BONES.
         std::vector<integer_32_bit> const&  parents,        // value -1 at index 'i' means, the bone 'i' does not have a parent
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.

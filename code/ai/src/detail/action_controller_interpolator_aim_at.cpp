@@ -47,15 +47,30 @@ void  action_controller_interpolator_aim_at::interpolate(
     auto const&  parents = get_blackboard()->m_motion_templates.parents();
 
     vector3 const  target = angeo::point3_from_coordinate_system(aim_at_target_in_agent_space, agent_frame);
-    std::vector<angeo::aim_at_goal>  goals;
-    for (natural_32_bit bone : m_current_bones->end_effector_bones)
-        goals.push_back({ bone, { angeo::aim_at_target::ORIGIN, target }});
+    std::unordered_map<natural_32_bit, angeo::aim_at_end_effector_constraints>   constraints;
+    for (auto const&   bone_and_constraints_map : m_current_bones->end_effector_bones)
+        for (auto const&  id_and_constraints : bone_and_constraints_map.second)
+        {
+            auto const  it = id_and_constraints.second.point_match_constraints.find("pointer_end");
+            if (it != id_and_constraints.second.point_match_constraints.cend())
+                constraints.insert({
+                        bone_and_constraints_map.first,     // end_effector_bone
+                        angeo::aim_at_end_effector_constraints{ 
+                            std::vector<angeo::aim_at_end_effector_constraints::point_match_constraint>{
+                                angeo::aim_at_end_effector_constraints::point_match_constraint{
+                                    target,                 // target_in_world_space
+                                    it->second              // point_in_bone_space
+                                    }
+                                }
+                            }
+                        });
+        }
 
     std::vector<angeo::coordinate_system>  target_frames;
     std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >  bones_to_rotate;
     angeo::skeleton_aim_at(
             target_frames,
-            goals,
+            constraints,
             get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
             parents,
             get_blackboard()->m_motion_templates.joints(),
