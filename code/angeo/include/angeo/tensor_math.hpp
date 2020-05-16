@@ -157,8 +157,8 @@ inline scalar  length(quaternion const& q) { return q.norm(); }
 inline quaternion  normalised(quaternion const& q) { return q.normalized(); }
 inline void  normalise(quaternion& q) { q.normalize(); }
 inline scalar  dot_product(quaternion const& u, quaternion const& v) { return u.dot(v); }
-inline vector4 const&  quaternion_coefficients_wxyz(quaternion const& q) { return { q.coeffs()(3), q.coeffs()(0), q.coeffs()(1), q.coeffs()(2) }; }
-inline vector4 const&  quaternion_coefficients_xyzw(quaternion const& q) { return q.coeffs(); }
+inline vector4  quaternion_coefficients_wxyz(quaternion const& q) { return { q.coeffs()(3), q.coeffs()(0), q.coeffs()(1), q.coeffs()(2) }; }
+inline vector4  quaternion_coefficients_xyzw(quaternion const& q) { return q.coeffs(); }
 
 quaternion  transform(quaternion const&  orientation, matrix44 const&  transformation);
 
