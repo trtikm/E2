@@ -36,6 +36,28 @@ float_32_bit  closest_point_on_line_to_point(
 }
 
 
+float_32_bit  closest_point_on_ray_to_point(
+        vector3 const&  ray_point,
+        vector3 const&  ray_direction,
+        vector3 const&  point,
+        float_32_bit const  min_param,
+        float_32_bit const  max_param,
+        vector3* const  output_closest_point
+        )
+{
+    float_32_bit const  ray_dot = dot_product(ray_direction, ray_direction);
+    if (ray_dot < 1e-6f)
+        return 0.0f;
+    float_32_bit  t = dot_product(point - ray_point, ray_direction) / ray_dot;
+    t = t < min_param ? min_param :
+        t > max_param ? max_param :
+                        t         ;
+    if (output_closest_point != nullptr)
+        *output_closest_point = ray_point + t * ray_direction;
+    return t;
+}
+
+
 natural_32_bit  closest_points_of_two_lines(
         vector3 const&  line_1_begin,
         vector3 const&  line_1_end,

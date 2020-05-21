@@ -62,6 +62,29 @@ float_32_bit  closest_point_on_line_to_point(
         );
 
 
+
+/**
+ * It computes a point to a parameter 't' on the ray 'X = ray_point + t * ray_direction'
+ * in range <min_param, max_param> such that X is the closest point to the passed one.
+ * @param ray_point     A point on the ray.
+ * @param ray_direction The direction vector of the ray.
+ * @param min_param     The minimal allowed value for the computed parameter.
+ * @param max_param     The maximal allowed value for the computed parameter.
+ * @param point         It is the point for which the function searches the closest point on the ray.
+ * @param output_closest_point  Pointer to a memory where the nearest point will be stored,
+ *                              if the pointer is not nullptr. The pointer may alias with any of the
+ *                              passed vectors.
+ */
+float_32_bit  closest_point_on_ray_to_point(
+        vector3 const&  ray_point,
+        vector3 const&  ray_direction,
+        vector3 const&  point,
+        float_32_bit const  min_param = -std::numeric_limits<float_32_bit>::max(),
+        float_32_bit const  max_param = +std::numeric_limits<float_32_bit>::max(),
+        vector3* const  output_closest_point = nullptr
+        );
+
+
 /**
 * It computes one or two pairs of closest points on the passed lines. The case when two pairs are
 * returned may only occur when both lines are parallel. Each point in each pair can be obtained
