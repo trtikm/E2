@@ -163,6 +163,9 @@ struct bind_ai_scene_to_simulator : public ai::scene
             float_32_bit const  initial_value
             ) override;
 
+    record_id  __dbg_insert_sketch_box(node_id const& nid, std::string const& name, vector3 const&  half_sizes_along_axes, vector4 const&  colour) override;
+    void  __dbg_erase_sketch_batch(record_id const&  rid) override;
+
 private:
 
     using collision_contacts_stream_type =

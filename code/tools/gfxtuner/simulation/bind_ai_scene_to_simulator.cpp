@@ -756,3 +756,43 @@ void  bind_ai_scene_to_simulator::insert_immediate_constraint(
             initial_value
             );
 }
+
+
+bind_ai_scene_to_simulator::record_id  bind_ai_scene_to_simulator::__dbg_insert_sketch_box(
+        node_id const&  nid,
+        std::string const&  name,
+        vector3 const&  half_sizes_along_axes,
+        vector4 const&  colour
+        )
+{
+    ASSUMPTION(
+            nid.valid()
+            && half_sizes_along_axes(0) > 0.0001f
+            && half_sizes_along_axes(1) > 0.0001f
+            && half_sizes_along_axes(2) > 0.0001f
+            && m_simulator_ptr != nullptr
+            );
+    scn::scene_node_ptr const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    m_simulator_ptr->insert_batch_to_scene_node(
+            name,
+            qtgl::get_sketch_id_prefix() + qtgl::make_box_id_without_prefix(half_sizes_along_axes, colour, qtgl::FOG_TYPE::NONE, false),
+            "default",
+            m_simulator_ptr->get_effects_config(),
+            nid
+            );
+    return record_id(nid, scn::get_batches_folder_name(), name);
+}
+
+
+void  bind_ai_scene_to_simulator::__dbg_erase_sketch_batch(record_id const&  rid)
+{
+    ASSUMPTION(
+            rid.valid()
+            && !rid.is_folder_reference()
+            && !rid.is_node_reference()
+            && rid.get_folder_name() == scn::get_batches_folder_name()
+            && m_simulator_ptr != nullptr
+            );
+    m_simulator_ptr->erase_batch_from_scene_node(rid.get_record_name(), rid.get_node_id());
+}
