@@ -48,36 +48,14 @@ struct  motion_template
 {
     using  keyframes_type = qtgl::keyframes;
     using  reference_frames_type = qtgl::modelspace;
-
-    struct  free_bones_for_look_at
-    {
-        std::vector<natural_32_bit>  all_bones;
-        std::vector<natural_32_bit>  end_effector_bones;
-    };
-    using  free_bones_for_look_at_ptr = std::shared_ptr<free_bones_for_look_at const>;
-
-    using  look_at_info = std::vector<free_bones_for_look_at_ptr>;
-
-    struct  free_bones_for_aim_at
-    {
-        struct  end_effector_constraints
-        {
-            std::unordered_map<std::string, vector3>  point_match_constraints;
-        };
-        using  end_effector_constraints_map = std::unordered_map<std::string, end_effector_constraints>;
-        using  end_effector_bones_map = std::unordered_map<natural_32_bit, end_effector_constraints_map>;
-
-        std::vector<natural_32_bit>  all_bones;
-        end_effector_bones_map  end_effector_bones;
-    };
-    using  free_bones_for_aim_at_ptr = std::shared_ptr<free_bones_for_aim_at const>;
-    using  aim_at_info = std::vector<free_bones_for_aim_at_ptr>;
+    using  look_at_names = std::unordered_set<std::string>;
+    using  aim_at_names = std::unordered_set<std::string>;
 
     keyframes_type  keyframes;
     reference_frames_type  reference_frames;
     std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
-    look_at_info  look_at;
-    aim_at_info  aim_at;
+    std::vector<look_at_names>  look_at;
+    std::vector<aim_at_names>  aim_at;
 };
 
 
@@ -136,7 +114,27 @@ struct  skeletal_motion_templates_data
 {
     using  bone_names = std::vector<std::string>;
     using  bone_lengths = std::vector<float_32_bit>;
-    using  bone_joints = std::vector<std::vector<angeo::joint_rotation_props> >;
+    using  bone_joints = angeo::joint_rotation_props_of_bones;
+
+    struct  look_at_info
+    {
+        natural_32_bit  end_effector_bone;
+        natural_32_bit  root_bone;
+        std::unordered_set<natural_32_bit>  all_bones;
+        vector3  direction;
+    };
+    using  look_at_info_ptr = std::shared_ptr<look_at_info const>;
+    using  look_at_infos = std::unordered_map<std::string, look_at_info_ptr>;
+
+    struct  aim_at_info
+    {
+        natural_32_bit  end_effector_bone;
+        natural_32_bit  root_bone;
+        std::unordered_set<natural_32_bit>  all_bones;
+        std::unordered_map<std::string, vector3>  touch_points;
+    };
+    using  aim_at_info_ptr = std::shared_ptr<aim_at_info const>;
+    using  aim_at_infos = std::unordered_map<std::string, aim_at_info_ptr>;
 
     struct  bone_hierarchy
     {
@@ -175,6 +173,8 @@ struct  skeletal_motion_templates_data
     bone_hierarchy  hierarchy;
     bone_lengths  lengths;
 	bone_joints  joints;
+    look_at_infos  look_at;
+    aim_at_infos  aim_at;
 
     std::unordered_map<std::string, motion_template>  motions_map;
     std::unordered_map<std::string, loop_target>  loop_targets;
@@ -215,13 +215,15 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     using  keyframes = detail::motion_template::keyframes_type;
     using  reference_frames = detail::motion_template::reference_frames_type;
-    using  free_bones_for_look_at_ptr = detail::motion_template::free_bones_for_look_at_ptr;
-    using  free_bones_for_aim_at_ptr = detail::motion_template::free_bones_for_aim_at_ptr;
 
     using  bone_names = detail::skeletal_motion_templates_data::bone_names;
     using  bone_hierarchy = detail::skeletal_motion_templates_data::bone_hierarchy;
     using  bone_lengths = detail::skeletal_motion_templates_data::bone_lengths;
     using  bone_joints = detail::skeletal_motion_templates_data::bone_joints;
+    using  look_at_info_ptr = detail::skeletal_motion_templates_data::look_at_info_ptr;
+    using  look_at_infos = detail::skeletal_motion_templates_data::look_at_infos;
+    using  aim_at_info_ptr = detail::skeletal_motion_templates_data::aim_at_info_ptr;
+    using  aim_at_infos = detail::skeletal_motion_templates_data::aim_at_infos;
 
     using  motion_template = detail::motion_template;
 
@@ -239,6 +241,8 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     bone_hierarchy::children_vector const&  children() const { return hierarchy().children; }
     bone_lengths const&  lengths() const { return resource().lengths; }
 	bone_joints const&  joints() const { return resource().joints; }
+    look_at_infos const&  look_at() const { return resource().look_at; }
+    aim_at_infos const&  aim_at() const { return resource().aim_at; }
 
     std::unordered_map<std::string, motion_template> const&  motions_map() const { return resource().motions_map; }
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }

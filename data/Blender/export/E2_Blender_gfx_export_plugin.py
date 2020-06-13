@@ -1423,30 +1423,67 @@ def save_skeleton_template_files(
         output_dir = os.path.join(export_info["root_dir"], "animations", "skeletal", remove_ignored_part_of_name(armature.name, "SKELETAL"))
 
         export_info["joints"] = os.path.join(output_dir, "joints.txt")
-        print("Saving skeleton template file " + os.path.relpath(export_info["joints"], export_info["root_dir"]))
+        print("Saving joints of bones: " + os.path.relpath(export_info["joints"], export_info["root_dir"]))
         with open(export_info["joints"], "w") as f:
             coord_systems = export_info["armature"]["bone_local_coord_systems"]
             joint_props_keys = [
                 "e2_joint_axis",                        # Indices of axis vectors
-                "e2_joint_axis_in_parent_space",        # Bools (i.e. zeros and ones); relates to 'e2_joint_axis'
                 "e2_joint_zero_angle_direction",        # Indices of axis vectors; always in bone's parent cood system
                 "e2_joint_direction",                   # Scalars; multipliers of 'e2_joint_max_angle'; so, they define vectors in bone's cood system
                 "e2_joint_max_angle",                   # Scalars
-                "e2_joint_stiffness_with_parent_bone",  # Scalars
                 "e2_joint_max_angular_speed",           # Scalars
                 ]
             axis_vectors = [vector3_axis_x(), vector3_axis_y(), vector3_axis_z()]
             for bone_idx, bone in enumerate(armature.pose.bones):
-                f.write(bone.name + "\n{")
                 if all(x in bone and len(bone[x]) == len(bone[joint_props_keys[0]]) for x in joint_props_keys):
-                    f.write("\n")
                     num_constraints = len(bone[joint_props_keys[0]])
+                    # First check that all rotation props of the joint are correct.
+                    for i in range(num_constraints):
+                        error_msg_prefix = "ERROR: In joint rotation props #" + str(i) + " of bone " + bone.name + ": "
+                        if not isinstance(bone["e2_joint_axis"][i], int):
+                            print(error_msg_prefix + "'e2_joint_axis' is not 'int'.")
+                            print("       Skipping joint definition.")
+                            continue
+                        if not isinstance(bone["e2_joint_zero_angle_direction"][i], int):
+                            print(error_msg_prefix + "'e2_joint_zero_angle_direction' is not 'int'.")
+                            print("       Skipping joint definition.")
+                            continue
+                        if bone["e2_joint_axis"][i] < 0 or bone["e2_joint_axis"][i] > 2:
+                            print(error_msg_prefix + "'e2_joint_axis' is not in [0,1,2].")
+                            print("       Skipping joint definition.")
+                            continue
+                        if bone["e2_joint_zero_angle_direction"][i] < 0 or bone["e2_joint_zero_angle_direction"][i] > 2:
+                            print(error_msg_prefix + "'e2_joint_zero_angle_direction' is not in [0,1,2].")
+                            print("       Skipping joint definition.")
+                            continue
+                        if bone["e2_joint_axis"][i] == bone["e2_joint_zero_angle_direction"][i]:
+                            print(error_msg_prefix + "'e2_joint_axis' == 'e2_joint_zero_angle_direction'.")
+                            print("       Skipping joint definition.")
+                            continue
+                        if bone["e2_joint_direction"][i] < -1.0 or bone["e2_joint_direction"][i] > 1.0:
+                            print(error_msg_prefix + "'e2_joint_direction' is not in range <-1.0, 1.0>.")
+                            print("       Skipping joint definition.")
+                            continue
+                        if bone["e2_joint_max_angle"][i] < 0.0 or bone["e2_joint_max_angle"][i] > 6.2831853:
+                            print(error_msg_prefix + "'e2_joint_max_angle' is not in range <0.0, 6.2831853>.")
+                            print("       Skipping joint definition.")
+                            continue
+                        if bone["e2_joint_max_angular_speed"][i] < 0.001:
+                            print(error_msg_prefix + "'e2_joint_max_angular_speed' < 0.001.")
+                            print("       Skipping joint definition.")
+                            continue
+                    # Now we save all rotation props of the joint.
+                    shift = "    "
+                    f.write("\"\"\n{\n")
+                    f.write(shift + "bone_index    " + str(bone_idx) + " ; " + bone.name + "\n")
+                    f.write(shift + "joint_rotation_props\n")
+                    f.write(shift + "{\n")
                     for i in range(num_constraints):
                         current_cs = coord_systems[bone_idx]
 
-                        def get_axis_vector(idx, in_parent_space):
+                        def get_axis_vector(idx, transform_to_parent_space):
                             u = axis_vectors[idx]
-                            if in_parent_space is True:
+                            if transform_to_parent_space is True:
                                 W = from_base_matrix(current_cs["position"], current_cs["orientation"])
                                 u = W * mathutils.Vector((u[0], u[1], u[2], 0.0))
                             return u
@@ -1455,31 +1492,29 @@ def save_skeleton_template_files(
                             return mathutils.Matrix.Rotation(angle, 3, mathutils.Vector(axis)) * mathutils.Vector(vec)
 
                         def write_coords(u):
-                            f.write("        {\n")
-                            f.write("            x " + float_to_string(u[0]) + "\n")
-                            f.write("            y " + float_to_string(u[1]) + "\n")
-                            f.write("            z " + float_to_string(u[2]) + "\n")
-                            f.write("        }\n")
+                            f.write(3*shift + "{\n")
+                            f.write(4*shift + "x " + float_to_string(u[0]) + "\n")
+                            f.write(4*shift + "y " + float_to_string(u[1]) + "\n")
+                            f.write(4*shift + "z " + float_to_string(u[2]) + "\n")
+                            f.write(3*shift + "}\n")
 
-                        f.write("    \"\"\n")
-                        f.write("    {\n")
-                        f.write("        axis\n")
-                        rot_axis = get_axis_vector(bone["e2_joint_axis"][i], int(bone["e2_joint_axis_in_parent_space"][i]) != 0)
-                        write_coords(rot_axis)
-                        f.write("        axis_in_parent_space " + ("true" if bone["e2_joint_axis_in_parent_space"][i] else "false") + "\n")
-                        f.write("        zero_angle_direction\n")
-                        zero_dir = get_axis_vector(bone["e2_joint_zero_angle_direction"][i], True)
-                        write_coords(zero_dir)
-                        f.write("        direction\n")
-                        current_dir = rotate_vector(get_axis_vector(bone["e2_joint_zero_angle_direction"][i], False),
-                                                    get_axis_vector(bone["e2_joint_axis"][i], False),
-                                                    bone["e2_joint_direction"][i] * 0.5 * bone["e2_joint_max_angle"][i])
-                        write_coords(current_dir)
-                        f.write("        max_angle " + float_to_string(bone["e2_joint_max_angle"][i]) + "\n")
-                        f.write("        stiffness_with_parent_bone " + float_to_string(bone["e2_joint_stiffness_with_parent_bone"][i]) + "\n")
-                        f.write("        max_angular_speed " + float_to_string(bone["e2_joint_max_angular_speed"][i]) + "\n")
-                        f.write("    }\n")
-                f.write("}\n")
+                        f.write(2*shift + "\"\"\n")
+                        f.write(2*shift + "{\n")
+                        f.write(3*shift + "axis\n")
+                        write_coords(get_axis_vector(bone["e2_joint_axis"][i], i == 0))
+                        f.write(3*shift + "zero_angle_direction\n")
+                        write_coords(get_axis_vector(bone["e2_joint_zero_angle_direction"][i], i == 0))
+                        f.write(3*shift + "direction\n")
+                        write_coords(
+                            rotate_vector(get_axis_vector(bone["e2_joint_zero_angle_direction"][i], False),
+                                          get_axis_vector(bone["e2_joint_axis"][i], False),
+                                          bone["e2_joint_direction"][i] * 0.5 * bone["e2_joint_max_angle"][i])
+                            )
+                        f.write(3*shift + "max_angle " + float_to_string(bone["e2_joint_max_angle"][i]) + "\n")
+                        f.write(3*shift + "max_angular_speed " + float_to_string(bone["e2_joint_max_angular_speed"][i]) + "\n")
+                        f.write(2*shift + "}\n")
+                    f.write(shift + "}\n")
+                    f.write("}\n")
 
 
 def save_batch(

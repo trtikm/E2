@@ -13,6 +13,8 @@ namespace ai { namespace detail {
 
 struct  action_controller_interpolator_aim_at  final : public action_controller_interpolator_shared
 {
+    using  aim_at_infos = std::vector<skeletal_motion_templates::aim_at_info_ptr>;
+    
     explicit action_controller_interpolator_aim_at(
             action_controller_interpolator const* const  interpolator_,
             skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor
@@ -28,12 +30,12 @@ struct  action_controller_interpolator_aim_at  final : public action_controller_
 
     void  commit() const { /* nothing to commit acctualy. */ }
 
-    skeletal_motion_templates::free_bones_for_aim_at_ptr  get_current_bones() const { return m_current_bones; }
+    aim_at_infos const&  get_current_aim_at_infos() const { return m_current_infos; }
 
 private:
-    skeletal_motion_templates::free_bones_for_aim_at_ptr  m_src_bones;
-    skeletal_motion_templates::free_bones_for_aim_at_ptr  m_current_bones;
-    skeletal_motion_templates::free_bones_for_aim_at_ptr  m_dst_bones;
+    aim_at_infos  m_src_infos;
+    aim_at_infos  m_current_infos;
+    aim_at_infos  m_dst_infos;
 };
 
 

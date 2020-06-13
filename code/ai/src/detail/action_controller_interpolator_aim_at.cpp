@@ -15,12 +15,12 @@ action_controller_interpolator_aim_at::action_controller_interpolator_aim_at(
         )
     : action_controller_interpolator_shared(interpolator_)
 
-    , m_src_bones()
-    , m_current_bones()
-    , m_dst_bones()
+    , m_src_infos()
+    , m_current_infos()
+    , m_dst_infos()
 {
     set_target(initial_template_cursor);
-    m_src_bones = m_current_bones = m_dst_bones;
+    m_src_infos = m_current_infos = m_dst_infos;
 }
 
 
@@ -36,62 +36,57 @@ void  action_controller_interpolator_aim_at::interpolate(
 
     ASSUMPTION(frames_to_update.size() == get_blackboard()->m_motion_templates.names().size());
     
-    m_current_bones = (interpolation_param < 0.5f) ? m_src_bones : m_dst_bones;
-    if (m_current_bones == nullptr || m_current_bones->all_bones.empty() || m_current_bones->end_effector_bones.empty())
-        return;
-
-    std::unordered_set<integer_32_bit>  bones_to_consider;
-    for (auto bone : m_current_bones->all_bones)
-        bones_to_consider.insert(bone);
-
     auto const&  parents = get_blackboard()->m_motion_templates.parents();
 
-    vector3 const  target = angeo::point3_from_coordinate_system(aim_at_target_in_agent_space, agent_frame);
-    std::unordered_map<natural_32_bit, angeo::aim_at_end_effector_constraints>   constraints;
-    for (auto const&   bone_and_constraints_map : m_current_bones->end_effector_bones)
-        for (auto const&  id_and_constraints : bone_and_constraints_map.second)
+    m_current_infos = (interpolation_param < 0.5f) ? m_src_infos : m_dst_infos;
+    for (skeletal_motion_templates::aim_at_info_ptr  aim_at_ptr : m_current_infos)
+    {
+        if (aim_at_ptr->touch_points.count("pointer") == 0UL)
+            continue;
+
+        std::unordered_map<natural_32_bit, angeo::coordinate_system const*>  pose_frame_pointers;
+        std::unordered_map<natural_32_bit, angeo::coordinate_system*>  output_frame_pointers;
+        for (natural_32_bit  bone : aim_at_ptr->all_bones)
         {
-            auto const  it = id_and_constraints.second.point_match_constraints.find("pointer_end");
-            if (it != id_and_constraints.second.point_match_constraints.cend())
-                constraints.insert({
-                        bone_and_constraints_map.first,     // end_effector_bone
-                        angeo::aim_at_end_effector_constraints{ 
-                            std::vector<angeo::aim_at_end_effector_constraints::point_match_constraint>{
-                                angeo::aim_at_end_effector_constraints::point_match_constraint{
-                                    target,                 // target_in_world_space
-                                    it->second              // point_in_bone_space
-                                    }
-                                }
-                            }
-                        });
+            pose_frame_pointers.insert({ bone, &get_blackboard()->m_motion_templates.pose_frames().get_coord_systems().at(bone) });
+            output_frame_pointers.insert({ bone, &frames_to_update.at(bone) });
         }
 
-    std::vector<angeo::coordinate_system>  target_frames;
-    std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >  bones_to_rotate;
-    angeo::skeleton_aim_at(
-            target_frames,
-            constraints,
-            get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
-            parents,
-            get_blackboard()->m_motion_templates.joints(),
-            bones_to_consider,
-            &bones_to_rotate
-            );
+        angeo::skeleton_kinematics_of_chain_of_bones  kinematics(
+                pose_frame_pointers,
+                aim_at_ptr->all_bones,
+                aim_at_ptr->end_effector_bone,
+                get_blackboard()->m_motion_templates.joints(),
+                parents,
+                get_blackboard()->m_motion_templates.lengths()
+                );
 
-    for (auto const& bone_and_anges : bones_to_rotate)
-        get_blackboard()->m_scene->get_frame_of_scene_node(
-            get_blackboard()->m_bone_nids.at(bone_and_anges.first),
-            true,
-            frames_to_update.at(bone_and_anges.first)
-            );
+        angeo::bone_aim_at_targets  aim_at_targets;
+        {
+            angeo::coordinate_system_explicit  chain_world_frame;
+            if (parents.at(aim_at_ptr->root_bone) != -1)
+            {
+                angeo::coordinate_system  frame;
+                get_blackboard()->m_scene->get_frame_of_scene_node(
+                        get_blackboard()->m_bone_nids.at(parents.at(aim_at_ptr->root_bone)),
+                        false,
+                        frame
+                        );
+                chain_world_frame = frame;
+            }
 
-    angeo::skeleton_rotate_bones_towards_target_pose(
-            frames_to_update,
-            target_frames,
-            get_blackboard()->m_motion_templates.joints(),
-            bones_to_rotate,
-            time_step_in_seconds
-            );
+            vector3  target = angeo::point3_to_coordinate_system(
+                                    angeo::point3_from_coordinate_system(aim_at_target_in_agent_space, agent_frame),
+                                    chain_world_frame
+                                    );
+
+            aim_at_targets.push_back(angeo::aim_at_target{ target, aim_at_ptr->touch_points.at("pointer") });
+        }
+
+        angeo::skeleton_aim_at(kinematics, aim_at_targets);
+
+        kinematics.commit_target_frames(output_frame_pointers);
+    }
 }
 
 
@@ -99,8 +94,15 @@ void  action_controller_interpolator_aim_at::set_target(
         skeletal_motion_templates::motion_template_cursor const&  cursor
         )
 {
-    m_src_bones = m_current_bones;
-    m_dst_bones = get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).aim_at.at(cursor.keyframe_index);
+    m_src_infos = m_current_infos;
+    m_dst_infos.clear();
+    for (std::string const&  name :
+         get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).aim_at.at(cursor.keyframe_index))
+    {
+        auto const  it = get_blackboard()->m_motion_templates.aim_at().find(name);
+        if (it != get_blackboard()->m_motion_templates.aim_at().end())
+            m_dst_infos.push_back(it->second);
+    }
 }
 
 

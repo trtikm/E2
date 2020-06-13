@@ -42,10 +42,14 @@ void  sensory_controller_sight::next_round(float_32_bit const  time_step_in_seco
 
         std::vector<std::pair<vector3, vector3> >  look_at_props;
         std::vector<vector3>  eye_right_directions;
-        for (natural_32_bit bone : get_blackboard()->m_action_controller->get_free_bones_for_look_at()->end_effector_bones)
+        for (skeletal_motion_templates::look_at_info_ptr  look_at_ptr :
+             get_blackboard()->m_action_controller->get_free_bones_for_look_at())
         {
             angeo::coordinate_system  frame;
-            get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_bone_nids.at(bone), false, frame);
+            get_blackboard()->m_scene->get_frame_of_scene_node(
+                    get_blackboard()->m_bone_nids.at(look_at_ptr->end_effector_bone),
+                    false, frame
+                    );
             look_at_props.push_back({ frame.origin(), angeo::axis_y(frame) });
             eye_right_directions.push_back(angeo::axis_x(frame));
         }
@@ -65,7 +69,10 @@ void  sensory_controller_sight::next_round(float_32_bit const  time_step_in_seco
             //// Let us predict/estimate the position of the origin at the next round.
             //camera_origin += (1.0f * time_step_in_seconds) * get_blackboard()->m_action_controller->get_motion_object_motion().velocity.m_linear;
         }
-        vector3 const  look_at_target = angeo::compute_common_look_at_target_for_multiple_eyes(look_at_props);
+        vector3 const  look_at_target =
+                look_at_props.size() == 1UL ?
+                        camera_origin + look_at_props.front().second :
+                        angeo::compute_common_look_at_target_for_multiple_eyes(look_at_props);
         vector3  camera_z_axis;
         {
             camera_z_axis = camera_origin - look_at_target;

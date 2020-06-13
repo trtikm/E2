@@ -16,15 +16,15 @@ action_controller_interpolator_look_at::action_controller_interpolator_look_at(
         )
     : action_controller_interpolator_shared(interpolator_)
 
-    , m_src_bones()
-    , m_current_bones()
-    , m_dst_bones()
+    , m_src_infos()
+    , m_current_infos()
+    , m_dst_infos()
 
     , m_look_at_target_in_local_space(vector3_zero())
     , m_target_pose_reached(true)
 {
     set_target(initial_template_cursor);
-    m_src_bones = m_current_bones = m_dst_bones;
+    m_src_infos = m_current_infos = m_dst_infos;
 }
 
 
@@ -40,87 +40,58 @@ void  action_controller_interpolator_look_at::interpolate(
 
     ASSUMPTION(frames_to_update.size() == get_blackboard()->m_motion_templates.names().size());
 
-    m_current_bones = (interpolation_param < 0.5f) ? m_src_bones : m_dst_bones;
-    if (m_current_bones == nullptr || m_current_bones->all_bones.empty() || m_current_bones->end_effector_bones.empty())
-        return;
-
-    ai::sensory_controller_sight_ptr const  sight = get_blackboard()->m_sensory_controller->get_sight();
-    if (sight == nullptr)
-        return;
-    ai::sensory_controller_sight::camera_perspective_ptr const  camera = sight->get_camera();
-    if (camera == nullptr)
-        return;
-
-    update_look_at_target_in_local_space(look_at_target_in_agent_space, agent_frame, camera);
-
-    // We setup data for the look-at algo.
-
-    std::unordered_set<integer_32_bit>  bones_to_consider;
-    for (auto bone : m_current_bones->all_bones)
-        bones_to_consider.insert(bone);
-
     auto const&  parents = get_blackboard()->m_motion_templates.parents();
 
-    vector3  target;
+    m_current_infos = (interpolation_param < 0.5f) ? m_src_infos : m_dst_infos;
+
+    std::vector<angeo::skeleton_kinematics_of_chain_of_bones>  kinematics;
+    std::vector< angeo::look_at_target>  look_at_targets;
+    std::unordered_map<natural_32_bit, angeo::coordinate_system*>  output_frame_pointers;
+    for (skeletal_motion_templates::look_at_info_ptr  look_at_ptr : m_current_infos)
     {
-        target = m_look_at_target_in_local_space;
+        std::unordered_map<natural_32_bit, angeo::coordinate_system const*>  pose_frame_pointers;
+        for (natural_32_bit  bone : look_at_ptr->all_bones)
+        {
+            pose_frame_pointers.insert({ bone, &get_blackboard()->m_motion_templates.pose_frames().get_coord_systems().at(bone) });
+            output_frame_pointers.insert({ bone, &frames_to_update.at(bone) });
+        }
 
-        // The target is now in agent's local space, but we need the target in the space of the bone which is the closest parent bone
-        // to all bones in 'bones_to_consider'; note that the parent bone cannot be in 'bones_to_consider'.
+        kinematics.push_back({
+                pose_frame_pointers,
+                look_at_ptr->all_bones,
+                look_at_ptr->end_effector_bone,
+                get_blackboard()->m_motion_templates.joints(),
+                parents,
+                get_blackboard()->m_motion_templates.lengths()
+                });
 
-        integer_32_bit  closest_parent_bone = *bones_to_consider.begin();
-        for (; bones_to_consider.count(closest_parent_bone) != 0ULL; closest_parent_bone = parents.at(closest_parent_bone))
-            ;
+        angeo::look_at_target  target;
+        {
+            angeo::coordinate_system_explicit  chain_world_frame;
+            if (parents.at(look_at_ptr->root_bone) != -1)
+            {
+                angeo::coordinate_system  frame;
+                get_blackboard()->m_scene->get_frame_of_scene_node(
+                        get_blackboard()->m_bone_nids.at(parents.at(look_at_ptr->root_bone)),
+                        false,
+                        frame
+                        );
+                chain_world_frame = frame;
+            }
 
-        angeo::coordinate_system  closest_parent_bone_frame;
-        get_blackboard()->m_scene->get_frame_of_scene_node(
-                get_blackboard()->m_bone_nids.at(closest_parent_bone),
-                false,
-                closest_parent_bone_frame
-                );
-
-        matrix44  T;
-        angeo::to_base_matrix(closest_parent_bone_frame, T);
-        matrix44  F;
-        angeo::from_base_matrix(agent_frame, F);
-
-        target = transform_point(target, T * F);
+            target.target = angeo::point3_to_coordinate_system(
+                                    angeo::point3_from_coordinate_system(look_at_target_in_agent_space, agent_frame),
+                                    chain_world_frame
+                                    );
+            target.direction = look_at_ptr->direction;
+        }
+        look_at_targets.push_back(target);
     }
 
-    angeo::bone_look_at_targets  look_at_targets;
-    for (auto bone : m_current_bones->end_effector_bones)
-        look_at_targets.insert({ (integer_32_bit)bone, { vector3_unit_y(), target } });
+    angeo::skeleton_look_at(kinematics, look_at_targets);
 
-    // Now execute the look-at algo for the prepared data.
-
-    std::vector<angeo::coordinate_system>  target_frames;
-    std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >  bones_to_rotate;
-    angeo::skeleton_look_at(
-            target_frames,
-            look_at_targets,
-            get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
-            parents,
-            get_blackboard()->m_motion_templates.joints(),
-            bones_to_consider,
-            &bones_to_rotate
-            );
-
-    for (auto const& bone_and_anges : bones_to_rotate)
-        get_blackboard()->m_scene->get_frame_of_scene_node(
-            get_blackboard()->m_bone_nids.at(bone_and_anges.first),
-            true,
-            frames_to_update.at(bone_and_anges.first)
-            );
-
-    bool const target_pose_reached = angeo::skeleton_rotate_bones_towards_target_pose(
-            frames_to_update,
-            target_frames,
-            get_blackboard()->m_motion_templates.joints(),
-            bones_to_rotate,
-            time_step_in_seconds
-            );
-    if (target_pose_reached)
-        m_target_pose_reached = true;;
+    for (angeo::skeleton_kinematics_of_chain_of_bones const&  kinematic : kinematics)
+        kinematic.commit_target_frames(output_frame_pointers);
 }
 
 
@@ -128,8 +99,15 @@ void  action_controller_interpolator_look_at::set_target(
         skeletal_motion_templates::motion_template_cursor const&  cursor
         )
 {
-    m_src_bones = m_current_bones;
-    m_dst_bones = get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).look_at.at(cursor.keyframe_index);
+    m_src_infos = m_current_infos;
+    m_dst_infos.clear();
+    for (std::string const&  name :
+         get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).look_at.at(cursor.keyframe_index))
+    {
+        auto const  it = get_blackboard()->m_motion_templates.look_at().find(name);
+        if (it != get_blackboard()->m_motion_templates.look_at().end())
+            m_dst_infos.push_back(it->second);
+    }
 }
 
 

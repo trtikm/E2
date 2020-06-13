@@ -14,6 +14,8 @@ namespace ai { namespace detail {
 
 struct  action_controller_interpolator_look_at  final : public action_controller_interpolator_shared
 {
+    using  look_at_infos = std::vector<skeletal_motion_templates::look_at_info_ptr>;
+
     explicit action_controller_interpolator_look_at(
             action_controller_interpolator const* const  interpolator_,
             skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor
@@ -27,9 +29,9 @@ struct  action_controller_interpolator_look_at  final : public action_controller
             );
     void  set_target(skeletal_motion_templates::motion_template_cursor const&  cursor);
 
-    void  commit() const { /* nothing to commit acctualy. */ }
+    void  commit() const { /* nothing to commit actually. */ }
 
-    skeletal_motion_templates::free_bones_for_look_at_ptr  get_current_bones() const { return m_current_bones; }
+    look_at_infos const&  get_current_bones() const { return m_current_infos; }
 
 private:
     void  update_look_at_target_in_local_space(
@@ -38,9 +40,9 @@ private:
             ai::sensory_controller_sight::camera_perspective_ptr const  camera
             );
 
-    skeletal_motion_templates::free_bones_for_look_at_ptr  m_src_bones;
-    skeletal_motion_templates::free_bones_for_look_at_ptr  m_current_bones;
-    skeletal_motion_templates::free_bones_for_look_at_ptr  m_dst_bones;
+    look_at_infos  m_src_infos;
+    look_at_infos  m_current_infos;
+    look_at_infos  m_dst_infos;
 
     vector3  m_look_at_target_in_local_space;
     bool  m_target_pose_reached;

@@ -83,8 +83,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     throw std::runtime_error("The 'hierarchy' was not loaded.");
                 if (lengths.empty())
                     throw std::runtime_error("The 'lengths' were not loaded.");
-                if (joints.empty())
-                    throw std::runtime_error("The 'joints' is empty.");
                 if (motions_map.empty())
                     throw std::runtime_error("The 'motions_map' is empty.");
 
@@ -96,8 +94,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     throw std::runtime_error("The size of 'pose_frames' and 'hierarchy.parents' are different.");
                 if (pose_frames.size() != lengths.size())
                     throw std::runtime_error("The size of 'pose_frames' and 'lengths' are different.");
-                if (joints.size() != names.size())
-                    throw std::runtime_error("The size of 'joints' and 'names' are different.");
 
                 if (hierarchy.parents.at(0U) != -1)
                     throw std::runtime_error("Invariant failure: hierarchy.parent(0) != -1.");
@@ -123,18 +119,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'bboxes' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.look_at.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'look_at' differ in 'motions_map[" << entry.first << "]'.");
-                    for (auto const  data_ptr : record.look_at)
-                        if (data_ptr != nullptr)
-                            for (natural_32_bit  bone_index : data_ptr->all_bones)
-                                if (bone_index >= (natural_32_bit)names.size())
-                                    throw std::runtime_error(msgstream() << "The 'look_at' data contain wrong bone index " << bone_index << " in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.aim_at.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'aim_at' differ in 'motions_map[" << entry.first << "]'.");
-                    for (auto const  data_ptr : record.aim_at)
-                        if (data_ptr != nullptr)
-                            for (natural_32_bit  bone_index : data_ptr->all_bones)
-                                if (bone_index >= (natural_32_bit)names.size())
-                                    throw std::runtime_error(msgstream() << "The 'aim_at' data contain wrong bone index " << bone_index << " in 'motions_map[" << entry.first << "]'.");
                 }
             },
             finaliser
@@ -257,35 +243,68 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             boost::filesystem::path const  joints_pathname = pathname / "joints.txt";
             
             std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(joints_pathname);
-	        joints.resize(ptree->size());
-	        natural_32_bit i = 0U;
-	        for (boost::property_tree::ptree::value_type const&  bone_and_props : *ptree)
-	        {
-		        std::vector<angeo::joint_rotation_props>&  data_at_i = joints.at(i);
-		        data_at_i.resize(bone_and_props.second.size());
-		        natural_32_bit j = 0U;
-		        for (boost::property_tree::ptree::value_type const&  none_and_props : bone_and_props.second)
+	        for (boost::property_tree::ptree::value_type const&  void_and_bone_joints : *ptree)
+            {
+                natural_32_bit const  bone = void_and_bone_joints.second.get<natural_32_bit>("bone_index");
+                for (boost::property_tree::ptree::value_type const&  void_and_props :
+                        void_and_bone_joints.second.get_child("joint_rotation_props"))
 		        {
-			        boost::property_tree::ptree const&  joint_ptree = none_and_props.second;
-			        angeo::joint_rotation_props&  joint = data_at_i.at(j);
-			        joint.m_axis = vector3(joint_ptree.get<float_32_bit>("axis.x"),
-								           joint_ptree.get<float_32_bit>("axis.y"),
-								           joint_ptree.get<float_32_bit>("axis.z"));
-			        joint.m_axis_in_parent_space = joint_ptree.get<bool>("axis_in_parent_space");
-			        joint.m_zero_angle_direction = vector3(joint_ptree.get<float_32_bit>("zero_angle_direction.x"),
-												           joint_ptree.get<float_32_bit>("zero_angle_direction.y"),
-												           joint_ptree.get<float_32_bit>("zero_angle_direction.z"));
-			        joint.m_direction = vector3(joint_ptree.get<float_32_bit>("direction.x"),
-										        joint_ptree.get<float_32_bit>("direction.y"),
-										        joint_ptree.get<float_32_bit>("direction.z"));
-			        joint.m_max_angle = joint_ptree.get<float_32_bit>("max_angle");
-			        joint.m_stiffness_with_parent_bone = joint_ptree.get<float_32_bit>("stiffness_with_parent_bone");
-			        joint.m_max_angular_speed = joint_ptree.get<float_32_bit>("max_angular_speed");
-
-			        ++j;
+			        angeo::joint_rotation_props  joint;
+			        joint.axis = vector3(void_and_props.second.get<float_32_bit>("axis.x"),
+                                         void_and_props.second.get<float_32_bit>("axis.y"),
+                                         void_and_props.second.get<float_32_bit>("axis.z"));
+			        joint.zero_angle_direction = vector3(void_and_props.second.get<float_32_bit>("zero_angle_direction.x"),
+                                                         void_and_props.second.get<float_32_bit>("zero_angle_direction.y"),
+                                                         void_and_props.second.get<float_32_bit>("zero_angle_direction.z"));
+			        joint.direction = vector3(void_and_props.second.get<float_32_bit>("direction.x"),
+                                              void_and_props.second.get<float_32_bit>("direction.y"),
+                                              void_and_props.second.get<float_32_bit>("direction.z"));
+			        joint.max_angle = void_and_props.second.get<float_32_bit>("max_angle");
+			        joint.max_angular_speed = void_and_props.second.get<float_32_bit>("max_angular_speed");
+			        joints[bone].push_back(joint);
 		        }
-		        ++i;
-	        }
+            }
+        }
+
+        if (boost::filesystem::is_regular_file(pathname / "look_at.txt"))
+        {
+            std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "look_at.txt");
+            for (boost::property_tree::ptree::value_type const&  name_and_data : *ptree)
+            {
+                std::shared_ptr<look_at_info>  info = std::make_shared<look_at_info>();
+                for (boost::property_tree::ptree::value_type const&  void_and_bone : name_and_data.second.get_child("bones"))
+                    info->all_bones.insert(void_and_bone.second.get_value<natural_32_bit>());
+                info->end_effector_bone = name_and_data.second.get<natural_32_bit>("end_effector_bone");
+                info->root_bone = name_and_data.second.get<natural_32_bit>("root_bone");
+                info->direction = {
+                        name_and_data.second.get<float_32_bit>("direction.x"),
+                        name_and_data.second.get<float_32_bit>("direction.y"),
+                        name_and_data.second.get<float_32_bit>("direction.z")
+                        };
+                look_at[name_and_data.first] = info;
+            }
+        }
+
+        if (boost::filesystem::is_regular_file(pathname / "aim_at.txt"))
+        {
+            std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "aim_at.txt");
+            for (boost::property_tree::ptree::value_type const&  name_and_data : *ptree)
+            {
+                std::shared_ptr<aim_at_info>  info = std::make_shared<aim_at_info>();
+                for (boost::property_tree::ptree::value_type const&  void_and_bone : name_and_data.second.get_child("bones"))
+                    info->all_bones.insert(void_and_bone.second.get_value<natural_32_bit>());
+                info->end_effector_bone = name_and_data.second.get<natural_32_bit>("end_effector_bone");
+                info->root_bone = name_and_data.second.get<natural_32_bit>("root_bone");
+                for (boost::property_tree::ptree::value_type const&  name_and_point : name_and_data.second.get_child("touch_points"))
+                    info->touch_points.insert({
+                            name_and_point.first,
+                            vector3{
+                                name_and_point.second.get<float_32_bit>("x"),
+                                name_and_point.second.get<float_32_bit>("y"),
+                                name_and_point.second.get<float_32_bit>("z")
+                            }});
+                aim_at[name_and_data.first] = info;
+            }
         }
 
         if (boost::filesystem::is_regular_file(pathname / "loop_targets.txt"))
@@ -486,68 +505,36 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         istr.close();
                     }
 
-                    if (record.look_at.empty() && boost::filesystem::is_regular_file(meta_pathname / "free_bones_look_at.txt"))
+                    if (record.look_at.empty() && boost::filesystem::is_regular_file(meta_pathname / "look_at.txt"))
                     {
-                        std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(meta_pathname / "free_bones_look_at.txt");
+                        std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(meta_pathname / "look_at.txt");
                         for (boost::property_tree::ptree::value_type const&  void_and_data : *ptree)
                         {
-                            auto const  data_ptr = std::make_shared<motion_template::free_bones_for_look_at>();
-                            for (boost::property_tree::ptree::value_type const&  void_and_info : void_and_data.second.get_child("bones"))
-                            {
-                                data_ptr->all_bones.push_back(void_and_info.second.get<natural_32_bit>("bone_index"));
-                                if (void_and_info.second.get<bool>("is_end_effector"))
-                                    data_ptr->end_effector_bones.push_back(data_ptr->all_bones.back());
-                            }
+                            std::string const  name = void_and_data.second.get<std::string>("name");
                             for (boost::property_tree::ptree::value_type const& void_and_range : void_and_data.second.get_child("keyframe_ranges"))
                             {
                                 natural_32_bit const  n = void_and_range.second.get<natural_32_bit>("last");
                                 if (n >= (natural_32_bit)record.look_at.size())
                                     record.look_at.resize(n + 1U);
                                 for (natural_32_bit  i = void_and_range.second.get<natural_32_bit>("first"); i <= n; ++i)
-                                    record.look_at.at(i) = data_ptr;
+                                    record.look_at.at(i).insert(name);
                             }
                         }
                     }
 
-                    if (record.aim_at.empty() && boost::filesystem::is_regular_file(meta_pathname / "free_bones_aim_at.txt"))
+                    if (boost::filesystem::is_regular_file(meta_pathname / "aim_at.txt"))
                     {
-                        std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(meta_pathname / "free_bones_aim_at.txt");
+                        std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(meta_pathname / "aim_at.txt");
                         for (boost::property_tree::ptree::value_type const&  void_and_data : *ptree)
                         {
-                            auto const  data_ptr = std::make_shared<motion_template::free_bones_for_aim_at>();
-                            for (boost::property_tree::ptree::value_type const&  void_and_info : void_and_data.second.get_child("bones"))
-                            {
-                                data_ptr->all_bones.push_back(void_and_info.second.get<natural_32_bit>("bone_index"));
-                                if (void_and_info.second.get<bool>("is_end_effector"))
-                                {
-                                    motion_template::free_bones_for_aim_at::end_effector_constraints_map&  constraints_map =
-                                            data_ptr->end_effector_bones[data_ptr->all_bones.back()];
-                                    for (boost::property_tree::ptree::value_type const&  id_and_constraints :
-                                         void_and_info.second.get_child("constraint_props"))
-                                    {
-                                        motion_template::free_bones_for_aim_at::end_effector_constraints  constraints;
-                                        if (id_and_constraints.second.count("point_match_constraints") != 0UL)
-                                            for (boost::property_tree::ptree::value_type const&  id_and_point :
-                                                    id_and_constraints.second.get_child("point_match_constraints"))
-                                                constraints.point_match_constraints.insert({
-                                                        id_and_point.first,
-                                                        {
-                                                            id_and_point.second.get<float_32_bit>("x"),
-                                                            id_and_point.second.get<float_32_bit>("y"),
-                                                            id_and_point.second.get<float_32_bit>("z"),
-                                                        }
-                                                        });
-                                        constraints_map.insert({ id_and_constraints.first, constraints });
-                                    }
-                                }
-                            }
+                            std::string const  name = void_and_data.second.get<std::string>("name");
                             for (boost::property_tree::ptree::value_type const& void_and_range : void_and_data.second.get_child("keyframe_ranges"))
                             {
                                 natural_32_bit const  n = void_and_range.second.get<natural_32_bit>("last");
                                 if (n >= (natural_32_bit)record.aim_at.size())
                                     record.aim_at.resize(n + 1U);
                                 for (natural_32_bit  i = void_and_range.second.get<natural_32_bit>("first"); i <= n; ++i)
-                                    record.aim_at.at(i) = data_ptr;
+                                    record.aim_at.at(i).insert(name);
                             }
                         }
                     }
