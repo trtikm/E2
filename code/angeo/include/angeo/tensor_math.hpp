@@ -98,6 +98,7 @@ vector3  orthogonal(vector3 const&  u);
 inline vector3  project_to_unit_vector(vector3 const&  u, vector3 const&  unit_target) { return dot_product(u, unit_target) * unit_target; }
 inline vector3  project_to_unit_vector(vector3 const& u, vector3 const& unit_target, float_32_bit& output_normal_distance) { output_normal_distance = dot_product(u, unit_target); return output_normal_distance * unit_target; }
 inline vector3  project_to_vector(vector3 const&  u, vector3 const&  target) { return (dot_product(u, target) / dot_product(target, target)) * target; }
+inline vector3  subtract_projection_to_unit_vector(vector3 const&  u, vector3 const&  unit_target) { return u - project_to_unit_vector(u, unit_target); }
 scalar  cos_angle(vector3 const& u, vector3 const& v);
 inline scalar  angle(vector3 const& u, vector3 const& v) { return std::acosf(cos_angle(u,v)); }
 

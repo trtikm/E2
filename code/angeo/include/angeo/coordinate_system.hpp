@@ -136,6 +136,26 @@ void  integrate(
         vector3 const&  angular_velocity
         );
 
+inline vector3  vector3_from_coordinate_system(vector3 const&  u, coordinate_system const&  coord_system)
+{
+    return quaternion_to_rotation_matrix(coord_system.orientation()) * u;
+}
+
+inline vector3  vector3_to_coordinate_system(vector3 const&  u, coordinate_system const&  coord_system)
+{
+    return transpose33(quaternion_to_rotation_matrix(coord_system.orientation())) * u;
+}
+
+inline vector3  point3_from_coordinate_system(vector3 const&  p, coordinate_system const&  coord_system)
+{
+    return coord_system.origin() + vector3_from_coordinate_system(p, coord_system);
+}
+
+inline vector3  point3_to_coordinate_system(vector3 const&  p, coordinate_system const&  coord_system)
+{
+    return vector3_to_coordinate_system(p - coord_system.origin(), coord_system);
+}
+
 void  from_base_matrix(coordinate_system const&  coord_system, matrix44&  output);
 void  to_base_matrix(coordinate_system const&  coord_system, matrix44&  output);
 
