@@ -117,7 +117,7 @@ batch  create_text(
             // uv-coords of the character in the texture.
             vector2 const  lo_uv{
                 props.min_u + char_column * (props.char_uv_width + props.char_separ_u),
-                1.0f - (props.min_v + (char_row + 1U) * (props.char_uv_height + props.char_separ_v)),
+                1.0f - (props.min_v + props.char_uv_height + char_row * (props.char_uv_height + props.char_separ_v)),
             };
             vector2 const  hi_uv{ lo_uv(0) + props.char_uv_width, lo_uv(1) + props.char_uv_height };
 
