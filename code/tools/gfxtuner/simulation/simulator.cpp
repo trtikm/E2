@@ -965,11 +965,10 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
             if (agents.ready(agent_id))
             {
                 ai::blackboard_agent_const_ptr const  blackboard = agents.at(agent_id).get_blackboard();
-                for (ai::skeletal_motion_templates::look_at_info_ptr  look_at_ptr :
-                     blackboard->m_action_controller->get_free_bones_for_look_at())
+                for (auto const&  name_and_info : blackboard->m_motion_templates.look_at())
                 {
                     scn::scene_node_id const  raw_bone_id = detail::skeleton_build_scene_node_id_of_bones(
-                            look_at_ptr->end_effector_bone,
+                            name_and_info.second->end_effector_bone,
                             blackboard->m_motion_templates.parents(),
                             blackboard->m_motion_templates.names()
                             );

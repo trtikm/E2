@@ -48,13 +48,11 @@ struct  motion_template
 {
     using  keyframes_type = qtgl::keyframes;
     using  reference_frames_type = qtgl::modelspace;
-    using  look_at_names = std::unordered_set<std::string>;
     using  aim_at_names = std::unordered_set<std::string>;
 
     keyframes_type  keyframes;
     reference_frames_type  reference_frames;
     std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
-    std::vector<look_at_names>  look_at;
     std::vector<aim_at_names>  aim_at;
 };
 

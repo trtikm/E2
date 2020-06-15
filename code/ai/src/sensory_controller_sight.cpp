@@ -42,12 +42,11 @@ void  sensory_controller_sight::next_round(float_32_bit const  time_step_in_seco
 
         std::vector<std::pair<vector3, vector3> >  look_at_props;
         std::vector<vector3>  eye_right_directions;
-        for (skeletal_motion_templates::look_at_info_ptr  look_at_ptr :
-             get_blackboard()->m_action_controller->get_free_bones_for_look_at())
+        for (auto const&  name_and_info : get_blackboard()->m_motion_templates.look_at())
         {
             angeo::coordinate_system  frame;
             get_blackboard()->m_scene->get_frame_of_scene_node(
-                    get_blackboard()->m_bone_nids.at(look_at_ptr->end_effector_bone),
+                    get_blackboard()->m_bone_nids.at(name_and_info.second->end_effector_bone),
                     false, frame
                     );
             look_at_props.push_back({ frame.origin(), angeo::axis_y(frame) });

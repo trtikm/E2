@@ -15,16 +15,9 @@ action_controller_interpolator_look_at::action_controller_interpolator_look_at(
         skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor
         )
     : action_controller_interpolator_shared(interpolator_)
-
-    , m_src_infos()
-    , m_current_infos()
-    , m_dst_infos()
-
     , m_look_at_target_in_local_space(vector3_zero())
     , m_target_pose_reached(true)
 {
-    set_target(initial_template_cursor);
-    m_src_infos = m_current_infos = m_dst_infos;
 }
 
 
@@ -42,15 +35,13 @@ void  action_controller_interpolator_look_at::interpolate(
 
     auto const&  parents = get_blackboard()->m_motion_templates.parents();
 
-    m_current_infos = (interpolation_param < 0.5f) ? m_src_infos : m_dst_infos;
-
     std::vector<angeo::skeleton_kinematics_of_chain_of_bones>  kinematics;
     std::vector< angeo::look_at_target>  look_at_targets;
     std::unordered_map<natural_32_bit, angeo::coordinate_system*>  output_frame_pointers;
-    for (skeletal_motion_templates::look_at_info_ptr  look_at_ptr : m_current_infos)
+    for (auto const&  name_and_info : get_blackboard()->m_motion_templates.look_at())
     {
         std::unordered_map<natural_32_bit, angeo::coordinate_system const*>  pose_frame_pointers;
-        for (natural_32_bit  bone : look_at_ptr->all_bones)
+        for (natural_32_bit  bone : name_and_info.second->all_bones)
         {
             pose_frame_pointers.insert({ bone, &get_blackboard()->m_motion_templates.pose_frames().get_coord_systems().at(bone) });
             output_frame_pointers.insert({ bone, &frames_to_update.at(bone) });
@@ -58,8 +49,8 @@ void  action_controller_interpolator_look_at::interpolate(
 
         kinematics.push_back({
                 pose_frame_pointers,
-                look_at_ptr->all_bones,
-                look_at_ptr->end_effector_bone,
+                name_and_info.second->all_bones,
+                name_and_info.second->end_effector_bone,
                 get_blackboard()->m_motion_templates.joints(),
                 parents,
                 get_blackboard()->m_motion_templates.lengths()
@@ -68,11 +59,11 @@ void  action_controller_interpolator_look_at::interpolate(
         angeo::look_at_target  target;
         {
             angeo::coordinate_system_explicit  chain_world_frame;
-            if (parents.at(look_at_ptr->root_bone) != -1)
+            if (parents.at(name_and_info.second->root_bone) != -1)
             {
                 angeo::coordinate_system  frame;
                 get_blackboard()->m_scene->get_frame_of_scene_node(
-                        get_blackboard()->m_bone_nids.at(parents.at(look_at_ptr->root_bone)),
+                        get_blackboard()->m_bone_nids.at(parents.at(name_and_info.second->root_bone)),
                         false,
                         frame
                         );
@@ -83,7 +74,7 @@ void  action_controller_interpolator_look_at::interpolate(
                                     angeo::point3_from_coordinate_system(look_at_target_in_agent_space, agent_frame),
                                     chain_world_frame
                                     );
-            target.direction = look_at_ptr->direction;
+            target.direction = name_and_info.second->direction;
         }
         look_at_targets.push_back(target);
     }
@@ -92,22 +83,6 @@ void  action_controller_interpolator_look_at::interpolate(
 
     for (angeo::skeleton_kinematics_of_chain_of_bones const&  kinematic : kinematics)
         kinematic.commit_target_frames(output_frame_pointers);
-}
-
-
-void  action_controller_interpolator_look_at::set_target(
-        skeletal_motion_templates::motion_template_cursor const&  cursor
-        )
-{
-    m_src_infos = m_current_infos;
-    m_dst_infos.clear();
-    for (std::string const&  name :
-         get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).look_at.at(cursor.keyframe_index))
-    {
-        auto const  it = get_blackboard()->m_motion_templates.look_at().find(name);
-        if (it != get_blackboard()->m_motion_templates.look_at().end())
-            m_dst_infos.push_back(it->second);
-    }
 }
 
 

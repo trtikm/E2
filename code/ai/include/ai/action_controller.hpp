@@ -27,8 +27,6 @@ struct  action_controller
     scene::node_id const&  get_roller_nid() const { return m_roller.get_roller_nid(); }
     scene::node_id const&  get_body_nid() const { return m_roller.get_body_nid(); }
     angeo::coordinate_system_explicit const&  get_agent_frame() const { return m_roller.get_agent_frame(); }
-    std::vector<skeletal_motion_templates::look_at_info_ptr> const&  get_free_bones_for_look_at() const
-    { return m_interpolator.get_look_at_iterpolator().get_current_bones(); }
 
 private:
 

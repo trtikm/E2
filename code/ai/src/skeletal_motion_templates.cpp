@@ -67,8 +67,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                 for (auto&  entry : motions_map)
                 {
                     motion_template&  record = entry.second;
-                    if ((natural_32_bit)record.look_at.size() < record.keyframes.num_keyframes())
-                        record.look_at.resize(record.keyframes.num_keyframes());
                     if ((natural_32_bit)record.aim_at.size() < record.keyframes.num_keyframes())
                         record.aim_at.resize(record.keyframes.num_keyframes());
                 }
@@ -108,8 +106,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The 'reference_frames' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.bboxes.empty())
                         throw std::runtime_error(msgstream() << "The 'bboxes' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.look_at.empty())
-                        throw std::runtime_error(msgstream() << "The 'look_at' were not loaded to 'motions_map[" << entry.first << "]'.");
 
                     if (record.keyframes.num_keyframes() < 2U)
                         throw std::runtime_error(msgstream() << "The count of keyframes is less than 2 in 'motions_map[" << entry.first << "]'.");
@@ -117,8 +113,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'reference_frames' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.bboxes.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'bboxes' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.look_at.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'look_at' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.aim_at.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'aim_at' differ in 'motions_map[" << entry.first << "]'.");
                 }
@@ -503,23 +497,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                             record.bboxes.push_back(sizes);
                         }
                         istr.close();
-                    }
-
-                    if (record.look_at.empty() && boost::filesystem::is_regular_file(meta_pathname / "look_at.txt"))
-                    {
-                        std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(meta_pathname / "look_at.txt");
-                        for (boost::property_tree::ptree::value_type const&  void_and_data : *ptree)
-                        {
-                            std::string const  name = void_and_data.second.get<std::string>("name");
-                            for (boost::property_tree::ptree::value_type const& void_and_range : void_and_data.second.get_child("keyframe_ranges"))
-                            {
-                                natural_32_bit const  n = void_and_range.second.get<natural_32_bit>("last");
-                                if (n >= (natural_32_bit)record.look_at.size())
-                                    record.look_at.resize(n + 1U);
-                                for (natural_32_bit  i = void_and_range.second.get<natural_32_bit>("first"); i <= n; ++i)
-                                    record.look_at.at(i).insert(name);
-                            }
-                        }
                     }
 
                     if (boost::filesystem::is_regular_file(meta_pathname / "aim_at.txt"))
