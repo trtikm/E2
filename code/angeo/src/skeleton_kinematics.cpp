@@ -149,6 +149,51 @@ void  skeleton_average_joint_angle_deltas(
 }
 
 
+void  skeleton_interpolate_joint_rotation_states(
+        joint_angle_deltas_vector&  angle_deltas,
+        joint_rotation_state_vector const&  src_states,
+        joint_rotation_state_vector const&  dst_states,
+        joint_rotation_props_vector const&  joint_definitions,
+        float_32_bit const  time_step_in_seconds
+        )
+{
+    INVARIANT(src_states.size() == dst_states.size() && src_states.size() == joint_definitions.size() && time_step_in_seconds >= 0.0f);
+    angle_deltas.resize(joint_definitions.size());
+    for (natural_32_bit i = 0U, n = (natural_32_bit)joint_definitions.size(); i != n; ++i)
+    {
+        float_32_bit const  max_angle_delta = joint_definitions.at(i).max_angular_speed * time_step_in_seconds;
+        float_32_bit const  angle_delta = dst_states.at(i).current_angle - src_states.at(i).current_angle;
+        if (angle_delta < 0.0f)
+            angle_deltas[i] = std::max(-max_angle_delta, angle_delta);
+        else
+            angle_deltas[i] = std::min( max_angle_delta, angle_delta);
+    }
+}
+
+
+void  skeleton_interpolate_joint_rotation_states(
+        joint_angle_deltas_of_bones&  angle_deltas,
+        joint_rotation_states_of_bones const&  src_states,
+        joint_rotation_states_of_bones const&  dst_states,
+        joint_rotation_props_of_bones const&  joint_definitions,
+        float_32_bit const  time_step_in_seconds
+        )
+{
+    for (auto&  bone_and_state : src_states)
+    {
+        auto const  dst_it = dst_states.find(bone_and_state.first);
+        if (dst_it != dst_states.end())
+            skeleton_interpolate_joint_rotation_states(
+                    angle_deltas[bone_and_state.first],
+                    bone_and_state.second,
+                    dst_it->second,
+                    joint_definitions.at(bone_and_state.first),
+                    time_step_in_seconds
+                    );
+    }
+}
+
+
 void  skeleton_apply_angle_deltas(
         joint_rotation_state_vector&  joint_states,
         joint_angle_deltas_vector const&  angle_deltas,

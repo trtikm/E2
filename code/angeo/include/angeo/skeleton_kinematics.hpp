@@ -182,6 +182,25 @@ void  skeleton_average_joint_angle_deltas(
         );
 
 
+// This is the interpolation algorithm for a single joint. I.e. computes rotation angle deltas from src_states
+// towards dst_states w.r.t. 'max_angular_speed' fields in corresponding 'joint_definitions'.
+void  skeleton_interpolate_joint_rotation_states(
+        joint_angle_deltas_vector&  angle_deltas,
+        joint_rotation_state_vector const&  src_states,
+        joint_rotation_state_vector const&  dst_states,
+        joint_rotation_props_vector const&  joint_definitions,
+        float_32_bit const  time_step_in_seconds
+        );
+// This is the interpolation algorithm for a given chain. Calls function above for each bone in the chain.
+void  skeleton_interpolate_joint_rotation_states(
+        joint_angle_deltas_of_bones&  angle_deltas,
+        joint_rotation_states_of_bones const&  src_states,
+        joint_rotation_states_of_bones const&  dst_states,
+        joint_rotation_props_of_bones const&  joint_definitions,
+        float_32_bit const  time_step_in_seconds
+        );
+
+
 // This is the forward kinematics algorithm for a single joint.
 void  skeleton_apply_angle_deltas(
         joint_rotation_state_vector&  joint_states,
