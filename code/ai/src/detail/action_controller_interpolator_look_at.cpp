@@ -15,6 +15,7 @@ action_controller_interpolator_look_at::action_controller_interpolator_look_at(
         skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor
         )
     : action_controller_interpolator_shared(interpolator_)
+    , m_joint_rotations()
     , m_look_at_target_in_local_space(vector3_zero())
     , m_target_pose_reached(true)
 {
@@ -81,8 +82,26 @@ void  action_controller_interpolator_look_at::interpolate(
 
     angeo::skeleton_look_at(kinematics, look_at_targets);
 
-    for (angeo::skeleton_kinematics_of_chain_of_bones const&  kinematic : kinematics)
-        kinematic.commit_target_frames(output_frame_pointers);
+    angeo::joint_angle_deltas_of_bones  angle_deltas;
+    angeo::joint_rotation_props_of_bones  joint_definitions;
+    for (angeo::skeleton_kinematics_of_chain_of_bones const&  kin : kinematics)
+        for (auto const&  bone_and_states : kin.joint_states)
+        {
+            auto  it = m_joint_rotations.find(bone_and_states.first);
+            if (it == m_joint_rotations.end())
+                it = m_joint_rotations.insert(bone_and_states).first;
+            auto const  def_it = kin.joint_definitions.find(bone_and_states.first);
+            angeo::skeleton_interpolate_joint_rotation_states(
+                    angle_deltas[bone_and_states.first],
+                    it->second,
+                    bone_and_states.second,
+                    def_it->second,
+                    time_step_in_seconds
+                    );
+            joint_definitions.insert(*def_it);
+        }
+    angeo::skeleton_apply_angle_deltas(m_joint_rotations, angle_deltas, joint_definitions);
+    angeo::skeleton_commit_joint_states_to_frames(output_frame_pointers, m_joint_rotations);
 }
 
 

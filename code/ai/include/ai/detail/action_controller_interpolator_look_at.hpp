@@ -7,6 +7,7 @@
 #   include <ai/sensory_controller_sight.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
+#   include <angeo/skeleton_kinematics.hpp>
 #   include <vector>
 
 namespace ai { namespace detail {
@@ -36,6 +37,7 @@ private:
             ai::sensory_controller_sight::camera_perspective_ptr const  camera
             );
 
+    angeo::joint_rotation_states_of_bones  m_joint_rotations;
     vector3  m_look_at_target_in_local_space;
     bool  m_target_pose_reached;
 };
