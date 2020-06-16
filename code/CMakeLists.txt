@@ -50,7 +50,7 @@ add_subdirectory(./utility)
 add_subdirectory(./pycellab)
     message("-- pycellab")
     
-# Here follow tests, if they should be included.
+# Here follow tools, if they should be included.
 if(NOT DEFINED E2_BUILD_ALSO_TOOLS)
     set(E2_BUILD_ALSO_TOOLS "Yes" CACHE STRING "Build also tools? (Yes/No)" FORCE)
 endif()
@@ -61,7 +61,19 @@ if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
     add_subdirectory(./tools)
 endif()
 
-    
+
+# Here follow experiments, if they should be included.
+if(NOT DEFINED E2_BUILD_ALSO_EXPERIMENTS)
+    set(E2_BUILD_ALSO_EXPERIMENTS "Yes" CACHE STRING "Build also experiments? (Yes/No)" FORCE)
+endif()
+message("Build also experiments: " ${E2_BUILD_ALSO_EXPERIMENTS})
+string( TOLOWER "${E2_BUILD_ALSO_EXPERIMENTS}" E2_TEMPORARY_VARIBLE)
+if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
+    include_directories("${PROJECT_SOURCE_DIR}/code/experiments")
+    add_subdirectory(./experiments)
+endif()
+
+
 # Here follow tests, if they should be included.
 if(NOT DEFINED E2_BUILD_ALSO_TESTS)
     set(E2_BUILD_ALSO_TESTS "Yes" CACHE STRING "Build also tests? (Yes/No)" FORCE)
