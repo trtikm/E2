@@ -10,8 +10,10 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <vector>
-#include <ostream>
+#include <iostream>
 #include <algorithm>
 
 
@@ -27,6 +29,7 @@ struct  experiment_setup
     natural_32_bit  NUM_SPIKE_TRAINS;
     natural_32_bit  MIN_SPIKE_DISTANCE;
     natural_32_bit  SEED;
+    natural_32_bit  ID;
 };
 
 
@@ -104,13 +107,13 @@ void  compute_distribution(spikes_distribution&  distribution, experiment_setup 
 }
 
 
-void  save_distribution(spikes_distribution const&  distribution, natural_32_bit const  ID, experiment_setup const&  setup)
+void  save_distribution(spikes_distribution const&  distribution, experiment_setup const&  setup)
 {
     boost::filesystem::path  dir = canonical_path(get_program_options()->outputDir());
     boost::filesystem::create_directories(dir);
 
     std::string const  fname =
-        msgstream() << "exp" << ID
+        msgstream() << "exp" << setup.ID
                     << "_trains_" << setup.NUM_SPIKE_TRAINS
                     << "_spiking_" << setup.SPIKING_FREQUENCY << "Hz"
                     << "_simul_" << setup.SIMULATION_FREQUENCY << "Hz"
@@ -146,159 +149,46 @@ void run(int argc, char* argv[])
 {
     TMPROF_BLOCK();
 
-    std::vector<experiment_setup>  setups {
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            100U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            100U,   // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            100U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            500U,   // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            100U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            1500U,  // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            100U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            10000U, // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            200U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            100U,   // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            200U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            500U,   // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            200U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            1500U,  // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            200U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            10000U, // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            151U    // SEED
-        },
-
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            500U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            100U,   // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            500U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            500U,   // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            500U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            1500U,  // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            500U,   // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            10000U, // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            1000U,  // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            100U,   // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            1000U,  // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            500U,   // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            1000U,  // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            1500U,  // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-        {
-            10U,    // NUM_TRIALS
-            10U,    // NUM_SECONDS_TO_SIMULATE
-            1000U,  // SIMULATION_FREQUENCY
-            20U,    // SPIKING_FREQUENCY
-            10000U, // NUM_SPIKE_TRAINS
-            2U,     // MIN_SPIKE_DISTANCE
-            101U    // SEED
-        },
-    };
-    for (natural_32_bit  i = 0U; i != setups.size(); ++i)
+    if (get_program_options()->genJson())
     {
-        spikes_distribution  distribution;
-        compute_distribution(distribution, setups.at(i));
-        save_distribution(distribution, i, setups.at(i));
+        boost::property_tree::ptree  ptree;
+        ptree.put("NUM_TRIALS", 10U);
+        ptree.put("NUM_SECONDS_TO_SIMULATE", 10U);
+        ptree.put("SIMULATION_FREQUENCY", 100U);
+        ptree.put("SPIKING_FREQUENCY", 20U);
+        ptree.put("NUM_SPIKE_TRAINS", 100U);
+        ptree.put("MIN_SPIKE_DISTANCE", 2U);
+        ptree.put("SEED", 101U);
+        ptree.put("ID", 0U);
+
+        std::string const  pathname = "./" + get_program_name() + ".json";
+        std::ofstream  ostr(pathname.c_str(), std::ios_base::out);
+
+        boost::property_tree::write_json(ostr, ptree);
     }
+
+    experiment_setup  setup;
+    {
+        boost::property_tree::ptree  ptree;
+        {
+            std::ifstream  istr(get_program_options()->inputJson().c_str(), std::ios_base::in);
+            if (istr.is_open())
+                boost::property_tree::read_json(istr, ptree);
+            else
+                std::cout << "Cannot read JSON setup file '" << get_program_options()->inputJson()
+                          << "'. The default setup will be used." << std::endl;
+        }
+
+        setup.NUM_TRIALS = ptree.get<natural_32_bit>("NUM_TRIALS", 10U);
+        setup.NUM_SECONDS_TO_SIMULATE = ptree.get<natural_32_bit>("NUM_SECONDS_TO_SIMULATE", 10U);
+        setup.SIMULATION_FREQUENCY = ptree.get<natural_32_bit>("SIMULATION_FREQUENCY", 100U);
+        setup.SPIKING_FREQUENCY = ptree.get<natural_32_bit>("SPIKING_FREQUENCY", 20U);
+        setup.NUM_SPIKE_TRAINS = ptree.get<natural_32_bit>("NUM_SPIKE_TRAINS", 100U);
+        setup.MIN_SPIKE_DISTANCE = ptree.get<natural_32_bit>("MIN_SPIKE_DISTANCE", 2U);
+        setup.SEED = ptree.get<natural_32_bit>("SEED", 101U);
+        setup.ID = ptree.get<natural_32_bit>("ID", 0U);
+    }
+    spikes_distribution  distribution;
+    compute_distribution(distribution, setup);
+    save_distribution(distribution, setup);
 }

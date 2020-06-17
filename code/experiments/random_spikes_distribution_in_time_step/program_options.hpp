@@ -13,6 +13,8 @@ public:
 
     bool helpMode() const { return vm.count("help") > 0; }
     bool versionMode() const { return vm.count("version") > 0; }
+    bool genJson() const { return vm.count("genjson") > 0; }
+    std::string const& inputJson() const { return vm["inputjson"].as<std::string>(); }
     std::string const& outputDir() const { return vm["outputdir"].as<std::string>(); }
 
     std::ostream& operator<<(std::ostream& ostr) const;

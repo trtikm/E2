@@ -13,6 +13,10 @@ program_options::program_options(int argc, char* argv[])
     desc.add_options()
         ("help,h","Produces this help message.")
         ("version,v", "Prints the version string.")
+        ("genjson,g", "Generates a default JSON experiment setup file into the current directory.")
+        ("inputjson,i",
+            bpo::value<std::string>()->default_value("./" + get_program_name() + ".json"),
+            "A pathname of a JSON file defining the experiment setup.")
         ("outputdir,o",
             bpo::value<std::string>()->default_value("."),
             "Output directory under which results will be saved.")
