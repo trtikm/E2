@@ -62,9 +62,9 @@ float_32_bit  compute_penalty(
     vector3  ideal_linear_velocity_dir;
     {
         ideal_linear_velocity_dir =
-                info.motion_matcher.ideal_linear_velocity_dir(DESIRE_COORD::FORWARD) * motion.forward +
-                info.motion_matcher.ideal_linear_velocity_dir(DESIRE_COORD::LEFT) * motion.left +
-                info.motion_matcher.ideal_linear_velocity_dir(DESIRE_COORD::UP) * motion.up
+                info.motion_matcher.ideal_linear_velocity_dir(0) * motion.forward +
+                info.motion_matcher.ideal_linear_velocity_dir(1) * motion.left +
+                info.motion_matcher.ideal_linear_velocity_dir(2) * motion.up
                 ;
         float_32_bit const  len = length(ideal_linear_velocity_dir);
         if (len > 0.0001f)
@@ -75,10 +75,10 @@ float_32_bit  compute_penalty(
     penalty += info.motion_matcher.linear_velocity_mag(length(motion.linear_velocity));
     penalty += info.motion_matcher.angular_speed(dot_product(motion.up, motion.angular_velocity));
 
-    penalty += info.desire_matcher.speed_forward(desire.speed(DESIRE_COORD::FORWARD));
-    penalty += info.desire_matcher.speed_left(desire.speed(DESIRE_COORD::LEFT));
-    penalty += info.desire_matcher.speed_up(desire.speed(DESIRE_COORD::UP));
-    penalty += info.desire_matcher.speed_turn_ccw(desire.speed(DESIRE_COORD::TURN_CCW));
+    penalty += info.desire_matcher.speed_forward(desire.move.forward);
+    penalty += info.desire_matcher.speed_left(desire.move.left);
+    penalty += info.desire_matcher.speed_up(desire.move.up);
+    penalty += info.desire_matcher.speed_turn_ccw(desire.move.turn_ccw);
 
     return penalty;
 }
@@ -106,20 +106,10 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
     motion_desire_props const&  desire = get_blackboard()->m_cortex->get_motion_desire_props();
 
     bool  disable_upper_joint = false;
-    skeletal_motion_templates::motion_object_binding::desire_to_speed_convertor_curves const*  desire_to_speed_convertors_ptr;
+    skeletal_motion_templates::motion_object_binding::desire_values_intepretation_curves const*  desire_values_interpreters_ptr;
     {
-        static skeletal_motion_templates::motion_object_binding::desire_to_speed_convertor_curves const
-        zero_desire_to_speed_convertors{
-            {{ // DESIRE_COORD::FORWARD
-            }},
-            {{ // DESIRE_COORD::LEFT
-            }},
-            {{ // DESIRE_COORD::UP
-            }},
-            {{ // DESIRE_COORD::TURN_CCW
-            }}
-        };
-        desire_to_speed_convertors_ptr = &zero_desire_to_speed_convertors;
+        static skeletal_motion_templates::motion_object_binding::desire_values_intepretation_curves const  zero_desire_values_interpreters;
+        desire_values_interpreters_ptr = &zero_desire_values_interpreters;
 
         skeletal_motion_templates::motion_template_cursor const  old_template_cursor = m_template_cursor;
         std::unordered_set<natural_32_bit>  excluded;
@@ -172,6 +162,13 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                                     name,
                                     get_blackboard()->m_motion_templates.default_transition_props()
                                     );
+                float_32_bit const  speed_mult =
+                        speed_solver.compute_transition_time_scale(speed_solver.compute_interpolation_speed(
+                                m_template_cursor,
+                                { name, transition_props.first },
+                                transition_props.second,
+                                info.speedup_sensitivity
+                                ));
                 m_template_cursor.motion_name = name;
                 m_template_cursor.keyframe_index = transition_props.first;
                 current_remaining_time = transition_props.second;
@@ -223,7 +220,7 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
             if (success)
             {
                 disable_upper_joint = info.disable_upper_joint;
-                desire_to_speed_convertors_ptr = &motion_bindings.desire_to_speed_convertors;
+                desire_values_interpreters_ptr = &motion_bindings.desire_values_interpreters;
                 if (m_template_cursor != old_template_cursor)
                 {
                     m_interpolator.reset_time(total_remaining_time);
@@ -238,21 +235,51 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
 
     m_roller.apply_desire(
             time_step_in_seconds,
-            desire_to_speed_convertors_ptr->at(DESIRE_COORD::TURN_CCW)(desire.speed(DESIRE_COORD::TURN_CCW)),
-            desire_to_speed_convertors_ptr->at(DESIRE_COORD::LEFT)(desire.speed(DESIRE_COORD::LEFT)) * vector3_unit_x()
-                - desire_to_speed_convertors_ptr->at(DESIRE_COORD::FORWARD)(desire.speed(DESIRE_COORD::FORWARD)) * vector3_unit_y(),
-            desire_to_speed_convertors_ptr->at(DESIRE_COORD::UP)(desire.speed(DESIRE_COORD::UP)) * vector3_unit_z(),
+            desire_values_interpreters_ptr->move.turn_ccw(desire.move.turn_ccw),
+            desire_values_interpreters_ptr->move.left(desire.move.left) * vector3_unit_x()
+                - desire_values_interpreters_ptr->move.forward(desire.move.forward) * vector3_unit_y(),
+            desire_values_interpreters_ptr->move.up(desire.move.up) * vector3_unit_z(),
             disable_upper_joint
             );
 
+
+    auto const  get_look_or_aim_target =
+            []( skeletal_motion_templates::motion_object_binding::desire_values_intepretation_curves::target_curves const&  curves,
+                motion_desire_props::target_props const&  props
+            ) -> vector3
+            {
+                float_32_bit const  lon_angle = curves.longitude(props.longitude);
+                float_32_bit const  alt_angle = curves.altitude(props.altitude);
+                float_32_bit const  mag = curves.magnitude(props.magnitude);
+                float_32_bit const  cos_alt_angle = std::cosf(alt_angle);
+                vector3 const  result {
+                    mag * cos_alt_angle * std::cosf(lon_angle - PI() / 2.0f),
+                    mag * cos_alt_angle * std::sinf(lon_angle - PI() / 2.0f),
+                    mag * std::sinf(alt_angle),
+                };
+                return result;
+            };
+
+    auto const  get_origin_shift = [this](natural_32_bit const  bone) -> vector3 {
+        vector3 const  origin_in_bone_space = 0.5f * get_blackboard()->m_motion_templates.lengths().at(bone) * vector3_unit_y();
+        vector3 const  origin_in_template_space =
+                transform_point(origin_in_bone_space, get_blackboard()->m_motion_templates.from_pose_matrices().at(bone));
+        vector3 const  origin_in_reference_frame =
+                angeo::point3_to_coordinate_system(
+                        origin_in_template_space,        
+                        get_blackboard()->m_motion_templates.at(m_template_cursor.motion_name)
+                                                            .reference_frames
+                                                            .at(m_template_cursor.keyframe_index)
+                        );
+        return origin_in_reference_frame;
+    };
+
     m_interpolator.next_round(
             time_step_in_seconds,
-            desire.look_at_target(DESIRE_COORD::LEFT) * vector3_unit_x()
-                - desire.look_at_target(DESIRE_COORD::FORWARD) * vector3_unit_y()
-                + desire.look_at_target(DESIRE_COORD::UP) * vector3_unit_z(),
-            desire.aim_at_target(DESIRE_COORD::LEFT) * vector3_unit_x()
-                - desire.aim_at_target(DESIRE_COORD::FORWARD) * vector3_unit_y()
-                + desire.aim_at_target(DESIRE_COORD::UP) * vector3_unit_z(),
+            get_look_or_aim_target(desire_values_interpreters_ptr->look_at, desire.look_at)
+                + get_origin_shift(get_blackboard()->m_motion_templates.look_at_origin_bone()),
+            get_look_or_aim_target(desire_values_interpreters_ptr->aim_at, desire.aim_at)
+                + get_origin_shift(get_blackboard()->m_motion_templates.aim_at_origin_bone()),
             m_roller.get_agent_frame()
             );
     m_interpolator.commit();

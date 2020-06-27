@@ -13,15 +13,9 @@ struct  interpolation_speed_solver
             skeletal_motion_templates const  motion_templates,
             float_32_bit const  agent_linear_speed,
             float_32_bit const  agent_angular_speed,
-            float_32_bit const  min_speed_coef = 0.5f,
-            float_32_bit const  max_speed_coef = 1.5f
-            )
-        : m_motion_templates(motion_templates)
-        , m_agent_linear_speed(agent_linear_speed)
-        , m_agent_angular_speed(agent_angular_speed)
-        , MIN_SPEED_COEF(min_speed_coef)
-        , MAX_SPEED_COEF(max_speed_coef)
-    {}
+            float_32_bit const  min_speed_coef = 0.1f,
+            float_32_bit const  max_speed_coef = 10.0f
+            );
 
     float_32_bit  compute_interpolation_speed(
             skeletal_motion_templates::motion_template_cursor const&  src_cursor,

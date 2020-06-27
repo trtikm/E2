@@ -293,8 +293,8 @@ void  snapshot_encoder::next_round(
     // --- desire_computed_by_cortex ---------------------------------------------------------------------
 
     updater.begin(desire_computed_by_cortex);
-    updater.update_next(ss.desire_computed_by_cortex.speed);
-    updater.update_next(ss.desire_computed_by_cortex.look_at_target);
+    //updater.update_next(ss.desire_computed_by_cortex.speed);
+    //updater.update_next(ss.desire_computed_by_cortex.look_at_target);
     updater.end();
 
 

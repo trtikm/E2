@@ -39,8 +39,8 @@ motion_desire_decoder::motion_desire_decoder(motion_desire_props&  props, natura
         register_number(u(3));
     };
 
-    register_vector4(props.speed);
-    register_vector(props.look_at_target);
+    //register_vector4(props.speed);
+    //register_vector(props.look_at_target);
 
     INVARIANT(SEPARATOR_UNIT_INDICES.size() == decoders.size() + 1UL);
 }

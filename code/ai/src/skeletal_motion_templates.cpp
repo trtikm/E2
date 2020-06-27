@@ -63,7 +63,20 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             [this](async::finalise_load_on_destroy_ptr) -> void {
 
                 // All data are loaded. Let's apply post-load setup.
-            
+
+                from_pose_matrices.resize(pose_frames.size());
+                to_pose_matrices.resize(pose_frames.size());
+                for (natural_32_bit  bone = 0U; bone != pose_frames.size(); ++bone)
+                {
+                    angeo::from_base_matrix(pose_frames.at(bone), from_pose_matrices.at(bone));
+                    angeo::to_base_matrix(pose_frames.at(bone), to_pose_matrices.at(bone));
+                    if (hierarchy.parents.at(bone) >= 0)
+                    {
+                        to_pose_matrices.at(bone) = to_pose_matrices.at(bone) * to_pose_matrices.at(hierarchy.parents.at(bone));
+                        from_pose_matrices.at(bone) = from_pose_matrices.at(hierarchy.parents.at(bone)) * from_pose_matrices.at(bone);
+                    }
+                }
+
                 for (auto&  entry : motions_map)
                 {
                     motion_template&  record = entry.second;
@@ -263,7 +276,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
         if (boost::filesystem::is_regular_file(pathname / "look_at.txt"))
         {
             std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "look_at.txt");
-            for (boost::property_tree::ptree::value_type const&  name_and_data : *ptree)
+            look_at_origin_bone = ptree->get<natural_32_bit>("origin_bone");
+            for (boost::property_tree::ptree::value_type const&  name_and_data : ptree->get_child("chains"))
             {
                 std::shared_ptr<look_at_info>  info = std::make_shared<look_at_info>();
                 for (boost::property_tree::ptree::value_type const&  void_and_bone : name_and_data.second.get_child("bones"))
@@ -282,7 +296,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
         if (boost::filesystem::is_regular_file(pathname / "aim_at.txt"))
         {
             std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "aim_at.txt");
-            for (boost::property_tree::ptree::value_type const&  name_and_data : *ptree)
+            aim_at_origin_bone = ptree->get<natural_32_bit>("origin_bone");
+            for (boost::property_tree::ptree::value_type const&  name_and_data : ptree->get_child("chains"))
             {
                 std::shared_ptr<aim_at_info>  info = std::make_shared<aim_at_info>();
                 for (boost::property_tree::ptree::value_type const&  void_and_bone : name_and_data.second.get_child("bones"))
@@ -432,26 +447,71 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                                         );
                                 info.disable_upper_joint = bi_ptree->get<bool>("disable_upper_joint");
                             }
-                        if (boost::filesystem::is_regular_file(mob_pathname / "desire_to_speed_convertors.txt"))
+                        if (boost::filesystem::is_regular_file(mob_pathname / "desire_values_interpreters.txt"))
                         {
-                            std::unique_ptr<boost::property_tree::ptree> const  desire_to_speed_convertors_ptree =
-                                    load_ptree(mob_pathname / "desire_to_speed_convertors.txt");
-                            binding.desire_to_speed_convertors.resize(4U);
+                            std::unique_ptr<boost::property_tree::ptree> const  desire_values_interpreters_ptree =
+                                    load_ptree(mob_pathname / "desire_values_interpreters.txt");
                             load_linear_segment_function(
-                                    desire_to_speed_convertors_ptree->get_child("FORWARD"),
-                                    binding.desire_to_speed_convertors.at(DESIRE_COORD::FORWARD).points
+                                    desire_values_interpreters_ptree->get_child("move.forward"),
+                                    binding.desire_values_interpreters.move.forward.points
                                     );
                             load_linear_segment_function(
-                                    desire_to_speed_convertors_ptree->get_child("LEFT"),
-                                    binding.desire_to_speed_convertors.at(DESIRE_COORD::LEFT).points
+                                    desire_values_interpreters_ptree->get_child("move.left"),
+                                    binding.desire_values_interpreters.move.left.points
                                     );
                             load_linear_segment_function(
-                                    desire_to_speed_convertors_ptree->get_child("UP"),
-                                    binding.desire_to_speed_convertors.at(DESIRE_COORD::UP).points
+                                    desire_values_interpreters_ptree->get_child("move.up"),
+                                    binding.desire_values_interpreters.move.up.points
                                     );
                             load_linear_segment_function(
-                                    desire_to_speed_convertors_ptree->get_child("TURN_CCW"),
-                                    binding.desire_to_speed_convertors.at(DESIRE_COORD::TURN_CCW).points
+                                    desire_values_interpreters_ptree->get_child("move.turn_ccw"),
+                                    binding.desire_values_interpreters.move.turn_ccw.points
+                                    );
+
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("guesture.subject.head"),
+                                    binding.desire_values_interpreters.guesture.subject.head.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("guesture.subject.tail"),
+                                    binding.desire_values_interpreters.guesture.subject.tail.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("guesture.sign.head"),
+                                    binding.desire_values_interpreters.guesture.sign.head.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("guesture.sign.tail"),
+                                    binding.desire_values_interpreters.guesture.sign.tail.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("guesture.sign.intensity"),
+                                    binding.desire_values_interpreters.guesture.sign.intensity.points
+                                    );
+
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("look_at.longitude"),
+                                    binding.desire_values_interpreters.look_at.longitude.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("look_at.altitude"),
+                                    binding.desire_values_interpreters.look_at.altitude.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("look_at.magnitude"),
+                                    binding.desire_values_interpreters.look_at.magnitude.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("aim_at.longitude"),
+                                    binding.desire_values_interpreters.aim_at.longitude.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("aim_at.altitude"),
+                                    binding.desire_values_interpreters.aim_at.altitude.points
+                                    );
+                            load_linear_segment_function(
+                                    desire_values_interpreters_ptree->get_child("aim_at.magnitude"),
+                                    binding.desire_values_interpreters.aim_at.magnitude.points
                                     );
                         }
                         if (boost::filesystem::is_regular_file(mob_pathname / "transition_penalties.txt"))

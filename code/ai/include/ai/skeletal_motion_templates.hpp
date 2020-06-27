@@ -96,15 +96,56 @@ struct  motion_object_binding
         bool  disable_upper_joint;
     };
 
+    struct  desire_values_intepretation_curves
+    {
+        struct  move_curves
+        {
+            angeo::linear_segment_curve  forward;
+            angeo::linear_segment_curve  left;
+            angeo::linear_segment_curve  up;
+            angeo::linear_segment_curve  turn_ccw;
+        };
+
+        struct  guesture_curves
+        {
+            struct  subject_curves
+            {
+                angeo::linear_segment_curve  head;
+                angeo::linear_segment_curve  tail;
+            };
+
+            struct  sign_curves
+            {
+                angeo::linear_segment_curve  head;
+                angeo::linear_segment_curve  tail;
+                angeo::linear_segment_curve  intensity;
+            };
+
+            subject_curves  subject;
+            sign_curves  sign;
+        };
+
+        struct  target_curves
+        {
+            angeo::linear_segment_curve  longitude;
+            angeo::linear_segment_curve  altitude;
+            angeo::linear_segment_curve  magnitude;
+        };
+
+        move_curves  move;
+        guesture_curves  guesture;
+        target_curves  look_at;
+        target_curves  aim_at;
+    };
+
     using  binding_info_vector = std::vector<std::pair<std::string, binding_info> >;
     using  transition_penalties_map = std::unordered_map<std::pair<std::string, std::string>, float_32_bit>;
-    using  desire_to_speed_convertor_curves = std::vector<angeo::linear_segment_curve>;
 
     //explicit  motion_object_binding(boost::property_tree::ptree const&  root);
 
     binding_info_vector  binding_infos;
     transition_penalties_map  transition_penalties;
-    desire_to_speed_convertor_curves  desire_to_speed_convertors;
+    desire_values_intepretation_curves  desire_values_interpreters;
 };
 
 
@@ -167,12 +208,16 @@ struct  skeletal_motion_templates_data
     using  motion_object_binding_map = std::unordered_map<std::string, detail::motion_object_binding>;
 
     motion_template::reference_frames_type  pose_frames;
+    std::vector<matrix44>  from_pose_matrices;  // I.e. matrices from spaces of pose bones to the motion tempalte space.
+    std::vector<matrix44>  to_pose_matrices;    // I.e. matrices from the motion tempalte space to spaces of pose bones.
     bone_names  names;
     bone_hierarchy  hierarchy;
     bone_lengths  lengths;
 	bone_joints  joints;
     look_at_infos  look_at;
     aim_at_infos  aim_at;
+    natural_32_bit  look_at_origin_bone;
+    natural_32_bit  aim_at_origin_bone;
 
     std::unordered_map<std::string, motion_template>  motions_map;
     std::unordered_map<std::string, loop_target>  loop_targets;
@@ -233,6 +278,8 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  motion_object_binding = detail::motion_object_binding;
 
     reference_frames  pose_frames() const { return resource().pose_frames; }
+    std::vector<matrix44> const&  from_pose_matrices() const { return resource().from_pose_matrices; }
+    std::vector<matrix44> const&  to_pose_matrices() const { return resource().to_pose_matrices; }
     bone_names const&  names() const { return resource().names; }
     bone_hierarchy const&  hierarchy() const { return resource().hierarchy; }
     bone_hierarchy::parents_vector const&  parents() const { return hierarchy().parents; }
@@ -240,7 +287,9 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     bone_lengths const&  lengths() const { return resource().lengths; }
 	bone_joints const&  joints() const { return resource().joints; }
     look_at_infos const&  look_at() const { return resource().look_at; }
+    natural_32_bit  look_at_origin_bone() const { return resource().look_at_origin_bone; }
     aim_at_infos const&  aim_at() const { return resource().aim_at; }
+    natural_32_bit  aim_at_origin_bone() const { return resource().aim_at_origin_bone; }
 
     std::unordered_map<std::string, motion_template> const&  motions_map() const { return resource().motions_map; }
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }

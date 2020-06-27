@@ -6,38 +6,59 @@
 namespace ai {
 
 
-struct DESIRE_COORD
-{
-    // Use these to access coords of motion_desire_props::speed
-    static natural_8_bit constexpr  FORWARD     = 0U;
-    static natural_8_bit constexpr  LEFT        = 1U;
-    static natural_8_bit constexpr  UP          = 2U;
-    static natural_8_bit constexpr  TURN_CCW    = 3U;
-
-    // Use these to access coords of motion_desire_props::guesture_subject and guesture_sign
-    static natural_8_bit constexpr  HEAD        = 0U;
-    static natural_8_bit constexpr  TAIL        = 1U;
-};
-
-
 struct  motion_desire_props
 {
-    motion_desire_props();
+    // All fields, including those in nested structures, are in cortex's LOGICAL space
+    // which lies inside agent's space. They all are also in the range <-1.0, 1.0>.
+    // Action controller defines the actual transformations between the logical and agent's
+    // space.
 
-    // Values of all fields are in cortex's LOGICAL space which lies inside agent's local space.
-    // The struct DESIRE_COORD defines an interpretation of coordinates in the logical space
-    // in agent space. Action controller is responsible for correct transformation of these
-    // values to the agent's local space (and back).
+    struct  move_props
+    {
+        move_props() : forward(0.0f), left(0.0f), up(0.0f), turn_ccw(0.0f) {}
 
-    vector4  speed;     // xyz represent vector in the logical space (use FORWARD, LEFT, UP),
-                        // and w is the rotation/turning (use TURN_CCW); all 4 coords are in <-1,1> 
+        float_32_bit  forward;
+        float_32_bit  left;
+        float_32_bit  up;
+        float_32_bit  turn_ccw;
+    };
 
-    vector2  guesture_subject;  // Use HEAD and TAIL for accessing coords; all coords are in <-1,1> 
-    vector2  guesture_sign;     // Use HEAD and TAIL for accessing coords; all coords are in <0,1>
-    float_32_bit  guesture_intensity;   // in <0,1>
+    struct  guesture_props
+    {
+        struct  subject_props
+        {
+            subject_props() : head(0.0f), tail(0.0f) {}
 
-    vector3  look_at_target;
-    vector3  aim_at_target;
+            float_32_bit  head;
+            float_32_bit  tail;
+        };
+
+        struct  sign_props
+        {
+            sign_props() : head(0.0f), tail(0.0f), intensity(0.0f) {}
+
+            float_32_bit  head;
+            float_32_bit  tail;
+            float_32_bit  intensity;
+        };
+
+        subject_props  subject;
+        sign_props  sign;
+    };
+
+    struct  target_props
+    {
+        target_props() : longitude(0.0f), altitude(0.0f), magnitude(0.0f) {}
+
+        float_32_bit  longitude;
+        float_32_bit  altitude;
+        float_32_bit  magnitude;
+    };
+
+    move_props  move;
+    guesture_props  guesture;
+    target_props  look_at;
+    target_props  aim_at;
 };
 
 

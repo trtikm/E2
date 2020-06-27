@@ -5,6 +5,22 @@
 namespace ai { namespace detail {
 
 
+interpolation_speed_solver::interpolation_speed_solver(
+        skeletal_motion_templates const  motion_templates,
+        float_32_bit const  agent_linear_speed,
+        float_32_bit const  agent_angular_speed,
+        float_32_bit const  min_speed_coef,
+        float_32_bit const  max_speed_coef
+        )
+    : m_motion_templates(motion_templates)
+    , m_agent_linear_speed(agent_linear_speed)
+    , m_agent_angular_speed(agent_angular_speed)
+    , MIN_SPEED_COEF(min_speed_coef)
+    , MAX_SPEED_COEF(max_speed_coef)
+{
+    ASSUMPTION(MIN_SPEED_COEF > 0.0001f && MAX_SPEED_COEF > MIN_SPEED_COEF + 0.0001f);
+}
+
 float_32_bit  interpolation_speed_solver::compute_interpolation_speed(
         skeletal_motion_templates::motion_template_cursor const&  src_cursor,
         skeletal_motion_templates::motion_template_cursor const&  dst_cursor,
@@ -12,8 +28,42 @@ float_32_bit  interpolation_speed_solver::compute_interpolation_speed(
         skeletal_motion_templates::motion_object_binding::speed_sensitivity const&  speed_sensitivity
         ) const
 {
-    if (src_cursor.motion_name != dst_cursor.motion_name || transition_time < 0.001f)
+    if (transition_time < 0.001f)
         return 1.0f;
+
+    if (src_cursor.motion_name != dst_cursor.motion_name)
+    {
+        float_32_bit const  is1 = compute_interpolation_speed(src_cursor, src_cursor, transition_time, speed_sensitivity);
+        float_32_bit const  is2 = compute_interpolation_speed(dst_cursor, dst_cursor, transition_time, speed_sensitivity);
+        return 0.5f * (is1 + is2);
+    }
+
+    if (src_cursor.keyframe_index == dst_cursor.keyframe_index)
+    {
+        if (src_cursor.keyframe_index > 0U)
+            return compute_interpolation_speed(
+                        { src_cursor.motion_name, src_cursor.keyframe_index - 1U },
+                        src_cursor,
+                        transition_time,
+                        speed_sensitivity
+                        );
+        if (src_cursor.keyframe_index + 1U < m_motion_templates.at(src_cursor.motion_name).keyframes.num_keyframes())
+            return compute_interpolation_speed(
+                        src_cursor,
+                        { src_cursor.motion_name, src_cursor.keyframe_index + 1U },
+                        transition_time,
+                        speed_sensitivity
+                        );
+        return 1.0f;
+    }
+
+    if (dst_cursor.keyframe_index < src_cursor.keyframe_index)
+        return compute_interpolation_speed(
+                    { src_cursor.motion_name, src_cursor.keyframe_index - 1U },
+                    src_cursor,
+                    transition_time,
+                    speed_sensitivity
+                    );
 
     angeo::coordinate_system const&  src_frame =
             m_motion_templates.at(src_cursor.motion_name).reference_frames.at(src_cursor.keyframe_index);
@@ -68,8 +118,8 @@ float_32_bit  interpolation_speed_solver::compute_interpolation_speed(
 
 float_32_bit  interpolation_speed_solver::compute_transition_time_scale(float_32_bit const  interpolation_speed) const
 {
-    float_32_bit const  MIDDLE = 0.5f * (MIN_SPEED_COEF + MAX_SPEED_COEF);
-    return MIDDLE - (interpolation_speed - MIDDLE);
+    ASSUMPTION(MIN_SPEED_COEF <= interpolation_speed && interpolation_speed <= MAX_SPEED_COEF);
+    return 1.0f / interpolation_speed;
 }
 
 

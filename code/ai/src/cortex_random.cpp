@@ -59,27 +59,23 @@ void  cortex_random::next_round(float_32_bit const  time_step_in_seconds)
         return;
     m_seconds_till_change = get_random_float_32_bit_in_range(0.0f, 2.0f, m_generator);
 
-    m_motion_desire_props.speed(DESIRE_COORD::FORWARD) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
-    m_motion_desire_props.speed(DESIRE_COORD::LEFT) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
-    m_motion_desire_props.speed(DESIRE_COORD::UP) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
-    m_motion_desire_props.speed(DESIRE_COORD::TURN_CCW) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.move.forward = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.move.left = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.move.up = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.move.turn_ccw = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
 
-    m_motion_desire_props.guesture_subject(DESIRE_COORD::HEAD) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
-    m_motion_desire_props.guesture_subject(DESIRE_COORD::TAIL) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
-    m_motion_desire_props.guesture_sign(DESIRE_COORD::HEAD) = get_random_float_32_bit_in_range(0.0f, 1.0f, m_generator);
-    m_motion_desire_props.guesture_sign(DESIRE_COORD::TAIL) = get_random_float_32_bit_in_range(0.0f, 1.0f, m_generator);
-    m_motion_desire_props.guesture_intensity = get_random_float_32_bit_in_range(0.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture.subject.head = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture.subject.tail = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture.sign.head = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture.sign.tail = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture.sign.intensity = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
 
-    m_motion_desire_props.look_at_target = {
-            get_random_float_32_bit_in_range(-5.0f, 50.0f, m_generator),
-            get_random_float_32_bit_in_range(-50.0f, 50.0f, m_generator),
-            get_random_float_32_bit_in_range(-50.0f, 50.0f, m_generator)
-            };
-    m_motion_desire_props.aim_at_target = {
-            get_random_float_32_bit_in_range(0.2f, 1.0f, m_generator),
-            get_random_float_32_bit_in_range(-0.5f, 0.5f, m_generator),
-            get_random_float_32_bit_in_range(-0.1f, 1.1f, m_generator)
-            };
+    m_motion_desire_props.look_at.longitude = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.look_at.altitude = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.look_at.magnitude = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.aim_at.longitude = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.aim_at.altitude = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.aim_at.magnitude = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
 }
 
 
