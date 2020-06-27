@@ -63,6 +63,13 @@ void  cortex_random::next_round(float_32_bit const  time_step_in_seconds)
     m_motion_desire_props.speed(DESIRE_COORD::LEFT) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
     m_motion_desire_props.speed(DESIRE_COORD::UP) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
     m_motion_desire_props.speed(DESIRE_COORD::TURN_CCW) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+
+    m_motion_desire_props.guesture_subject(DESIRE_COORD::HEAD) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture_subject(DESIRE_COORD::TAIL) = get_random_float_32_bit_in_range(-1.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture_sign(DESIRE_COORD::HEAD) = get_random_float_32_bit_in_range(0.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture_sign(DESIRE_COORD::TAIL) = get_random_float_32_bit_in_range(0.0f, 1.0f, m_generator);
+    m_motion_desire_props.guesture_intensity = get_random_float_32_bit_in_range(0.0f, 1.0f, m_generator);
+
     m_motion_desire_props.look_at_target = {
             get_random_float_32_bit_in_range(-5.0f, 50.0f, m_generator),
             get_random_float_32_bit_in_range(-50.0f, 50.0f, m_generator),

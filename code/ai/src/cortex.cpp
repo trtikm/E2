@@ -17,13 +17,13 @@ cortex::cortex(blackboard_agent_weak_ptr const  blackboard_)
 
 void  cortex::initialise()
 {
-    set_stationary_desire(m_motion_desire_props, get_blackboard());
+    set_stationary_desire(m_motion_desire_props);
 }
 
 
 void  cortex::next_round(float_32_bit const  time_step_in_seconds)
 {
-    set_stationary_desire(m_motion_desire_props, get_blackboard());
+    set_stationary_desire(m_motion_desire_props);
 }
 
 
@@ -32,7 +32,7 @@ void  cortex::next_round(float_32_bit const  time_step_in_seconds)
 namespace ai {
 
 
-void  set_stationary_desire(motion_desire_props&  desire_props, blackboard_agent_ptr const  bb)
+void  set_stationary_desire(motion_desire_props&  desire_props)
 {
     desire_props = motion_desire_props();
 }

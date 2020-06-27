@@ -32,7 +32,7 @@ private:
 };
 
 
-void  set_stationary_desire(motion_desire_props&  desire_props, blackboard_agent_ptr const  bb);
+void  set_stationary_desire(motion_desire_props&  desire_props);
 
 
 }
