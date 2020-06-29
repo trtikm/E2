@@ -20,7 +20,7 @@ void  transform_keyframes_to_reference_frame(
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(frames.size() == pose_frames.size());
+    ASSUMPTION(frames.size() == bones_to_indices.size() && frames.size() <= pose_frames.size());
 
     output_frames.clear();
     output_frames.reserve(pose_frames.size());
