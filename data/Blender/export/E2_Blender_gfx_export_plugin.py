@@ -1099,7 +1099,11 @@ def save_hierarchy_of_bones(
             remove_ignored_part_of_name(armature.name, "SKELETAL"),
             "parents.txt"
             )
-        export_info["armature"] = {"bone_parents": parents}
+        export_info["armature"] = {
+            "bone_parents": parents,
+            "bone_names": names,
+            "bone_lengths": lengths,
+        }
 
         os.makedirs(os.path.dirname(export_info["bone_names"]), exist_ok=True)
         with open(export_info["bone_names"], "w") as f:
@@ -1244,6 +1248,10 @@ def save_keyframe_coord_systems_of_bones(
             action_name = action_name.replace("/", ".").replace("\\", '.').replace(":", '.')
             action_name = action_name[1:] if action_name.startswith("!") else action_name
 
+            used_bones = set()
+            for grp in action.groups:
+                used_bones.add(grp.name)
+
             armature.animation_data.action = action
 
             coord_systems_of_frames = {}
@@ -1284,10 +1292,11 @@ def save_keyframe_coord_systems_of_bones(
                     shift_vector = pos - local_coord_systems[bone_idx]["position"]
                     if vector3_length(shift_vector) < 0.001:
                         shift_vector = vector3_zero()
-                    coord_systems.append({
-                        "position": shift_vector,
-                        "orientation": rot
-                        })
+                    if armature_bone.name in used_bones:
+                        coord_systems.append({
+                            "position": shift_vector,
+                            "orientation": rot
+                            })
                     bone_idx += 1
                 coord_systems_of_frames[time_of_time_point(start_frame, frame)] = coord_systems
 
@@ -1325,6 +1334,17 @@ def save_keyframe_coord_systems_of_bones(
                         for i in range(4):
                             f.write(float_to_string(system["orientation"][i]) + "\n")
                 frame_idx += 1
+
+            # Next we save the bones used in the action
+
+            with open(os.path.join(keyframes_output_dir, "bones.txt"), "w") as f:
+                f.write(str(len(used_bones)) + "\n")
+                num_saved = 0
+                for idx, name in enumerate(export_info["armature"]["bone_names"]):
+                    if name in used_bones:
+                        f.write(str(idx) + "\n")
+                        num_saved += 1
+                assert num_saved == len(used_bones)
 
             # In case the meta-object and meta-action are available, then we also compute meta-data.
 
