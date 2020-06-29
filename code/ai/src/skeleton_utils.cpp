@@ -10,10 +10,12 @@ namespace ai {
 
 void  transform_keyframes_to_reference_frame(
         std::vector<angeo::coordinate_system> const&  frames,
+        std::unordered_map<natural_32_bit, natural_32_bit> const&  bones_to_indices,
         angeo::coordinate_system const&  reference_frame,
         std::vector<angeo::coordinate_system> const&  pose_frames,
         std::vector<integer_32_bit> const&  parents,
-        std::vector<angeo::coordinate_system>&  output_frames
+        std::vector<angeo::coordinate_system>&  output_frames,
+        bool const  initialise_not_animated_frames_from_pose
         )
 {
     TMPROF_BLOCK();
@@ -26,8 +28,17 @@ void  transform_keyframes_to_reference_frame(
     angeo::to_base_matrix(reference_frame, Ainv);
     for (natural_32_bit bone = 0; bone != pose_frames.size(); ++bone)
     {
-        auto const& frame = frames.at(bone);
-        output_frames.push_back({ frame.origin() + pose_frames.at(bone).origin(), frame.orientation() });
+        auto const  it = bones_to_indices.find(bone);
+        if (it == bones_to_indices.end())
+        {
+            if (initialise_not_animated_frames_from_pose)
+                output_frames.push_back(pose_frames.at(bone));
+        }
+        else
+        {
+            auto const& frame = frames.at(it->second);
+            output_frames.push_back({ frame.origin() + pose_frames.at(bone).origin(), frame.orientation() });
+        }
         if (parents.at(bone) < 0)
         {
             vector3  u;

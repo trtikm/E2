@@ -6,25 +6,38 @@
 #   include <utility/assumptions.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <vector>
+#   include <unordered_map>
 #   include <algorithm>
+#   include <memory>
 #   include <utility>
 #   include <type_traits>
 
 namespace qtgl { namespace detail {
 
 
+struct  keyframes_data;
+
+
 struct  keyframe_data
 {
+    using  translation_map_ptr = std::shared_ptr<std::unordered_map<natural_32_bit, natural_32_bit> const>;
+
     keyframe_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~keyframe_data();
 
     float_32_bit  time_point() const { return m_time_point; }
     std::vector<angeo::coordinate_system> const&  coord_systems() const { return m_coord_systems; }
+    translation_map_ptr  from_indices_to_bones() const { return m_from_indices_to_bones; };
+    translation_map_ptr  from_bones_to_indices() const { return m_from_bones_to_indices; };
 
 private:
 
+    friend struct  keyframes_data;
+
     float_32_bit  m_time_point;
     std::vector<angeo::coordinate_system>  m_coord_systems;
+    translation_map_ptr  m_from_indices_to_bones;
+    translation_map_ptr  m_from_bones_to_indices;
 };
 
 
@@ -35,6 +48,8 @@ namespace qtgl {
 
 struct  keyframe : public async::resource_accessor<detail::keyframe_data>
 {
+    using  translation_map_ptr = detail::keyframe_data::translation_map_ptr;
+
     keyframe()
         : async::resource_accessor<detail::keyframe_data>()
     {}
@@ -66,6 +81,9 @@ struct  keyframe : public async::resource_accessor<detail::keyframe_data>
 
     std::vector<angeo::coordinate_system> const&  get_coord_systems() const
     { return resource().coord_systems(); }
+
+    translation_map_ptr  from_indices_to_bones() const { return resource().from_indices_to_bones(); };
+    translation_map_ptr  from_bones_to_indices() const { return resource().from_bones_to_indices(); };
 };
 
 
@@ -76,14 +94,21 @@ namespace qtgl { namespace detail {
 
 struct  keyframes_data
 {
+    using  translation_map = std::unordered_map<natural_32_bit, natural_32_bit>;
+    using  translation_map_ptr = std::shared_ptr<std::unordered_map<natural_32_bit, natural_32_bit> const>;
+
     keyframes_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~keyframes_data();
 
     std::vector<keyframe> const&  keyframes() const { return m_keyframes; }
+    translation_map_ptr  from_indices_to_bones() const { return m_from_indices_to_bones; };
+    translation_map_ptr  from_bones_to_indices() const { return m_from_bones_to_indices; };
 
 private:
 
     std::vector<keyframe>  m_keyframes;
+    translation_map_ptr  m_from_indices_to_bones;
+    translation_map_ptr  m_from_bones_to_indices;
 };
 
 
@@ -94,6 +119,8 @@ namespace qtgl {
 
 struct  keyframes : public async::resource_accessor<detail::keyframes_data>
 {
+    using  translation_map_ptr = detail::keyframes_data::translation_map_ptr;
+
     keyframes()
         : async::resource_accessor<detail::keyframes_data>()
     {}
@@ -139,6 +166,9 @@ struct  keyframes : public async::resource_accessor<detail::keyframes_data>
     {
         return keyframe_at(keyframe_index).get_coord_systems().at(coord_system_index);
     }
+
+    translation_map_ptr  from_indices_to_bones() const { return resource().from_indices_to_bones(); };
+    translation_map_ptr  from_bones_to_indices() const { return resource().from_bones_to_indices(); };
 };
 
 

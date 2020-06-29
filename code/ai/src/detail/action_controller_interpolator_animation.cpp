@@ -43,10 +43,12 @@ void  action_controller_interpolator_animation::set_target(
     transform_keyframes_to_reference_frame(
             get_blackboard()->m_motion_templates.at(cursor.motion_name).keyframes.get_keyframes().at(cursor.keyframe_index)
                                                                                                  .get_coord_systems(),
+            *get_blackboard()->m_motion_templates.at(cursor.motion_name).keyframes.from_bones_to_indices(),
             get_blackboard()->m_motion_templates.at(cursor.motion_name).reference_frames.at(cursor.keyframe_index),
             get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
             get_blackboard()->m_motion_templates.parents(),
-            m_dst_frames
+            m_dst_frames,
+            true
             );
 
     m_src_offset = m_current_offset;
