@@ -76,23 +76,23 @@ void  cortex_mock::next_round(float_32_bit const  time_step_in_seconds)
         }
     }
 
-    SLOG(
-        "speed={" << m_motion_desire_props.move.forward << ","
-                  << m_motion_desire_props.move.left << ","
-                  << m_motion_desire_props.move.up << ","
-                  << m_motion_desire_props.move.turn_ccw << "}\n"
-        "subject={" << m_motion_desire_props.guesture.subject.head << ","
-                    << m_motion_desire_props.guesture.subject.tail << "}\n"
-        "sign={" << m_motion_desire_props.guesture.sign.head << ","
-                 << m_motion_desire_props.guesture.sign.tail << ","
-                 << m_motion_desire_props.guesture.sign.intensity << "}\n"
-        "look_at_target={" << m_motion_desire_props.look_at.longitude << ","
-                           << m_motion_desire_props.look_at.altitude << ","
-                           << m_motion_desire_props.look_at.magnitude << "}\n"
-        "aim_at_target={" << m_motion_desire_props.aim_at.longitude << ","
-                          << m_motion_desire_props.aim_at.altitude << ","
-                          << m_motion_desire_props.aim_at.magnitude << "}\n"
-    );
+    //SLOG(
+    //    "speed={" << m_motion_desire_props.move.forward << ","
+    //              << m_motion_desire_props.move.left << ","
+    //              << m_motion_desire_props.move.up << ","
+    //              << m_motion_desire_props.move.turn_ccw << "}\n"
+    //    "subject={" << m_motion_desire_props.guesture.subject.head << ","
+    //                << m_motion_desire_props.guesture.subject.tail << "}\n"
+    //    "sign={" << m_motion_desire_props.guesture.sign.head << ","
+    //             << m_motion_desire_props.guesture.sign.tail << ","
+    //             << m_motion_desire_props.guesture.sign.intensity << "}\n"
+    //    "look_at_target={" << m_motion_desire_props.look_at.longitude << ","
+    //                       << m_motion_desire_props.look_at.altitude << ","
+    //                       << m_motion_desire_props.look_at.magnitude << "}\n"
+    //    "aim_at_target={" << m_motion_desire_props.aim_at.longitude << ","
+    //                      << m_motion_desire_props.aim_at.altitude << ","
+    //                      << m_motion_desire_props.aim_at.magnitude << "}\n"
+    //);
 }
 
 
