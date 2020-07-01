@@ -191,7 +191,7 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
                 matrix_element const&  matrix_elem = m_inverted_mass_matrix_times_jacobian_transposed.at(i);
                 float_32_bit&  lambda_ref = m_lambdas.at(i);
 
-                float_32_bit const  raw_delta_lambda = (
+                float_32_bit const  raw_delta_lambda = are_equal(diagonal_elements.at(i), 0.0f, 0.00001f) ? 0.0f : (
                     m_rhs_vector.at(i) - 
                     (dot_product(jacobian_elem.first.m_linear, rb_first.m_acceleration_from_constraints.m_linear) +
                         dot_product(jacobian_elem.first.m_angular, rb_first.m_acceleration_from_constraints.m_angular)
