@@ -37,6 +37,7 @@ struct  scene_node_id
     path_type const&  path() const { return m_path; }
     path_element_type const&  path_element(natural_32_bit const  index) const { return m_path.at(index); }
     path_element_type const&  path_last_element() const { return m_path.back(); }
+    path_element_type const&  path_front_element() const { return m_path.front(); }
     scene_node_id  get_direct_parent_id() const;
 
     bool  is_prefix_of(scene_node_id const&  other) const;
@@ -105,12 +106,13 @@ scn::scene_node_id::path_type&  split(
         bool const  ignore_empty_path_elements = true,
         char const  sep = '/'
         );
+scn::scene_node_id  make_absolute_node_id(scn::scene_node_id::path_type const&  rel, scn::scene_node_id::path_type const&  base);
 
 inline std::string  as_string(scn::scene_node_id const&  id)
 {  return join(id.path()); }
 
-inline scn::scene_node_id  as_scene_node_id(std::string const&  path)
-{ scn::scene_node_id::path_type p; return scn::scene_node_id(split(p, path)); }
+inline scn::scene_node_id  as_scene_node_id(std::string const&  path, scn::scene_node_id const&  base = scn::scene_node_id())
+{ scn::scene_node_id::path_type p; return make_absolute_node_id(split(p, path), base.path()); }
 
 
 namespace std {

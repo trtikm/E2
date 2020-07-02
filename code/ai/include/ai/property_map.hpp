@@ -139,8 +139,10 @@ struct property_map
     matrix33  get_matrix33(property_name const&  name) const
     { return row_vectors_to_matrix(get_vector3(name + "_0"), get_vector3(name + "_1"), get_vector3(name + "_2")); }
 
-    scene_node_id  get_scene_node_id(property_name const&  name) const { return as_scene_node_id(get_string(name)); }
-    scene_record_id  get_scene_record_id(property_name const& name) const { return as_scene_record_id(get_string(name)); }
+    scene_node_id  get_scene_node_id(property_name const&  name, scene_node_id const&  base_id = scene_node_id()) const
+    { return as_scene_node_id(get_string(name), base_id); }
+    scene_record_id  get_scene_record_id(property_name const& name, scene_node_id const&  base_id = scene_node_id()) const
+    { return as_scene_record_id(get_string(name), base_id); }
 
     bool&  get_bool_ref(property_name const&  name) { return as<bool_value>(at(name)).value_ref(); }
     integer_32_bit&  get_int_ref(property_name const&  name) { return as<int_value>(at(name)).value_ref(); }

@@ -112,6 +112,24 @@ scn::scene_node_id::path_type&  split(
     return output;
 }
 
+scn::scene_node_id  make_absolute_node_id(scn::scene_node_id::path_type const&  rel, scn::scene_node_id::path_type const&  base)
+{
+    if (rel.empty() || base.empty() || (rel.front() != "." && rel.front() != ".."))
+        return scn::scene_node_id(rel);
+    scn::scene_node_id::path_type  p = base;
+    for (auto const&  x : rel)
+        if (x == ".")
+            continue;
+        else if (x == "..")
+        {
+            ASSUMPTION(!p.empty());
+            p.pop_back();
+        }
+        else
+            p.push_back(x);
+    return scn::scene_node_id(p);
+}
+
 
 namespace std {
 

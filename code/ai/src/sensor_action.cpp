@@ -379,8 +379,7 @@ ai::from_sensor_record_to_sensor_action_map  as_sensor_action_map(
     ai::from_sensor_record_to_sensor_action_map  result;
     for (auto  it = tree.begin(); it != tree.end(); ++it)
     {
-        ai::scene::record_id const  relative_id = as_scene_record_id(it->first);
-        ai::scene::record_id const  id(root / relative_id.get_node_id(), relative_id.get_folder_name(), relative_id.get_record_name());
+        ai::scene::record_id const  id = as_scene_record_id("./" + it->first, root);
         std::vector<ai::sensor_action>  actions;
         for (auto  action_it = it->second.begin(); action_it != it->second.end(); ++action_it)
         {

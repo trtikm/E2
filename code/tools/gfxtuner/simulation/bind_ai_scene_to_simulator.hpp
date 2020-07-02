@@ -125,8 +125,10 @@ struct bind_ai_scene_to_simulator : public ai::scene
             vector3 const&  unit_normal_in_world_space,
             angeo::collision_object_id const  coid,
             angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  self_collision_class,
             angeo::collision_object_id const  other_coid,
-            angeo::COLLISION_MATERIAL_TYPE const  other_material
+            angeo::COLLISION_MATERIAL_TYPE const  other_material,
+            angeo::COLLISION_CLASS const  other_collision_class
             ) const;
 
 

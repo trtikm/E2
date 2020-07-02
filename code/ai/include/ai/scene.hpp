@@ -27,27 +27,33 @@ struct  scene
                 node_id const&  self_collider_nid_,
                 collision_object_id const  self_coid_,
                 angeo::COLLISION_MATERIAL_TYPE const  self_material_,
+                angeo::COLLISION_CLASS const  self_collision_class_,
                 node_id const&  other_collider_nid_,
                 collision_object_id const  other_coid_,
-                angeo::COLLISION_MATERIAL_TYPE const  other_material_
+                angeo::COLLISION_MATERIAL_TYPE const  other_material_,
+                angeo::COLLISION_CLASS const  other_collision_class_
                 )
             : contact_point_in_world_space(contact_point_in_world_space_)
             , unit_normal_in_world_space(unit_normal_in_world_space_)
             , self_collider_nid(self_collider_nid_)
             , self_coid(self_coid_)
             , self_material(self_material_)
+            , self_collision_class(self_collision_class_)
             , other_collider_nid(other_collider_nid_)
             , other_coid(other_coid_)
             , other_material(other_material_)
+            , other_collision_class(other_collision_class_)
         {}
         vector3  contact_point_in_world_space;
         vector3  unit_normal_in_world_space;
         node_id  self_collider_nid;
         collision_object_id  self_coid;
         angeo::COLLISION_MATERIAL_TYPE  self_material;
+        angeo::COLLISION_CLASS  self_collision_class;
         node_id  other_collider_nid;
         collision_object_id  other_coid;
         angeo::COLLISION_MATERIAL_TYPE  other_material;
+        angeo::COLLISION_CLASS  other_collision_class;
     };
     using  collicion_contant_info_ptr = std::shared_ptr<collicion_contant_info const>;
 

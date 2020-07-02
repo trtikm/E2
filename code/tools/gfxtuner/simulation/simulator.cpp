@@ -1013,11 +1013,13 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
                     angeo::COLLISION_MATERIAL_TYPE const  material_1 = m_collision_scene_ptr->get_material(coid_1);
                     angeo::COLLISION_MATERIAL_TYPE const  material_2 = m_collision_scene_ptr->get_material(coid_2);
+                    angeo::COLLISION_CLASS const  class_1 = m_collision_scene_ptr->get_collision_class(coid_1);
+                    angeo::COLLISION_CLASS const  class_2 = m_collision_scene_ptr->get_collision_class(coid_2);
 
                     if (ai_scene_binding->do_tracking_collision_contact_of_collision_object(coid_1))
-                        ai_scene_binding->on_collision_contact(contact_point, unit_normal, coid_1, material_1, coid_2, material_2);
+                        ai_scene_binding->on_collision_contact(contact_point, unit_normal, coid_1, material_1, class_1, coid_2, material_2, class_2);
                     if (ai_scene_binding->do_tracking_collision_contact_of_collision_object(coid_2))
-                        ai_scene_binding->on_collision_contact(contact_point, -unit_normal, coid_2, material_2, coid_1, material_1);
+                        ai_scene_binding->on_collision_contact(contact_point, -unit_normal, coid_2, material_2, class_2, coid_1, material_1, class_1);
 
                     auto const  rb_1_it = m_binding_of_collision_objects.find(coid_1);
                     auto const  rb_2_it = m_binding_of_collision_objects.find(coid_2);
@@ -1201,7 +1203,7 @@ void  simulator::process_ai_requests(
         {
             scn::scene_node_ptr const  affected_node_ptr = find_nearest_rigid_body_node(request->affected_object_rid.get_node_id());
             scn::scene_node_ptr const  field_node_ptr = get_scene_node(request->force_field_rid.get_node_id());
-            scn::scene_node_ptr const  origin_node_ptr = get_scene_node(request->props.get_scene_node_id("origin_nid"));
+            scn::scene_node_ptr const  origin_node_ptr = get_scene_node(request->props.get_scene_node_id("origin_nid", field_node_ptr->get_id()));
             if (affected_node_ptr != nullptr && field_node_ptr != nullptr && origin_node_ptr != nullptr)
             {
                 angeo::rigid_body_id const  rb_id = scn::get_rigid_body(*affected_node_ptr)->id();
@@ -1255,7 +1257,7 @@ void  simulator::process_ai_requests(
         }
         else if (auto const  request = ai::scene::cast<ai::scene::request_update_linear_force_field>(requests.back()))
         {
-            scn::scene_node_ptr const  affected_node_ptr = get_scene_node(request->affected_object_rid.get_node_id());
+            scn::scene_node_ptr const  affected_node_ptr = find_nearest_rigid_body_node(request->affected_object_rid.get_node_id());
             if (affected_node_ptr != nullptr)
             {
                 angeo::rigid_body_id const  rb_id = scn::get_rigid_body(*affected_node_ptr)->id();

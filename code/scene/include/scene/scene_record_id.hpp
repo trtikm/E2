@@ -117,9 +117,16 @@ inline bool operator>=(scene_record_id const&  left, scene_record_id const&  rig
 inline std::string  as_string(scn::scene_record_id const&  id)
 { return msgstream() << as_string(id.get_node_id()) << (id.get_node_id().depth() == 0U ? "" : "/") << id.get_folder_name() << '/' << id.get_record_name(); }
 
-inline scn::scene_record_id  as_scene_record_id(std::string const&  path)
-{ scn::scene_node_id::path_type p; split(p, path, false); ASSUMPTION(p.size() >= 2UL); return scn::scene_record_id(p); }
-
+inline scn::scene_record_id  as_scene_record_id(std::string const&  path, scn::scene_node_id const&  base = scn::scene_node_id())
+{
+    scn::scene_node_id::path_type  p = as_scene_node_id(path, base).path();
+    ASSUMPTION(p.size() > 2UL);
+    std::string const  rec_name = p.back();
+    p.pop_back();
+    std::string const  fol_name = p.back();
+    p.pop_back();
+    return scn::scene_record_id(scn::scene_node_id(p), fol_name, rec_name);
+}
 
 
 namespace std {

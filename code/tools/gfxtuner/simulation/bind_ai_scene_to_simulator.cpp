@@ -598,8 +598,10 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
         vector3 const&  unit_normal_in_world_space,
         angeo::collision_object_id const  coid,
         angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  self_collision_class,
         angeo::collision_object_id const  other_coid,
-        angeo::COLLISION_MATERIAL_TYPE const  other_material
+        angeo::COLLISION_MATERIAL_TYPE const  other_material,
+        angeo::COLLISION_CLASS const  other_collision_class
         ) const
 {
     collision_contacts_stream_type::const_iterator const  it = m_collision_contacts_stream.find(coid);
@@ -618,9 +620,11 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
                     it->second.first,
                     coid,
                     material,
+                    self_collision_class,
                     other_it != m_collision_contacts_stream.cend() ? other_it->second.first : node_id{},
                     other_coid,
-                    other_material
+                    other_material,
+                    other_collision_class
                     );
 
     if (other_it == m_collision_contacts_stream.cend())

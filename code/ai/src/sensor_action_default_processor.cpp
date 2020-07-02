@@ -32,67 +32,76 @@ bool  process_sensor_event_using_default_procedure(
 
     case SENSOR_ACTION_KIND::SET_LINEAR_VELOCITY:
         scene->set_linear_velocity_of_rigid_body_of_scene_node(
-            action.props.get_scene_node_id("rigid_body_nid"),
+            action.props.get_scene_node_id("rigid_body_nid", self_rid.get_node_id()),
             action.props.get_vector3()
         );
         return true;
     case SENSOR_ACTION_KIND::SET_ANGULAR_VELOCITY:
         scene->set_angular_velocity_of_rigid_body_of_scene_node(
-            action.props.get_scene_node_id("rigid_body_nid"),
+            action.props.get_scene_node_id("rigid_body_nid", self_rid.get_node_id()),
             action.props.get_vector3()
         );
         return true;
     case SENSOR_ACTION_KIND::SET_LINEAR_ACCELERATION:
         scene->set_linear_acceleration_of_rigid_body_of_scene_node(
-            action.props.get_scene_node_id("rigid_body_nid"),
+            action.props.get_scene_node_id("rigid_body_nid", self_rid.get_node_id()),
             action.props.get_vector3()
         );
         return true;
     case SENSOR_ACTION_KIND::SET_ANGULAR_ACCELERATION:
         scene->set_angular_acceleration_of_rigid_body_of_scene_node(
-            action.props.get_scene_node_id("rigid_body_nid"),
+            action.props.get_scene_node_id("rigid_body_nid", self_rid.get_node_id()),
             action.props.get_vector3()
         );
         return true;
 
     case SENSOR_ACTION_KIND::SET_MASS_INVERTED:
         scene->set_inverted_mass_of_rigid_body_of_scene_node(
-            action.props.get_scene_node_id("rigid_body_nid"),
+            action.props.get_scene_node_id("rigid_body_nid", self_rid.get_node_id()),
             action.props.get_float("inverted_mass")
         );
         return true;
     case SENSOR_ACTION_KIND::SET_INERTIA_TENSOR_INVERTED:
         scene->set_inverted_inertia_tensor_of_rigid_body_of_scene_node(
-            action.props.get_scene_node_id("rigid_body_nid"),
+            action.props.get_scene_node_id("rigid_body_nid", self_rid.get_node_id()),
             action.props.get_matrix33()
         );
         return true;
 
     case SENSOR_ACTION_KIND::UPDATE_RADIAL_FORCE_FIELD:
-        ASSUMPTION(other.sensor != nullptr || other.rigid_body_id != nullptr);
-        scene->accept(scene::create_request<scene::request_update_radial_force_field>(
-            other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
-            self_rid,
-            action.props
-            ),
-            false);
+        if (other.sensor == nullptr)
+        {
+            ASSUMPTION(other.rigid_body_id != nullptr);
+            scene->accept(scene::create_request<scene::request_update_radial_force_field>(
+                other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
+                self_rid,
+                action.props
+                ),
+                false);
+        }
         return true;
     case SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD:
-        ASSUMPTION(other.sensor != nullptr || other.rigid_body_id != nullptr);
-        scene->accept(scene::create_request<scene::request_update_linear_force_field>(
-            other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
-            self_rid,
-            action.props
-            ),
-            false);
+        if (other.sensor == nullptr)
+        {
+            ASSUMPTION(other.rigid_body_id != nullptr);
+            scene->accept(scene::create_request<scene::request_update_linear_force_field>(
+                other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
+                self_rid,
+                action.props
+                ),
+                false);
+        }
         return true;
     case SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD:
-        ASSUMPTION(other.sensor != nullptr || other.rigid_body_id != nullptr);
-        scene->accept(scene::create_request<scene::request_leave_force_field>(
-            other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
-            self_rid
-            ),
-            false);
+        if (other.sensor == nullptr)
+        {
+            ASSUMPTION(other.rigid_body_id != nullptr);
+            scene->accept(scene::create_request<scene::request_leave_force_field>(
+                other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
+                self_rid
+                ),
+                false);
+        }
         return true;
 
     case SENSOR_ACTION_KIND::END_OF_LIFE:
