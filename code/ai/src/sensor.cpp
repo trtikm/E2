@@ -147,7 +147,8 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
             if (record.other_id.valid() && record.other_id.kind == OBJECT_KIND::SENSOR)
             {
                 sensor const* const  other_sensor_ptr = &m_simulator->get_sensors().at(record.other_id.index);
-                m_touching.insert({ other_sensor_ptr->get_self_rid(), other_sensor_ptr });
+                if (other_sensor_ptr == nullptr || other_sensor_ptr->is_enabled())
+                    m_touching.insert({ other_sensor_ptr->get_self_rid(), other_sensor_ptr });
             }
             else
             {

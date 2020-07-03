@@ -24,10 +24,10 @@ bool  process_sensor_event_using_default_procedure(
         return true;
 
     case SENSOR_ACTION_KIND::ENABLE_SENSOR:
-        simulator->set_sensor_enabled(action.props.get_scene_record_id("sensor_rid"), true);
+        simulator->set_sensor_enabled(action.props.get_scene_record_id("sensor_rid", self_rid.get_node_id()), true);
         return true;
     case SENSOR_ACTION_KIND::DISABLE_SENSOR:
-        simulator->set_sensor_enabled(action.props.get_scene_record_id("sensor_rid"), false);
+        simulator->set_sensor_enabled(action.props.get_scene_record_id("sensor_rid", self_rid.get_node_id()), false);
         return true;
 
     case SENSOR_ACTION_KIND::SET_LINEAR_VELOCITY:
