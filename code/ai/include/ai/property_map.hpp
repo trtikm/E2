@@ -159,6 +159,8 @@ struct property_map
     void  set(property_name const& name, property_value_ptr const  value) { set(name, *value); }
     void  set_shared(property_name const& name, property_value_ptr const  value) { get_map()[name] = value; }
 
+    void  del(property_name const& name) { get_map().erase(name); }
+
 private:
     map_type const&  get_map() const { return m_map; }
     map_type&  get_map() { return m_map; }

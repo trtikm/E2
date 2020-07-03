@@ -12,6 +12,7 @@
 #   include <QPushButton>
 #   include <QComboBox>
 #   include <QCheckBox>
+#   include <QPushButton>
 #   include <QTableWidget>
 #   include <unordered_map>
 
@@ -32,6 +33,8 @@ public slots:
     void  reject();
 
     void  on_kind_combo_changed(int = 0);
+    void  on_insert_row_button_pressed();
+    void  on_delete_row_button_pressed();
     void  on_props_table_changed(QTableWidgetItem* = nullptr);
 
 private:
@@ -45,6 +48,8 @@ private:
     QPushButton* m_widget_ok;
     QComboBox*  m_sensor_kind_combobox;
     QCheckBox*  m_enabled_checkbox;
+    QPushButton*  m_insert_property_row_button;
+    QPushButton*  m_delete_property_row_button;
     QTableWidget*  m_property_map_table;
     bool  m_locked;
 

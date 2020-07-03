@@ -72,8 +72,6 @@ sensor::sensor(simulator* const  simulator_,
         m_self_id.valid() && m_self_id.kind == OBJECT_KIND::SENSOR &&
         [](SENSOR_KIND const  kind, property_map const&  cfg) -> bool {
             auto const&  default_cfg = default_sensor_configs().at(kind);
-            if (cfg.size() != default_cfg.size())
-                return false;
             for (auto const&  elem : default_cfg)
             {
                 auto const  it = cfg.find(elem.first);
@@ -142,12 +140,20 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
             return other_oid.valid() ? &m_simulator->get_sensors().at(other_oid.index) : nullptr;
         };
 
+        scene::record_id  activator_rid;
+        {
+            if (m_cfg->has("activator"))
+                activator_rid = m_cfg->get_scene_record_id("activator", this->get_self_rid().get_node_id());
+        }
+
         for (collision_contact_record const& record : m_collision_contacts_buffer)
         {
             if (record.other_id.valid() && record.other_id.kind == OBJECT_KIND::SENSOR)
             {
                 sensor const* const  other_sensor_ptr = &m_simulator->get_sensors().at(record.other_id.index);
-                if (other_sensor_ptr == nullptr || other_sensor_ptr->is_enabled())
+                if (other_sensor_ptr == nullptr
+                        || (other_sensor_ptr->is_enabled()
+                                && (!activator_rid.valid() || activator_rid == other_sensor_ptr->get_self_rid())))
                     m_touching.insert({ other_sensor_ptr->get_self_rid(), other_sensor_ptr });
             }
             else
@@ -206,6 +212,9 @@ void  sensor::on_collision_contact(scene::collicion_contant_info_ptr const  cont
         return;
 
     if (!m_owner_id.valid())
+        return;
+
+    if (contact_info->self_collision_class == angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR)
         return;
 
     m_collision_contacts_buffer.push_back({ contact_info, other_id });

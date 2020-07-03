@@ -15,18 +15,27 @@ void  on_property_map_table_changed(QTableWidget* const  table, ai::property_map
 {
     int const  row = table->currentRow();
     int const  column = table->currentColumn();
-    if (column != 1)
-        return;
     QTableWidgetItem* const  name_item = table->item(row, 0);
     QTableWidgetItem* const  value_item = table->item(row, 1);
+    if (name_item == nullptr || value_item == nullptr)
+        return;
     std::string const  name = qtgl::to_string(name_item->text());
-    props.set(
-            qtgl::to_string(name_item->text()),
-            as_property_map_value(
-                    props.get_type(qtgl::to_string(name_item->text())),
-                    qtgl::to_string(value_item->text())
-                    )
-            );
+    std::string const  value = qtgl::to_string(value_item->text());
+    if (name == "TODO" || value == "TODO")
+        return;
+    if (props.has(name))
+        props.set(name, as_property_map_value(props.get_type(name), value));
+    else if (value.empty())
+        props.set(name, as_property_map_value(ai::property_map::PROPERTY_TYPE::STRING, value));
+    else if (value.front() == '+' || value.front() == '-' || std::isdigit(value.front()))
+    {
+        if (value.find('.') == std::string::npos)
+            props.set(name, as_property_map_value(ai::property_map::PROPERTY_TYPE::INT, value));
+        else
+            props.set(name, as_property_map_value(ai::property_map::PROPERTY_TYPE::FLOAT, value));
+    }
+    else
+        props.set(name, as_property_map_value(ai::property_map::PROPERTY_TYPE::STRING, value));
 }
 
 
@@ -44,6 +53,10 @@ void  rebuild_property_map_table(
     for (auto const&  name_and_record : default_content)
         if (reset_to_defaults || name_and_record.second.is_mandatory || props.has(name_and_record.first))
             map.insert({name_and_record.second.edit_order, name_and_record.first});
+    natural_32_bit  order = map.empty() ? 0U : map.rbegin()->first;
+    for (auto const&  name_and_value : props)
+        if (default_content.count(name_and_value.first) == 0UL)
+            map.insert({ ++order, name_and_value.first });
 
     table->clear();
     table->setRowCount((int)map.size());
@@ -63,14 +76,18 @@ void  rebuild_property_map_table(
             value_item = table->item(row, 1);
         }
 
-        ai::property_map::default_config_record const&  record = default_content.at(order_and_name.second);
-
         name_item->setText(order_and_name.second.c_str());
-        std::string const  tool_tip = record.description + (record.is_mandatory ? "\nNOTE: This is mandatory property." : "");
-        name_item->setToolTip(tool_tip.c_str());
+
+        auto const  record_it = default_content.find(order_and_name.second);
+
+        if (record_it != default_content.end())
+        {
+            std::string const  tool_tip = record_it->second.description + (record_it->second.is_mandatory ? "\nNOTE: This is mandatory property." : "");
+            name_item->setToolTip(tool_tip.c_str());
+        }
 
         std::string const  value_text = as_string(
-                props.has(order_and_name.second) ? ((ai::property_map const&)props).at(order_and_name.second) : *record.value
+                props.has(order_and_name.second) ? ((ai::property_map const&)props).at(order_and_name.second) : *record_it->second.value
                 );
         value_item->setText(value_text.c_str());
 
@@ -172,6 +189,11 @@ sensor_action_editor::sensor_action_editor(
 
     , m_sensor_nodes_and_kinds(sensor_nodes_and_kinds_)
 {
+    m_sensor_action_kind_insert_button->setAutoDefault(false);
+    m_sensor_action_kind_insert_button->setDefault(false);
+    m_sensor_action_kind_delete_button->setAutoDefault(false);
+    m_sensor_action_kind_delete_button->setDefault(false);
+
     std::sort(m_sensor_nodes_and_kinds.begin(), m_sensor_nodes_and_kinds.end(),
         [](std::pair<scn::scene_record_id, ai::SENSOR_KIND> const&  left,
            std::pair<scn::scene_record_id, ai::SENSOR_KIND> const&  right) -> bool {

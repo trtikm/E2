@@ -44,6 +44,28 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
                 }(this)
             )
     , m_enabled_checkbox(new QCheckBox("Enabled"))
+    , m_insert_property_row_button(
+            [](sensor_props_dialog* wnd) {
+                    struct s : public QPushButton {
+                        s(sensor_props_dialog* wnd) : QPushButton("Insert row")
+                        {
+                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_insert_row_button_pressed()));
+                        }
+                    };
+                    return new s(wnd);
+                }(this)
+            )
+    , m_delete_property_row_button(
+            [](sensor_props_dialog* wnd) {
+                    struct s : public QPushButton {
+                        s(sensor_props_dialog* wnd) : QPushButton("Delete row")
+                        {
+                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_delete_row_button_pressed()));
+                        }
+                    };
+                    return new s(wnd);
+                }(this)
+            )
     , m_property_map_table(
             [](sensor_props_dialog* wnd) {
                     struct s : public QTableWidget {
@@ -91,10 +113,25 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
         }
         dlg_layout->addLayout(kind_layout);
 
-        dlg_layout->addWidget(m_enabled_checkbox);
-        m_enabled_checkbox->setChecked(m_current_props.m_enabled);
+        QHBoxLayout* const  enabled_and_insert_delete_layout = new QHBoxLayout;
+        {
+            m_enabled_checkbox->setChecked(m_current_props.m_enabled);
+            enabled_and_insert_delete_layout->addWidget(m_enabled_checkbox);
 
-        rebuild_sensor_property_map_table(m_property_map_table, m_new_props.m_sensor_props, m_new_props.m_sensor_kind, false);
+            m_insert_property_row_button->setAutoDefault(false);
+            m_insert_property_row_button->setDefault(false);
+            m_delete_property_row_button->setAutoDefault(false);
+            m_delete_property_row_button->setDefault(false);
+
+            enabled_and_insert_delete_layout->addWidget(m_insert_property_row_button);
+            enabled_and_insert_delete_layout->addWidget(m_delete_property_row_button);
+            enabled_and_insert_delete_layout->addStretch(1);
+        }
+        dlg_layout->addLayout(enabled_and_insert_delete_layout);
+
+        LOCK_BOOL_BLOCK_BEGIN(m_locked);
+            rebuild_sensor_property_map_table(m_property_map_table, m_new_props.m_sensor_props, m_new_props.m_sensor_kind, false);
+        LOCK_BOOL_BLOCK_END();
         dlg_layout->addWidget(m_property_map_table);
 
         QHBoxLayout* const buttons_layout = new QHBoxLayout;
@@ -142,10 +179,43 @@ void  sensor_props_dialog::on_kind_combo_changed(int)
         if (new_kind != m_new_props.m_sensor_kind)
         {
             m_new_props.m_sensor_kind = new_kind;
-            rebuild_sensor_property_map_table(m_property_map_table, m_new_props.m_sensor_props, new_kind, true);
+            //rebuild_sensor_property_map_table(m_property_map_table, m_new_props.m_sensor_props, new_kind, true);
         }
     LOCK_BOOL_BLOCK_END();
 }
+
+
+void  sensor_props_dialog::on_insert_row_button_pressed()
+{
+    LOCK_BOOL_BLOCK_BEGIN(m_locked);
+        int row = m_property_map_table->rowCount();
+        m_property_map_table->insertRow(row);
+        QTableWidgetItem*  name_item = m_property_map_table->item(row, 0);
+        if (name_item == nullptr)
+        {
+            m_property_map_table->setItem(row, 0, new QTableWidgetItem);
+            name_item = m_property_map_table->item(row, 0);
+        }
+        QTableWidgetItem*  value_item = m_property_map_table->item(row, 1);
+        if (value_item == nullptr)
+        {
+            m_property_map_table->setItem(row, 1, new QTableWidgetItem);
+            value_item = m_property_map_table->item(row, 1);
+        }
+        name_item->setText("TODO");
+        value_item->setText("TODO");
+    LOCK_BOOL_BLOCK_END();
+}
+
+
+void  sensor_props_dialog::on_delete_row_button_pressed()
+{
+    LOCK_BOOL_BLOCK_BEGIN(m_locked);
+        int const  row = m_property_map_table->currentRow();
+        m_property_map_table->removeRow(row);
+    LOCK_BOOL_BLOCK_END();
+}
+
 
 
 void  sensor_props_dialog::on_props_table_changed(QTableWidgetItem*)
