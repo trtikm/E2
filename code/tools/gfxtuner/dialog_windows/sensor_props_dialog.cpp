@@ -43,6 +43,7 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
                     return new s(wnd);
                 }(this)
             )
+    , m_enabled_checkbox(new QCheckBox("Enabled"))
     , m_property_map_table(
             [](sensor_props_dialog* wnd) {
                     struct s : public QTableWidget {
@@ -90,6 +91,9 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
         }
         dlg_layout->addLayout(kind_layout);
 
+        dlg_layout->addWidget(m_enabled_checkbox);
+        m_enabled_checkbox->setChecked(m_current_props.m_enabled);
+
         rebuild_sensor_property_map_table(m_property_map_table, m_new_props.m_sensor_props, m_new_props.m_sensor_kind, false);
         dlg_layout->addWidget(m_property_map_table);
 
@@ -118,6 +122,8 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
 
 void  sensor_props_dialog::accept()
 {
+    m_new_props.m_enabled = m_enabled_checkbox->isChecked();
+
     m_ok = true;
     QDialog::accept();
 }

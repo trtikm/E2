@@ -11,6 +11,7 @@
 #   include <QDialog>
 #   include <QPushButton>
 #   include <QComboBox>
+#   include <QCheckBox>
 #   include <QTableWidget>
 #   include <unordered_map>
 
@@ -43,6 +44,7 @@ private:
     bool  m_ok;
     QPushButton* m_widget_ok;
     QComboBox*  m_sensor_kind_combobox;
+    QCheckBox*  m_enabled_checkbox;
     QTableWidget*  m_property_map_table;
     bool  m_locked;
 
