@@ -1854,205 +1854,235 @@ void  simulator::render_scene_batches(
 
     using  batch_and_nodes_vector = std::pair<qtgl::batch, std::vector<scn::scene_node_ptr> >;
     using  vector_index_and_element_index = std::pair<natural_32_bit, natural_32_bit>;
+    using  array_of_render_tasks = std::array<std::vector<batch_and_nodes_vector>, 4>;
 
-    std::array<std::vector<batch_and_nodes_vector>, 2>  opaque_and_tanslucent_batches;
-    std::unordered_map<std::string, vector_index_and_element_index> from_batch_id_to_indices;
+    std::array<std::vector<batch_and_nodes_vector>, 4>  collected_batches;
+    std::array<std::unordered_map<std::string, vector_index_and_element_index>, 2> from_batch_id_to_indices;
     get_scene().foreach_node(
-        [this, &from_batch_id_to_indices , &opaque_and_tanslucent_batches](scn::scene_node_ptr const  node_ptr) -> bool {
+        [this, &from_batch_id_to_indices , &collected_batches](scn::scene_node_ptr const  node_ptr) -> bool {
+                scn::scene_node::folder_content::records_map const&  sensor_holders = get_sensor_holders(*node_ptr);
                 for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
                 {
                     qtgl::batch const  batch = scn::as_batch(name_holder.second);
                     if (!batch.loaded_successfully())
                         continue;
-                    auto  it = from_batch_id_to_indices.find(batch.key().get_unique_id());
-                    if (it == from_batch_id_to_indices.end())
+                    bool  is_disabled = false;
+                    auto const  sensor_it = sensor_holders.find(name_holder.first);
+                    if (sensor_it != sensor_holders.end())
+                        is_disabled = !get_ai_simulator()->is_sensor_enabled(scn::as_sensor(sensor_it->second)->id());
+                    if (is_disabled)
                     {
-                        natural_32_bit const  vector_index = batch.is_translucent() ? 1U : 0U;
-                        std::vector<batch_and_nodes_vector>&  nodes = opaque_and_tanslucent_batches.at(vector_index);
-                        natural_32_bit const  element_index = (natural_32_bit)nodes.size();
-                        nodes.push_back({batch, {node_ptr}});
-                        it = from_batch_id_to_indices.insert({batch.key().get_unique_id(), {vector_index, element_index}}).first;
+                        auto  it = from_batch_id_to_indices.front().find(batch.key().get_unique_id());
+                        if (it == from_batch_id_to_indices.front().end())
+                        {
+                            natural_32_bit const  vector_index = batch.is_translucent() ? 2U : 0U;
+                            std::vector<batch_and_nodes_vector>&  nodes = collected_batches.at(vector_index);
+                            natural_32_bit const  element_index = (natural_32_bit)nodes.size();
+                            nodes.push_back({batch, {node_ptr}});
+                            it = from_batch_id_to_indices.front().insert({batch.key().get_unique_id(), {vector_index, element_index}}).first;
+                        }
+                        else
+                            collected_batches.at(it->second.first).at(it->second.second).second.push_back(node_ptr);
                     }
                     else
-                        opaque_and_tanslucent_batches.at(it->second.first).at(it->second.second).second.push_back(node_ptr);
+                    {
+                        auto  it = from_batch_id_to_indices.back().find(batch.key().get_unique_id());
+                        if (it == from_batch_id_to_indices.back().end())
+                        {
+                            natural_32_bit const  vector_index = batch.is_translucent() ? 3U : 1U;
+                            std::vector<batch_and_nodes_vector>&  nodes = collected_batches.at(vector_index);
+                            natural_32_bit const  element_index = (natural_32_bit)nodes.size();
+                            nodes.push_back({batch, {node_ptr}});
+                            it = from_batch_id_to_indices.back().insert({batch.key().get_unique_id(), {vector_index, element_index}}).first;
+                        }
+                        else
+                            collected_batches.at(it->second.first).at(it->second.second).second.push_back(node_ptr);
+                    }
                 }
                 return true;
             },
         false
         );
-    for (auto const& tasks : opaque_and_tanslucent_batches)
-    for (auto const& batch_and_nodes : tasks)
+
+    for (natural_32_bit  set_idx = 0U; set_idx != (natural_32_bit)collected_batches.size(); ++set_idx)
     {
-        bool const  use_instancing =
-                batch_and_nodes.first.get_available_resources().skeletal() == nullptr &&
-                batch_and_nodes.first.has_instancing_data() &&
-                batch_and_nodes.second.size() > 1UL
-                ;
-        if (!qtgl::make_current(batch_and_nodes.first, draw_state, use_instancing))
-            continue;
+        vector4 const  diffuse_colour = (set_idx & 1U) == 0U ? vector4(0.0f, 0.0f, 0.0f, 1.0f) : m_diffuse_colour;
+        vector3 const  ambient_colour = (set_idx & 1U) == 0U ? vector3(0.25f, 0.25f, 0.25f) : m_ambient_colour;
+        vector3 const  directional_light_colour = (set_idx & 1U) == 0U ? ambient_colour : m_directional_light_colour;
 
-        if (use_instancing)
+        for (auto const& batch_and_nodes : collected_batches.at(set_idx))
         {
-            qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(batch_and_nodes.first);
-            for (auto const& node_ptr : batch_and_nodes.second)
-                instanced_data_provider.insert_from_model_to_camera_matrix(
-                        matrix_from_world_to_camera * node_ptr->get_world_matrix()
-                        );
-            qtgl::render_batch(
-                    batch_and_nodes.first,
-                    instanced_data_provider,
-                    qtgl::vertex_shader_uniform_data_provider(
-                            batch_and_nodes.first,
-                            {},
-                            matrix_from_camera_to_clipspace,
-                            m_diffuse_colour,
-                            m_ambient_colour,
-                            m_specular_colour,
-                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                            m_directional_light_colour,
-                            m_fog_colour,
-                            m_fog_near,
-                            m_fog_far
-                            ),
-                    qtgl::fragment_shader_uniform_data_provider(
-                            m_diffuse_colour,
-                            m_ambient_colour,
-                            m_specular_colour,
-                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                            m_directional_light_colour,
-                            m_fog_colour,
-                            m_fog_near,
-                            m_fog_far
-                            )
-                    );
-        }
-        else
-            for (auto const& node_ptr : batch_and_nodes.second)
+            bool const  use_instancing =
+                    batch_and_nodes.first.get_available_resources().skeletal() == nullptr &&
+                    batch_and_nodes.first.has_instancing_data() &&
+                    batch_and_nodes.second.size() > 1UL
+                    ;
+            if (!qtgl::make_current(batch_and_nodes.first, draw_state, use_instancing))
+                continue;
+
+            if (use_instancing)
             {
-                ai::skeletal_motion_templates  motion_templates;
-                {
-                    scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
-                    if (agent_ptr != nullptr && agent_ptr->get_props().m_skeleton_props != nullptr)
-                        motion_templates = agent_ptr->get_props().m_skeleton_props->skeletal_motion_templates;
-                }
-                if (!motion_templates.loaded_successfully())
-                {
-                    qtgl::render_batch(
-                            batch_and_nodes.first,
-                            qtgl::vertex_shader_uniform_data_provider(
-                                    batch_and_nodes.first,
-                                    { matrix_from_world_to_camera * node_ptr->get_world_matrix() },
-                                    matrix_from_camera_to_clipspace,
-                                    m_diffuse_colour,
-                                    m_ambient_colour,
-                                    m_specular_colour,
-                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                    m_directional_light_colour,
-                                    m_fog_colour,
-                                    m_fog_near,
-                                    m_fog_far
-                                    ),
-                            qtgl::fragment_shader_uniform_data_provider(
-                                    m_diffuse_colour,
-                                    m_ambient_colour,
-                                    m_specular_colour,
-                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                    m_directional_light_colour,
-                                    m_fog_colour,
-                                    m_fog_near,
-                                    m_fog_far
-                                    )
+                qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(batch_and_nodes.first);
+                for (auto const& node_ptr : batch_and_nodes.second)
+                    instanced_data_provider.insert_from_model_to_camera_matrix(
+                            matrix_from_world_to_camera * node_ptr->get_world_matrix()
                             );
-                    continue;
-                }
-
-                std::vector<matrix44>  frame;
-                {
-                    matrix44 alignment_matrix;
-                    angeo::from_base_matrix(batch_and_nodes.first.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
-
-                    std::vector<matrix44>  to_bone_matrices;
-                    {
-                        to_bone_matrices.resize(motion_templates.pose_frames().size());
-                        for (natural_32_bit  bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
-                        {
-                            angeo::to_base_matrix(motion_templates.pose_frames().at(bone), to_bone_matrices.at(bone));
-                            if (motion_templates.parents().at(bone) >= 0)
-                                to_bone_matrices.at(bone) *= to_bone_matrices.at(motion_templates.parents().at(bone));
-                        }
-                    }
-
-                    detail::skeleton_enumerate_nodes_of_bones(
-                            node_ptr,
-                            motion_templates,
-                            [&frame, &matrix_from_world_to_camera, motion_templates, &alignment_matrix, &to_bone_matrices, node_ptr](
-                                natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
-                                {
-
-                                    if (bone_node_ptr != nullptr)
-                                        frame.push_back(
-                                                matrix_from_world_to_camera *
-                                                bone_node_ptr->get_world_matrix() *
-                                                to_bone_matrices.at(bone) *
-                                                alignment_matrix
-                                                );
-                                    else
-                                    {
-                                        // The deformable mesh is in inconsistent state: the controlling scene nodes
-                                        // are not available; they were perhaps manually deleted from the scene bu the
-                                        // user. The code below is supposed to render the object in default pose despite
-                                        // of the inconsistency. The code is not optimal (slow) though.
-                                        matrix44 result;
-                                        angeo::from_base_matrix(motion_templates.pose_frames().at(bone), result);
-                                        for (integer_32_bit  bone_idx = motion_templates.parents().at(bone);
-                                             bone_idx >= 0;
-                                             bone_idx = motion_templates.parents().at(bone_idx))
-                                        {
-                                            matrix44 M;
-                                            angeo::from_base_matrix(motion_templates.pose_frames().at(bone_idx), M);
-                                            result = M * result;
-                                        }
-                                        frame.push_back(
-                                                matrix_from_world_to_camera *
-                                                node_ptr->get_world_matrix() *
-                                                result *
-                                                to_bone_matrices.at(bone) *
-                                                alignment_matrix
-                                                );
-                                    }
-                                    return true;
-                                }
-                            );
-                }
-
                 qtgl::render_batch(
                         batch_and_nodes.first,
+                        instanced_data_provider,
                         qtgl::vertex_shader_uniform_data_provider(
                                 batch_and_nodes.first,
-                                frame,
+                                {},
                                 matrix_from_camera_to_clipspace,
-                                m_diffuse_colour,
-                                m_ambient_colour,
+                                diffuse_colour,
+                                ambient_colour,
                                 m_specular_colour,
                                 transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                m_directional_light_colour,
+                                directional_light_colour,
                                 m_fog_colour,
                                 m_fog_near,
                                 m_fog_far
                                 ),
                         qtgl::fragment_shader_uniform_data_provider(
-                                m_diffuse_colour,
-                                m_ambient_colour,
+                                diffuse_colour,
+                                ambient_colour,
                                 m_specular_colour,
                                 transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                m_directional_light_colour,
+                                directional_light_colour,
                                 m_fog_colour,
                                 m_fog_near,
                                 m_fog_far
                                 )
                         );
             }
-        draw_state = batch_and_nodes.first.get_draw_state();
+            else
+                for (auto const& node_ptr : batch_and_nodes.second)
+                {
+                    ai::skeletal_motion_templates  motion_templates;
+                    {
+                        scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
+                        if (agent_ptr != nullptr && agent_ptr->get_props().m_skeleton_props != nullptr)
+                            motion_templates = agent_ptr->get_props().m_skeleton_props->skeletal_motion_templates;
+                    }
+                    if (!motion_templates.loaded_successfully())
+                    {
+                        qtgl::render_batch(
+                                batch_and_nodes.first,
+                                qtgl::vertex_shader_uniform_data_provider(
+                                        batch_and_nodes.first,
+                                        { matrix_from_world_to_camera * node_ptr->get_world_matrix() },
+                                        matrix_from_camera_to_clipspace,
+                                        diffuse_colour,
+                                        ambient_colour,
+                                        m_specular_colour,
+                                        transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                        directional_light_colour,
+                                        m_fog_colour,
+                                        m_fog_near,
+                                        m_fog_far
+                                        ),
+                                qtgl::fragment_shader_uniform_data_provider(
+                                        diffuse_colour,
+                                        ambient_colour,
+                                        m_specular_colour,
+                                        transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                        directional_light_colour,
+                                        m_fog_colour,
+                                        m_fog_near,
+                                        m_fog_far
+                                        )
+                                );
+                        continue;
+                    }
+
+                    std::vector<matrix44>  frame;
+                    {
+                        matrix44 alignment_matrix;
+                        angeo::from_base_matrix(batch_and_nodes.first.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
+
+                        std::vector<matrix44>  to_bone_matrices;
+                        {
+                            to_bone_matrices.resize(motion_templates.pose_frames().size());
+                            for (natural_32_bit  bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
+                            {
+                                angeo::to_base_matrix(motion_templates.pose_frames().at(bone), to_bone_matrices.at(bone));
+                                if (motion_templates.parents().at(bone) >= 0)
+                                    to_bone_matrices.at(bone) *= to_bone_matrices.at(motion_templates.parents().at(bone));
+                            }
+                        }
+
+                        detail::skeleton_enumerate_nodes_of_bones(
+                                node_ptr,
+                                motion_templates,
+                                [&frame, &matrix_from_world_to_camera, motion_templates, &alignment_matrix, &to_bone_matrices, node_ptr](
+                                    natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
+                                    {
+
+                                        if (bone_node_ptr != nullptr)
+                                            frame.push_back(
+                                                    matrix_from_world_to_camera *
+                                                    bone_node_ptr->get_world_matrix() *
+                                                    to_bone_matrices.at(bone) *
+                                                    alignment_matrix
+                                                    );
+                                        else
+                                        {
+                                            // The deformable mesh is in inconsistent state: the controlling scene nodes
+                                            // are not available; they were perhaps manually deleted from the scene bu the
+                                            // user. The code below is supposed to render the object in default pose despite
+                                            // of the inconsistency. The code is not optimal (slow) though.
+                                            matrix44 result;
+                                            angeo::from_base_matrix(motion_templates.pose_frames().at(bone), result);
+                                            for (integer_32_bit  bone_idx = motion_templates.parents().at(bone);
+                                                 bone_idx >= 0;
+                                                 bone_idx = motion_templates.parents().at(bone_idx))
+                                            {
+                                                matrix44 M;
+                                                angeo::from_base_matrix(motion_templates.pose_frames().at(bone_idx), M);
+                                                result = M * result;
+                                            }
+                                            frame.push_back(
+                                                    matrix_from_world_to_camera *
+                                                    node_ptr->get_world_matrix() *
+                                                    result *
+                                                    to_bone_matrices.at(bone) *
+                                                    alignment_matrix
+                                                    );
+                                        }
+                                        return true;
+                                    }
+                                );
+                    }
+
+                    qtgl::render_batch(
+                            batch_and_nodes.first,
+                            qtgl::vertex_shader_uniform_data_provider(
+                                    batch_and_nodes.first,
+                                    frame,
+                                    matrix_from_camera_to_clipspace,
+                                    diffuse_colour,
+                                    ambient_colour,
+                                    m_specular_colour,
+                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                    directional_light_colour,
+                                    m_fog_colour,
+                                    m_fog_near,
+                                    m_fog_far
+                                    ),
+                            qtgl::fragment_shader_uniform_data_provider(
+                                    diffuse_colour,
+                                    ambient_colour,
+                                    m_specular_colour,
+                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                    directional_light_colour,
+                                    m_fog_colour,
+                                    m_fog_near,
+                                    m_fog_far
+                                    )
+                            );
+                }
+            draw_state = batch_and_nodes.first.get_draw_state();
+        }
     }
 }
 
@@ -3384,6 +3414,7 @@ void  simulator::get_sensor_info(scn::scene_record_id const& id, scn::sensor_pro
     scn::sensor const* const  sensor_ptr = scn::get_sensor(*node_ptr, id.get_record_name());
     ASSUMPTION(sensor_ptr != nullptr);
     props = sensor_ptr->get_props();
+    props.m_enabled = get_ai_simulator()->is_sensor_enabled(sensor_ptr->id());
 }
 
 
