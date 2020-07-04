@@ -3651,7 +3651,7 @@ void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property
     ASSUMPTION(agent_ptr != nullptr);
     data.put("kind", ai::as_string(agent_ptr->get_props().m_agent_kind));
     data.put("skeleton_dir", agent_ptr->get_props().m_skeleton_props->skeleton_directory.string());
-    data.put_child("sensor_action_map", as_ptree(agent_ptr->get_props().m_sensor_action_map, node_ptr->get_id()));
+    data.put_child("sensor_action_map", as_ptree(agent_ptr->get_props().m_sensor_action_map));
 }
 
 
@@ -3680,7 +3680,7 @@ void  simulator::save_device(scn::scene_node_ptr const  node_ptr, boost::propert
     ASSUMPTION(device_ptr != nullptr);
     data.put("kind", ai::as_string(device_ptr->get_props().m_device_kind));
     data.put("skeleton_dir", device_ptr->get_props().m_skeleton_props->skeleton_directory.string());
-    data.put_child("sensor_action_map", as_ptree(device_ptr->get_props().m_sensor_action_map, node_ptr->get_id()));
+    data.put_child("sensor_action_map", as_ptree(device_ptr->get_props().m_sensor_action_map));
 }
 
 

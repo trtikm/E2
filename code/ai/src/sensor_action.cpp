@@ -346,7 +346,7 @@ ai::SENSOR_ACTION_KIND  as_sensor_action_kind(std::string const&  name)
 }
 
 
-boost::property_tree::ptree  as_ptree(ai::from_sensor_record_to_sensor_action_map const&  map, ai::scene::node_id const&  root)
+boost::property_tree::ptree  as_ptree(ai::from_sensor_record_to_sensor_action_map const&  map)
 {
     boost::property_tree::ptree  result;
     for (auto const&  elem : map)
@@ -361,7 +361,7 @@ boost::property_tree::ptree  as_ptree(ai::from_sensor_record_to_sensor_action_ma
         }
         result.put_child(
                 ::as_string({
-                        elem.first.get_node_id().copy(common_prefix_size(elem.first.get_node_id(), root)),
+                        elem.first.get_node_id().copy(1U),
                         elem.first.get_folder_name(),
                         elem.first.get_record_name()
                         }),
