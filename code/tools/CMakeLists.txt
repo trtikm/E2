@@ -5,3 +5,6 @@ add_subdirectory(./gfxtuner)
 
 add_subdirectory(./setimagealphachannel)
     message("-- setimagealphachannel")
+
+add_subdirectory(./e2sim)
+    message("-- e2sim")
