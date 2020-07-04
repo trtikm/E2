@@ -62,7 +62,7 @@ struct  sensor
     scene::record_id const&  get_self_rid() const { return m_self_rid; }
     object_id const&  get_owner_id() const { return m_owner_id; }
     bool  is_enabled() const { return m_enabled; }
-    void  set_enabled(bool const  state) { m_enabled = state; m_collision_contacts_buffer.clear(); }
+    void  set_enabled(bool const  state);
     property_map const&  get_config() const { return *m_cfg; }
     std::vector<collision_contact_record> const&  get_collision_contacts() const { return m_collision_contacts_buffer; }
     touch_map const&  get_touch_begin() const { return m_touch_begin; }

@@ -110,6 +110,19 @@ void  sensor::set_owner_id(object_id const&  id)
 }
 
 
+void  sensor::set_enabled(bool const  state)
+{
+    if (m_enabled != state)
+    {
+        m_enabled = state;
+
+        m_touching.clear();
+        m_old_touching.clear();
+        m_collision_contacts_buffer.clear();
+    }
+}
+
+
 void  sensor::next_round(float_32_bit const  time_step_in_seconds)
 {
     if (!is_enabled())
