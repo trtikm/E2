@@ -26,15 +26,26 @@ struct  sensor
 
     struct  other_object_info
     {
-        other_object_info() : other_object_info(nullptr, nullptr) {}
-        other_object_info(sensor const* const  sensor_, scene::record_id const* const  rigid_body_id_)
-            : sensor(sensor_), rigid_body_id(rigid_body_id_)
+        other_object_info()
+            : sensor(nullptr)
+            , rigid_body_id()
+            , contact_infos()
+        {}
+        other_object_info(
+                sensor const* const  sensor_,
+                scene::record_id const&  rigid_body_id_,
+                scene::collicion_contant_info_ptr const  contact_info
+                )
+            : sensor(sensor_)
+            , rigid_body_id(rigid_body_id_)
+            , contact_infos{contact_info}
         {}
         sensor const*  sensor;
-        scene::record_id const*  rigid_body_id;
+        scene::record_id  rigid_body_id;
+        std::vector<scene::collicion_contant_info_ptr>  contact_infos;
     };
 
-    using  touch_map = std::unordered_map<scene::record_id, sensor const*>;
+    using  touch_map = std::unordered_map<scene::record_id, other_object_info>;
 
     sensor(simulator* const  simulator_,
            SENSOR_KIND const  kind_,

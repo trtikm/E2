@@ -10,12 +10,13 @@ namespace angeo {
 enum struct  COLLISION_CLASS : natural_8_bit
 {
     COMMON_SCENE_OBJECT     = 0,
-    AGENT_MOTION_OBJECT     = 1,
-    AGENT_BODY_PART         = 2,
-    RAY_CAST_SIGHT          = 3,
-    TRIGGER_GENERAL         = 4,
-    TRIGGER_SPECIAL         = 5,
-    TRIGGER_ACTIVATOR       = 6,
+    INFINITE_MASS_OBJECT    = 1,
+    AGENT_MOTION_OBJECT     = 2,
+    SIGHT_TARGET            = 3,
+    RAY_CAST_SIGHT          = 4,
+    TRIGGER_GENERAL         = 5,
+    TRIGGER_SPECIAL         = 6,
+    TRIGGER_ACTIVATOR       = 7,
 };
 
 

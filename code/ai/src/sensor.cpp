@@ -140,6 +140,21 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
             return other_oid.valid() ? &m_simulator->get_sensors().at(other_oid.index) : nullptr;
         };
 
+        auto const  insert_to_touching =
+            [this](scene::record_id const&  rid,
+                   sensor const* const  sensor_ptr,
+                   scene::collicion_contant_info_ptr const  contact_info) -> void
+            {
+                auto const  it = m_touching.find(rid);
+                if (it == m_touching.end())
+                    m_touching.insert({ rid, { sensor_ptr, rid, contact_info }});
+                else
+                {
+                    INVARIANT(it->second.sensor == sensor_ptr);
+                    it->second.contact_infos.push_back(contact_info);
+                }
+            };
+
         scene::record_id  activator_rid;
         {
             if (m_cfg->has("activator"))
@@ -154,7 +169,7 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
                 if (other_sensor_ptr == nullptr
                         || (other_sensor_ptr->is_enabled()
                                 && (!activator_rid.valid() || activator_rid == other_sensor_ptr->get_self_rid())))
-                    m_touching.insert({ other_sensor_ptr->get_self_rid(), other_sensor_ptr });
+                    insert_to_touching(other_sensor_ptr->get_self_rid(), other_sensor_ptr, record.contact_info);
             }
             else
             {
@@ -163,39 +178,39 @@ void  sensor::next_round(float_32_bit const  time_step_in_seconds)
                                 record.contact_info->other_coid
                                 );
                 if (other_coid_rid.valid())
-                    m_touching.insert({ other_coid_rid, nullptr });
+                    insert_to_touching(other_coid_rid, nullptr, record.contact_info);
             }
         }
 
         if (get_kind() == SENSOR_KIND::TOUCH_BEGIN)
         {
-            for (auto const&  rid_and_sensor : m_touching)
-                if (m_old_touching.count(rid_and_sensor.first) == 0UL)
-                    m_touch_begin.insert(rid_and_sensor);
+            for (auto const&  rid_and_info : m_touching)
+                if (m_old_touching.count(rid_and_info.first) == 0UL)
+                    m_touch_begin.insert(rid_and_info);
             if (!m_touch_begin.empty())
             {
-                for (auto const&  rid_and_sensor : m_touch_begin)
-                    m_simulator->on_sensor_event(*this, { rid_and_sensor.second, &rid_and_sensor.first });
+                for (auto const&  rid_and_info : m_touch_begin)
+                    m_simulator->on_sensor_event(*this, rid_and_info.second);
             }
             m_touch_begin.clear();
         }
         else if (get_kind() == SENSOR_KIND::TOUCH_END)
         {
-            for (auto const& rid_and_sensor : m_old_touching)
-                if (m_touching.count(rid_and_sensor.first) == 0UL)
-                    m_touch_end.insert(rid_and_sensor);
+            for (auto const& rid_and_info : m_old_touching)
+                if (m_touching.count(rid_and_info.first) == 0UL)
+                    m_touch_end.insert(rid_and_info);
             if (!m_touch_end.empty())
             {
-                for (auto const&  rid_and_sensor : m_touch_end)
-                    m_simulator->on_sensor_event(*this, { rid_and_sensor.second, &rid_and_sensor.first });
+                for (auto const&  rid_and_info : m_touch_end)
+                    m_simulator->on_sensor_event(*this, rid_and_info.second);
             }
             m_touch_end.clear();
         }
         else
         {
             INVARIANT(get_kind() == SENSOR_KIND::TOUCHING);
-            for (auto const&  rid_and_sensor : m_touching)
-                m_simulator->on_sensor_event(*this, { rid_and_sensor.second, &rid_and_sensor.first });
+            for (auto const&  rid_and_info : m_touching)
+                m_simulator->on_sensor_event(*this, rid_and_info.second);
         }
 
         m_touching.swap(m_old_touching);

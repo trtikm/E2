@@ -290,8 +290,15 @@ void  action_controller_roller::filter_contacts(scene::node_id const&  nid, std:
     auto const begin_and_end = 
             get_blackboard()->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map().equal_range(nid);
     for (auto it = begin_and_end.first; it != begin_and_end.second; ++it)
-        if (it->second.data->other_collision_class == angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT)
+        switch (it->second.data->other_collision_class)
+        {
+        case angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT:
+        case angeo::COLLISION_CLASS::INFINITE_MASS_OBJECT:
             contacts.push_back(it->second.data);
+            break;
+        default:
+            break;
+        }
 }
 
 

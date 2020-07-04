@@ -5,6 +5,26 @@
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 
+namespace ai { namespace detail {
+
+
+bool  has_contact_with_force_field_sensitive_object(std::vector<scene::collicion_contant_info_ptr>  contact_infos)
+{
+    for (scene::collicion_contant_info_ptr  info : contact_infos)
+        switch (info->other_collision_class)
+        {
+        case angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT:
+        case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+            return true;
+        default:
+            break;
+        }
+    return false;
+}
+
+
+}}
+
 namespace ai {
 
 
@@ -69,47 +89,22 @@ bool  process_sensor_event_using_default_procedure(
         return true;
 
     case SENSOR_ACTION_KIND::UPDATE_RADIAL_FORCE_FIELD:
-        if (other.sensor == nullptr)
-        {
-            ASSUMPTION(other.rigid_body_id != nullptr);
-            scene->accept(scene::create_request<scene::request_update_radial_force_field>(
-                other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
-                self_rid,
-                action.props
-                ),
-                false);
-        }
+        if (other.sensor == nullptr && detail::has_contact_with_force_field_sensitive_object(other.contact_infos))
+            scene->accept(scene::create_request<scene::request_update_radial_force_field>(other.rigid_body_id, self_rid, action.props), false);
         return true;
     case SENSOR_ACTION_KIND::UPDATE_LINEAR_FORCE_FIELD:
-        if (other.sensor == nullptr)
-        {
-            ASSUMPTION(other.rigid_body_id != nullptr);
-            scene->accept(scene::create_request<scene::request_update_linear_force_field>(
-                other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
-                self_rid,
-                action.props
-                ),
-                false);
-        }
+        if (other.sensor == nullptr && detail::has_contact_with_force_field_sensitive_object(other.contact_infos))
+            scene->accept(scene::create_request<scene::request_update_linear_force_field>(other.rigid_body_id, self_rid, action.props), false);
         return true;
     case SENSOR_ACTION_KIND::LEAVE_FORCE_FIELD:
-        if (other.sensor == nullptr)
-        {
-            ASSUMPTION(other.rigid_body_id != nullptr);
-            scene->accept(scene::create_request<scene::request_leave_force_field>(
-                other.sensor != nullptr ? other.sensor->get_self_rid() : *other.rigid_body_id,
-                self_rid
-                ),
-                false);
-        }
+        if (other.sensor == nullptr && detail::has_contact_with_force_field_sensitive_object(other.contact_infos))
+            scene->accept(scene::create_request<scene::request_leave_force_field>(other.rigid_body_id, self_rid), false);
         return true;
 
     case SENSOR_ACTION_KIND::END_OF_LIFE:
-        scene->accept(scene::create_request<scene::request_erase_nodes_tree>(
-            self_rid.get_node_id()
-            ),
-            true);
+        scene->accept(scene::create_request<scene::request_erase_nodes_tree>(self_rid.get_node_id()), true);
         return true;
+
     default: return false;
     }
 }
