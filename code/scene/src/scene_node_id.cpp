@@ -22,6 +22,14 @@ bool  scene_node_id::is_prefix_of(scene_node_id const&  other) const
     return true;
 }
 
+scene_node_id  scene_node_id::get_relative_to(scene_node_id const&  other) const
+{
+    ASSUMPTION(other.is_prefix_of(*this));
+    path_type  path{"."};
+    for (natural_32_bit  start_index = other.depth(); start_index < depth(); ++start_index)
+        path.push_back(path_element(start_index));
+    return scene_node_id(path);
+}
 
 scene_node_id  scene_node_id::copy(natural_32_bit  start_index) const
 {

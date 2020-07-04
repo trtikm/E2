@@ -69,7 +69,7 @@ ai::SENSOR_ACTION_KIND  as_sensor_action_kind(std::string const& name);
 
 
 boost::property_tree::ptree  as_ptree(ai::from_sensor_record_to_sensor_action_map const& map, ai::scene::node_id const& root);
-ai::from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const& tree, ai::scene::node_id const& root);
+ai::from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const& tree);
 
 
 #endif

@@ -161,7 +161,8 @@ void  register_record_handler_for_update_scene_record(
                     w->wnd()->glwindow().call_now(
                             &simulator::get_sensor_nodes_and_kinds_under_scene_node,
                             std::cref(record_id.get_node_id()),
-                            std::ref(sensor_nodes_and_kinds)
+                            std::ref(sensor_nodes_and_kinds),
+                            true
                             );
                     dialog_windows::agent_props_dialog  dlg(w->wnd(), old_props, sensor_nodes_and_kinds);
                     dlg.exec();

@@ -262,7 +262,8 @@ struct simulator : public qtgl::real_time_simulator
 
     void  get_sensor_nodes_and_kinds_under_scene_node(
             scn::scene_node_id const&  search_root_id,
-            std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >&  output_sensor_nodes_and_kinds
+            std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >&  output_sensor_nodes_and_kinds,
+            bool const  relativise_sensor_record_ids_to_root_id
             );
 
     void  load_collider(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id);

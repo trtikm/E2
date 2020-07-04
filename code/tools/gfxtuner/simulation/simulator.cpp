@@ -3414,23 +3414,27 @@ void  simulator::get_sensor_info(scn::scene_record_id const& id, scn::sensor_pro
     scn::sensor const* const  sensor_ptr = scn::get_sensor(*node_ptr, id.get_record_name());
     ASSUMPTION(sensor_ptr != nullptr);
     props = sensor_ptr->get_props();
-    props.m_enabled = get_ai_simulator()->is_sensor_enabled(sensor_ptr->id());
 }
 
 
 void  simulator::get_sensor_nodes_and_kinds_under_scene_node(
         scn::scene_node_id const&  search_root_id,
-        std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >&  output_sensor_nodes_and_kinds
+        std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >&  output_sensor_nodes_and_kinds,
+        bool const  relativise_sensor_record_ids_to_root_id
         )
 {
-    auto const  action = [&output_sensor_nodes_and_kinds](scn::scene_node_ptr const  node_ptr) -> bool {
-        for (auto const&  name_holder : scn::get_sensor_holders(*node_ptr))
-            output_sensor_nodes_and_kinds.push_back({
-                    scn::make_sensor_record_id(node_ptr->get_id(), name_holder.first),
-                    scn::as_sensor(name_holder.second)->get_props().m_sensor_kind
-                    });
-        return true;
-    };
+    auto const  action = [&output_sensor_nodes_and_kinds, &search_root_id, relativise_sensor_record_ids_to_root_id]
+        (scn::scene_node_ptr const  node_ptr) -> bool {
+            for (auto const&  name_holder : scn::get_sensor_holders(*node_ptr))
+            {
+                scn::scene_record_id const  rid = scn::make_sensor_record_id(node_ptr->get_id(), name_holder.first);
+                output_sensor_nodes_and_kinds.push_back({
+                        relativise_sensor_record_ids_to_root_id ? rid.get_relative_to(search_root_id) : rid,
+                        scn::as_sensor(name_holder.second)->get_props().m_sensor_kind
+                        });
+            }
+            return true;
+        };
     auto const  iterate_children_of = [&search_root_id](scn::scene_node_ptr const  node_ptr) -> bool {
         return !scn::has_device(*node_ptr) && !scn::has_agent(*node_ptr);
     };
@@ -3633,7 +3637,7 @@ void  simulator::load_agent(boost::property_tree::ptree const&  data, scn::scene
     scn::agent_props const  props{
         ai::as_agent_kind(data.get<std::string>("kind")),
         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates),
-        as_sensor_action_map(data.get_child("sensor_action_map"), id.get_node_id())
+        as_sensor_action_map(data.get_child("sensor_action_map"))
     };
     insert_agent(id, props);
 }
@@ -3662,7 +3666,7 @@ void  simulator::load_device(boost::property_tree::ptree const&  data, scn::scen
                 skeleton_dir,
                 skeleton_dir.empty() ? ai::skeletal_motion_templates() : ai::skeletal_motion_templates(skeleton_dir, 75U)
                 ),
-        as_sensor_action_map(data.get_child("sensor_action_map"), id.get_node_id())
+        as_sensor_action_map(data.get_child("sensor_action_map"))
     };
     insert_device(id, props);
 }

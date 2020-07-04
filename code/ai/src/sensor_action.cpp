@@ -371,15 +371,12 @@ boost::property_tree::ptree  as_ptree(ai::from_sensor_record_to_sensor_action_ma
 }
 
 
-ai::from_sensor_record_to_sensor_action_map  as_sensor_action_map(
-        boost::property_tree::ptree const&  tree,
-        ai::scene::node_id const&  root
-        )
+ai::from_sensor_record_to_sensor_action_map  as_sensor_action_map(boost::property_tree::ptree const&  tree)
 {
     ai::from_sensor_record_to_sensor_action_map  result;
     for (auto  it = tree.begin(); it != tree.end(); ++it)
     {
-        ai::scene::record_id const  id = as_scene_record_id("./" + it->first, root);
+        ai::scene::record_id const  id = as_scene_relative_record_id(it->first);
         std::vector<ai::sensor_action>  actions;
         for (auto  action_it = it->second.begin(); action_it != it->second.end(); ++action_it)
         {

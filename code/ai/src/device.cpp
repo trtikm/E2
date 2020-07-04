@@ -70,7 +70,9 @@ void  device::next_round(float_32_bit const  time_step_in_seconds)
 
 void  device::on_sensor_event(sensor const&  s, sensor::other_object_info const&  other)
 {
-    auto const  actions_it = get_blackboard()->m_sensor_actions->find(s.get_self_rid());
+    auto const  actions_it = get_blackboard()->m_sensor_actions->find(
+            s.get_self_rid().get_relative_to(get_blackboard()->m_self_rid.get_node_id())
+            );
 
     // Each sensor must have an action attached to it, otherwise it is completely useless.
     ASSUMPTION(actions_it != get_blackboard()->m_sensor_actions->end());

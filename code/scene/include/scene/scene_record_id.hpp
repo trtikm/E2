@@ -55,6 +55,9 @@ struct  scene_record_id
     bool  is_node_reference() const { return get_folder_name().empty() && get_record_name().empty(); }
     bool  is_folder_reference() const { return get_record_name().empty(); }
 
+    scene_record_id  get_relative_to(scene_node_id const&  other) const
+    { return { get_node_id().get_relative_to(other), get_folder_name(), get_record_name() }; }
+
 private:
     scene_node_id  m_node_id;
     scene_node::folder_name  m_folder_name;
@@ -120,6 +123,18 @@ inline std::string  as_string(scn::scene_record_id const&  id)
 inline scn::scene_record_id  as_scene_record_id(std::string const&  path, scn::scene_node_id const&  base = scn::scene_node_id())
 {
     scn::scene_node_id::path_type  p = as_scene_node_id(path, base).path();
+    ASSUMPTION(p.size() > 2UL);
+    std::string const  rec_name = p.back();
+    p.pop_back();
+    std::string const  fol_name = p.back();
+    p.pop_back();
+    return scn::scene_record_id(scn::scene_node_id(p), fol_name, rec_name);
+}
+
+
+inline scn::scene_record_id  as_scene_relative_record_id(std::string const&  path)
+{
+    scn::scene_node_id::path_type  p = as_scene_relative_node_id(path).path();
     ASSUMPTION(p.size() > 2UL);
     std::string const  rec_name = p.back();
     p.pop_back();

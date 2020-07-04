@@ -41,6 +41,7 @@ struct  scene_node_id
     scene_node_id  get_direct_parent_id() const;
 
     bool  is_prefix_of(scene_node_id const&  other) const;
+    scene_node_id  get_relative_to(scene_node_id const&  other) const;
 
     scene_node_id  copy(natural_32_bit  start_index = 0U) const;
 
@@ -113,6 +114,9 @@ inline std::string  as_string(scn::scene_node_id const&  id)
 
 inline scn::scene_node_id  as_scene_node_id(std::string const&  path, scn::scene_node_id const&  base = scn::scene_node_id())
 { scn::scene_node_id::path_type p; return make_absolute_node_id(split(p, path), base.path()); }
+
+inline scn::scene_node_id  as_scene_relative_node_id(std::string const&  path)
+{ scn::scene_node_id::path_type p{"."}; return scn::scene_node_id{ split(p, path) }; }
 
 
 namespace std {
