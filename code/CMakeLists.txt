@@ -6,6 +6,7 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/code/scene/include"
     "${PROJECT_SOURCE_DIR}/code/netlab/include"
     "${PROJECT_SOURCE_DIR}/code/osi/include"
+    "${PROJECT_SOURCE_DIR}/code/com/include"
     "${PROJECT_SOURCE_DIR}/code/utility/include"
     )
 message("Including the following E2 libraries to the build:")
@@ -21,6 +22,8 @@ add_subdirectory(./netlab)
     message("-- netlab")
 add_subdirectory(./osi)
     message("-- osi")
+add_subdirectory(./com)
+    message("-- com")
 add_subdirectory(./utility)
     message("-- utility")
     
