@@ -1,6 +1,23 @@
 #include <gfx/camera.hpp>
 #include <utility/assumptions.hpp>
 
+namespace gfx { namespace detail {
+
+
+float_32_bit  window_width_in_meters(osi::window_props const&  window_info)
+{
+    return 0.001f * window_info.pixel_width_mm() * window_info.window_width();
+}
+
+
+float_32_bit  window_height_in_meters(osi::window_props const&  window_info)
+{
+    return 0.001f * window_info.pixel_height_mm() * window_info.window_height();
+}
+
+
+}}
+
 namespace gfx {
 
 
@@ -31,26 +48,26 @@ void  camera::set_coordinate_system(angeo::coordinate_system_ptr const   coord_s
 }
 
 
-//camera_perspective_ptr  camera_perspective::create(
-//        angeo::coordinate_system const&  coordinate_system,
-//        float_32_bit const  near,
-//        float_32_bit const  far,
-//        window_props const&  window_info
-//        )
-//{
-//    return create(std::make_shared<angeo::coordinate_system>(coordinate_system),near,far,window_info);
-//}
+camera_perspective_ptr  camera_perspective::create(
+        angeo::coordinate_system const&  coordinate_system,
+        float_32_bit const  near,
+        float_32_bit const  far,
+        osi::window_props const&  window_info
+        )
+{
+    return create(std::make_shared<angeo::coordinate_system>(coordinate_system),near,far,window_info);
+}
 
 
-//camera_perspective_ptr  camera_perspective::create(
-//        angeo::coordinate_system_ptr  coordinate_system,
-//        float_32_bit const  near,
-//        float_32_bit const  far,
-//        window_props const&  window_info
-//        )
-//{
-//    return std::make_shared<camera_perspective>(coordinate_system,near,far,window_info);
-//}
+camera_perspective_ptr  camera_perspective::create(
+        angeo::coordinate_system_ptr  coordinate_system,
+        float_32_bit const  near,
+        float_32_bit const  far,
+        osi::window_props const&  window_info
+        )
+{
+    return std::make_shared<camera_perspective>(coordinate_system,near,far,window_info);
+}
 
 
 camera_perspective_ptr  camera_perspective::create(
@@ -106,33 +123,33 @@ camera_perspective::camera_perspective(
 {}
 
 
-//camera_perspective::camera_perspective(angeo::coordinate_system_ptr  coordinate_system,
-//                                       float_32_bit const  near,
-//                                       float_32_bit const  far,
-//                                       window_props const&  window_info)
-//    : camera(coordinate_system)
-//    , m_near(near)
-//    , m_far(far)
-//    , m_left(-window_width_in_meters(window_info) / 2.0f)
-//    , m_right(window_width_in_meters(window_info) / 2.0f)
-//    , m_bottom(-window_height_in_meters(window_info) / 2.0f)
-//    , m_top(window_height_in_meters(window_info) / 2.0f)
-//{
-//    ASSUMPTION(0.0f < m_near && m_near <= m_far);
-//    ASSUMPTION(m_left <= m_right);
-//    ASSUMPTION(m_bottom <= m_top);
-//}
+camera_perspective::camera_perspective(angeo::coordinate_system_ptr  coordinate_system,
+                                       float_32_bit const  near,
+                                       float_32_bit const  far,
+                                       osi::window_props const&  window_info)
+    : camera(coordinate_system)
+    , m_near(near)
+    , m_far(far)
+    , m_left(-detail::window_width_in_meters(window_info) / 2.0f)
+    , m_right(detail::window_width_in_meters(window_info) / 2.0f)
+    , m_bottom(-detail::window_height_in_meters(window_info) / 2.0f)
+    , m_top(detail::window_height_in_meters(window_info) / 2.0f)
+{
+    ASSUMPTION(0.0f < m_near && m_near <= m_far);
+    ASSUMPTION(m_left <= m_right);
+    ASSUMPTION(m_bottom <= m_top);
+}
 
 
-//camera_perspective::camera_perspective(angeo::coordinate_system const&  coordinate_system,
-//                                       float_32_bit const  near,
-//                                       float_32_bit const  far,
-//                                       window_props const&  window_info)
-//    : camera_perspective(
-//          std::make_shared<angeo::coordinate_system>(coordinate_system),
-//          near,far,window_info
-//          )
-//{}
+camera_perspective::camera_perspective(angeo::coordinate_system const&  coordinate_system,
+                                       float_32_bit const  near,
+                                       float_32_bit const  far,
+                                       osi::window_props const&  window_info)
+    : camera_perspective(
+          std::make_shared<angeo::coordinate_system>(coordinate_system),
+          near,far,window_info
+          )
+{}
 
 
 void  camera_perspective::set_near_plane(float_32_bit const  near)
@@ -196,23 +213,23 @@ void  camera_perspective::projection_matrix_orthogonal_2d(matrix44&  output) con
 }
 
 
-//camera_perspective_ptr  create_camera_perspective(
-//        angeo::coordinate_system_ptr  coordinate_system,
-//        float_32_bit const  near,
-//        float_32_bit const  far,
-//        window_props const&  window_info
-//        )
-//{
-//    return std::make_shared<camera_perspective>(coordinate_system,near,far,window_info);
-//}
-//
-//void  adjust(camera_perspective&  camera_ref, window_props const&  window_info)
-//{
-//    camera_ref.set_left(-window_width_in_meters(window_info) / 2.0f);
-//    camera_ref.set_right(window_width_in_meters(window_info) / 2.0f);
-//    camera_ref.set_bottom(-window_height_in_meters(window_info) / 2.0f);
-//    camera_ref.set_top(window_height_in_meters(window_info) / 2.0f);
-//}
+camera_perspective_ptr  create_camera_perspective(
+        angeo::coordinate_system_ptr  coordinate_system,
+        float_32_bit const  near,
+        float_32_bit const  far,
+        osi::window_props const&  window_info
+        )
+{
+    return std::make_shared<camera_perspective>(coordinate_system,near,far,window_info);
+}
+
+void  adjust(camera_perspective&  camera_ref, osi::window_props const&  window_info)
+{
+    camera_ref.set_left(-detail::window_width_in_meters(window_info) / 2.0f);
+    camera_ref.set_right(detail::window_width_in_meters(window_info) / 2.0f);
+    camera_ref.set_bottom(-detail::window_height_in_meters(window_info) / 2.0f);
+    camera_ref.set_top(detail::window_height_in_meters(window_info) / 2.0f);
+}
 
 
 void  projection_matrix_perspective(

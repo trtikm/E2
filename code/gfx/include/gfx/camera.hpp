@@ -2,7 +2,7 @@
 #   define GFX_CAMERA_HPP_INCLUDED
 
 #   include <angeo/coordinate_system.hpp>
-//#   include <gfx/window_props.hpp>
+#   include <osi/window_props.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <angeo/tensor_math.hpp>
 
@@ -40,18 +40,18 @@ typedef std::shared_ptr<camera_perspective const>  camera_perspective_const_ptr;
 
 struct camera_perspective : public camera
 {
-    //static camera_perspective_ptr  create(
-    //        angeo::coordinate_system const&  coordinate_system,
-    //        float_32_bit const  near,
-    //        float_32_bit const  far,
-    //        window_props const&  window_info
-    //        );
-    //static camera_perspective_ptr  create(
-    //        angeo::coordinate_system_ptr  coordinate_system,
-    //        float_32_bit const  near,
-    //        float_32_bit const  far,
-    //        window_props const&  window_info
-    //        );
+    static camera_perspective_ptr  create(
+            angeo::coordinate_system const&  coordinate_system,
+            float_32_bit const  near,
+            float_32_bit const  far,
+            osi::window_props const&  window_info
+            );
+    static camera_perspective_ptr  create(
+            angeo::coordinate_system_ptr  coordinate_system,
+            float_32_bit const  near,
+            float_32_bit const  far,
+            osi::window_props const&  window_info
+            );
     static camera_perspective_ptr  create(
             angeo::coordinate_system_ptr  coordinate_system,
             float_32_bit const  near,
@@ -78,14 +78,14 @@ struct camera_perspective : public camera
                        float_32_bit const  bottom,
                        float_32_bit const  top
                        );
-    //camera_perspective(angeo::coordinate_system const&  coordinate_system,
-    //                   float_32_bit const  near,
-    //                   float_32_bit const  far,
-    //                   window_props const&  window_info);
-    //camera_perspective(angeo::coordinate_system_ptr  coordinate_system,
-    //                   float_32_bit const  near,
-    //                   float_32_bit const  far,
-    //                   window_props const&  window_info);
+    camera_perspective(angeo::coordinate_system const&  coordinate_system,
+                       float_32_bit const  near,
+                       float_32_bit const  far,
+                       osi::window_props const&  window_info);
+    camera_perspective(angeo::coordinate_system_ptr  coordinate_system,
+                       float_32_bit const  near,
+                       float_32_bit const  far,
+                       osi::window_props const&  window_info);
 
     float_32_bit  near_plane() const { return m_near; }
     float_32_bit  far_plane() const { return m_far; }
@@ -122,7 +122,7 @@ private:
 };
 
 
-//void  adjust(camera_perspective&  camera_ref, window_props const&  window_info);
+void  adjust(camera_perspective&  camera_ref, osi::window_props const&  window_info);
 
 
 void  projection_matrix_perspective(
