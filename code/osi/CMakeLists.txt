@@ -6,6 +6,12 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/osi/simulator.hpp
     ./src/simulator.cpp
+    ./include/osi/window_props.hpp
+    ./src/window_props.cpp
+    ./include/osi/keyboard_props.hpp
+    ./src/keyboard_props.cpp
+    ./include/osi/mouse_props.hpp
+    ./src/mouse_props.cpp
 
     ./include/osi/keyboard_key_names.hpp
     ./include/osi/mouse_button_names.hpp

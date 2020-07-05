@@ -80,33 +80,18 @@ void swap_states()
     current_state().width = (natural_16_bit)w;
     current_state().height = (natural_16_bit)h;
 
-    for (keyboard_key_name const&  name : current_state().keys_pressed)
-        if (other_state().keys_pressed.count(name) == 0UL)
-            current_state().keys_just_pressed.insert(name);
-    for (keyboard_key_name const&  name : other_state().keys_pressed)
-        if (current_state().keys_pressed.count(name) == 0UL)
-            current_state().keys_just_released.insert(name);
-
     double  cx, cy;
     glfwGetCursorPos(window_ptr, &cx, &cy);
+    current_state().cursor_x_delta = (float_32_bit)cx - other_state().cursor_x;
+    current_state().cursor_y_delta = (float_32_bit)cy - other_state().cursor_y;
     current_state().cursor_x = (float_32_bit)cx;
     current_state().cursor_y = (float_32_bit)cy;
-    current_state().cursor_x_delta = current_state().cursor_x - other_state().cursor_x;
-    current_state().cursor_y_delta = current_state().cursor_y - other_state().cursor_y;
-    for (mouse_button_name const&  name : current_state().buttons_pressed)
-        if (other_state().buttons_pressed.count(name) == 0UL)
-            current_state().buttons_just_pressed.insert(name);
-    for (mouse_button_name const&  name : other_state().buttons_pressed)
-        if (current_state().buttons_pressed.count(name) == 0UL)
-            current_state().buttons_just_released.insert(name);
 
     other_state().text.clear();
-    other_state().keys_pressed.clear();
+    other_state().keys_pressed = current_state().keys_pressed;
     other_state().keys_just_pressed.clear();
     other_state().keys_just_released.clear();
-    other_state().wheel_delta_x = 0.0f;
-    other_state().wheel_delta_y = 0.0f;
-    other_state().buttons_pressed.clear();
+    other_state().buttons_pressed = current_state().buttons_pressed;
     other_state().buttons_just_pressed.clear();
     other_state().buttons_just_released.clear();
     other_state().error_msg.clear();
@@ -255,9 +240,23 @@ void  on_keyboard_event(GLFWwindow* const  window, int const  key, int const  sc
     if (name.empty())
         return;
     if (action == GLFW_RELEASE)
+    {
+        auto const  it = other_state().keys_just_pressed.find(name);
+        if (it == other_state().keys_just_pressed.end())
+            other_state().keys_just_released.insert(name);
+        else
+            other_state().keys_just_pressed.erase(name);
         other_state().keys_pressed.erase(name);
+    }
     else
+    {
+        auto const  it = other_state().keys_just_released.find(name);
+        if (it == other_state().keys_just_released.end())
+            other_state().keys_just_pressed.insert(name);
+        else
+            other_state().keys_just_released.erase(name);
         other_state().keys_pressed.insert(name);
+    }
 }
 
 
@@ -272,8 +271,8 @@ mouse_button_name  to_button_name(int const  button)
     switch (button)
     {
     case GLFW_MOUSE_BUTTON_LEFT: return LEFT_MOUSE_BUTTON();
-    case GLFW_MOUSE_BUTTON_RIGHT: return LEFT_MOUSE_BUTTON();
-    case GLFW_MOUSE_BUTTON_MIDDLE: return LEFT_MOUSE_BUTTON();
+    case GLFW_MOUSE_BUTTON_RIGHT: return RIGHT_MOUSE_BUTTON();
+    case GLFW_MOUSE_BUTTON_MIDDLE: return MIDDLE_MOUSE_BUTTON();
     default: return "";
     }
 }
@@ -285,9 +284,23 @@ void  on_mouse_button_event(GLFWwindow* const  window, int const  button, int co
     if (name.empty())
         return;
     if (action == GLFW_RELEASE)
+    {
+        auto const  it = other_state().buttons_just_pressed.find(name);
+        if (it == other_state().buttons_just_pressed.end())
+            other_state().buttons_just_released.insert(name);
+        else
+            other_state().buttons_just_pressed.erase(name);
         other_state().buttons_pressed.erase(name);
+    }
     else
+    {
+        auto const  it = other_state().buttons_just_released.find(name);
+        if (it == other_state().buttons_just_released.end())
+            other_state().buttons_just_pressed.insert(name);
+        else
+            other_state().buttons_just_released.erase(name);
         other_state().buttons_pressed.insert(name);
+    }
 }
 
 
