@@ -3,6 +3,7 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/code/ai/include"
     "${PROJECT_SOURCE_DIR}/code/angeo/include"
     "${PROJECT_SOURCE_DIR}/code/qtgl/include"
+    "${PROJECT_SOURCE_DIR}/code/gfx/include"
     "${PROJECT_SOURCE_DIR}/code/scene/include"
     "${PROJECT_SOURCE_DIR}/code/netlab/include"
     "${PROJECT_SOURCE_DIR}/code/osi/include"
@@ -16,6 +17,8 @@ add_subdirectory(./angeo)
     message("-- angeo")
 add_subdirectory(./qtgl)
     message("-- qtgl")
+add_subdirectory(./gfx)
+    message("-- gfx")
 add_subdirectory(./scene)
     message("-- scene")
 add_subdirectory(./netlab)
