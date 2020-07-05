@@ -17,6 +17,8 @@ target_link_libraries(${THIS_TARGET_NAME}
     ai
     angeo
     osi
+    com
+    gfx
     utility
     ${OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH}
     ${GLAD_LIST_OF_LIBRARIES_TO_LINK_WITH}

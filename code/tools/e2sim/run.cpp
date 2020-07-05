@@ -1,5 +1,7 @@
 #include <osi/simulator.hpp>
 #include <osi/opengl.hpp>
+#include <gfx/draw.hpp>
+#include <gfx/batch_generators.hpp>
 #include <e2sim/program_info.hpp>
 #include <e2sim/program_options.hpp>
 #include <angeo/tensor_math.hpp>
@@ -12,106 +14,124 @@
 
 struct  simulator : public osi::simulator
 {
+    gfx::camera_perspective_ptr  m_camera;
+    gfx::effects_config  m_effects_config;
+    vector4  m_diffuse_colour;
+    vector3  m_ambient_colour;
+    vector4  m_specular_colour;
+    vector3  m_directional_light_direction;
+    vector3  m_directional_light_colour;
+    vector4  m_fog_colour;
+    float  m_fog_near;
+    float  m_fog_far;
+    gfx::batch  m_batch_grid;
+
+    simulator()
+        : osi::simulator()
+        , m_camera(
+                gfx::camera_perspective::create(
+                        angeo::coordinate_system::create(
+                                vector3(10.0f, 10.0f, 4.0f),
+                                quaternion(0.293152988f, 0.245984003f, 0.593858004f, 0.707732975f)
+                                ),
+                        0.25f,
+                        500.0f,
+                        -0.2f,
+                         0.2f,
+                        -0.1f,
+                         0.1f
+                        )
+                )
+        , m_effects_config(
+                nullptr,
+                gfx::effects_config::light_types{
+                    gfx::LIGHT_TYPE::AMBIENT,
+                    gfx::LIGHT_TYPE::DIRECTIONAL,
+                    },
+                gfx::effects_config::lighting_data_types{
+                    { gfx::LIGHTING_DATA_TYPE::DIRECTION, gfx::SHADER_DATA_INPUT_TYPE::UNIFORM },
+                    { gfx::LIGHTING_DATA_TYPE::NORMAL, gfx::SHADER_DATA_INPUT_TYPE::TEXTURE },
+                    { gfx::LIGHTING_DATA_TYPE::DIFFUSE, gfx::SHADER_DATA_INPUT_TYPE::TEXTURE },
+                    //{ gfx::LIGHTING_DATA_TYPE::DIFFUSE, gfx::SHADER_DATA_INPUT_TYPE::UNIFORM },
+                    { gfx::LIGHTING_DATA_TYPE::SPECULAR, gfx::SHADER_DATA_INPUT_TYPE::TEXTURE }
+                    },
+                gfx::SHADER_PROGRAM_TYPE::VERTEX,
+                gfx::effects_config::shader_output_types{
+                    gfx::SHADER_DATA_OUTPUT_TYPE::DEFAULT
+                    },
+                gfx::FOG_TYPE::NONE,
+                gfx::SHADER_PROGRAM_TYPE::VERTEX
+                )
+        , m_diffuse_colour{ 1.0f, 1.0f, 1.0f, 1.0f }
+        , m_ambient_colour{ 0.5f, 0.5f, 0.5f }
+        , m_specular_colour{ 1.0f, 1.0f, 1.0f, 2.0f }
+        , m_directional_light_direction(normalised(-vector3(2.0f, 1.0f, 3.0f)))
+        , m_directional_light_colour{ 1.0f, 1.0f, 1.0f }
+        , m_fog_colour{ 0.25f, 0.25f, 0.25f, 2.0f }
+        , m_fog_near(0.25f)
+        , m_fog_far(1000.0f)
+        , m_batch_grid{ 
+                gfx::create_grid(
+                        50.0f,
+                        50.0f,
+                        50.0f,
+                        1.0f,
+                        1.0f,
+                        { 0.4f, 0.4f, 0.4f, 1.0f },
+                        { 0.4f, 0.4f, 0.4f, 1.0f },
+                        { 0.5f, 0.5f, 0.5f, 1.0f },
+                        { 0.5f, 0.5f, 0.5f, 1.0f },
+                        { 1.0f, 0.0f, 0.0f, 1.0f },
+                        { 0.0f, 1.0f, 0.0f, 1.0f },
+                        { 0.0f, 0.0f, 1.0f, 1.0f },
+                        10U,
+                        gfx::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
+                        m_effects_config.get_fog_type(),
+                        "e2sim"
+                        )
+                }
+    {}
+
+    void  terminate() override
+    {
+        m_batch_grid.release();
+    }
+
     void  round()
     {
         glViewport(0, 0, window_width(), window_height());
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         if (has_focus())
             glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
         else
             glClearColor(0.75f, 0.25f, 0.25f, 1.0f);
-        glFrontFace(GL_CW);
-        glCullFace(GL_FRONT);
-        glEnable(GL_CULL_FACE);
-        glEnable(GL_DEPTH_TEST);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        std::vector<GLchar const*> const vshader_lines = {
-            "#version 420\n",
-            "in vec4  vertex;\n",
-            "void main(void)\n",
-            "{\n",
-            "    gl_Position = vertex;\n",
-            "}\n",
-        };
-        GLuint const  vshader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vshader, (GLsizei)vshader_lines.size(), (GLchar const**)&vshader_lines.at(0), nullptr);
-        glCompileShader(vshader);
-        GLuint const  vshader_program = glCreateProgram();
-        glProgramParameteri(vshader_program, GL_PROGRAM_SEPARABLE, GL_TRUE);
-        glAttachShader(vshader_program, vshader);
-        glLinkProgram(vshader_program);
-        glDetachShader(vshader_program, vshader);
-        glDeleteShader(vshader);
+        matrix44  matrix_from_world_to_camera;
+        m_camera->to_camera_space_matrix(matrix_from_world_to_camera);
+        matrix44  matrix_from_camera_to_clipspace;
+        m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
-        std::vector<GLchar const*> const fshader_lines = {
-            "#version 420\n",
-            "out vec4  out_colour;\n",
-            "void main(void)\n",
-            "{\n",
-            "    out_colour = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n",
-            "}\n",
-        };
-        GLuint const  fshader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fshader, (GLsizei)fshader_lines.size(), (GLchar const**)&fshader_lines.at(0), nullptr);
-        glCompileShader(fshader);
-        GLuint const  fshader_program = glCreateProgram();
-        glProgramParameteri(fshader_program, GL_PROGRAM_SEPARABLE, GL_TRUE);
-        glAttachShader(fshader_program, fshader);
-        glLinkProgram(fshader_program);
-        glDetachShader(fshader_program, fshader);
-        glDeleteShader(fshader);
-
-        GLuint  pipeline_id = 0;
-        glGenProgramPipelines(1U, &pipeline_id);
-        glUseProgramStages(pipeline_id, GL_VERTEX_SHADER_BIT, vshader_program);
-        glUseProgramStages(pipeline_id, GL_FRAGMENT_SHADER_BIT, fshader_program);
-        glBindProgramPipeline(pipeline_id);
-
-        GLint const  vdata_position = glGetAttribLocation(vshader_program, "vertex");
-
-        std::array<float_32_bit, 12> const  vbuffer_data = {
-                0.0f, 0.0f, 0.0f, 1.0f,
-                1.0f, 0.0f, 0.0f, 1.0f,
-                0.0f, 1.0f, 0.0f, 1.0f,
-        };
-
-        GLuint  vbuffer_id = 0U;
-        glGenBuffers(1U, &vbuffer_id);
-        glBindBuffer(GL_ARRAY_BUFFER, vbuffer_id);
-        glBufferData(GL_ARRAY_BUFFER,
-            (GLsizeiptr)(vbuffer_data.size() * sizeof(float_32_bit)),
-            (GLvoid const*)vbuffer_data.data(),
-            GL_STATIC_DRAW);
-
-        GLuint  barrays_id = 0;
-        glGenVertexArrays(1U, &barrays_id);
-        glBindVertexArray(barrays_id);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vbuffer_id);
-        glEnableVertexAttribArray(vdata_position);
-        glVertexAttribPointer(
-            vdata_position,
-            4,
-            GL_FLOAT,
-            GL_FALSE,
-            0U,
-            nullptr
-        );
-
-        glBindVertexArray(barrays_id);
-
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
-        glBindProgramPipeline(0);
-        glBindVertexArray(0);
-
-        glDeleteVertexArrays(1U, &barrays_id);
-        glDeleteBuffers(1U, &vbuffer_id);
-
-        glDeleteProgramPipelines(1, &pipeline_id);
-        glDeleteProgram(vshader_program);
-        glDeleteProgram(fshader_program);
+        gfx::draw_state  draw_state;
+        if (gfx::make_current(m_batch_grid, draw_state))
+        {
+            gfx::render_batch(
+                m_batch_grid,
+                gfx::vertex_shader_uniform_data_provider(
+                    m_batch_grid,
+                    { matrix_from_world_to_camera },
+                    matrix_from_camera_to_clipspace,
+                    m_diffuse_colour,
+                    m_ambient_colour,
+                    m_specular_colour,
+                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                    m_directional_light_colour,
+                    m_fog_colour,
+                    m_fog_near,
+                    m_fog_far
+                    )
+                );
+            draw_state = m_batch_grid.get_draw_state();
+        }
     }
 };
 
