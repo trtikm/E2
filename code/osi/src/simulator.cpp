@@ -1,5 +1,6 @@
 #include <osi/simulator.hpp>
 #include <osi/provider.hpp>
+#include <utility/async_resource_load.hpp>
 
 namespace osi {
 
@@ -50,6 +51,8 @@ void  run(simulator&  s)
 
             osi::finish_round();
         }
+
+        async::terminate();
 
         s.terminate();
 
