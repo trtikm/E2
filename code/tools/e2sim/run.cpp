@@ -1,6 +1,7 @@
 #include <osi/simulator.hpp>
 #include <osi/opengl.hpp>
 #include <gfx/draw.hpp>
+#include <gfx/free_fly.hpp>
 #include <gfx/batch_generators.hpp>
 #include <e2sim/program_info.hpp>
 #include <e2sim/program_options.hpp>
@@ -15,6 +16,7 @@
 struct  simulator : public osi::simulator
 {
     gfx::camera_perspective_ptr  m_camera;
+    gfx::free_fly_config  m_free_fly_config;
     gfx::effects_config  m_effects_config;
     vector4  m_diffuse_colour;
     vector3  m_ambient_colour;
@@ -36,12 +38,76 @@ struct  simulator : public osi::simulator
                                 ),
                         0.25f,
                         500.0f,
-                        -0.2f,
-                         0.2f,
-                        -0.1f,
-                         0.1f
+                        get_window_props()
                         )
                 )
+    , m_free_fly_config
+            {
+                {
+                    false,
+                    false,
+                    2U,
+                    2U,
+                    -15.0f,
+                    gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_W()),
+                },
+                {
+                    false,
+                    false,
+                    2U,
+                    2U,
+                    15.0f,
+                    gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_S()),
+                },
+                {
+                    false,
+                    false,
+                    0U,
+                    2U,
+                    -15.0f,
+                    gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_A()),
+                },
+                {
+                    false,
+                    false,
+                    0U,
+                    2U,
+                    15.0f,
+                    gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_D()),
+                },
+                {
+                    false,
+                    false,
+                    1U,
+                    2U,
+                    -15.0f,
+                    gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_Q()),
+                },
+                {
+                    false,
+                    false,
+                    1U,
+                    2U,
+                    15.0f,
+                    gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_E()),
+                },
+                {
+                    true,
+                    true,
+                    2U,
+                    0U,
+                    -(10.0f * PI()) * (get_window_props().pixel_width_mm() / 1000.0f),
+                    gfx::free_fly_controler::mouse_button_pressed(osi::MIDDLE_MOUSE_BUTTON()),
+                },
+                {
+                    true,
+                    false,
+                    0U,
+                    1U,
+                    -(10.0f * PI()) * (get_window_props().pixel_height_mm() / 1000.0f),
+                    gfx::free_fly_controler::mouse_button_pressed(osi::MIDDLE_MOUSE_BUTTON()),
+                },
+            }
         , m_effects_config(
                 nullptr,
                 gfx::effects_config::light_types{
@@ -99,13 +165,17 @@ struct  simulator : public osi::simulator
 
     void  round()
     {
-        glViewport(0, 0, window_width(), window_height());
-        if (has_focus())
+        if (get_window_props().has_focus())
             glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
         else
             glClearColor(0.75f, 0.25f, 0.25f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        glViewport(0, 0, get_window_props().window_width(), get_window_props().window_height());
+
+        gfx::adjust(*m_camera, get_window_props());
+        if (get_window_props().has_focus() && !get_window_props().focus_just_received())
+            gfx::free_fly(*m_camera->coordinate_system(), m_free_fly_config, round_seconds(), get_mouse_props(), get_keyboard_props());
         matrix44  matrix_from_world_to_camera;
         m_camera->to_camera_space_matrix(matrix_from_world_to_camera);
         matrix44  matrix_from_camera_to_clipspace;
