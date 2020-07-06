@@ -1347,12 +1347,19 @@ scn::scene_node_ptr  simulator::import_scene(
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  scene_pathname =
-            boost::filesystem::path(get_program_options()->dataRoot()) / scene_id / "hierarchy.info"
-            ;
-    ASSUMPTION(boost::filesystem::is_regular_file(scene_pathname));
     boost::property_tree::ptree  impored_scene_ptree;
-    boost::property_tree::read_info(scene_pathname.string(), impored_scene_ptree);
+    {
+        boost::filesystem::path  scene_pathname =
+                boost::filesystem::path(get_program_options()->dataRoot()) / scene_id / "hierarchy.json"
+                ;
+        if (boost::filesystem::is_regular_file(scene_pathname))
+            boost::property_tree::read_json(scene_pathname.string(), impored_scene_ptree);
+        else
+        {
+            scene_pathname = boost::filesystem::path(get_program_options()->dataRoot()) / scene_id / "hierarchy.info";
+            boost::property_tree::read_info(scene_pathname.string(), impored_scene_ptree);
+        }
+    }
 
     scn::scene_node_ptr  root_node_ptr = nullptr;
     for (auto it = impored_scene_ptree.begin(); it != impored_scene_ptree.end(); ++it)

@@ -21,6 +21,7 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <QLabel>
 #include <QDialog>
 #include <QVBoxLayout>
@@ -396,7 +397,9 @@ void  widgets::process_pending_scene_load_requst_if_any()
 
         if (!boost::filesystem::is_directory(scene_dir))
             scene_dir = get_program_options()->dataRoot() / scene_dir;
-        if (boost::filesystem::is_directory(scene_dir) && boost::filesystem::is_regular_file(scene_dir / "hierarchy.info"))
+        if (boost::filesystem::is_directory(scene_dir) &&
+                (boost::filesystem::is_regular_file(scene_dir / "hierarchy.json") ||
+                 boost::filesystem::is_regular_file(scene_dir / "hierarchy.info")))
             open_scene(canonical_path(scene_dir));
         else
         {
@@ -1451,10 +1454,16 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
             { "effects", boost::property_tree::ptree() }
         };
         for (auto&  name_and_info : infos)
-            boost::property_tree::read_info(
-                (wnd()->get_current_scene_dir() / (name_and_info.first + ".info")).string(),
-                name_and_info.second
-                );
+        {
+            boost::filesystem::path  pathname = wnd()->get_current_scene_dir() / (name_and_info.first + ".json");
+            if (boost::filesystem::is_regular_file(pathname))
+                boost::property_tree::read_json(pathname.string(), name_and_info.second);
+            else
+            {
+                pathname = wnd()->get_current_scene_dir() / (name_and_info.first + ".info");
+                boost::property_tree::read_info(pathname.string(), name_and_info.second);
+            }
+        }
         boost::property_tree::ptree&  load_tree = infos.at("hierarchy");
         for (auto  it = load_tree.begin(); it != load_tree.end(); ++it)
             load_scene_node(scn::scene_node_id(it->first), it->second, infos, nullptr);
@@ -1553,7 +1562,7 @@ void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
         save_scene_node(as_tree_widget_item(m_scene_tree->topLevelItem(i)), save_tree, infos);
     boost::filesystem::create_directories(scene_root_dir);
     for (auto& name_and_info : infos)
-        boost::property_tree::write_info((scene_root_dir / (name_and_info.first + ".info")).string(), name_and_info.second);
+        boost::property_tree::write_json((scene_root_dir / (name_and_info.first + ".json")).string(), name_and_info.second);
     wnd()->set_current_scene_dir(scene_root_dir);
     wnd()->print_status_message(std::string("SUCCESS: Scene saved to: ") + scene_root_dir.string(), 5000);
     m_save_commit_id = get_scene_history()->get_active_commit_id();
@@ -1631,7 +1640,16 @@ void  widgets::import_scene(boost::filesystem::path const& scene_root_dir)
             { "effects", boost::property_tree::ptree() }
         };
         for (auto&  name_and_info : infos)
-            boost::property_tree::read_info((scene_root_dir / (name_and_info.first + ".info")).string(), name_and_info.second);
+        {
+            boost::filesystem::path  pathname = scene_root_dir / (name_and_info.first + ".json");
+            if (boost::filesystem::is_regular_file(pathname))
+                boost::property_tree::read_json(pathname.string(), name_and_info.second);
+            else
+            {
+                pathname = scene_root_dir / (name_and_info.first + ".info");
+                boost::property_tree::read_info(pathname.string(), name_and_info.second);
+            }
+        }
         boost::property_tree::ptree&  load_tree = infos.at("hierarchy");
         std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
         for (auto  it = load_tree.begin(); it != load_tree.end(); ++it)

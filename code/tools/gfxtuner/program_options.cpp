@@ -19,7 +19,7 @@ program_options::program_options(int argc, char* argv[])
         ("scene,s",
             bpo::value<std::string>(),
             "A directory of a scene to be loaded. A scene directory "
-            "always contains a file 'hierarchy.info'. The scene can either "
+            "always contains a file 'hierarchy.json'. The scene can either "
             "be absolute disk path, or relative path to either the "
             "current working directory or to the data root directory "
             "(see --data option).")
