@@ -1,11 +1,15 @@
 #include <gfxtuner/program_info.hpp>
 #include <gfxtuner/program_options.hpp>
+#include <utility/config.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <stdexcept>
 #include <iostream>
+#if PLATFORM() == PLATFORM_WINDOWS()
+#   pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup") 
+#endif
 
 
 LOG_INITIALISE(get_program_name() + "_LOG",true,true,warning)
