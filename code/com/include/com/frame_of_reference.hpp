@@ -3,6 +3,7 @@
 
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
+#   include <utility/dynamic_array.hpp>
 #   include <vector>
 #   include <unordered_set>
 #   include <limits>
@@ -63,8 +64,7 @@ private:
 
     void  invalidate(frame_id const  id) const;
 
-    std::vector<frame_of_reference>  m_frames;
-    std::unordered_set<natural_32_bit>  m_free_ids;
+    dynamic_array<frame_of_reference, frame_id>  m_frames;
 };
 
 

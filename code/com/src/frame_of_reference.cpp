@@ -24,20 +24,7 @@ frames_provider::frame_of_reference::frame_of_reference()
 
 frame_id  frames_provider::insert()
 {
-    frame_id  id;
-    if (m_free_ids.empty())
-    {
-        id = (natural_32_bit)m_frames.size();
-        m_frames.emplace_back();
-    }
-    else
-    {
-        auto const  it = m_free_ids.begin();
-        id = *it;
-        m_free_ids.erase(it);
-        m_frames.at(id) = frame_of_reference();
-    }
-    return id;
+    return m_frames.insert();
 }
 
 
@@ -48,20 +35,19 @@ void  frames_provider::erase(frame_id const  id)
     for (frame_id  child_id : frame.children)
         set_parent(child_id, frame.parent);
     set_parent(id, invalid_frame_id());
-    m_free_ids.insert(id);
+    m_frames.erase(id);
 }
 
 
 void  frames_provider::clear()
 {
     m_frames.clear();
-    m_free_ids.clear();
 }
 
 
 bool  frames_provider::valid(frame_id const  id) const
 {
-    return id < (natural_32_bit)m_frames.size() && m_free_ids.count(id) == 0UL;
+    return m_frames.valid(id);
 }
 
 
