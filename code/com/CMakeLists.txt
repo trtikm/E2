@@ -1,8 +1,12 @@
 set(THIS_TARGET_NAME com)
 
 add_library(${THIS_TARGET_NAME}
+    ./include/com/object_guid.hpp
+    ./src/object_guid.cpp
+
     ./include/com/frame_of_reference.hpp
     ./src/frame_of_reference.cpp
+
     ./include/com/simulation_context.hpp
     ./src/simulation_context.cpp
     )
