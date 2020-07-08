@@ -71,6 +71,8 @@ add_library(${THIS_TARGET_NAME}
     ./src/read_line.cpp
 
     ./include/utility/lock_bool.hpp
+
+    ./include/utility/dynamic_array.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
