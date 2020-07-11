@@ -9,6 +9,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/com/simulation_context.hpp
     ./src/simulation_context.cpp
+    
+    ./include/com/simulator.hpp
+    ./src/simulator.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
