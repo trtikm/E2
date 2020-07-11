@@ -195,6 +195,39 @@ void  frames_provider::relocate(frame_id const  id, vector3 const&  new_origin, 
 }
 
 
+void  frames_provider::relocate_relative_to_parent(frame_id const  id, vector3 const&  new_origin, quaternion const&  new_orientation)
+{
+    frame_id const  parent_id = parent(id);
+    if (parent_id == invalid_frame_id())
+        relocate(id, new_origin, new_orientation);
+    else
+    {
+        vector3  relocated_origin;
+        quaternion  relocated_orientation;
+        {
+            matrix44  from_relocated_to_parent_matrix;
+            matrix33  R;
+            {
+                matrix44  from_relocated_frame_matrix;
+                compose_from_base_matrix(new_origin, quaternion_to_rotation_matrix(new_orientation), from_relocated_frame_matrix);
+                matrix44  to_parent_matrix;
+                {
+                    vector3  u;
+                    decompose_matrix44(world_matrix(parent_id), u, R);
+                    compose_to_base_matrix(u, R, to_parent_matrix);
+                }
+                from_relocated_to_parent_matrix = to_parent_matrix * from_relocated_frame_matrix;
+            }
+
+            decompose_matrix44(from_relocated_to_parent_matrix, relocated_origin, R);
+            relocated_orientation = rotation_matrix_to_quaternion(R);
+        }
+
+        relocate(id, relocated_origin, relocated_orientation);
+    }
+}
+
+
 void  frames_provider::invalidate(frame_id const  id) const
 {
     frame_of_reference const&  frame = m_frames.at(id);
