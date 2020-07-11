@@ -9,6 +9,8 @@ window_props  simulator::s_window_props;
 keyboard_props  simulator::s_keyboard_props;
 mouse_props  simulator::s_mouse_props;
 
+void  simulator::set_window_title(std::string const&  title) { return osi::set_window_title(title); }
+
 natural_64_bit  simulator::round_number() const { return osi::round_number(); }
 float_64_bit  simulator::seconds_openned() const { return osi::seconds_openned(); }
 float_64_bit  simulator::round_start_time() const { return osi::round_start_time(); }

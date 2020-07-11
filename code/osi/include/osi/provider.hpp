@@ -18,6 +18,8 @@ void  close();
 bool  is_open();
 bool  is_close_requested();
 
+void  set_window_title(std::string const&  title);
+
 void  start_round();
 void  finish_round();
 

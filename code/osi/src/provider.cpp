@@ -389,6 +389,12 @@ bool  is_close_requested()
 }
 
 
+void  set_window_title(std::string const&  title)
+{
+    glfwSetWindowTitle(window_ptr, title.c_str());
+}
+
+
 void  start_round()
 {
     ASSUMPTION(is_open());

@@ -19,6 +19,8 @@ struct  simulator
     virtual void  round() {}
     virtual void  terminate() {}
 
+    void  set_window_title(std::string const&  title);
+
     natural_64_bit  round_number() const;
     float_64_bit  seconds_openned() const;
     float_64_bit  round_start_time() const;
