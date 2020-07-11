@@ -198,6 +198,15 @@ texture_image_data::texture_image_data(async::finalise_load_on_destroy_ptr const
         throw std::runtime_error(msgstream() << "lodepng::decode() failed to load PNG image '" << path.string()
                                              << "'. Error code=" << error_code << ", message=" << lodepng_error_text(error));
     INVARIANT((unsigned int)image.size() == width * height * 4U);
+
+    // We have to flip the image vertically for OpenGL.
+    for (int lo = 0, hi = (int)height - 1; lo < hi; ++lo, --hi)
+        for (natural_32_bit*  lo_ptr = (natural_32_bit*)image.data() + lo * (int)width,
+                           *  lo_end = lo_ptr + width,
+                           *  hi_ptr = (natural_32_bit*)image.data() + hi * (int)width;
+                lo_ptr != lo_end; ++lo_ptr, ++hi_ptr)
+            std::swap(*lo_ptr, *hi_ptr);
+
     initialise(width, height, image.data(), image.data() + image.size(), GL_RGBA, GL_UNSIGNED_BYTE);
 }
 
