@@ -7,6 +7,7 @@
 #include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <lodepng/lodepng.h>
 #include <stdexcept>
 
 namespace gfx { namespace detail {
@@ -190,56 +191,14 @@ texture_image_data::texture_image_data(async::finalise_load_on_destroy_ptr const
     ASSUMPTION(boost::filesystem::exists(path));
     ASSUMPTION(boost::filesystem::is_regular_file(path));
 
-    //QImage  qimage;
-    //{
-    //    QImage  qtmp_image;
-    //    {
-    //        std::vector<natural_8_bit> buffer(boost::filesystem::file_size(path),0U);
-    //        {
-    //            boost::filesystem::ifstream  istr(path,std::ios_base::binary);
-    //            if (!istr.good())
-    //                throw std::runtime_error(msgstream() << "Cannot open the passed image file: " << path);
-    //            istr.read((char*)&buffer.at(0U),buffer.size());
-    //            if (istr.bad())
-    //                throw std::runtime_error(msgstream() << "Cannot read the passed image file: " << path);
-    //        }
-    //        if (!qtmp_image.loadFromData(&buffer.at(0),(int)buffer.size()))
-    //            throw std::runtime_error(msgstream() << "Qt function QImage::loadFromData() has failed for "
-    //                                                    "the passed image file: " << path);
-    //    }
-    //    QImage::Format const  desired_format = qtmp_image.hasAlphaChannel() ? QImage::Format_RGBA8888 :
-    //                                                                          QImage::Format_RGB888;
-    //    if (qtmp_image.format() != desired_format)
-    //    {
-    //        // We subclass QImage, because its method 'convertToFormat_helper' is protected.
-    //        struct format_convertor : public QImage
-    //        {
-    //            format_convertor(QImage const& orig, QImage::Format const  desired_format)
-    //                : QImage(orig)
-    //                , m_desired_format(desired_format)
-    //            {}
-    //            QImage  operator()() const
-    //            {
-    //                return convertToFormat_helper(m_desired_format,Qt::AutoColor);
-    //            }
-    //        private:
-    //            QImage::Format  m_desired_format;
-    //        };
-    //        qtmp_image = format_convertor(qtmp_image, desired_format)();
-    //    }
-
-    //    // We have to flip the image vertically for OpenGL (because its origin is at bottom).
-    //    qimage = qtmp_image.transformed(QMatrix().scale(1,-1));
-    //}
-
-    //initialise(
-    //    qimage.width(),
-    //    qimage.height(),
-    //    qimage.bits(),
-    //    qimage.bits()+qimage.byteCount(),
-    //    qimage.hasAlphaChannel() ? GL_RGBA : GL_RGB,
-    //    GL_UNSIGNED_BYTE
-    //    );
+    std::vector<natural_8_bit> image;
+    unsigned int width, height;
+    unsigned int error_code = lodepng::decode(image, width, height, path.string().c_str(), LCT_RGBA, 8U);
+    if (error_code != 0)
+        throw std::runtime_error(msgstream() << "lodepng::decode() failed to load PNG image '" << path.string()
+                                             << "'. Error code=" << error_code << ", message=" << lodepng_error_text(error));
+    INVARIANT((unsigned int)image.size() == width * height * 4U);
+    initialise(width, height, image.data(), image.data() + image.size(), GL_RGBA, GL_UNSIGNED_BYTE);
 }
 
 
