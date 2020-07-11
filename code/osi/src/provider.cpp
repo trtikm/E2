@@ -14,7 +14,8 @@ GLFWwindow*  window_ptr = nullptr;
 struct  round_state
 {
     round_state()
-        : round_start_time(0.0f)
+        : round_number(0ULL)
+        , round_start_time(0.0f)
         , round_time_delta(0.0f)
         , has_focus(true)
         , focus_just_received(true)
@@ -37,6 +38,7 @@ struct  round_state
         , error_msg()
     {}
 
+    natural_64_bit  round_number;
     float_64_bit  round_start_time;
     float_32_bit  round_time_delta;
     bool  has_focus;
@@ -69,6 +71,7 @@ void swap_states()
 {
     std::swap(current_state(), other_state());
 
+    current_state().round_number = other_state().round_number + 1ULL;
     current_state().round_start_time = seconds_openned();
     current_state().round_time_delta = (float_32_bit)(current_state().round_start_time - other_state().round_start_time);
 
@@ -405,6 +408,12 @@ void  finish_round()
     INVARIANT(glGetError() == 0U);
     glfwPollEvents();
     INVARIANT(glGetError() == 0U);
+}
+
+
+natural_64_bit  round_number()
+{
+    return current_state().round_number;
 }
 
 

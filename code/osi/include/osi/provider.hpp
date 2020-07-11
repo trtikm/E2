@@ -21,6 +21,8 @@ bool  is_close_requested();
 void  start_round();
 void  finish_round();
 
+natural_64_bit  round_number();
+
 float_64_bit  seconds_openned();
 float_64_bit  round_start_time();
 float_32_bit  round_seconds();
