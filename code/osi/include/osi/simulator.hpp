@@ -6,6 +6,7 @@
 #   include <osi/mouse_props.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <string>
+#   include <memory>
 
 namespace osi {
 
@@ -18,6 +19,7 @@ struct  simulator
     virtual void  round() {}
     virtual void  terminate() {}
 
+    natural_64_bit  round_number() const;
     float_64_bit  seconds_openned() const;
     float_64_bit  round_start_time() const;
     float_32_bit  round_seconds() const;
@@ -36,7 +38,7 @@ private:
 };
 
 
-void  run(simulator&  s);
+void  run(std::unique_ptr<simulator>  s);
 
 
 }

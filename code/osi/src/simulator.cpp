@@ -9,6 +9,7 @@ window_props  simulator::s_window_props;
 keyboard_props  simulator::s_keyboard_props;
 mouse_props  simulator::s_mouse_props;
 
+natural_64_bit  simulator::round_number() const { return osi::round_number(); }
 float_64_bit  simulator::seconds_openned() const { return osi::seconds_openned(); }
 float_64_bit  simulator::round_start_time() const { return osi::round_start_time(); }
 float_32_bit  simulator::round_seconds() const { return osi::round_seconds(); }
@@ -20,34 +21,39 @@ mouse_props const&  simulator::get_mouse_props() const { return s_mouse_props; }
 std::string const&  simulator::error_text() const { return osi::error_text(); }
 
 
-void  run(simulator&  s)
+void  run(std::unique_ptr<simulator>  s)
 {
+    if (s == nullptr)
+        return;
+
     try
     {
         osi::open();
         if (!osi::is_open())
             return;
 
-        s.initialise();
+        s->initialise();
 
         while (!osi::is_close_requested())
         {
             osi::start_round();
 
-            s.round();
+            s->round();
 
             osi::finish_round();
         }
 
         async::terminate();
 
-        s.terminate();
+        s->terminate();
+        s.reset();
 
         osi::close();
     }
     catch (...)
     {
-        s.terminate();
+        s->terminate();
+        s.reset();
 
         osi::close();
     }
