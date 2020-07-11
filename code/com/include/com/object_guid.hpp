@@ -31,7 +31,7 @@ constexpr natural_8_bit  get_num_object_kinds()
 
 inline natural_8_bit  as_number(OBJECT_KIND const  okind) { return (natural_8_bit)okind; }
 OBJECT_KIND  as_object_kind(natural_8_bit  const  okind);
-char const* to_string(OBJECT_KIND const  okind);
+std::string  to_string(OBJECT_KIND const  okind);
 OBJECT_KIND  read_object_kind_from_string(std::string const&  name);
 
 
