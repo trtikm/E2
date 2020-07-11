@@ -14,7 +14,7 @@ OBJECT_KIND  as_object_kind(natural_8_bit  const  okind)
 }
 
 
-char const*  to_string(OBJECT_KIND const  okind)
+std::string  to_string(OBJECT_KIND const  okind)
 {
     switch (okind)
     {
