@@ -395,6 +395,44 @@ void  set_window_title(std::string const&  title)
 }
 
 
+void  set_window_pos(natural_16_bit const  x, natural_16_bit const  y)
+{
+    glfwSetWindowPos(window_ptr, x, y);
+}
+
+
+natural_16_bit  window_frame_size_left()
+{
+    int  left;
+    glfwGetWindowFrameSize(window_ptr, &left, nullptr, nullptr, nullptr);
+    return (natural_16_bit)left;
+}
+
+
+natural_16_bit  window_frame_size_right()
+{
+    int  right;
+    glfwGetWindowFrameSize(window_ptr, nullptr, nullptr, &right, nullptr);
+    return (natural_16_bit)right;
+}
+
+
+natural_16_bit  window_frame_size_top()
+{
+    int  top;
+    glfwGetWindowFrameSize(window_ptr, nullptr, &top, nullptr, nullptr);
+    return (natural_16_bit)top;
+}
+
+
+natural_16_bit  window_frame_size_bottom()
+{
+    int bottom;
+    glfwGetWindowFrameSize(window_ptr, nullptr, nullptr, nullptr, &bottom);
+    return (natural_16_bit)bottom;
+}
+
+
 void  start_round()
 {
     ASSUMPTION(is_open());

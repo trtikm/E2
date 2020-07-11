@@ -15,6 +15,10 @@ struct  window_props
     natural_16_bit  window_height() const;
     float_32_bit  pixel_width_mm() const;
     float_32_bit  pixel_height_mm() const;
+    natural_16_bit  window_frame_size_left() const;
+    natural_16_bit  window_frame_size_right() const;
+    natural_16_bit  window_frame_size_top() const;
+    natural_16_bit  window_frame_size_bottom() const;
 };
 
 

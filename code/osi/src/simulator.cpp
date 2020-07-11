@@ -10,6 +10,7 @@ keyboard_props  simulator::s_keyboard_props;
 mouse_props  simulator::s_mouse_props;
 
 void  simulator::set_window_title(std::string const&  title) { return osi::set_window_title(title); }
+void  simulator::set_window_pos(natural_16_bit const  x, natural_16_bit const  y) { return osi::set_window_pos(x, y); }
 
 natural_64_bit  simulator::round_number() const { return osi::round_number(); }
 float_64_bit  simulator::seconds_openned() const { return osi::seconds_openned(); }

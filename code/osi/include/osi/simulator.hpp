@@ -20,6 +20,7 @@ struct  simulator
     virtual void  terminate() {}
 
     void  set_window_title(std::string const&  title);
+    void  set_window_pos(natural_16_bit const  x, natural_16_bit const  y);
 
     natural_64_bit  round_number() const;
     float_64_bit  seconds_openned() const;
