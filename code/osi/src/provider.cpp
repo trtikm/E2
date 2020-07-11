@@ -353,7 +353,7 @@ void  open()
         return;
     }
 
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     glfwSetKeyCallback(window_ptr, on_keyboard_event);
     glfwSetCharCallback(window_ptr, on_character_event);
