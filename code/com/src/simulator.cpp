@@ -2,6 +2,7 @@
 #include <gfx/draw.hpp>
 #include <osi/opengl.hpp>
 #include <angeo/utility.hpp>
+#include <utility/canonical_path.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/assumptions.hpp>
@@ -101,6 +102,16 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
             gfx::FOG_TYPE::NONE,
             gfx::SHADER_PROGRAM_TYPE::VERTEX
         }
+    , font_props(
+            []() -> gfx::font_mono_props {
+                gfx::font_mono_props  props;
+                gfx::load_font_mono_props(
+                    canonical_path("..") / "data" / "shared" / "gfx" / "fonts" / "Liberation_Mono.txt",
+                    props
+                    );
+                return props;
+            }()        
+            )
     , clear_colour{ 0.25f, 0.25f, 0.25f }
     , diffuse_colour{ 1.0f, 1.0f, 1.0f, 1.0f }
     , ambient_colour{ 0.5f, 0.5f, 0.5f }
@@ -110,6 +121,12 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , fog_colour{ 0.25f, 0.25f, 0.25f, 2.0f }
     , fog_near(0.25f)
     , fog_far(1000.0f)
+    , text_scale(1.0f)
+    , text_shift{ 0.0f, -1.0f, 0.0f }
+    , text_ambient_colour{ 1.0f, 0.0f, 1.0f }
+    , fps_prefix("FPS:")
+    , render_fps(true)
+    , render_text(true)
     , render_in_wireframe(false)
     , render_class_common_object(true)
     , render_class_collider_of_rigid_body(true)
@@ -133,11 +150,13 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
         )
     , matrix_from_world_to_camera()
     , matrix_from_camera_to_clipspace()
+    , matrix_ortho_projection_for_text()
     , directional_light_direction_in_camera_space()
     , draw_state()
 {
     camera->to_camera_space_matrix(matrix_from_world_to_camera);
     camera->projection_matrix(matrix_from_camera_to_clipspace);
+    camera->projection_matrix_orthogonal(matrix_ortho_projection_for_text);
     directional_light_direction_in_camera_space = transform_vector(directional_light_direction, matrix_from_world_to_camera);
 }
 
@@ -151,6 +170,12 @@ simulator::simulator()
 
     , m_paused(true)
     , m_render_config(get_window_props())
+
+    , m_FPS_num_rounds(0U)
+    , m_FPS_time(0.0f)
+    , m_FPS(0U)
+
+    , m_text_cache()
 {}
 
 
@@ -168,7 +193,20 @@ void  simulator::round()
 {
     TMPROF_BLOCK();
 
+    screen_text_logger::instance().clear();
+
     on_begin_round();
+
+        ++m_FPS_num_rounds;
+        m_FPS_time += round_seconds();
+        if (m_FPS_time >= 0.25L)
+        {
+            m_FPS = 4U * m_FPS_num_rounds;
+            m_FPS_num_rounds = 0U;
+            m_FPS_time -= 0.25L;
+        }
+        if (render_config().render_text && render_config().render_fps)
+            SLOG(render_config().fps_prefix << FPS());
 
         on_begin_simulation();
             if (!is_paused())
@@ -281,6 +319,7 @@ void  simulator::camera_update()
     render_config().camera->projection_matrix(render_config().matrix_from_camera_to_clipspace);
     render_config().directional_light_direction_in_camera_space =
             transform_vector(render_config().directional_light_direction, render_config().matrix_from_world_to_camera);
+    render_config().camera->projection_matrix_orthogonal(render_config().matrix_ortho_projection_for_text);
 }
 
 
@@ -289,6 +328,7 @@ void  simulator::render()
     TMPROF_BLOCK();
 
     simulation_context&  ctx = *context();
+    render_configuration&  cfg = render_config();
 
     using  render_tasks_map = std::unordered_map<std::string, std::vector<object_guid> >;
 
@@ -301,14 +341,14 @@ void  simulator::render()
 
         switch (ctx.batch_class(batch_guid))
         {
-        case BATCH_CLASS::COMMON_OBJECT: if (render_config().render_class_common_object) break; else continue;
-        case BATCH_CLASS::COLLIDER_OF_RIGID_BODY: if (render_config().render_class_collider_of_rigid_body) break; else continue;
-        case BATCH_CLASS::COLLIDER_OF_SENSOR: if (render_config().render_class_collider_of_sensor) break; else continue;
-        case BATCH_CLASS::COLLIDER_OF_ACTIVATOR: if (render_config().render_class_collider_of_activator) break; else continue;
-        case BATCH_CLASS::COLLIDER_OF_AGENT: if (render_config().render_class_collider_of_agent) break; else continue;
-        case BATCH_CLASS::COLLISION_CONTACT: if (render_config().render_class_collision_contact) break; else continue;
-        case BATCH_CLASS::RAY_CAST: if (render_config().render_class_ray_cast) break; else continue;
-        case BATCH_CLASS::HELPER: if (render_config().render_class_helper) break; else continue;
+        case BATCH_CLASS::COMMON_OBJECT: if (cfg.render_class_common_object) break; else continue;
+        case BATCH_CLASS::COLLIDER_OF_RIGID_BODY: if (cfg.render_class_collider_of_rigid_body) break; else continue;
+        case BATCH_CLASS::COLLIDER_OF_SENSOR: if (cfg.render_class_collider_of_sensor) break; else continue;
+        case BATCH_CLASS::COLLIDER_OF_ACTIVATOR: if (cfg.render_class_collider_of_activator) break; else continue;
+        case BATCH_CLASS::COLLIDER_OF_AGENT: if (cfg.render_class_collider_of_agent) break; else continue;
+        case BATCH_CLASS::COLLISION_CONTACT: if (cfg.render_class_collision_contact) break; else continue;
+        case BATCH_CLASS::RAY_CAST: if (cfg.render_class_ray_cast) break; else continue;
+        case BATCH_CLASS::HELPER: if (cfg.render_class_helper) break; else continue;
         default: UNREACHABLE(); continue;
         }
 
@@ -325,16 +365,20 @@ void  simulator::render()
 
     // Here we start the actual rendering of batches collected above.
 
-    glClearColor(render_config().clear_colour(0), render_config().clear_colour(1), render_config().clear_colour(2), 1.0f);
+    glClearColor(cfg.clear_colour(0), cfg.clear_colour(1), cfg.clear_colour(2), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glViewport(0, 0, get_window_props().window_width(), get_window_props().window_height());
-    glPolygonMode(GL_FRONT_AND_BACK, render_config().render_in_wireframe ? GL_LINE : GL_FILL);
+    glPolygonMode(GL_FRONT_AND_BACK, cfg.render_in_wireframe ? GL_LINE : GL_FILL);
 
     for (auto const&  id_and_guids : from_ids_to_guids_opaque)
         render_task(id_and_guids.second);
     for (auto const&  id_and_guids : from_ids_to_guids_translucent)
         render_task(id_and_guids.second);
+
+    if (cfg.render_text)
+        render_text();
 }
+
 
 void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
 {
@@ -342,6 +386,7 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
         return;
 
     simulation_context&  ctx = *context();
+    render_configuration&  cfg = render_config();
 
     gfx::batch const  batch = ctx.from_batch_guid_to_batch(batch_guids.front());
 
@@ -351,18 +396,18 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
             batch.has_instancing_data()
             ;
 
-    if (!gfx::make_current(batch, render_config().draw_state, use_instancing))
+    if (!gfx::make_current(batch, cfg.draw_state, use_instancing))
         return;
 
     gfx::fragment_shader_uniform_data_provider const  fs_uniform_data_provider(
-            render_config().diffuse_colour,
-            render_config().ambient_colour,
-            render_config().specular_colour,
-            render_config().directional_light_direction_in_camera_space,
-            render_config().directional_light_colour,
-            render_config().fog_colour,
-            render_config().fog_near,
-            render_config().fog_far
+            cfg.diffuse_colour,
+            cfg.ambient_colour,
+            cfg.specular_colour,
+            cfg.directional_light_direction_in_camera_space,
+            cfg.directional_light_colour,
+            cfg.fog_colour,
+            cfg.fog_near,
+            cfg.fog_far
             );
 
     if (use_instancing)
@@ -370,7 +415,7 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
         gfx::vertex_shader_instanced_data_provider  instanced_data_provider(batch);
         for (object_guid  batch_guid : batch_guids)
             instanced_data_provider.insert_from_model_to_camera_matrix(
-                    render_config().matrix_from_world_to_camera * ctx.frame_world_matrix(ctx.frames_of_batch(batch_guid).front())
+                    cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(ctx.frames_of_batch(batch_guid).front())
                     );
         gfx::render_batch(
                 batch,
@@ -378,19 +423,19 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
                 gfx::vertex_shader_uniform_data_provider(
                         batch,
                         {},
-                        render_config().matrix_from_camera_to_clipspace,
-                        render_config().diffuse_colour,
-                        render_config().ambient_colour,
-                        render_config().specular_colour,
-                        render_config().directional_light_direction_in_camera_space,
-                        render_config().directional_light_colour,
-                        render_config().fog_colour,
-                        render_config().fog_near,
-                        render_config().fog_far
+                        cfg.matrix_from_camera_to_clipspace,
+                        cfg.diffuse_colour,
+                        cfg.ambient_colour,
+                        cfg.specular_colour,
+                        cfg.directional_light_direction_in_camera_space,
+                        cfg.directional_light_colour,
+                        cfg.fog_colour,
+                        cfg.fog_near,
+                        cfg.fog_far
                         ),
                 fs_uniform_data_provider
                 );    
-        render_config().draw_state = batch.get_draw_state();
+        cfg.draw_state = batch.get_draw_state();
         return;
     }
 
@@ -408,17 +453,16 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
                     batch,
                     gfx::vertex_shader_uniform_data_provider(
                             batch,
-                            { render_config().matrix_from_world_to_camera
-                                    * ctx.frame_world_matrix(ctx.frames_of_batch(batch_guid).front()) },
-                            render_config().matrix_from_camera_to_clipspace,
-                            render_config().diffuse_colour,
-                            render_config().ambient_colour,
-                            render_config().specular_colour,
-                            render_config().directional_light_direction_in_camera_space,
-                            render_config().directional_light_colour,
-                            render_config().fog_colour,
-                            render_config().fog_near,
-                            render_config().fog_far
+                            { cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(ctx.frames_of_batch(batch_guid).front()) },
+                            cfg.matrix_from_camera_to_clipspace,
+                            cfg.diffuse_colour,
+                            cfg.ambient_colour,
+                            cfg.specular_colour,
+                            cfg.directional_light_direction_in_camera_space,
+                            cfg.directional_light_colour,
+                            cfg.fog_colour,
+                            cfg.fog_near,
+                            cfg.fog_far
                             ),
                     fs_uniform_data_provider
                     );
@@ -464,21 +508,55 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
                     gfx::vertex_shader_uniform_data_provider(
                             batch,
                             frame,
-                            render_config().matrix_from_camera_to_clipspace,
-                            render_config().diffuse_colour,
-                            render_config().ambient_colour,
-                            render_config().specular_colour,
-                            render_config().directional_light_direction_in_camera_space,
-                            render_config().directional_light_colour,
-                            render_config().fog_colour,
-                            render_config().fog_near,
-                            render_config().fog_far
+                            cfg.matrix_from_camera_to_clipspace,
+                            cfg.diffuse_colour,
+                            cfg.ambient_colour,
+                            cfg.specular_colour,
+                            cfg.directional_light_direction_in_camera_space,
+                            cfg.directional_light_colour,
+                            cfg.fog_colour,
+                            cfg.fog_near,
+                            cfg.fog_far
                             ),
                     fs_uniform_data_provider
                     );
 
         }
-        render_config().draw_state = batch.get_draw_state();
+        cfg.draw_state = batch.get_draw_state();
+    }
+}
+
+
+void  simulator::render_text()
+{
+    std::string const&  text = screen_text_logger::instance().text();
+    if (text.empty())
+        return;
+
+    render_configuration&  cfg = render_config();
+
+    vector3 const  pos{
+        cfg.camera->left() + cfg.text_scale * cfg.text_shift(0) * cfg.font_props.char_width,
+        cfg.camera->top() + cfg.text_scale * cfg.text_shift(1)* cfg.font_props.char_height,
+        -cfg.camera->near_plane()
+    };
+
+    if (text != m_text_cache.first)
+    {
+        m_text_cache.first = text;
+        m_text_cache.second = gfx::create_text(text, cfg.font_props, (cfg.camera->right() - pos(0)) / cfg.text_scale);
+    }
+
+    if (gfx::make_current(m_text_cache.second, cfg.draw_state))
+    {
+        gfx::render_batch(
+            m_text_cache.second,
+            pos,
+            cfg.text_scale,
+            cfg.matrix_ortho_projection_for_text,
+            cfg.text_ambient_colour
+            );
+        cfg.draw_state = m_text_cache.second.get_draw_state();
     }
 }
 
