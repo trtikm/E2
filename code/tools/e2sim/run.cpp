@@ -1,6 +1,7 @@
-#include <com/simulator.hpp>
 #include <e2sim/program_info.hpp>
 #include <e2sim/program_options.hpp>
+#include <com/simulator.hpp>
+#include <gfx/image.hpp>
 #include <angeo/tensor_math.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
@@ -13,6 +14,9 @@ struct  simulator : public com::simulator
     void  initialise() override
     {
         set_window_title(get_program_name());
+        gfx::image_rgba_8888  img;
+        gfx::load_png_image("../data/shared/gfx/icons/E2_icon.png", img);
+        set_window_icon((natural_8_bit)img.width, (natural_8_bit)img.height, img.data);
         set_window_pos(get_window_props().window_frame_size_left(), get_window_props().window_frame_size_top());
         set_window_size(1024U, 768U);
         maximise_window();
