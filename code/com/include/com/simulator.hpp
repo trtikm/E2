@@ -10,6 +10,7 @@
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
 //#   include <ai/simulator.hpp>
+#   include <string>
 #   include <memory>
 
 namespace com {
@@ -19,7 +20,7 @@ struct  simulator : public osi::simulator
 {
     struct  render_configuration
     {
-        render_configuration(osi::window_props const&  wnd_props);
+        render_configuration(osi::window_props const&  wnd_props, std::string const&  data_root_dir);
         // Global config - fields are only initialised in the constructor and then never changed in this class.
         //                 Feel free to modify these field, ideally in the callback 'on_begin_round()'
         gfx::free_fly_config  free_fly_config;
@@ -59,7 +60,7 @@ struct  simulator : public osi::simulator
         gfx::draw_state  draw_state;
     };
 
-    simulator();
+    simulator(std::string const&  data_root_dir = "../data");
     ~simulator() override;
 
     void  round() override;

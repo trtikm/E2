@@ -12,7 +12,7 @@
 namespace com {
 
 
-simulator::render_configuration::render_configuration(osi::window_props const&  wnd_props)
+simulator::render_configuration::render_configuration(osi::window_props const&  wnd_props, std::string const&  data_root_dir)
     // Global config
     : free_fly_config
         {
@@ -103,12 +103,9 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
             gfx::SHADER_PROGRAM_TYPE::VERTEX
         }
     , font_props(
-            []() -> gfx::font_mono_props {
+            [&data_root_dir]() -> gfx::font_mono_props {
                 gfx::font_mono_props  props;
-                gfx::load_font_mono_props(
-                    canonical_path("..") / "data" / "shared" / "gfx" / "fonts" / "Liberation_Mono.txt",
-                    props
-                    );
+                gfx::load_font_mono_props(canonical_path(data_root_dir) / "shared" / "gfx" / "fonts" / "Liberation_Mono.txt", props);
                 return props;
             }()        
             )
@@ -161,7 +158,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
 }
 
 
-simulator::simulator()
+simulator::simulator(std::string const&  data_root_dir)
     : m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
     , m_ai_simulator_ptr()
@@ -169,7 +166,7 @@ simulator::simulator()
     , m_context(simulation_context::create(m_collision_scene_ptr, m_rigid_body_simulator_ptr, m_ai_simulator_ptr))
 
     , m_paused(true)
-    , m_render_config(get_window_props())
+    , m_render_config(get_window_props(), data_root_dir)
 
     , m_FPS_num_rounds(0U)
     , m_FPS_time(0.0f)
