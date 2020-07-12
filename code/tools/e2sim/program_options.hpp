@@ -5,6 +5,7 @@
 #   include <boost/noncopyable.hpp>
 #   include <ostream>
 #   include <memory>
+#   include <string>
 
 class program_options : private boost::noncopyable
 {
@@ -14,6 +15,11 @@ public:
     bool helpMode() const { return vm.count("help") > 0; }
     bool versionMode() const { return vm.count("version") > 0; }
     
+    std::string  data_root() const { return vm["data"].as<std::string>(); }
+
+    bool  has_scene_dir() const { return vm.count("scene") != 0UL; }
+    std::string  scene_dir() const { return vm["scene"].as<std::string>(); }
+
     // Add more option access/query functions here, if needed.
 
     std::ostream& operator<<(std::ostream& ostr) const;

@@ -11,20 +11,29 @@
 
 struct  simulator : public com::simulator
 {
+    simulator() : com::simulator(get_program_options()->data_root()) {}
+
     void  initialise() override
     {
         set_window_title(get_program_name());
         gfx::image_rgba_8888  img;
-        gfx::load_png_image("../data/shared/gfx/icons/E2_icon.png", img);
+        gfx::load_png_image(get_program_options()->data_root() + "/shared/gfx/icons/E2_icon.png", img);
         set_window_icon((natural_8_bit)img.width, (natural_8_bit)img.height, img.data);
         set_window_pos(get_window_props().window_frame_size_left(), get_window_props().window_frame_size_top());
         set_window_size(1024U, 768U);
         maximise_window();
 
-        context()->insert_frame(context()->root_folder());
-        context()->insert_batch_default_grid(context()->root_folder(), "BATCH.grid", com::BATCH_CLASS::HELPER);
-        context()->load_batch(context()->root_folder(), "BATCH.sphere_10cm", com::BATCH_CLASS::COMMON_OBJECT,
-                              "../data/shared/gfx/batches/sphere_10cm.txt", render_config().effects_config);
+        com::object_guid const  grid_folder_guid = context()->insert_folder(context()->root_folder(), "grid");
+        context()->insert_frame(grid_folder_guid);
+        context()->insert_batch_default_grid(grid_folder_guid, "BATCH.grid", com::BATCH_CLASS::HELPER);
+        context()->load_batch(grid_folder_guid, "BATCH.sphere_10cm", com::BATCH_CLASS::COMMON_OBJECT,
+                              get_program_options()->data_root() + "/shared/gfx/batches/sphere_10cm.txt",
+                              render_config().effects_config);
+
+        if (get_program_options()->has_scene_dir())
+            context()->request_import_scene_from_directory(
+                    get_program_options()->data_root() + '/' + get_program_options()->scene_dir()
+                    );
     }
 
     void  on_begin_simulation() override

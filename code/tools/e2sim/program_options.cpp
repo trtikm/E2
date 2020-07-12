@@ -13,6 +13,14 @@ program_options::program_options(int argc, char* argv[])
     desc.add_options()
         ("help,h","Produces this help message.")
         ("version,v", "Prints the version string.")
+        ("data,D",
+            bpo::value<std::string>()->default_value("../data"),
+            "A root directory under which program's data are stored.")
+        ("scene,s",
+            bpo::value<std::string>(),
+            "A directory of a scene to be loaded. A scene directory always "
+            "contains a file 'hierarchy.json'. The scene is  a relative "
+            "path to the data root directory (see --data option).")
         // Specify more options here, if needed.
         ;
 
