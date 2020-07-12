@@ -49,6 +49,8 @@ simulation_context::simulation_context(
     , m_acids_to_guids()
     , m_deids_to_guids()
     , m_agids_to_guids()
+    , m_moveable_colliders()
+    , m_moveable_rigid_bodies()
 {
     m_root_folder = { OBJECT_KIND::FOLDER, m_folders.insert(folder_content_type("ROOT", invalid_object_guid())) };
 }
@@ -830,7 +832,19 @@ simulation_context::collider_guid_iterator  simulation_context::colliders_end() 
 bool  simulation_context::is_collider_moveable(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
-    return m_colliders.at(collider_guid.index).moveable;
+    return m_moveable_colliders.count(collider_guid.index) != 0UL;
+}
+
+
+simulation_context::collider_guid_iterator  simulation_context::moveable_colliders_begin() const
+{
+    return collider_guid_iterator(m_moveable_colliders.begin());
+}
+
+
+simulation_context::collider_guid_iterator  simulation_context::moveable_colliders_end() const
+{
+    return collider_guid_iterator(m_moveable_colliders.end());
 }
 
 
@@ -917,7 +931,19 @@ simulation_context::rigid_body_guid_iterator  simulation_context::rigid_bodies_e
 bool  simulation_context::is_rigid_body_moveable(object_guid const  rigid_body_guid) const
 {
     ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
-    return m_rigid_bodies.at(rigid_body_guid.index).moveable;
+    return m_moveable_rigid_bodies.count(rigid_body_guid.index) != 0UL;
+}
+
+
+simulation_context::rigid_body_guid_iterator  simulation_context::moveable_rigid_bodies_begin() const
+{
+    return rigid_body_guid_iterator(m_moveable_rigid_bodies.begin());
+}
+
+
+simulation_context::rigid_body_guid_iterator  simulation_context::moveable_rigid_bodies_end() const
+{
+    return rigid_body_guid_iterator(m_moveable_rigid_bodies.end());
 }
 
 

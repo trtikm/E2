@@ -249,6 +249,8 @@ void  simulator::simulate()
                     if (owner_1_guid.kind != OBJECT_KIND::RIGID_BODY || owner_2_guid.kind != OBJECT_KIND::RIGID_BODY)
                         return true;
 
+                    INVARIANT(ctx.is_rigid_body_moveable(owner_1_guid) || ctx.is_rigid_body_moveable(owner_2_guid));
+
                     angeo::COLLISION_MATERIAL_TYPE const  material_1 = ctx.collision_material_of(collider_1_guid);
                     angeo::COLLISION_MATERIAL_TYPE const  material_2 = ctx.collision_material_of(collider_2_guid);
 
@@ -291,22 +293,16 @@ void  simulator::simulate()
     rigid_body_simulator()->solve_constraint_system(round_seconds(), round_seconds() * 0.75f);
     rigid_body_simulator()->integrate_motion_of_rigid_bodies(round_seconds());
     rigid_body_simulator()->prepare_contact_cache_and_constraint_system_for_next_frame();
-    for (simulation_context::rigid_body_guid_iterator  rb_it = ctx.rigid_bodies_begin(), rb_end = ctx.rigid_bodies_end();
-         rb_it != rb_end; ++rb_it)
-    {
-        object_guid const  rb_guid = *rb_it;
-        if (!ctx.is_rigid_body_moveable(rb_guid))
-            continue;
 
+    for (auto  rb_it = ctx.moveable_rigid_bodies_begin(), rb_end = ctx.moveable_rigid_bodies_end(); rb_it != rb_end; ++rb_it)
         ctx.frame_relocate_relative_to_parent(
-                ctx.frame_of_rigid_body(rb_guid),
-                ctx.mass_centre_of_rigid_body(rb_guid),
-                ctx.orientation_of_rigid_body(rb_guid)
+                ctx.frame_of_rigid_body(*rb_it),
+                ctx.mass_centre_of_rigid_body(*rb_it),
+                ctx.orientation_of_rigid_body(*rb_it)
                 );
 
-        for (object_guid  collider_guid : ctx.colliders_of_rigid_body(rb_guid))
-            ctx.relocate_collider(collider_guid, ctx.frame_world_matrix(ctx.frame_of_collider(collider_guid)));
-    }
+    for (auto  col_it = ctx.moveable_colliders_begin(), col_end = ctx.moveable_colliders_end(); col_it != col_end; ++col_it)
+        ctx.relocate_collider(*col_it, ctx.frame_world_matrix(ctx.frame_of_collider(*col_it)));
 }
 
 

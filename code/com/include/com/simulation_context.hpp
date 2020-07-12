@@ -281,6 +281,8 @@ struct simulation_context
     collider_guid_iterator  colliders_begin() const;
     collider_guid_iterator  colliders_end() const;
     bool  is_collider_moveable(object_guid const  collider_guid) const;
+    collider_guid_iterator  moveable_colliders_begin() const;
+    collider_guid_iterator  moveable_colliders_end() const;
     object_guid  frame_of_collider(object_guid const  collider_guid) const;
     object_guid  owner_of_collider(object_guid const  collider_guid) const;
     angeo::COLLISION_MATERIAL_TYPE  collision_material_of(object_guid const  collider_guid) const;
@@ -333,6 +335,8 @@ struct simulation_context
     rigid_body_guid_iterator  rigid_bodies_begin() const;
     rigid_body_guid_iterator  rigid_bodies_end() const;
     bool  is_rigid_body_moveable(object_guid const  rigid_body_guid) const;
+    rigid_body_guid_iterator  moveable_rigid_bodies_begin() const;
+    rigid_body_guid_iterator  moveable_rigid_bodies_end() const;
     object_guid  frame_of_rigid_body(object_guid const  rigid_body_guid) const;
     vector3 const&  mass_centre_of_rigid_body(object_guid const  rigid_body_guid) const;
     quaternion const&  orientation_of_rigid_body(object_guid const  rigid_body_guid) const;
@@ -443,21 +447,17 @@ private:
             : base_type()
             , frame(invalid_object_guid())
             , owner(invalid_object_guid())
-            , moveable(false)
         {}
         folder_element_collider(module_specific_id const  id_, index_type const  folder_index_, std::string const&  element_name_,
                 object_guid const  frame_,
-                object_guid const  owner_,
-                bool const  moveable_
+                object_guid const  owner_
                 )
             : base_type(id_, folder_index_, element_name_)
             , frame(frame_)
             , owner(owner_)
-            , moveable(moveable_)
         {}
         object_guid  frame;
         object_guid  owner; // Can be either a rigid body, a sensor, or an activator.
-        bool  moveable;
     };
 
     struct  folder_element_rigid_body : public folder_element<angeo::rigid_body_id>
@@ -466,22 +466,19 @@ private:
             : base_type()
             , frame(invalid_object_guid())
             , colliders()
-            , moveable(false)
         {}
         folder_element_rigid_body(module_specific_id const  id_, index_type const  folder_index_, std::string const&  element_name_,
-                object_guid const  frame_,
-                bool const  moveable_
+                object_guid const  frame_
                 )
             : base_type(id_, folder_index_, element_name_)
             , frame(frame_)
             , colliders()
-            , moveable(moveable_)
         {}
         object_guid  frame;
-        std::vector<object_guid>  colliders;
-        bool  moveable;
+        std::vector<object_guid>  colliders; // Only those whose owner is this rigid body.
     };
 
+    // TODO: folder_element_* below are NOT properly implemented, i.e. they have been ignored so far.
     using  folder_element_sensor = folder_element<ai::object_id>;
     using  folder_element_activator = folder_element<ai::object_id>;
     using  folder_element_device = folder_element<ai::object_id>;
@@ -511,6 +508,9 @@ private:
     std::unordered_map<ai::object_id, object_guid>  m_acids_to_guids;
     std::unordered_map<ai::object_id, object_guid>  m_deids_to_guids;
     std::unordered_map<ai::object_id, object_guid>  m_agids_to_guids;
+
+    std::unordered_set<index_type>  m_moveable_colliders;
+    std::unordered_set<index_type>  m_moveable_rigid_bodies;
 
     simulation_context(
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
