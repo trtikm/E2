@@ -1,4 +1,5 @@
 #include <gfx/texture.hpp>
+#include <gfx/image.hpp>
 #include <utility/read_line.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/assumptions.hpp>
@@ -7,7 +8,6 @@
 #include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <lodepng/lodepng.h>
 #include <stdexcept>
 
 namespace gfx { namespace detail {
@@ -191,23 +191,11 @@ texture_image_data::texture_image_data(async::finalise_load_on_destroy_ptr const
     ASSUMPTION(boost::filesystem::exists(path));
     ASSUMPTION(boost::filesystem::is_regular_file(path));
 
-    std::vector<natural_8_bit> image;
-    unsigned int width, height;
-    unsigned int error_code = lodepng::decode(image, width, height, path.string().c_str(), LCT_RGBA, 8U);
-    if (error_code != 0)
-        throw std::runtime_error(msgstream() << "lodepng::decode() failed to load PNG image '" << path.string()
-                                             << "'. Error code=" << error_code << ", message=" << lodepng_error_text(error));
-    INVARIANT((unsigned int)image.size() == width * height * 4U);
+    image_rgba_8888  img;
+    load_png_image(path, img);
+    flip_image_vertically(img);
 
-    // We have to flip the image vertically for OpenGL.
-    for (int lo = 0, hi = (int)height - 1; lo < hi; ++lo, --hi)
-        for (natural_32_bit*  lo_ptr = (natural_32_bit*)image.data() + lo * (int)width,
-                           *  lo_end = lo_ptr + width,
-                           *  hi_ptr = (natural_32_bit*)image.data() + hi * (int)width;
-                lo_ptr != lo_end; ++lo_ptr, ++hi_ptr)
-            std::swap(*lo_ptr, *hi_ptr);
-
-    initialise(width, height, image.data(), image.data() + image.size(), GL_RGBA, GL_UNSIGNED_BYTE);
+    initialise(img.width, img.height, img.data.data(), img.data.data() + img.data.size(), GL_RGBA, GL_UNSIGNED_BYTE);
 }
 
 

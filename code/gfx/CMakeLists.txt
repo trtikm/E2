@@ -29,6 +29,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/gfx/texture.hpp
     ./src/texture.cpp
 
+    ./include/gfx/image.hpp
+    ./src/image.cpp
+
     ./include/gfx/texture_generators.hpp
     ./src/texture_generator_chessboard.cpp
 
