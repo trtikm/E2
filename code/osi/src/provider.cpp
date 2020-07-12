@@ -395,6 +395,16 @@ void  set_window_title(std::string const&  title)
 }
 
 
+void  set_window_icon(natural_8_bit const  width, natural_8_bit const  height, std::vector<natural_8_bit> const&  pixels_rgba_8888)
+{
+    GLFWimage img;
+    img.width = width;
+    img.height = height;
+    img.pixels = (unsigned char*)pixels_rgba_8888.data();
+    glfwSetWindowIcon(window_ptr, 1, &img);
+}
+
+
 void  set_window_pos(natural_16_bit const  x, natural_16_bit const  y)
 {
     glfwSetWindowPos(window_ptr, x, y);

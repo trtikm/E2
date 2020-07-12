@@ -10,6 +10,9 @@ keyboard_props  simulator::s_keyboard_props;
 mouse_props  simulator::s_mouse_props;
 
 void  simulator::set_window_title(std::string const&  title) { return osi::set_window_title(title); }
+void  simulator::set_window_icon(natural_8_bit const  width, natural_8_bit const  height,
+                                 std::vector<natural_8_bit> const&  pixels_rgba_8888)
+{ osi::set_window_icon(width, height, pixels_rgba_8888); }
 void  simulator::set_window_pos(natural_16_bit const  x, natural_16_bit const  y) { return osi::set_window_pos(x, y); }
 void  simulator::set_window_size(natural_16_bit const  width, natural_16_bit const  height) { osi::set_window_size(width, height); }
 void  simulator::restore_window() { osi::restore_window(); }
