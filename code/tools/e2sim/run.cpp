@@ -14,6 +14,7 @@ struct  simulator : public com::simulator
     {
         set_window_title(get_program_name());
         set_window_pos(get_window_props().window_frame_size_left(), get_window_props().window_frame_size_top());
+        set_window_size(1024U, 768U);
 
         context()->insert_frame(context()->root_folder());
         context()->insert_batch_default_grid(context()->root_folder(), "BATCH.grid", com::BATCH_CLASS::HELPER);
