@@ -57,6 +57,17 @@ simulation_context::simulation_context(
 
 
 /////////////////////////////////////////////////////////////////////////////////////
+// SCENE IMPORT/EXPORT API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+void  simulation_context::request_import_scene_from_directory(std::string const&  directory_on_the_disk)
+{
+    // TODO!
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
 // ACCESS PATH API
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -380,7 +391,7 @@ void  simulation_context::request_erase_frame(object_guid const  frame_guid) con
 // Disabled (not const) for modules.
 
 
-object_guid  simulation_context::set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid)
+void  simulation_context::set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid)
 {
     ASSUMPTION(
         is_valid_frame_guid(frame_guid) &&

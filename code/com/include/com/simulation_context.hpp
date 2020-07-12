@@ -80,6 +80,18 @@ struct simulation_context
     //      to be valid only in the current simulation round. Therefore, in each round you are supposed to call
     //      the API function again to obtain a valid iterator/refences/pointer for that round.
 
+    // IMPORTANT NOTE:
+    //      Each method whose name starts with 'request_' only inserts the corresponding request to an internal 
+    //      queue for later processing and then returns immediatelly. An effect of most requests can be seen
+    //      in the next simulation round. But for some requests, like request_import_scene_from_directory, there
+    //      may pass several simulation rounds till the effect is actually visible.
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // SCENE IMPORT/EXPORT API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    void  request_import_scene_from_directory(std::string const&  directory_on_the_disk);
+
     /////////////////////////////////////////////////////////////////////////////////////
     // ACCESS PATH API
     /////////////////////////////////////////////////////////////////////////////////////
@@ -148,7 +160,7 @@ struct simulation_context
     void  request_insert_frame(object_guid const  under_folder_guid) const;
     void  request_erase_frame(object_guid const  frame_guid) const;
     // Disabled (not const) for modules.
-    object_guid  set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid);
+    void  set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid);
     object_guid  insert_frame(object_guid const  under_folder_guid);
     void  erase_frame(object_guid const  frame_guid);
     void  frame_translate(object_guid const  frame_guid, vector3 const&  shift);
