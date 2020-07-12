@@ -53,7 +53,16 @@ bool  frames_provider::valid(frame_id const  id) const
 
 void  frames_provider::set_parent(frame_id const  id, frame_id const  parent_id)
 {
-    ASSUMPTION(valid(id));
+    ASSUMPTION(
+        valid(id) &&
+        [this](frame_id const  id, frame_id  parent_id) -> bool {
+            for ( ; parent_id != invalid_frame_id(); parent_id = parent(parent_id))
+                if (parent_id == id)
+                    return false;
+            return true;
+        }(id, parent_id)
+        );
+
     frame_of_reference&  frame = m_frames.at(id);
     if (frame.parent == parent_id)
         return;
