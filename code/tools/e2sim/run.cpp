@@ -13,6 +13,8 @@ struct  simulator : public com::simulator
     void  initialise() override
     {
         set_window_title(get_program_name());
+        set_window_pos(get_window_props().window_frame_size_left(), get_window_props().window_frame_size_top());
+
         context()->insert_frame(context()->root_folder());
         context()->insert_batch_default_grid(context()->root_folder(), "BATCH.grid", com::BATCH_CLASS::HELPER);
         context()->load_batch(context()->root_folder(), "BATCH.sphere_10cm", com::BATCH_CLASS::COMMON_OBJECT,
