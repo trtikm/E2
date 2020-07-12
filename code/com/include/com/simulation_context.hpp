@@ -148,6 +148,7 @@ struct simulation_context
     void  request_insert_frame(object_guid const  under_folder_guid) const;
     void  request_erase_frame(object_guid const  frame_guid) const;
     // Disabled (not const) for modules.
+    object_guid  set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid);
     object_guid  insert_frame(object_guid const  under_folder_guid);
     void  erase_frame(object_guid const  frame_guid);
     void  frame_translate(object_guid const  frame_guid, vector3 const&  shift);

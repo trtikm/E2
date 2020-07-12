@@ -380,6 +380,21 @@ void  simulation_context::request_erase_frame(object_guid const  frame_guid) con
 // Disabled (not const) for modules.
 
 
+object_guid  simulation_context::set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid)
+{
+    ASSUMPTION(
+        is_valid_frame_guid(frame_guid) &&
+        [this](object_guid const  folder_guid, object_guid  parent_folder_guid) -> bool {
+            for ( ; parent_folder_guid != invalid_object_guid(); parent_folder_guid = folder_content(parent_folder_guid).parent_folder)
+                if (parent_folder_guid == folder_guid)
+                    return false;
+            return true;
+        }(folder_of_frame(frame_guid), folder_of_frame(parent_frame_guid))
+        );
+    m_frames_provider.set_parent(m_frames.at(frame_guid.index).id, m_frames.at(parent_frame_guid.index).id);
+}
+
+
 object_guid  simulation_context::insert_frame(object_guid const  under_folder_guid)
 {
     ASSUMPTION(is_folder_empty(under_folder_guid));
