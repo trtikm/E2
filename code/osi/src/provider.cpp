@@ -407,6 +407,18 @@ void  set_window_size(natural_16_bit const  width, natural_16_bit const  height)
 }
 
 
+void  restore_window()
+{
+    glfwRestoreWindow(window_ptr);
+}
+
+
+void  maximise_window()
+{
+    glfwMaximizeWindow(window_ptr);
+}
+
+
 natural_16_bit  window_frame_size_left()
 {
     int  left;
