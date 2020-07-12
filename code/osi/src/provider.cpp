@@ -79,7 +79,7 @@ void swap_states()
     current_state().focus_just_lost = !current_state().has_focus && other_state().has_focus;
 
     int  w, h;
-    glfwGetFramebufferSize(window_ptr, &w, &h);
+    glfwGetWindowSize(window_ptr, &w, &h);
     current_state().width = (natural_16_bit)w;
     current_state().height = (natural_16_bit)h;
 
