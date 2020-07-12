@@ -401,6 +401,12 @@ void  set_window_pos(natural_16_bit const  x, natural_16_bit const  y)
 }
 
 
+void  set_window_size(natural_16_bit const  width, natural_16_bit const  height)
+{
+    glfwSetWindowSize(window_ptr, width, height);
+}
+
+
 natural_16_bit  window_frame_size_left()
 {
     int  left;

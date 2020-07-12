@@ -20,6 +20,7 @@ bool  is_close_requested();
 
 void  set_window_title(std::string const&  title);
 void  set_window_pos(natural_16_bit const  x, natural_16_bit const  y);
+void  set_window_size(natural_16_bit const  width, natural_16_bit const  height);
 natural_16_bit  window_frame_size_left();
 natural_16_bit  window_frame_size_right();
 natural_16_bit  window_frame_size_top();
