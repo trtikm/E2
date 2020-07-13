@@ -11,6 +11,8 @@
 #   include <ai/object_id.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/dynamic_array.hpp>
+#   include <boost/filesystem/path.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <unordered_map>
 #   include <vector>
 #   include <string>
@@ -81,16 +83,32 @@ struct simulation_context
     //      the API function again to obtain a valid iterator/refences/pointer for that round.
 
     // IMPORTANT NOTE:
+    //      Non-const methods are NOT supposed to be accessible from modules managing objects of kinds 'OBJECT_KIND',
+    //      like collison scene, physics, AI. If any of these modules needs an access to the context, then they should
+    //      only be provided by a const reference to the context.
+
+    // IMPORTANT NOTE:
     //      Each method whose name starts with 'request_' only inserts the corresponding request to an internal 
     //      queue for later processing and then returns immediatelly. An effect of most requests can be seen
     //      in the next simulation round. But for some requests, like request_import_scene_from_directory, there
     //      may pass several simulation rounds till the effect is actually visible.
 
     /////////////////////////////////////////////////////////////////////////////////////
+    // REQUESTS PROCESSING API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    // Disabled (not const) for modules.
+    void  process_pending_requests();
+    void  process_pending_requests_import_scene();
+
+    /////////////////////////////////////////////////////////////////////////////////////
     // SCENE IMPORT/EXPORT API
     /////////////////////////////////////////////////////////////////////////////////////
 
-    void  request_import_scene_from_directory(std::string const&  directory_on_the_disk);
+    void  request_import_scene_from_directory(std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
+                                              bool const  cache_imported_scene) const;
+    // Disabled (not const) for modules.
+    void  import_scene(boost::property_tree::ptree const&  ptree, object_guid const  under_folder_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // ACCESS PATH API
@@ -524,6 +542,31 @@ private:
 
     std::unordered_set<index_type>  m_moveable_colliders;
     std::unordered_set<index_type>  m_moveable_rigid_bodies;
+
+    struct  imported_scene_data
+    {
+        imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser);
+        boost::property_tree::ptree const&  ptree() const { return m_ptree; }
+    private:
+        boost::property_tree::ptree  m_ptree;
+    };
+
+    struct  imported_scene : public async::resource_accessor<imported_scene_data>
+    {
+        imported_scene() : async::resource_accessor<imported_scene_data>() {}
+        imported_scene(boost::filesystem::path const&  path);
+        boost::property_tree::ptree const&  ptree() const { return resource().ptree(); }
+    };
+
+    struct  request_props_imported_scene
+    {
+        imported_scene  scene;
+        object_guid  folder_guid;
+        bool  store_in_cache;
+    };
+
+    mutable std::vector<request_props_imported_scene> m_requests_queue_scene_import;
+    std::unordered_map<std::string, imported_scene> m_cache_of_imported_scenes;
 
     simulation_context(
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,

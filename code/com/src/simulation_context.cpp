@@ -1,8 +1,12 @@
 #include <com/simulation_context.hpp>
+#include <utility/async_resource_load.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 namespace com {
 
@@ -51,8 +55,53 @@ simulation_context::simulation_context(
     , m_agids_to_guids()
     , m_moveable_colliders()
     , m_moveable_rigid_bodies()
+    , m_requests_queue_scene_import()
+    , m_cache_of_imported_scenes()
 {
     m_root_folder = { OBJECT_KIND::FOLDER, m_folders.insert(folder_content_type("ROOT", invalid_object_guid())) };
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+// REQUESTS PROCESSING API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+// Disabled (not const) for modules.
+void  simulation_context::process_pending_requests()
+{
+    process_pending_requests_import_scene();
+}
+
+
+void  simulation_context::process_pending_requests_import_scene()
+{
+    for (natural_32_bit  i = 0U; i < (natural_32_bit)m_requests_queue_scene_import.size(); )
+        if (m_requests_queue_scene_import.at(i).scene.is_load_finished())
+        {
+            std::swap(m_requests_queue_scene_import.at(i), m_requests_queue_scene_import.back());
+            request_props_imported_scene const  request = m_requests_queue_scene_import.back();
+            m_requests_queue_scene_import.pop_back();
+
+            if (request.scene.loaded_successfully())
+                try
+                {
+                    import_scene(request.scene.ptree(), request.folder_guid);
+                    if (request.store_in_cache)
+                        m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+                }
+                catch (std::exception const&  e)
+                {
+                    LOG(error, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
+                    // To prevent subsequent attempts to load the scene from disk.
+                    m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+                }
+            else
+                // To prevent subsequent attempts to load the scene from disk.
+                m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+        }
+        else
+            ++i;
 }
 
 
@@ -61,7 +110,45 @@ simulation_context::simulation_context(
 /////////////////////////////////////////////////////////////////////////////////////
 
 
-void  simulation_context::request_import_scene_from_directory(std::string const&  directory_on_the_disk)
+simulation_context::imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser)
+    : m_ptree()
+{
+    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
+
+    if (!boost::filesystem::is_regular_file(pathname))
+        throw std::runtime_error(msgstream() << "Cannot access scene file '" << pathname << "'.");
+
+    std::ifstream  istr(pathname.string(), std::ios_base::binary);
+    if (!istr.good())
+        throw std::runtime_error(msgstream() << "Cannot open the scene file '" << pathname << "'.");
+
+    boost::property_tree::read_json(istr, m_ptree);
+}
+
+
+simulation_context::imported_scene::imported_scene(boost::filesystem::path const&  path)
+    : async::resource_accessor<imported_scene_data>(
+            { "com::simulation_context::imported_scene", boost::filesystem::absolute(path).string() }, 1U, nullptr
+            )
+{}
+
+
+void  simulation_context::request_import_scene_from_directory(
+        std::string const&  directory_on_the_disk, object_guid const  under_folder_guid, bool const  cache_imported_scene
+        ) const
+{
+    m_requests_queue_scene_import.push_back({
+            imported_scene(directory_on_the_disk + "/hierarchy.json"),
+            under_folder_guid,
+            cache_imported_scene
+            });
+}
+
+
+// Disabled (not const) for modules.
+
+
+void  simulation_context::import_scene(boost::property_tree::ptree const&  ptree, object_guid const  under_folder_guid)
 {
     // TODO!
 }

@@ -228,6 +228,8 @@ void  simulator::simulate()
 
     simulation_context&  ctx = *context();
 
+    ctx.process_pending_requests();
+
     collision_scene()->compute_contacts_of_all_dynamic_objects(
             [this, &ctx](
                 angeo::contact_id const&  cid,
