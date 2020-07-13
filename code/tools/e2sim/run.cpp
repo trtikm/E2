@@ -32,8 +32,12 @@ struct  simulator : public com::simulator
 
         if (get_program_options()->has_scene_dir())
             context()->request_import_scene_from_directory(
-                    get_program_options()->data_root() + '/' + get_program_options()->scene_dir()
+                    get_program_options()->data_root() + '/' + get_program_options()->scene_dir(),
+                    context()->root_folder(),
+                    false
                     );
+
+        set_paused(false);
     }
 
     void  on_begin_simulation() override
