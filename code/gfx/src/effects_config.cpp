@@ -90,4 +90,31 @@ std::string  effects_config::compute_generic_unique_id(
 }
 
 
+
+effects_config  default_effects_config()
+{
+    return
+        {
+            nullptr,
+            effects_config::light_types{
+                LIGHT_TYPE::AMBIENT,
+                LIGHT_TYPE::DIRECTIONAL,
+                },
+            effects_config::lighting_data_types{
+                { LIGHTING_DATA_TYPE::DIRECTION, SHADER_DATA_INPUT_TYPE::UNIFORM },
+                { LIGHTING_DATA_TYPE::NORMAL, SHADER_DATA_INPUT_TYPE::TEXTURE },
+                { LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE },
+                //{ LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::UNIFORM },
+                { LIGHTING_DATA_TYPE::SPECULAR, SHADER_DATA_INPUT_TYPE::TEXTURE }
+                },
+            SHADER_PROGRAM_TYPE::VERTEX,
+            effects_config::shader_output_types{
+                SHADER_DATA_OUTPUT_TYPE::DEFAULT
+                },
+            FOG_TYPE::NONE,
+            SHADER_PROGRAM_TYPE::VERTEX
+        };
+}
+
+
 }

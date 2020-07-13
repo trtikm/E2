@@ -59,6 +59,10 @@ private:
 
 typedef std::vector<free_fly_action>  free_fly_config;
 
+
+free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, float_32_bit const  pixel_height_mm);
+
+
 typedef std::shared_ptr<free_fly_config>  free_fly_config_ptr;
 typedef std::shared_ptr<free_fly_config const>  free_fly_config_const_ptr;
 

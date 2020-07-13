@@ -76,6 +76,8 @@ batch  create_grid(
         std::string const&  id = ""
         );
 
+batch  create_default_grid();
+
 
 batch  create_basis_vectors(FOG_TYPE const  fog_type_ = FOG_TYPE::NONE);
 

@@ -74,6 +74,151 @@ free_fly_action::free_fly_action(
 }
 
 
+free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, float_32_bit const  pixel_height_mm)
+{
+    using namespace  gfx::free_fly_controler;
+    return
+        {
+            {
+                false,
+                false,
+                2U,
+                2U,
+                -15.0f,
+                AND({
+                    keyboard_key_pressed(osi::KEY_W()),
+                    NOT(
+                        OR({
+                            keyboard_key_pressed(osi::KEY_LALT()),
+                            keyboard_key_pressed(osi::KEY_RALT()),
+                            keyboard_key_pressed(osi::KEY_LCTRL()),
+                            keyboard_key_pressed(osi::KEY_RCTRL()),
+                            keyboard_key_pressed(osi::KEY_LSHIFT()),
+                            keyboard_key_pressed(osi::KEY_RSHIFT()),
+                            })
+                        )
+                    })
+            },
+            {
+                false,
+                false,
+                2U,
+                2U,
+                15.0f,
+                AND({
+                    keyboard_key_pressed(osi::KEY_S()),
+                    NOT(
+                        OR({
+                            keyboard_key_pressed(osi::KEY_LALT()),
+                            keyboard_key_pressed(osi::KEY_RALT()),
+                            keyboard_key_pressed(osi::KEY_LCTRL()),
+                            keyboard_key_pressed(osi::KEY_RCTRL()),
+                            keyboard_key_pressed(osi::KEY_LSHIFT()),
+                            keyboard_key_pressed(osi::KEY_RSHIFT()),
+                            })
+                        )
+                    })
+            },
+            {
+                false,
+                false,
+                0U,
+                2U,
+                -15.0f,
+                AND({
+                    keyboard_key_pressed(osi::KEY_A()),
+                    NOT(
+                        OR({
+                            keyboard_key_pressed(osi::KEY_LALT()),
+                            keyboard_key_pressed(osi::KEY_RALT()),
+                            keyboard_key_pressed(osi::KEY_LCTRL()),
+                            keyboard_key_pressed(osi::KEY_RCTRL()),
+                            keyboard_key_pressed(osi::KEY_LSHIFT()),
+                            keyboard_key_pressed(osi::KEY_RSHIFT()),
+                            })
+                        )
+                    })
+            },
+            {
+                false,
+                false,
+                0U,
+                2U,
+                15.0f,
+                AND({
+                    keyboard_key_pressed(osi::KEY_D()),
+                    NOT(
+                        OR({
+                            keyboard_key_pressed(osi::KEY_LALT()),
+                            keyboard_key_pressed(osi::KEY_RALT()),
+                            keyboard_key_pressed(osi::KEY_LCTRL()),
+                            keyboard_key_pressed(osi::KEY_RCTRL()),
+                            keyboard_key_pressed(osi::KEY_LSHIFT()),
+                            keyboard_key_pressed(osi::KEY_RSHIFT()),
+                            })
+                        )
+                    })
+            },
+            {
+                false,
+                false,
+                1U,
+                2U,
+                -15.0f,
+                AND({
+                    keyboard_key_pressed(osi::KEY_Q()),
+                    NOT(
+                        OR({
+                            keyboard_key_pressed(osi::KEY_LALT()),
+                            keyboard_key_pressed(osi::KEY_RALT()),
+                            keyboard_key_pressed(osi::KEY_LCTRL()),
+                            keyboard_key_pressed(osi::KEY_RCTRL()),
+                            keyboard_key_pressed(osi::KEY_LSHIFT()),
+                            keyboard_key_pressed(osi::KEY_RSHIFT()),
+                            })
+                        )
+                    })
+            },
+            {
+                false,
+                false,
+                1U,
+                2U,
+                15.0f,
+                AND({
+                    keyboard_key_pressed(osi::KEY_E()),
+                    NOT(
+                        OR({
+                            keyboard_key_pressed(osi::KEY_LALT()),
+                            keyboard_key_pressed(osi::KEY_RALT()),
+                            keyboard_key_pressed(osi::KEY_LCTRL()),
+                            keyboard_key_pressed(osi::KEY_RCTRL()),
+                            keyboard_key_pressed(osi::KEY_LSHIFT()),
+                            keyboard_key_pressed(osi::KEY_RSHIFT()),
+                            })
+                        )
+                    })
+            },
+            {
+                true,
+                true,
+                2U,
+                0U,
+                -(10.0f * PI()) * (pixel_width_mm / 1000.0f),
+                mouse_button_pressed(osi::MIDDLE_MOUSE_BUTTON()),
+            },
+            {
+                true,
+                false,
+                0U,
+                1U,
+                -(10.0f * PI()) * (pixel_height_mm / 1000.0f),
+                mouse_button_pressed(osi::MIDDLE_MOUSE_BUTTON()),
+            },
+        };
+}
+
+
 free_fly_report  free_fly(angeo::coordinate_system&  coord_system,
                free_fly_config const&  config,
                float_64_bit const  seconds_from_previous_call,

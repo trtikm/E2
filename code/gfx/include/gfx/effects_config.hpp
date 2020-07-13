@@ -212,6 +212,9 @@ private:
 };
 
 
+effects_config  default_effects_config();
+
+
 inline bool  operator==(effects_config const  left, effects_config const  right) { return left.operator==(right); }
 inline bool  operator!=(effects_config const  left, effects_config const  right) { return !(left == right); }
 

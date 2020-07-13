@@ -161,7 +161,28 @@ batch  create_grid(
         }
     }
 
-    return create_lines3d(vertices, colours, fog_type_, "grid/" + id);
+    return create_lines3d(vertices, colours, fog_type_, id);
+}
+
+
+batch  create_default_grid()
+{
+    return create_grid(
+                50.0f,
+                50.0f,
+                50.0f,
+                1.0f,
+                1.0f,
+                { 0.4f, 0.4f, 0.4f, 1.0f },
+                { 0.4f, 0.4f, 0.4f, 1.0f },
+                { 0.5f, 0.5f, 0.5f, 1.0f },
+                { 0.5f, 0.5f, 0.5f, 1.0f },
+                { 1.0f, 0.0f, 0.0f, 1.0f },
+                { 0.0f, 1.0f, 0.0f, 1.0f },
+                { 0.0f, 0.0f, 1.0f, 1.0f },
+                10U,
+                gfx::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE
+                );
 }
 
 
