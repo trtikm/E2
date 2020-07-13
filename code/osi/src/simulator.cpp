@@ -1,6 +1,7 @@
 #include <osi/simulator.hpp>
 #include <osi/provider.hpp>
 #include <utility/async_resource_load.hpp>
+#include <stdexcept>
 
 namespace osi {
 
@@ -59,7 +60,7 @@ void  run(std::unique_ptr<simulator>  s)
 
         osi::close();
     }
-    catch (...)
+    catch (std::exception const&  e)
     {
         s->terminate();
         s.reset();
