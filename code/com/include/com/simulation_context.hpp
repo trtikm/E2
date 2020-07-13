@@ -105,10 +105,18 @@ struct simulation_context
     // SCENE IMPORT/EXPORT API
     /////////////////////////////////////////////////////////////////////////////////////
 
+    struct  import_scene_props
+    {
+        boost::property_tree::ptree const*  hierarchy;
+        std::unordered_map<std::string, gfx::effects_config> const* effects;
+    };
+
     void  request_import_scene_from_directory(std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
                                               bool const  cache_imported_scene) const;
     // Disabled (not const) for modules.
-    void  import_scene(boost::property_tree::ptree const&  ptree, object_guid const  under_folder_guid);
+    void  import_scene(import_scene_props const&  props, object_guid const  under_folder_guid);
+    void  import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid);
+    void  import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // ACCESS PATH API
@@ -280,24 +288,6 @@ struct simulation_context
             vector4 const&  colour,
             bool const  with_axis
             );
-    object_guid  insert_batch_grid(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
-            float_32_bit const  max_x_coordinate,
-            float_32_bit const  max_y_coordinate,
-            float_32_bit const  max_z_coordinate,
-            float_32_bit const  step_along_x_axis,
-            float_32_bit const  step_along_y_axis,
-            std::array<float_32_bit, 4> const&  colour_for_x_lines,
-            std::array<float_32_bit, 4> const&  colour_for_y_lines,
-            std::array<float_32_bit, 4> const&  colour_for_highlighted_x_lines,
-            std::array<float_32_bit, 4> const&  colour_for_highlighted_y_lines,
-            std::array<float_32_bit, 4> const&  colour_for_central_x_line,
-            std::array<float_32_bit, 4> const&  colour_for_central_y_line,
-            std::array<float_32_bit, 4> const&  colour_for_central_z_line,
-            natural_32_bit const  highlight_every,
-            gfx::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE const  main_exes_orientation_marker_type
-            );
-    object_guid  insert_batch_default_grid(object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // COLLIDERS API
@@ -546,16 +536,19 @@ private:
     struct  imported_scene_data
     {
         imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser);
-        boost::property_tree::ptree const&  ptree() const { return m_ptree; }
+        boost::property_tree::ptree const&  hierarchy() const { return m_hierarchy; }
+        std::unordered_map<std::string, gfx::effects_config> const&  effects() const { return m_effects; }
     private:
-        boost::property_tree::ptree  m_ptree;
+        boost::property_tree::ptree  m_hierarchy;
+        std::unordered_map<std::string, gfx::effects_config>  m_effects;
     };
 
     struct  imported_scene : public async::resource_accessor<imported_scene_data>
     {
         imported_scene() : async::resource_accessor<imported_scene_data>() {}
         imported_scene(boost::filesystem::path const&  path);
-        boost::property_tree::ptree const&  ptree() const { return resource().ptree(); }
+        boost::property_tree::ptree const&  hierarchy() const { return resource().hierarchy(); }
+        std::unordered_map<std::string, gfx::effects_config> const&  effects() const { return resource().effects(); }
     };
 
     struct  request_props_imported_scene

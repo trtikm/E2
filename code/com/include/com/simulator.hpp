@@ -18,9 +18,17 @@ namespace com {
 
 struct  simulator : public osi::simulator
 {
+    struct  simulation_configuration
+    {
+        simulation_configuration();
+        bool  paused;
+        natural_32_bit  num_rounds_to_pause;
+    };
+
     struct  render_configuration
     {
         render_configuration(osi::window_props const&  wnd_props, std::string const&  data_root_dir);
+        void  terminate();
         // Global config - fields are only initialised in the constructor and then never changed in this class.
         //                 Feel free to modify these field, ideally in the callback 'on_begin_round()'
         gfx::free_fly_config  free_fly_config;
@@ -39,7 +47,11 @@ struct  simulator : public osi::simulator
         vector3  text_shift;
         vector3  text_ambient_colour;
         std::string  fps_prefix;
+        gfx::batch  batch_grid;
+        gfx::batch  batch_frame;
         bool  render_fps;
+        bool  render_grid;
+        bool  render_frames;
         bool  render_text;
         bool  render_in_wireframe;
         bool  render_class_common_object;
@@ -62,6 +74,9 @@ struct  simulator : public osi::simulator
 
     simulator(std::string const&  data_root_dir = "../data");
     ~simulator() override;
+
+    void  initialise() override;
+    void  terminate() override;
 
     void  round() override;
 
@@ -90,20 +105,24 @@ struct  simulator : public osi::simulator
     simulation_context_ptr  context() { return m_context; }
     simulation_context_const_ptr  context() const { return m_context; }
 
+    simulation_configuration&  simulation_config() { return m_simulation_config; }
+    simulation_configuration const&  simulation_config() const { return m_simulation_config; }
+
     render_configuration&  render_config() { return m_render_config; }
     render_configuration const&  render_config() const { return m_render_config; }
-
-    bool  is_paused() const { return m_paused; }
-    void  set_paused(bool const  state) { m_paused = state; }
 
     natural_32_bit  FPS() const { return m_FPS; }
 
 private:
 
     void  simulate();
+
     void  camera_update();
+
     void  render();
     void  render_task(std::vector<object_guid> const&  batch_guids);
+    void  render_grid();
+    void  render_frames();
     void  render_text();
 
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
@@ -112,7 +131,7 @@ private:
 
     simulation_context_ptr  m_context;
 
-    bool  m_paused;
+    simulation_configuration  m_simulation_config;
     render_configuration  m_render_config;
 
     natural_32_bit  m_FPS_num_rounds;

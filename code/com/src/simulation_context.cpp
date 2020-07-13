@@ -7,6 +7,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace com {
 
@@ -86,7 +87,7 @@ void  simulation_context::process_pending_requests_import_scene()
             if (request.scene.loaded_successfully())
                 try
                 {
-                    import_scene(request.scene.ptree(), request.folder_guid);
+                import_scene({ &request.scene.hierarchy(), &request.scene.effects() }, request.folder_guid);
                     if (request.store_in_cache)
                         m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
                 }
@@ -111,18 +112,62 @@ void  simulation_context::process_pending_requests_import_scene()
 
 
 simulation_context::imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : m_ptree()
+    : m_hierarchy()
+    , m_effects()
 {
-    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
+    boost::filesystem::path const  scene_dir = finaliser->get_key().get_unique_id();
 
-    if (!boost::filesystem::is_regular_file(pathname))
-        throw std::runtime_error(msgstream() << "Cannot access scene file '" << pathname << "'.");
+    {
+        boost::filesystem::path  pathname = scene_dir / "hierarchy.json";
 
-    std::ifstream  istr(pathname.string(), std::ios_base::binary);
-    if (!istr.good())
-        throw std::runtime_error(msgstream() << "Cannot open the scene file '" << pathname << "'.");
+        if (!boost::filesystem::is_regular_file(pathname))
+            throw std::runtime_error(msgstream() << "Cannot access scene file '" << pathname << "'.");
 
-    boost::property_tree::read_json(istr, m_ptree);
+        std::ifstream  istr(pathname.string(), std::ios_base::binary);
+        if (!istr.good())
+            throw std::runtime_error(msgstream() << "Cannot open the scene file '" << pathname << "'.");
+
+        boost::property_tree::read_json(istr, m_hierarchy);
+    }
+
+    {
+        boost::filesystem::path  pathname = scene_dir / "effects.json";
+
+        if (!boost::filesystem::is_regular_file(pathname))
+            throw std::runtime_error(msgstream() << "Cannot access effects file '" << pathname << "'.");
+
+        std::ifstream  istr(pathname.string(), std::ios_base::binary);
+        if (!istr.good())
+            throw std::runtime_error(msgstream() << "Cannot open the effects file '" << pathname << "'.");
+
+        boost::property_tree::ptree  ptree;
+        boost::property_tree::read_json(istr, ptree);
+        for (auto it = ptree.begin(); it != ptree.end(); ++it)
+        {
+            gfx::effects_config::light_types  light_types;
+            for (auto const& lt_and_tree : it->second.get_child("light_types"))
+                light_types.insert((gfx::LIGHT_TYPE)lt_and_tree.second.get_value<int>());
+            gfx::effects_config::lighting_data_types  lighting_data_types;
+            for (auto const& ldt_and_tree : it->second.get_child("lighting_data_types"))
+                lighting_data_types.insert({
+                    (gfx::LIGHTING_DATA_TYPE)std::atoi(ldt_and_tree.first.c_str()),
+                    (gfx::SHADER_DATA_INPUT_TYPE)ldt_and_tree.second.get_value<int>()
+                });
+            gfx::effects_config::shader_output_types  shader_output_types;
+            for (auto const& sot_and_tree : it->second.get_child("shader_output_types"))
+                shader_output_types.insert((gfx::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
+
+            m_effects[it->first] = gfx::effects_config(
+                    nullptr,
+                    light_types,
+                    lighting_data_types,
+                    (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("lighting_algo_location"),
+                    shader_output_types,
+                    (gfx::FOG_TYPE)it->second.get<int>("fog_type"),
+                    (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("fog_algo_location")
+                    );
+        }
+    }
 }
 
 
@@ -137,20 +182,124 @@ void  simulation_context::request_import_scene_from_directory(
         std::string const&  directory_on_the_disk, object_guid const  under_folder_guid, bool const  cache_imported_scene
         ) const
 {
-    m_requests_queue_scene_import.push_back({
-            imported_scene(directory_on_the_disk + "/hierarchy.json"),
-            under_folder_guid,
-            cache_imported_scene
-            });
+    m_requests_queue_scene_import.push_back({ imported_scene(directory_on_the_disk), under_folder_guid, cache_imported_scene });
 }
 
 
 // Disabled (not const) for modules.
 
 
-void  simulation_context::import_scene(boost::property_tree::ptree const&  ptree, object_guid const  under_folder_guid)
+void  simulation_context::import_scene(import_scene_props const&  props, object_guid const  under_folder_guid)
 {
+    if (props.hierarchy->count("@pivot") != 0UL)
+    {
+        import_gfxtuner_scene(props, under_folder_guid);
+        return;
+    }
     // TODO!
+}
+
+
+void  simulation_context::import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid)
+{
+    ASSUMPTION(props.hierarchy->count("@pivot") != 0UL);
+
+    for (auto  it = props.hierarchy->begin(); it != props.hierarchy->end(); ++it)
+    {
+        if (it->first.empty() || it->first.front() == '@')
+            continue;
+
+        folder_content_type const&  fct = folder_content(under_folder_guid);
+
+        std::string  name = it->first;
+        if (fct.child_folders.count(name) != 0)
+        {
+            natural_32_bit  counter = 0U;
+            for ( ; fct.child_folders.count(name + '.' + std::to_string(counter)) != 0U; ++counter)
+                ;
+            name = name + '.' + std::to_string(counter);
+        }
+        import_gfxtuner_scene_node({ &it->second, props.effects }, insert_folder(under_folder_guid, name));
+    }
+}
+
+
+void  simulation_context::import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid)
+{
+    boost::property_tree::ptree const&  origin_tree = props.hierarchy->find("origin")->second;
+    vector3  origin(
+            origin_tree.get<scalar>("x"),
+            origin_tree.get<scalar>("y"),
+            origin_tree.get<scalar>("z")
+            );
+
+    boost::property_tree::ptree const&  orientation_tree = props.hierarchy->find("orientation")->second;
+    quaternion  orientation = make_quaternion_xyzw(
+            orientation_tree.get<scalar>("x"),
+            orientation_tree.get<scalar>("y"),
+            orientation_tree.get<scalar>("z"),
+            orientation_tree.get<scalar>("w")
+            );
+
+    frame_relocate(insert_frame(folder_guid), origin, orientation);
+
+    boost::property_tree::ptree const&  folders = props.hierarchy->find("folders")->second;
+    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
+        if (folder_it->first == "batches")
+        {
+            object_guid const  batches_folder_guid = insert_folder(folder_guid, folder_it->first);
+            for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
+            {
+                std::string const  batch_id = record_it->second.get<std::string>("id");
+                if (boost::starts_with(batch_id, gfx::get_sketch_id_prefix()))
+                {
+                    boost::property_tree::ptree  props;
+                    gfx::read_sketch_info_from_id(batch_id, props);
+                    vector3  box_half_sizes_along_axes;
+                    float_32_bit  capsule_half_distance;
+                    float_32_bit  capsule_thickness;
+                    float_32_bit  sphere_radius;
+                    natural_8_bit  num_lines;
+                    vector4  colour;
+                    gfx::FOG_TYPE  fog_type;
+                    bool wireframe;
+                    if (gfx::parse_box_info_from_id(props, box_half_sizes_along_axes, colour, fog_type, wireframe))
+                        if (wireframe)
+                            insert_batch_wireframe_box(batches_folder_guid, record_it->first, BATCH_CLASS::COMMON_OBJECT,
+                                                       box_half_sizes_along_axes, colour);
+                        else
+                            insert_batch_solid_box(batches_folder_guid, record_it->first, BATCH_CLASS::COMMON_OBJECT,
+                                                   box_half_sizes_along_axes, colour);
+                    else if (gfx::parse_capsule_info_from_id(props, capsule_half_distance, capsule_thickness, num_lines, colour, fog_type, wireframe))
+                        if (wireframe)
+                            insert_batch_wireframe_capsule(batches_folder_guid, record_it->first, BATCH_CLASS::COMMON_OBJECT,
+                                                           capsule_half_distance, capsule_thickness, num_lines, colour);
+                        else
+                            insert_batch_solid_capsule(batches_folder_guid, record_it->first, BATCH_CLASS::COMMON_OBJECT,
+                                                       capsule_half_distance, capsule_thickness, num_lines, colour);
+                    else if (gfx::parse_sphere_info_from_id(props, sphere_radius, num_lines, colour, fog_type, wireframe))
+                        if (wireframe)
+                            insert_batch_wireframe_sphere(batches_folder_guid, record_it->first, BATCH_CLASS::COMMON_OBJECT,
+                                                          sphere_radius, num_lines, colour);
+                        else
+                            insert_batch_solid_sphere(batches_folder_guid, record_it->first, BATCH_CLASS::COMMON_OBJECT,
+                                                      sphere_radius, num_lines, colour);
+                    else { UNREACHABLE(); }
+                }
+                else
+                    load_batch(
+                            batches_folder_guid,
+                            record_it->first,
+                            BATCH_CLASS::COMMON_OBJECT,
+                            record_it->second.get<std::string>("id"),
+                            props.effects->at(record_it->second.get<std::string>("effects")),
+                            record_it->second.get<std::string>("skin")
+                            );
+            }
+        }
+    boost::property_tree::ptree const&  children = props.hierarchy->find("children")->second;
+    for (auto child_it = children.begin(); child_it != children.end(); ++child_it)
+        import_gfxtuner_scene_node({ &child_it->second, props.effects }, insert_folder(folder_guid, child_it->first));
 }
 
 
@@ -847,55 +996,6 @@ object_guid  simulation_context::insert_batch_wireframe_perspective_frustum(
         gfx::create_wireframe_perspective_frustum(near_plane, far_plane, left_plane, right_plane, top_plane, bottom_plane,
                                                   colour, with_axis, gfx::FOG_TYPE::NONE)
         );
-}
-
-
-object_guid  simulation_context::insert_batch_grid(
-        object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
-        float_32_bit const  max_x_coordinate,
-        float_32_bit const  max_y_coordinate,
-        float_32_bit const  max_z_coordinate,
-        float_32_bit const  step_along_x_axis,
-        float_32_bit const  step_along_y_axis,
-        std::array<float_32_bit, 4> const&  colour_for_x_lines,
-        std::array<float_32_bit, 4> const&  colour_for_y_lines,
-        std::array<float_32_bit, 4> const&  colour_for_highlighted_x_lines,
-        std::array<float_32_bit, 4> const&  colour_for_highlighted_y_lines,
-        std::array<float_32_bit, 4> const&  colour_for_central_x_line,
-        std::array<float_32_bit, 4> const&  colour_for_central_y_line,
-        std::array<float_32_bit, 4> const&  colour_for_central_z_line,
-        natural_32_bit const  highlight_every,
-        gfx::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE const  main_exes_orientation_marker_type
-        )
-{
-    return insert_batch(folder_guid, name, cls,
-        gfx::create_grid(max_x_coordinate, max_y_coordinate, max_z_coordinate, step_along_x_axis, step_along_y_axis,
-                         colour_for_x_lines, colour_for_y_lines, colour_for_highlighted_x_lines, colour_for_highlighted_y_lines,
-                         colour_for_central_x_line, colour_for_central_y_line, colour_for_central_z_line, highlight_every,
-                         main_exes_orientation_marker_type, gfx::FOG_TYPE::NONE)
-        );
-}
-
-
-object_guid  simulation_context::insert_batch_default_grid(object_guid const  folder_guid, std::string const&  name,
-                                                           BATCH_CLASS const  cls)
-{
-    return insert_batch_grid(folder_guid, name, cls,
-                50.0f,
-                50.0f,
-                50.0f,
-                1.0f,
-                1.0f,
-                { 0.4f, 0.4f, 0.4f, 1.0f },
-                { 0.4f, 0.4f, 0.4f, 1.0f },
-                { 0.5f, 0.5f, 0.5f, 1.0f },
-                { 0.5f, 0.5f, 0.5f, 1.0f },
-                { 1.0f, 0.0f, 0.0f, 1.0f },
-                { 0.0f, 1.0f, 0.0f, 1.0f },
-                { 0.0f, 0.0f, 1.0f, 1.0f },
-                10U,
-                gfx::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE
-                );
 }
 
 

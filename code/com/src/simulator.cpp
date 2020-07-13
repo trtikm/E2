@@ -12,96 +12,16 @@
 namespace com {
 
 
+simulator::simulation_configuration::simulation_configuration()
+    : paused(true)
+    , num_rounds_to_pause(0U)
+{}
+
+
 simulator::render_configuration::render_configuration(osi::window_props const&  wnd_props, std::string const&  data_root_dir)
     // Global config
-    : free_fly_config
-        {
-            {
-                false,
-                false,
-                2U,
-                2U,
-                -15.0f,
-                gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_W()),
-            },
-            {
-                false,
-                false,
-                2U,
-                2U,
-                15.0f,
-                gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_S()),
-            },
-            {
-                false,
-                false,
-                0U,
-                2U,
-                -15.0f,
-                gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_A()),
-            },
-            {
-                false,
-                false,
-                0U,
-                2U,
-                15.0f,
-                gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_D()),
-            },
-            {
-                false,
-                false,
-                1U,
-                2U,
-                -15.0f,
-                gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_Q()),
-            },
-            {
-                false,
-                false,
-                1U,
-                2U,
-                15.0f,
-                gfx::free_fly_controler::keyboard_key_pressed(osi::KEY_E()),
-            },
-            {
-                true,
-                true,
-                2U,
-                0U,
-                -(10.0f * PI()) * (wnd_props.pixel_width_mm() / 1000.0f),
-                gfx::free_fly_controler::mouse_button_pressed(osi::MIDDLE_MOUSE_BUTTON()),
-            },
-            {
-                true,
-                false,
-                0U,
-                1U,
-                -(10.0f * PI()) * (wnd_props.pixel_height_mm() / 1000.0f),
-                gfx::free_fly_controler::mouse_button_pressed(osi::MIDDLE_MOUSE_BUTTON()),
-            },
-        }
-    , effects_config
-        {
-            nullptr,
-            gfx::effects_config::light_types{
-                gfx::LIGHT_TYPE::AMBIENT,
-                gfx::LIGHT_TYPE::DIRECTIONAL,
-                },
-            gfx::effects_config::lighting_data_types{
-                { gfx::LIGHTING_DATA_TYPE::DIRECTION, gfx::SHADER_DATA_INPUT_TYPE::UNIFORM },
-                { gfx::LIGHTING_DATA_TYPE::NORMAL, gfx::SHADER_DATA_INPUT_TYPE::TEXTURE },
-                { gfx::LIGHTING_DATA_TYPE::DIFFUSE, gfx::SHADER_DATA_INPUT_TYPE::TEXTURE },
-                //{ gfx::LIGHTING_DATA_TYPE::DIFFUSE, gfx::SHADER_DATA_INPUT_TYPE::UNIFORM },
-                { gfx::LIGHTING_DATA_TYPE::SPECULAR, gfx::SHADER_DATA_INPUT_TYPE::TEXTURE }
-                },
-            gfx::SHADER_PROGRAM_TYPE::VERTEX,
-            gfx::effects_config::shader_output_types{
-                gfx::SHADER_DATA_OUTPUT_TYPE::DEFAULT
-                },
-            gfx::FOG_TYPE::NONE,
-            gfx::SHADER_PROGRAM_TYPE::VERTEX
-        }
+    : free_fly_config(gfx::default_free_fly_config(wnd_props.pixel_width_mm(), wnd_props.pixel_height_mm()))
+    , effects_config(gfx::default_effects_config())
     , font_props(
             [&data_root_dir]() -> gfx::font_mono_props {
                 gfx::font_mono_props  props;
@@ -122,7 +42,11 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , text_shift{ 0.0f, -1.0f, 0.0f }
     , text_ambient_colour{ 1.0f, 0.0f, 1.0f }
     , fps_prefix("FPS:")
+    , batch_grid()
+    , batch_frame()
     , render_fps(true)
+    , render_grid(false)
+    , render_frames(false)
     , render_text(true)
     , render_in_wireframe(false)
     , render_class_common_object(true)
@@ -158,6 +82,33 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
 }
 
 
+void  simulator::render_configuration::terminate()
+{
+    batch_grid.release();
+    batch_frame.release();
+}
+
+
+void  simulator::initialise()
+{
+    osi::simulator::initialise();
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glDisable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glDepthRangef(0.0f,1.0f);
+}
+
+
+void  simulator::terminate()
+{
+    render_config().terminate();
+    osi::simulator::terminate();
+}
+
+
 simulator::simulator(std::string const&  data_root_dir)
     : m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
@@ -165,7 +116,7 @@ simulator::simulator(std::string const&  data_root_dir)
 
     , m_context(simulation_context::create(m_collision_scene_ptr, m_rigid_body_simulator_ptr, m_ai_simulator_ptr))
 
-    , m_paused(true)
+    , m_simulation_config()
     , m_render_config(get_window_props(), data_root_dir)
 
     , m_FPS_num_rounds(0U)
@@ -203,11 +154,22 @@ void  simulator::round()
             m_FPS_time -= 0.25L;
         }
         if (render_config().render_text && render_config().render_fps)
-            SLOG(render_config().fps_prefix << FPS());
+            SLOG(render_config().fps_prefix << FPS() << "\n");
 
         on_begin_simulation();
-            if (!is_paused())
+            context()->process_pending_requests();
+            if (!simulation_config().paused)
+            {
                 simulate();
+
+                if (simulation_config().num_rounds_to_pause > 0U)
+                {
+                    --simulation_config().num_rounds_to_pause;
+                    if (simulation_config().num_rounds_to_pause == 0U)
+                        simulation_config().paused = true;
+                }
+            }
+            else { SLOG("PAUSED\n"); }
         on_end_simulation();
 
         on_begin_camera_update();
@@ -227,8 +189,6 @@ void  simulator::simulate()
     TMPROF_BLOCK();
 
     simulation_context&  ctx = *context();
-
-    ctx.process_pending_requests();
 
     collision_scene()->compute_contacts_of_all_dynamic_objects(
             [this, &ctx](
@@ -369,6 +329,12 @@ void  simulator::render()
         render_task(id_and_guids.second);
     for (auto const&  id_and_guids : from_ids_to_guids_translucent)
         render_task(id_and_guids.second);
+
+    if (cfg.render_grid && cfg.batch_grid.loaded_successfully())
+        render_grid();
+
+    if (cfg.render_frames && cfg.batch_frame.loaded_successfully())
+        render_frames();
 
     if (cfg.render_text)
         render_text();
@@ -522,6 +488,75 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
 }
 
 
+void  simulator::render_grid()
+{
+    simulation_context&  ctx = *context();
+    render_configuration&  cfg = render_config();
+
+    if (!gfx::make_current(cfg.batch_grid, cfg.draw_state))
+        return;
+
+    gfx::render_batch(
+        cfg.batch_grid,
+        gfx::vertex_shader_uniform_data_provider(
+            cfg.batch_grid,
+            { cfg.matrix_from_world_to_camera },
+            cfg.matrix_from_camera_to_clipspace,
+            cfg.diffuse_colour,
+            cfg.ambient_colour,
+            cfg.specular_colour,
+            cfg.directional_light_direction_in_camera_space,
+            cfg.directional_light_colour,
+            cfg.fog_colour,
+            cfg.fog_near,
+            cfg.fog_far
+            )
+        );
+
+    cfg.draw_state = cfg.batch_grid.get_draw_state();
+}
+
+
+void  simulator::render_frames()
+{
+    simulation_context&  ctx = *context();
+
+    if (ctx.frames_begin() == ctx.frames_end())
+        return;
+
+    render_configuration&  cfg = render_config();
+
+    if (!gfx::make_current(cfg.batch_frame, cfg.draw_state, true))
+        return;
+
+    gfx::vertex_shader_instanced_data_provider  instanced_data_provider(cfg.batch_frame);
+    for (simulation_context::frame_guid_iterator  frame_it = ctx.frames_begin(), frame_end = ctx.frames_end();
+         frame_it != frame_end; ++frame_it)
+        instanced_data_provider.insert_from_model_to_camera_matrix(
+                cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(*frame_it)
+                );
+    gfx::render_batch(
+        cfg.batch_frame,
+        instanced_data_provider,
+        gfx::vertex_shader_uniform_data_provider(
+            cfg.batch_frame,
+            {},
+            cfg.matrix_from_camera_to_clipspace,
+            cfg.diffuse_colour,
+            cfg.ambient_colour,
+            cfg.specular_colour,
+            cfg.directional_light_direction_in_camera_space,
+            cfg.directional_light_colour,
+            cfg.fog_colour,
+            cfg.fog_near,
+            cfg.fog_far
+            )
+        );
+
+    cfg.draw_state = cfg.batch_frame.get_draw_state();
+}
+
+
 void  simulator::render_text()
 {
     std::string const&  text = screen_text_logger::instance().text();
@@ -544,6 +579,7 @@ void  simulator::render_text()
 
     if (gfx::make_current(m_text_cache.second, cfg.draw_state))
     {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         gfx::render_batch(
             m_text_cache.second,
             pos,
