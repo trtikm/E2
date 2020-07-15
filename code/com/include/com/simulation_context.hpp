@@ -29,19 +29,6 @@ using  simulation_context_ptr = std::shared_ptr<simulation_context>;
 using  simulation_context_const_ptr = std::shared_ptr<simulation_context const>;
 
 
-enum struct BATCH_CLASS : natural_8_bit
-{
-    COMMON_OBJECT,
-    COLLIDER_OF_RIGID_BODY,
-    COLLIDER_OF_SENSOR,
-    COLLIDER_OF_ACTIVATOR,
-    COLLIDER_OF_AGENT,
-    COLLISION_CONTACT,
-    RAY_CAST,
-    HELPER,
-};
-
-
 struct simulation_context
 {
     static simulation_context_ptr  create(
@@ -210,75 +197,73 @@ struct simulation_context
     object_guid  to_batch_guid(gfx::batch const  batch) const;
     batch_guid_iterator  batches_begin() const;
     batch_guid_iterator  batches_end() const;
-    BATCH_CLASS  batch_class(object_guid const  batch_guid) const;
     std::vector<object_guid> const&  frames_of_batch(object_guid const  batch_guid) const;
     // Disabled (not const) for modules.
     std::string const&  from_batch_guid(object_guid const  batch_guid);
     gfx::batch  from_batch_guid_to_batch(object_guid const  batch_guid);
-    object_guid  insert_batch(object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
-                              gfx::batch const  batch);
+    object_guid  insert_batch(object_guid const  folder_guid, std::string const&  name, gfx::batch const  batch);
     void  erase_batch(object_guid const  batch_guid);
     object_guid  load_batch(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             std::string const&  disk_path,
             gfx::effects_config  effects_config,
             std::string const&  skin_name = "default"
             );
     object_guid  insert_batch_lines3d(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             std::vector<std::pair<vector3,vector3> > const&  lines,
             vector4 const&  common_colour
             );
     object_guid  insert_batch_wireframe_box(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
             vector4 const&  colour
             );
     object_guid  insert_batch_solid_box(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
             vector4 const&  colour
             );
     object_guid  insert_batch_wireframe_capsule(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             natural_8_bit const  num_lines_per_quarter_of_circle,
             vector4 const&  colour
             );
     object_guid  insert_batch_solid_capsule(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             natural_8_bit const  num_lines_per_quarter_of_circle,
             vector4 const&  colour
             );
     object_guid  insert_batch_wireframe_sphere(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             float_32_bit const  radius,
             natural_8_bit const  num_lines_per_quarter_of_circle,
             vector4 const&  colour
             );
     object_guid  insert_batch_solid_smooth_sphere(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             float_32_bit const  radius,
             natural_8_bit const  num_lines_per_quarter_of_circle,
             vector4 const&  colour
             );
     object_guid  insert_batch_solid_sphere(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             float_32_bit const  radius,
             natural_8_bit const  num_lines_per_quarter_of_circle,
             vector4 const&  colour
             );
     object_guid  insert_batch_triangle_mesh(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             std::vector< std::array<float_32_bit, 3> > const& vertices,
             std::vector< std::array<float_32_bit, 3> > const& normals,
             vector4 const&  colour
             );
     object_guid  insert_batch_wireframe_perspective_frustum(
-            object_guid const  folder_guid, std::string const&  name, BATCH_CLASS const  cls,
+            object_guid const  folder_guid, std::string const&  name,
             float_32_bit const  near_plane,
             float_32_bit const  far_plane,
             float_32_bit const  left_plane,
@@ -307,41 +292,48 @@ struct simulation_context
     object_guid  frame_of_collider(object_guid const  collider_guid) const;
     object_guid  owner_of_collider(object_guid const  collider_guid) const;
     angeo::COLLISION_MATERIAL_TYPE  collision_material_of(object_guid const  collider_guid) const;
+    angeo::COLLISION_SHAPE_TYPE  collider_shape_type(object_guid const  collider_guid) const;
+    vector3 const&  collider_box_half_sizes_along_axes(object_guid const  collider_guid) const;
+    float_32_bit  collider_capsule_half_distance_between_end_points(object_guid const  collider_guid) const;
+    float_32_bit  collider_capsule_thickness_from_central_line(object_guid const  collider_guid) const;
+    float_32_bit  collider_sphere_radius(object_guid const  collider_guid) const;
     // Disabled (not const) for modules.
     angeo::collision_object_id  from_collider_guid(object_guid const  collider_guid);
     void  relocate_collider(object_guid const  collider_guid, matrix44 const&  world_matrix);
-    //object_guid  insert_collider_box(
-    //        vector3 const&  half_sizes_along_axes,
-    //        matrix44 const&  from_base_matrix,
-    //        angeo::COLLISION_MATERIAL_TYPE const  material,
-    //        angeo::COLLISION_CLASS const  collision_class,
-    //        bool const  is_dynamic
-    //        );
-    //object_guid  insert_collider_capsule(
-    //        float_32_bit const  half_distance_between_end_points,
-    //        float_32_bit const  thickness_from_central_line,
-    //        matrix44 const&  from_base_matrix,
-    //        angeo::COLLISION_MATERIAL_TYPE const  material,
-    //        angeo::COLLISION_CLASS const  collision_class,
-    //        bool const  is_dynamic
-    //        );
-    //object_guid  insert_collider_sphere(
-    //        float_32_bit const  radius,
-    //        matrix44 const&  from_base_matrix,
-    //        angeo::COLLISION_MATERIAL_TYPE const  material,
-    //        angeo::COLLISION_CLASS const  collision_class,
-    //        bool const  is_dynamic
-    //        );
-    //void  insert_collider_triangle_mesh(
-    //        natural_32_bit const  num_triangles,
-    //        std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
-    //        matrix44 const&  from_base_matrix,
-    //        angeo::COLLISION_MATERIAL_TYPE const  material,
-    //        angeo::COLLISION_CLASS const  collision_class,
-    //        bool const  is_dynamic,
-    //        std::vector<object_guid>&  output_guids_of_individual_triangles
-    //        );
-    //void  erase_collider(object_guid const  collider_guid);
+    void  insert_colliders(object_guid const  under_folder_guid, std::string const&  name,
+                           std::function<void(matrix44 const&, bool, std::vector<angeo::collision_object_id>&)> const&  coids_builder,
+                           std::vector<object_guid>&  output_collider_guids
+                           );
+    object_guid  insert_collider(object_guid const  under_folder_guid, std::string const&  name,
+                                 std::function<angeo::collision_object_id(matrix44 const&, bool)> const&  coid_builder);
+    object_guid  insert_collider_box(
+            object_guid const  under_folder_guid, std::string const&  name,
+            vector3 const&  half_sizes_along_axes,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class
+            );
+    object_guid  insert_collider_capsule(
+            object_guid const  under_folder_guid, std::string const&  name,
+            float_32_bit const  half_distance_between_end_points,
+            float_32_bit const  thickness_from_central_line,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class
+            );
+    object_guid  insert_collider_sphere(
+            object_guid const  under_folder_guid, std::string const&  name,
+            float_32_bit const  radius,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class
+            );
+    void  insert_collider_triangle_mesh(
+            object_guid const  under_folder_guid, std::string const&  name_prefix,
+            natural_32_bit const  num_triangles,
+            std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class,
+            std::vector<object_guid>&  output_guids_of_individual_triangles
+            );
+    void  erase_collider(object_guid const  collider_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // RIGID BODIES API
@@ -364,6 +356,21 @@ struct simulation_context
     std::vector<object_guid> const&  colliders_of_rigid_body(object_guid const  rigid_body_guid) const;
     // Disabled (not const) for modules.
     angeo::rigid_body_id  from_rigid_body_guid(object_guid const  rigid_body_guid);
+    object_guid  insert_rigid_body(
+            object_guid const  under_folder_guid,
+            float_32_bit const  mass_inverted,
+            matrix33 const&  inertia_tensor_inverted,
+            vector3 const&  linear_velocity,
+            vector3 const&  angular_velocity,
+            vector3 const&  external_linear_acceleration,
+            vector3 const&  external_angular_acceleration,
+            bool const  is_moveable
+            );
+    void  erase_rigid_body(object_guid const  rigid_body_guid);
+    void  set_rigid_body_mass_centre(object_guid const  rigid_body_guid, vector3 const&  position);
+    void  set_rigid_body_orientation(object_guid const  rigid_body_guid, quaternion const&  orientation);
+    void  set_rigid_body_inverted_mass(object_guid const  rigid_body_guid, float_32_bit const  inverted_mass);
+    void  set_rigid_body_inverted_inertia_tensor(object_guid const  rigid_body_guid, matrix33 const&  inverted_inertia_tensor);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // SENSORS API
@@ -445,20 +452,16 @@ private:
         folder_element_batch()
             : base_type()
             , batch()
-            , batch_class(BATCH_CLASS::COMMON_OBJECT)
             , frames()
         {}
         folder_element_batch(module_specific_id const  id_, index_type const  folder_index_, std::string const&  element_name_,
-                gfx::batch const  batch_,
-                BATCH_CLASS const  batch_class_
+                gfx::batch const  batch_
                 )
             : base_type(id_, folder_index_, element_name_)
             , batch(batch_)
-            , batch_class(batch_class_)
             , frames()
         {}
         gfx::batch  batch;
-        BATCH_CLASS  batch_class;
         std::vector<object_guid>  frames;
     };
 
@@ -469,11 +472,11 @@ private:
             , frame(invalid_object_guid())
             , owner(invalid_object_guid())
         {}
-        folder_element_collider(module_specific_id const  id_, index_type const  folder_index_, std::string const&  element_name_,
+        folder_element_collider(module_specific_id const  id_, index_type const  folder_index_, std::string const&  name,
                 object_guid const  frame_,
                 object_guid const  owner_
                 )
-            : base_type(id_, folder_index_, element_name_)
+            : base_type(id_, folder_index_, name)
             , frame(frame_)
             , owner(owner_)
         {}
@@ -488,10 +491,10 @@ private:
             , frame(invalid_object_guid())
             , colliders()
         {}
-        folder_element_rigid_body(module_specific_id const  id_, index_type const  folder_index_, std::string const&  element_name_,
+        folder_element_rigid_body(module_specific_id const  id_, index_type const  folder_index_,
                 object_guid const  frame_
                 )
-            : base_type(id_, folder_index_, element_name_)
+            : base_type(id_, folder_index_, to_string(OBJECT_KIND::RIGID_BODY))
             , frame(frame_)
             , colliders()
         {}

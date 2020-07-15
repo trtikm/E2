@@ -49,14 +49,13 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_frames(false)
     , render_text(true)
     , render_in_wireframe(false)
-    , render_class_common_object(true)
-    , render_class_collider_of_rigid_body(true)
-    , render_class_collider_of_sensor(true)
-    , render_class_collider_of_activator(true)
-    , render_class_collider_of_agent(true)
-    , render_class_collision_contact(true)
-    , render_class_ray_cast(true)
-    , render_class_helper(true)
+    , render_scene_batches(true)
+    , render_colliders_of_rigid_bodies(true)
+    , render_colliders_of_sensors(true)
+    , render_colliders_of_activators(true)
+    , render_colliders_of_agents(true)
+    , render_colliders_of_ray_casts(true)
+    , render_collision_contacts(true)
     // Current round config
     , camera(
         gfx::camera_perspective::create(
@@ -289,34 +288,23 @@ void  simulator::render()
 
     render_tasks_map  from_ids_to_guids_opaque;
     render_tasks_map  from_ids_to_guids_translucent;
-    for (simulation_context::batch_guid_iterator  batch_it = ctx.batches_begin(), batch_end = ctx.batches_end();
-         batch_it != batch_end; ++batch_it)
-    {
-        object_guid const  batch_guid = *batch_it;
 
-        switch (ctx.batch_class(batch_guid))
+    if (cfg.render_scene_batches)
+        for (simulation_context::batch_guid_iterator  batch_it = ctx.batches_begin(), batch_end = ctx.batches_end();
+             batch_it != batch_end; ++batch_it)
         {
-        case BATCH_CLASS::COMMON_OBJECT: if (cfg.render_class_common_object) break; else continue;
-        case BATCH_CLASS::COLLIDER_OF_RIGID_BODY: if (cfg.render_class_collider_of_rigid_body) break; else continue;
-        case BATCH_CLASS::COLLIDER_OF_SENSOR: if (cfg.render_class_collider_of_sensor) break; else continue;
-        case BATCH_CLASS::COLLIDER_OF_ACTIVATOR: if (cfg.render_class_collider_of_activator) break; else continue;
-        case BATCH_CLASS::COLLIDER_OF_AGENT: if (cfg.render_class_collider_of_agent) break; else continue;
-        case BATCH_CLASS::COLLISION_CONTACT: if (cfg.render_class_collision_contact) break; else continue;
-        case BATCH_CLASS::RAY_CAST: if (cfg.render_class_ray_cast) break; else continue;
-        case BATCH_CLASS::HELPER: if (cfg.render_class_helper) break; else continue;
-        default: UNREACHABLE(); continue;
+            object_guid const  batch_guid = *batch_it;
+
+            gfx::batch const  batch = ctx.from_batch_guid_to_batch(batch_guid);
+            if (!batch.loaded_successfully())
+                continue;
+
+            // TODO: insert here a check whether the batch is inside camera's frustum or not.
+
+            render_tasks_map&  tasks = batch.is_translucent() ? from_ids_to_guids_translucent : from_ids_to_guids_opaque;
+
+            tasks[ctx.from_batch_guid(batch_guid)].push_back(batch_guid);
         }
-
-        gfx::batch const  batch = ctx.from_batch_guid_to_batch(batch_guid);
-        if (!batch.loaded_successfully())
-            continue;
-
-        // TODO: insert here a check whether the batch is inside camera's frustum or not.
-
-        render_tasks_map&  tasks = batch.is_translucent() ? from_ids_to_guids_translucent : from_ids_to_guids_opaque;
-
-        tasks[ctx.from_batch_guid(batch_guid)].push_back(batch_guid);
-    }
 
     // Here we start the actual rendering of batches collected above.
 

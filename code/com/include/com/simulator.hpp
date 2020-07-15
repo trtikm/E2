@@ -54,14 +54,13 @@ struct  simulator : public osi::simulator
         bool  render_frames;
         bool  render_text;
         bool  render_in_wireframe;
-        bool  render_class_common_object;
-        bool  render_class_collider_of_rigid_body;
-        bool  render_class_collider_of_sensor;
-        bool  render_class_collider_of_activator;
-        bool  render_class_collider_of_agent;
-        bool  render_class_collision_contact;
-        bool  render_class_ray_cast;
-        bool  render_class_helper;
+        bool  render_scene_batches;
+        bool  render_colliders_of_rigid_bodies;
+        bool  render_colliders_of_sensors;
+        bool  render_colliders_of_activators;
+        bool  render_colliders_of_agents;
+        bool  render_colliders_of_ray_casts;
+        bool  render_collision_contacts;
         // Current round config - changes from round to round. So, your changes affect only the current round.
         //                        They are reset in the next round. Perform your changes in the callback 'on_begin_round()'.
         gfx::camera_perspective_ptr  camera;
