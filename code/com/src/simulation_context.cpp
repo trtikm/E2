@@ -1399,7 +1399,9 @@ void  simulation_context::insert_colliders(
             if (owner_of_collider_guid == rigid_body_guid)
                 owner_of_collider_guid = invalid_object_guid();
             break;
-        default: break;
+        default:
+            ASSUMPTION(owner_of_collider_guid == rigid_body_guid && rigid_body_guid != invalid_object_guid());
+            break;
         }
 
         object_guid const  collider_guid = {
