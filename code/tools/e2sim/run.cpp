@@ -58,6 +58,20 @@ struct  simulator : public com::simulator
         if (get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
             get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL )
         {
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_B()) != 0UL)
+                render_config().render_scene_batches = !render_config().render_scene_batches;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_R()) != 0UL)
+                render_config().render_colliders_of_rigid_bodies = !render_config().render_colliders_of_rigid_bodies;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_S()) != 0UL)
+                render_config().render_colliders_of_sensors = !render_config().render_colliders_of_sensors;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_C()) != 0UL)
+                render_config().render_colliders_of_activators = !render_config().render_colliders_of_activators;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_A()) != 0UL)
+                render_config().render_colliders_of_agents = !render_config().render_colliders_of_agents;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_Y()) != 0UL)
+                render_config().render_colliders_of_ray_casts = !render_config().render_colliders_of_ray_casts;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_K()) != 0UL)
+                render_config().render_collision_contacts = !render_config().render_collision_contacts;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_W()) != 0UL)
                 render_config().render_in_wireframe = !render_config().render_in_wireframe;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_G()) != 0UL)
