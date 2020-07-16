@@ -10,7 +10,10 @@
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
 //#   include <ai/simulator.hpp>
+#   include <unordered_map>
+#   include <vector>
 #   include <string>
+#   include <utility>
 #   include <memory>
 
 namespace com {
@@ -61,6 +64,14 @@ struct  simulator : public osi::simulator
         bool  render_colliders_of_agents;
         bool  render_colliders_of_ray_casts;
         bool  render_collision_contacts;
+        vector4  colour_of_rigid_body_collider;
+        vector4  colour_of_sensor_collider;
+        vector4  colour_of_activator_collider;
+        vector4  colour_of_agent_collider;
+        vector4  colour_of_ray_cast_collider;
+        vector4  colour_of_collision_contact;
+        bool  include_normals_to_batches_of_trinagle_mesh_colliders;
+        bool  include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders;
         // Current round config - changes from round to round. So, your changes affect only the current round.
         //                        They are reset in the next round. Perform your changes in the callback 'on_begin_round()'.
         gfx::camera_perspective_ptr  camera;
@@ -112,17 +123,29 @@ struct  simulator : public osi::simulator
 
     natural_32_bit  FPS() const { return m_FPS; }
 
+    void  clear_cache_of_collider_batches() { m_collider_batches_cache.clear(); }
+
 private:
+
+    struct  render_task_info
+    {
+        gfx::batch  batch;
+        std::vector<object_guid>  frame_guids;
+    };
+    using  render_tasks_map = std::unordered_map<std::string, render_task_info>;
 
     void  simulate();
 
     void  camera_update();
 
     void  render();
-    void  render_task(std::vector<object_guid> const&  batch_guids);
+    void  render_task(render_task_info const&  task);
     void  render_grid();
     void  render_frames();
+    void  render_colliders();
     void  render_text();
+
+    gfx::batch  create_batch_for_collider(object_guid const  collider_guid);
 
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
@@ -138,6 +161,7 @@ private:
     natural_32_bit  m_FPS;
 
     std::pair<std::string, gfx::batch>  m_text_cache;
+    std::unordered_map<object_guid, gfx::batch>  m_collider_batches_cache;
 };
 
 

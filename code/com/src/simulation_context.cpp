@@ -501,14 +501,12 @@ void  simulation_context::import_gfxtuner_scene_node(import_scene_props const&  
                     gfx::buffer  index_buffer;
                 };
 
-                std::vector<object_guid>  aux;
                 insert_collider_triangle_mesh(
                         folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".triangle.",
                         index_buffer.num_primitives(),
                         collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
                         angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
-                        aux
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
                         );
             }
             else
@@ -1282,49 +1280,56 @@ object_guid  simulation_context::owner_of_collider(object_guid const  collider_g
 angeo::COLLISION_MATERIAL_TYPE  simulation_context::collision_material_of(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
-    return m_collision_scene_ptr->get_material(m_colliders.at(collider_guid.index).id);
+    return m_collision_scene_ptr->get_material(m_colliders.at(collider_guid.index).id.front());
+}
+
+
+angeo::COLLISION_CLASS  simulation_context::collision_class_of(object_guid const  collider_guid) const
+{
+    ASSUMPTION(is_valid_collider_guid(collider_guid));
+    return m_collision_scene_ptr->get_collision_class(m_colliders.at(collider_guid.index).id.front());
 }
 
 
 angeo::COLLISION_SHAPE_TYPE  simulation_context::collider_shape_type(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
-    return angeo::get_shape_type(m_colliders.at(collider_guid.index).id);
+    return angeo::get_shape_type(m_colliders.at(collider_guid.index).id.front());
 }
 
 
 vector3 const&  simulation_context::collider_box_half_sizes_along_axes(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
-    return m_collision_scene_ptr->get_box_half_sizes_along_axes(m_colliders.at(collider_guid.index).id);
+    return m_collision_scene_ptr->get_box_half_sizes_along_axes(m_colliders.at(collider_guid.index).id.front());
 }
 
 
 float_32_bit  simulation_context::collider_capsule_half_distance_between_end_points(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
-    return m_collision_scene_ptr->get_capsule_half_distance_between_end_points(m_colliders.at(collider_guid.index).id);
+    return m_collision_scene_ptr->get_capsule_half_distance_between_end_points(m_colliders.at(collider_guid.index).id.front());
 }
 
 
 float_32_bit  simulation_context::collider_capsule_thickness_from_central_line(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
-    return m_collision_scene_ptr->get_capsule_thickness_from_central_line(m_colliders.at(collider_guid.index).id);
+    return m_collision_scene_ptr->get_capsule_thickness_from_central_line(m_colliders.at(collider_guid.index).id.front());
 }
 
 
 float_32_bit  simulation_context::collider_sphere_radius(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
-    return m_collision_scene_ptr->get_sphere_radius(m_colliders.at(collider_guid.index).id);
+    return m_collision_scene_ptr->get_sphere_radius(m_colliders.at(collider_guid.index).id.front());
 }
 
 
 // Disabled (not const) for modules.
 
 
-angeo::collision_object_id  simulation_context::from_collider_guid(object_guid const  collider_guid)
+std::vector<angeo::collision_object_id> const&  simulation_context::from_collider_guid(object_guid const  collider_guid)
 {
     return m_colliders.at(collider_guid.index).id;
 }
@@ -1333,17 +1338,18 @@ angeo::collision_object_id  simulation_context::from_collider_guid(object_guid c
 void  simulation_context::relocate_collider(object_guid const  collider_guid, matrix44 const&  world_matrix)
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
-    m_collision_scene_ptr->on_position_changed(m_colliders.at(collider_guid.index).id, world_matrix);
+    for (angeo::collision_object_id  coid : m_colliders.at(collider_guid.index).id)
+        m_collision_scene_ptr->on_position_changed(coid, world_matrix);
 }
 
 
-void  simulation_context::insert_colliders(
-        object_guid const  under_folder_guid,
-        std::string const&  name,
-        std::function<void(matrix44 const&, bool, std::vector<angeo::collision_object_id>&)> const&  coids_builder,
-        std::vector<object_guid>&  output_collider_guids
+object_guid  simulation_context::insert_collider(
+        object_guid const  under_folder_guid, std::string const&  name,
+        std::function<void(matrix44 const&, bool, std::vector<angeo::collision_object_id>&)> const&  coids_builder
         )
 {
+    ASSUMPTION(folder_content(under_folder_guid).content.count(name) == 0UL);
+
     object_guid const  frame_guid = find_closest_frame(under_folder_guid, true);
     ASSUMPTION(frame_guid != invalid_object_guid());
 
@@ -1380,71 +1386,46 @@ void  simulation_context::insert_colliders(
     coids_builder(frame_world_matrix(frame_guid), is_moveable, coids);
     ASSUMPTION(!coids.empty());
 
-    for (natural_32_bit  i = 0U, n = (natural_32_bit)coids.size(); i < n; ++i)
+    object_guid  owner_of_collider_guid = owner_guid;
+    switch (m_collision_scene_ptr->get_collision_class(coids.front()))
     {
-        angeo::collision_object_id  coid = coids.at(i);
+    case angeo::COLLISION_CLASS::RAY_CAST_SIGHT:
+    case angeo::COLLISION_CLASS::SIGHT_TARGET:
+    case angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR:
+    case angeo::COLLISION_CLASS::TRIGGER_GENERAL:
+    case angeo::COLLISION_CLASS::TRIGGER_SPECIAL:
+        if (owner_of_collider_guid == rigid_body_guid)
+            owner_of_collider_guid = invalid_object_guid();
+        break;
+    default:
+        ASSUMPTION(owner_of_collider_guid == rigid_body_guid && rigid_body_guid != invalid_object_guid());
+        break;
+    }
 
-        std::string const  coid_name = name + (n == 1U ? "": std::to_string(i));
+    object_guid const  collider_guid = {
+            OBJECT_KIND::COLLIDER,
+            m_colliders.insert({ coids, under_folder_guid.index, name, frame_guid, owner_of_collider_guid })
+            };
 
-        ASSUMPTION(folder_content(under_folder_guid).content.count(coid_name) == 0UL);
-
-        object_guid  owner_of_collider_guid = owner_guid;
-        switch (m_collision_scene_ptr->get_collision_class(coid))
-        {
-        case angeo::COLLISION_CLASS::RAY_CAST_SIGHT:
-        case angeo::COLLISION_CLASS::SIGHT_TARGET:
-        case angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR:
-        case angeo::COLLISION_CLASS::TRIGGER_GENERAL:
-        case angeo::COLLISION_CLASS::TRIGGER_SPECIAL:
-            if (owner_of_collider_guid == rigid_body_guid)
-                owner_of_collider_guid = invalid_object_guid();
-            break;
-        default:
-            ASSUMPTION(owner_of_collider_guid == rigid_body_guid && rigid_body_guid != invalid_object_guid());
-            break;
-        }
-
-        object_guid const  collider_guid = {
-                OBJECT_KIND::COLLIDER,
-                m_colliders.insert({ coid, under_folder_guid.index, coid_name, frame_guid, owner_of_collider_guid })
-                };
-
+    for (angeo::collision_object_id  coid : coids)
         m_coids_to_guids.insert({ coid, collider_guid });
 
-        m_folders.at(under_folder_guid.index).content.insert({ coid_name, collider_guid });
+    m_folders.at(under_folder_guid.index).content.insert({ name, collider_guid });
 
-        if (owner_of_collider_guid != invalid_object_guid())
-            switch (owner_of_collider_guid.kind)
-            {
-            case OBJECT_KIND::RIGID_BODY: m_rigid_bodies.at(owner_guid.index).colliders.push_back(collider_guid); break;
-            // TODO:
-            //case OBJECT_KIND::SENSOR: m_sensors.at(owner_guid.index).colliders.push_back(collider_guid); break;
-            //case OBJECT_KIND::ACTIVATOR: m_activators.at(owner_guid.index).colliders.push_back(collider_guid); break;
-            default: UNREACHABLE(); break;
-            }
+    if (owner_of_collider_guid != invalid_object_guid())
+        switch (owner_of_collider_guid.kind)
+        {
+        case OBJECT_KIND::RIGID_BODY: m_rigid_bodies.at(owner_guid.index).colliders.push_back(collider_guid); break;
+        // TODO:
+        //case OBJECT_KIND::SENSOR: m_sensors.at(owner_guid.index).colliders.push_back(collider_guid); break;
+        //case OBJECT_KIND::ACTIVATOR: m_activators.at(owner_guid.index).colliders.push_back(collider_guid); break;
+        default: UNREACHABLE(); break;
+        }
 
-        if (is_moveable)
-            m_moveable_colliders.insert(collider_guid.index);
+    if (is_moveable)
+        m_moveable_colliders.insert(collider_guid.index);
 
-        output_collider_guids.push_back(collider_guid);
-    }
-}
-
-
-object_guid  simulation_context::insert_collider(
-        object_guid const  under_folder_guid,
-        std::string const&  name,
-        std::function<angeo::collision_object_id(matrix44 const&, bool)> const&  coid_builder)
-{
-    std::vector<object_guid>  collider_guids;
-    insert_colliders(
-            under_folder_guid,
-            name,
-            [this, &coid_builder](matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
-                coids.push_back(coid_builder(W, is_dynamic));
-                },
-            collider_guids);
-    return collider_guids.front();
+    return collider_guid;
 }
 
 
@@ -1456,8 +1437,9 @@ object_guid  simulation_context::insert_collider_box(
         )
 {
     return insert_collider(under_folder_guid, name,
-        [this, &half_sizes_along_axes, material, collision_class](matrix44 const&  W, bool const  is_dynamic) {
-            return m_collision_scene_ptr->insert_box(half_sizes_along_axes, W, material, collision_class, is_dynamic);
+        [this, &half_sizes_along_axes, material, collision_class]
+        (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            coids.push_back(m_collision_scene_ptr->insert_box(half_sizes_along_axes, W, material, collision_class, is_dynamic));
         });
 }
 
@@ -1472,9 +1454,9 @@ object_guid  simulation_context::insert_collider_capsule(
 {
     return insert_collider(under_folder_guid, name,
         [this, half_distance_between_end_points, thickness_from_central_line, material, collision_class]
-            (matrix44 const&  W, bool const  is_dynamic) {
-            return m_collision_scene_ptr->insert_capsule(half_distance_between_end_points, thickness_from_central_line,
-                                                         W, material, collision_class, is_dynamic);
+            (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            coids.push_back(m_collision_scene_ptr->insert_capsule(half_distance_between_end_points, thickness_from_central_line,
+                                                                  W, material, collision_class, is_dynamic));
         });
 }
 
@@ -1487,30 +1469,27 @@ object_guid  simulation_context::insert_collider_sphere(
         )
 {
     return insert_collider(under_folder_guid, name,
-        [this, radius, material, collision_class](matrix44 const&  W, bool const  is_dynamic) {
-            return m_collision_scene_ptr->insert_sphere(radius, W, material, collision_class, is_dynamic);
+        [this, radius, material, collision_class]
+        (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            coids.push_back(m_collision_scene_ptr->insert_sphere(radius, W, material, collision_class, is_dynamic));
         });
 }
 
 
-void  simulation_context::insert_collider_triangle_mesh(
+object_guid  simulation_context::insert_collider_triangle_mesh(
         object_guid const  under_folder_guid, std::string const&  name_prefix,
         natural_32_bit const  num_triangles,
         std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
         angeo::COLLISION_MATERIAL_TYPE const  material,
-        angeo::COLLISION_CLASS const  collision_class,
-        std::vector<object_guid>&  output_guids_of_individual_triangles
+        angeo::COLLISION_CLASS const  collision_class
         )
 {
-    insert_colliders(
-            under_folder_guid,
-            name_prefix,
+    return insert_collider(under_folder_guid, name_prefix,
             [this, num_triangles, &getter_of_end_points_in_model_space, material, collision_class]
-                (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
                 m_collision_scene_ptr->insert_triangle_mesh(num_triangles, getter_of_end_points_in_model_space,
                                                             W, material, collision_class, is_dynamic, coids);
-                },
-            output_guids_of_individual_triangles);
+            });
 }
 
 
@@ -1522,9 +1501,11 @@ void  simulation_context::erase_collider(object_guid const  collider_guid)
         );
 
     auto const&  elem = m_colliders.at(collider_guid.index);
-    m_collision_scene_ptr->erase_object(elem.id);
+    for (angeo::collision_object_id  coid : elem.id)
+        m_collision_scene_ptr->erase_object(coid);
     m_folders.at(elem.folder_index).content.erase(elem.element_name);
-    m_coids_to_guids.erase(elem.id);
+    for (angeo::collision_object_id  coid : elem.id)
+        m_coids_to_guids.erase(coid);
     m_moveable_colliders.erase(collider_guid.index);
     m_colliders.erase(collider_guid.index);
 }

@@ -56,6 +56,14 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_colliders_of_agents(true)
     , render_colliders_of_ray_casts(true)
     , render_collision_contacts(true)
+    , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
+    , colour_of_sensor_collider{ 0.0f, 0.85f, 0.85f, 1.0f }
+    , colour_of_activator_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
+    , colour_of_agent_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
+    , colour_of_ray_cast_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
+    , colour_of_collision_contact{ 1.0f, 0.5f, 0.5f, 1.0f }
+    , include_normals_to_batches_of_trinagle_mesh_colliders(true)
+    , include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders(false)
     // Current round config
     , camera(
         gfx::camera_perspective::create(
@@ -284,10 +292,8 @@ void  simulator::render()
     simulation_context&  ctx = *context();
     render_configuration&  cfg = render_config();
 
-    using  render_tasks_map = std::unordered_map<std::string, std::vector<object_guid> >;
-
-    render_tasks_map  from_ids_to_guids_opaque;
-    render_tasks_map  from_ids_to_guids_translucent;
+    render_tasks_map  render_tasks_opaque;
+    render_tasks_map  render_tasks_translucent;
 
     if (cfg.render_scene_batches)
         for (simulation_context::batch_guid_iterator  batch_it = ctx.batches_begin(), batch_end = ctx.batches_end();
@@ -301,9 +307,15 @@ void  simulator::render()
 
             // TODO: insert here a check whether the batch is inside camera's frustum or not.
 
-            render_tasks_map&  tasks = batch.is_translucent() ? from_ids_to_guids_translucent : from_ids_to_guids_opaque;
+            render_tasks_map&  tasks = batch.is_translucent() ? render_tasks_translucent : render_tasks_opaque;
 
-            tasks[ctx.from_batch_guid(batch_guid)].push_back(batch_guid);
+            std::string const&  batch_id = ctx.from_batch_guid(batch_guid);
+            auto  it = tasks.find(batch_id);
+            if (it == tasks.end())
+                it = tasks.insert({ batch_id, { batch, {} } }).first;
+
+            for (object_guid  frame_guid : ctx.frames_of_batch(batch_guid))
+                it->second.frame_guids.push_back(frame_guid);
         }
 
     // Here we start the actual rendering of batches collected above.
@@ -313,10 +325,10 @@ void  simulator::render()
     glViewport(0, 0, get_window_props().window_width(), get_window_props().window_height());
     glPolygonMode(GL_FRONT_AND_BACK, cfg.render_in_wireframe ? GL_LINE : GL_FILL);
 
-    for (auto const&  id_and_guids : from_ids_to_guids_opaque)
-        render_task(id_and_guids.second);
-    for (auto const&  id_and_guids : from_ids_to_guids_translucent)
-        render_task(id_and_guids.second);
+    for (auto const&  id_and_task : render_tasks_opaque)
+        render_task(id_and_task.second);
+    for (auto const&  id_and_task : render_tasks_translucent)
+        render_task(id_and_task.second);
 
     if (cfg.render_grid && cfg.batch_grid.loaded_successfully())
         render_grid();
@@ -324,28 +336,34 @@ void  simulator::render()
     if (cfg.render_frames && cfg.batch_frame.loaded_successfully())
         render_frames();
 
+    if (cfg.render_colliders_of_rigid_bodies
+            || cfg.render_colliders_of_sensors
+            || cfg.render_colliders_of_activators
+            || cfg.render_colliders_of_agents
+            || cfg.render_colliders_of_ray_casts
+            )
+        render_colliders();
+
     if (cfg.render_text)
         render_text();
 }
 
 
-void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
+void  simulator::render_task(render_task_info const&  task)
 {
-    if (batch_guids.empty())
+    if (task.frame_guids.empty())
         return;
 
     simulation_context&  ctx = *context();
     render_configuration&  cfg = render_config();
 
-    gfx::batch const  batch = ctx.from_batch_guid_to_batch(batch_guids.front());
-
     bool const  use_instancing =
-            batch_guids.size() > 1UL &&    
-            batch.get_available_resources().skeletal() == nullptr &&
-            batch.has_instancing_data()
+            task.frame_guids.size() > 1UL &&    
+            task.batch.get_available_resources().skeletal() == nullptr &&
+            task.batch.has_instancing_data()
             ;
 
-    if (!gfx::make_current(batch, cfg.draw_state, use_instancing))
+    if (!gfx::make_current(task.batch, cfg.draw_state, use_instancing))
         return;
 
     gfx::fragment_shader_uniform_data_provider const  fs_uniform_data_provider(
@@ -361,16 +379,16 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
 
     if (use_instancing)
     {
-        gfx::vertex_shader_instanced_data_provider  instanced_data_provider(batch);
-        for (object_guid  batch_guid : batch_guids)
+        gfx::vertex_shader_instanced_data_provider  instanced_data_provider(task.batch);
+        for (object_guid  frame_guid : task.frame_guids)
             instanced_data_provider.insert_from_model_to_camera_matrix(
-                    cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(ctx.frames_of_batch(batch_guid).front())
+                    cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(frame_guid)
                     );
         gfx::render_batch(
-                batch,
+                task.batch,
                 instanced_data_provider,
                 gfx::vertex_shader_uniform_data_provider(
-                        batch,
+                        task.batch,
                         {},
                         cfg.matrix_from_camera_to_clipspace,
                         cfg.diffuse_colour,
@@ -384,11 +402,11 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
                         ),
                 fs_uniform_data_provider
                 );    
-        cfg.draw_state = batch.get_draw_state();
+        cfg.draw_state = task.batch.get_draw_state();
         return;
     }
 
-    for (object_guid  batch_guid : batch_guids)
+    for (object_guid  frame_guid : task.frame_guids)
     {
         //ai::skeletal_motion_templates  motion_templates;
         //{
@@ -399,10 +417,10 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
         //if (!motion_templates.loaded_successfully())
         if (true)
             gfx::render_batch(
-                    batch,
+                    task.batch,
                     gfx::vertex_shader_uniform_data_provider(
-                            batch,
-                            { cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(ctx.frames_of_batch(batch_guid).front()) },
+                            task.batch,
+                            { cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(frame_guid) },
                             cfg.matrix_from_camera_to_clipspace,
                             cfg.diffuse_colour,
                             cfg.ambient_colour,
@@ -453,9 +471,9 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
                 //        );
             }
             gfx::render_batch(
-                    batch,
+                    task.batch,
                     gfx::vertex_shader_uniform_data_provider(
-                            batch,
+                            task.batch,
                             frame,
                             cfg.matrix_from_camera_to_clipspace,
                             cfg.diffuse_colour,
@@ -471,7 +489,7 @@ void  simulator::render_task(std::vector<object_guid> const&  batch_guids)
                     );
 
         }
-        cfg.draw_state = batch.get_draw_state();
+        cfg.draw_state = task.batch.get_draw_state();
     }
 }
 
@@ -545,6 +563,86 @@ void  simulator::render_frames()
 }
 
 
+void  simulator::render_colliders()
+{
+    std::unordered_map<object_guid, gfx::batch>  collider_batches_cache;
+
+    simulation_context&  ctx = *context();
+    render_configuration&  cfg = render_config();
+
+    render_tasks_map  tasks;
+    for (simulation_context::collider_guid_iterator  collider_it = ctx.colliders_begin(), collider_end = ctx.colliders_end();
+         collider_it != collider_end; ++collider_it)
+    {
+        object_guid const  collider_guid = *collider_it;
+
+        std::unordered_map<object_guid, gfx::batch>::iterator  batch_it;
+        {
+            batch_it = m_collider_batches_cache.find(collider_guid);
+            batch_it = (batch_it != m_collider_batches_cache.end()) ? collider_batches_cache.insert(*batch_it).first :
+                                                                      collider_batches_cache.end();
+        }
+
+        switch (ctx.collision_class_of(collider_guid))
+        {
+        case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+            if (!cfg.render_colliders_of_agents)
+                continue;
+            break;
+        case angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT:
+        case angeo::COLLISION_CLASS::INFINITE_MASS_OBJECT:
+            if (!cfg.render_colliders_of_rigid_bodies)
+                continue;
+            break;
+        case angeo::COLLISION_CLASS::RAY_CAST_SIGHT:
+        case angeo::COLLISION_CLASS::SIGHT_TARGET:
+            if (!cfg.render_colliders_of_ray_casts)
+                continue;
+            break;
+        case angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR:
+            if (!cfg.render_colliders_of_activators)
+                continue;
+            break;
+        case angeo::COLLISION_CLASS::TRIGGER_GENERAL:
+        case angeo::COLLISION_CLASS::TRIGGER_SPECIAL:
+            if (!cfg.render_colliders_of_sensors)
+                continue;
+            break;
+        }
+
+        gfx::batch  batch;
+        {
+            if (batch_it == collider_batches_cache.end())
+            {
+                batch = create_batch_for_collider(collider_guid);
+                collider_batches_cache.insert({ collider_guid, batch} );
+            }
+            else
+                batch = batch_it->second;
+        }
+
+        std::string const  batch_id = batch.uid();
+        auto  it = tasks.find(batch_id);
+        if (it == tasks.end())
+            it = tasks.insert({ batch_id, { batch, {} } }).first;
+        it->second.frame_guids.push_back(ctx.frame_of_collider(collider_guid));
+    }
+
+    m_collider_batches_cache.swap(collider_batches_cache);
+
+    // And here we do the actual rendering of prepared render tasks.
+
+    GLint  backup_polygon_mode[2];
+    glGetIntegerv(GL_POLYGON_MODE, &backup_polygon_mode[0]);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    for (auto const&  id_and_task : tasks)
+        render_task(id_and_task.second);
+
+    glPolygonMode(GL_FRONT_AND_BACK, backup_polygon_mode[0]);
+}
+
+
 void  simulator::render_text()
 {
     std::string const&  text = screen_text_logger::instance().text();
@@ -576,6 +674,120 @@ void  simulator::render_text()
             cfg.text_ambient_colour
             );
         cfg.draw_state = m_text_cache.second.get_draw_state();
+    }
+}
+
+
+gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_guid)
+{
+    simulation_context&  ctx = *context();
+    render_configuration&  cfg = render_config();
+
+    vector4  colour;
+    switch (ctx.collision_class_of(collider_guid))
+    {
+    case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+        colour = cfg.colour_of_agent_collider;
+        break;
+    case angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT:
+    case angeo::COLLISION_CLASS::INFINITE_MASS_OBJECT:
+        colour = cfg.colour_of_rigid_body_collider;
+        break;
+    case angeo::COLLISION_CLASS::RAY_CAST_SIGHT:
+    case angeo::COLLISION_CLASS::SIGHT_TARGET:
+        colour = cfg.colour_of_ray_cast_collider;
+        break;
+    case angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR:
+        colour = cfg.colour_of_activator_collider;
+        break;
+    case angeo::COLLISION_CLASS::TRIGGER_GENERAL:
+    case angeo::COLLISION_CLASS::TRIGGER_SPECIAL:
+        colour = cfg.colour_of_sensor_collider;
+        break;
+    default: UNREACHABLE(); break;
+    }
+
+    switch (ctx.collider_shape_type(collider_guid))
+    {
+    case angeo::COLLISION_SHAPE_TYPE::BOX:
+        return gfx::create_wireframe_box(ctx.collider_box_half_sizes_along_axes(collider_guid),
+                                         colour, gfx::FOG_TYPE::NONE);
+    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+        return gfx::create_wireframe_capsule(ctx.collider_capsule_half_distance_between_end_points(collider_guid),
+                                             ctx.collider_capsule_thickness_from_central_line(collider_guid),
+                                             5U, colour, gfx::FOG_TYPE::NONE);
+    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+        return gfx::create_wireframe_sphere(ctx.collider_sphere_radius(collider_guid), 5U, colour, gfx::FOG_TYPE::NONE);
+    case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
+        {
+            matrix44 const  to_node_matrix = inverse44(ctx.frame_world_matrix(ctx.frame_of_collider(collider_guid)));
+
+            std::vector<std::pair<vector3,vector3> >  lines;
+            std::vector<vector4>  colours_of_lines;
+            vector4 const  ignored_edge_colour = expand34(0.5f * contract43(colour), 1.0f);
+            for (angeo::collision_object_id const  coid : ctx.from_collider_guid(collider_guid))
+            {
+                auto const&  getter = m_collision_scene_ptr->get_triangle_points_getter(coid);
+                natural_32_bit const  triangle_index = m_collision_scene_ptr->get_triangle_index(coid);
+                natural_8_bit const  edge_ignore_mask = m_collision_scene_ptr->get_trinagle_edges_ignore_mask(coid);
+
+                std::array<vector3, 3U> const  P = {
+                    getter(triangle_index, 0U),
+                    getter(triangle_index, 1U),
+                    getter(triangle_index, 2U)
+                };
+
+                lines.push_back({ P[0], P[1] });
+                colours_of_lines.push_back((edge_ignore_mask & 1U) == 0U ? colour : ignored_edge_colour);
+                lines.push_back({ P[1], P[2] });
+                colours_of_lines.push_back((edge_ignore_mask & 2U) == 0U ? colour : ignored_edge_colour);
+                lines.push_back({ P[2], P[0] });
+                colours_of_lines.push_back((edge_ignore_mask & 4U) == 0U ? colour : ignored_edge_colour);
+
+                vector3 const  center = (1.0f / 3.0f) * (P[0] + P[1] + P[2]);
+
+                if (cfg.include_normals_to_batches_of_trinagle_mesh_colliders)
+                    lines.push_back({
+                            center,
+                            center + 0.25f * transform_vector(m_collision_scene_ptr->get_triangle_unit_normal_in_world_space(coid),
+                                                             to_node_matrix)
+                            });
+                colours_of_lines.push_back(colour);
+
+                if (cfg.include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders)
+                    for (natural_32_bit i = 0U; i != 3U; ++i)
+                        if (m_collision_scene_ptr->get_trinagle_neighbour_over_edge(coid, i) != coid)
+                        {
+                            vector3 const  A = 0.5f * (P[i] + P[(i + 1U) % 3U]);
+                            vector3  B;
+                            if (false)
+                                B = A + 0.25f * (center - A);
+                            else
+                            {
+                                // This is only for debugging purposes (when suspicious about neighbours somewhere).
+                                angeo::collision_object_id const  neighbour_coid =
+                                        m_collision_scene_ptr->get_trinagle_neighbour_over_edge(coid, i);
+                                auto const& neighbour_getter =
+                                        m_collision_scene_ptr->get_triangle_points_getter(neighbour_coid);
+                                natural_32_bit const  neighbour_triangle_index =
+                                        m_collision_scene_ptr->get_triangle_index(neighbour_coid);
+
+                                std::array<vector3, 3U> const  neighbour_P = {
+                                    neighbour_getter(neighbour_triangle_index, 0U),
+                                    neighbour_getter(neighbour_triangle_index, 1U),
+                                    neighbour_getter(neighbour_triangle_index, 2U)
+                                };
+                                vector3 const  neighbour_center =
+                                    (1.0f / 3.0f) * (neighbour_P[0] + neighbour_P[1] + neighbour_P[2]);
+                                B = A + 0.25f * (neighbour_center - A);
+                            }
+                            lines.push_back({ A, B });
+                            colours_of_lines.push_back(colour);
+                        }
+            }
+            return gfx::create_lines3d(lines, colours_of_lines);
+        }
+    default: UNREACHABLE(); break;
     }
 }
 

@@ -292,20 +292,19 @@ struct simulation_context
     object_guid  frame_of_collider(object_guid const  collider_guid) const;
     object_guid  owner_of_collider(object_guid const  collider_guid) const;
     angeo::COLLISION_MATERIAL_TYPE  collision_material_of(object_guid const  collider_guid) const;
+    angeo::COLLISION_CLASS  collision_class_of(object_guid const  collider_guid) const;
     angeo::COLLISION_SHAPE_TYPE  collider_shape_type(object_guid const  collider_guid) const;
     vector3 const&  collider_box_half_sizes_along_axes(object_guid const  collider_guid) const;
     float_32_bit  collider_capsule_half_distance_between_end_points(object_guid const  collider_guid) const;
     float_32_bit  collider_capsule_thickness_from_central_line(object_guid const  collider_guid) const;
     float_32_bit  collider_sphere_radius(object_guid const  collider_guid) const;
     // Disabled (not const) for modules.
-    angeo::collision_object_id  from_collider_guid(object_guid const  collider_guid);
+    std::vector<angeo::collision_object_id> const&  from_collider_guid(object_guid const  collider_guid);
     void  relocate_collider(object_guid const  collider_guid, matrix44 const&  world_matrix);
-    void  insert_colliders(object_guid const  under_folder_guid, std::string const&  name,
-                           std::function<void(matrix44 const&, bool, std::vector<angeo::collision_object_id>&)> const&  coids_builder,
-                           std::vector<object_guid>&  output_collider_guids
-                           );
-    object_guid  insert_collider(object_guid const  under_folder_guid, std::string const&  name,
-                                 std::function<angeo::collision_object_id(matrix44 const&, bool)> const&  coid_builder);
+    object_guid  insert_collider(
+            object_guid const  under_folder_guid, std::string const&  name,
+            std::function<void(matrix44 const&, bool, std::vector<angeo::collision_object_id>&)> const&  coids_builder
+            );
     object_guid  insert_collider_box(
             object_guid const  under_folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
@@ -325,13 +324,12 @@ struct simulation_context
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class
             );
-    void  insert_collider_triangle_mesh(
+    object_guid  insert_collider_triangle_mesh(
             object_guid const  under_folder_guid, std::string const&  name_prefix,
             natural_32_bit const  num_triangles,
             std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            angeo::COLLISION_CLASS const  collision_class,
-            std::vector<object_guid>&  output_guids_of_individual_triangles
+            angeo::COLLISION_CLASS const  collision_class
             );
     void  erase_collider(object_guid const  collider_guid);
 
@@ -434,7 +432,7 @@ private:
         using  module_specific_id = T;
         using  base_type = folder_element<module_specific_id>;
         folder_element() : id(), folder_index(0), element_name() {}
-        folder_element(module_specific_id const  id_, index_type const  folder_index_, std::string const&  element_name_)
+        folder_element(module_specific_id const&  id_, index_type const  folder_index_, std::string const&  element_name_)
             : id(id_)
             , folder_index(folder_index_)
             , element_name(element_name_)
@@ -454,7 +452,7 @@ private:
             , batch()
             , frames()
         {}
-        folder_element_batch(module_specific_id const  id_, index_type const  folder_index_, std::string const&  element_name_,
+        folder_element_batch(module_specific_id const&  id_, index_type const  folder_index_, std::string const&  element_name_,
                 gfx::batch const  batch_
                 )
             : base_type(id_, folder_index_, element_name_)
@@ -465,14 +463,14 @@ private:
         std::vector<object_guid>  frames;
     };
 
-    struct  folder_element_collider : public folder_element<angeo::collision_object_id>
+    struct  folder_element_collider : public folder_element<std::vector<angeo::collision_object_id> >
     {
         folder_element_collider()
             : base_type()
             , frame(invalid_object_guid())
             , owner(invalid_object_guid())
         {}
-        folder_element_collider(module_specific_id const  id_, index_type const  folder_index_, std::string const&  name,
+        folder_element_collider(module_specific_id const&  id_, index_type const  folder_index_, std::string const&  name,
                 object_guid const  frame_,
                 object_guid const  owner_
                 )
