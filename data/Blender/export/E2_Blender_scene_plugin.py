@@ -412,6 +412,13 @@ def num2str(num, precision=6):
     return format(num, "." + str(precision) + "f") if isinstance(num, float) else str(num)
 
 
+def remove_numeric_suffix(name):
+    idx = name.rfind(".")
+    if idx >= 0 and idx + 1 < len(name) and all(c.isdigit() for c in name[idx+1:]):
+        return name[:idx]
+    return name
+
+
 class E2SceneExportOperator(bpy.types.Operator):
     """ E2 scene exporter: Exports the scene under the export dir """
     bl_idname = "scene.e2_export"
@@ -421,13 +428,14 @@ class E2SceneExportOperator(bpy.types.Operator):
     def execute(self, context):
         try:
             print("E2 Scene exporter: Exporting scene using to dir: " + context.scene.e2_scene_export_dir)
-            self.export_scene(context.scene.objects, str(context.scene.e2_scene_export_dir))
+            self.export_scene(context.scene.objects, str(context.scene.e2_scene_export_dir),
+                              context.scene.e2_scene_remove_name_numeric_suffixes_whenever_possible)
             print("E2 Scene exporter: Finished successfully.")
         except Exception as e:
             print("E2 Scene exporter: Export has FAILED. Details:\n" + str(e))
         return{'FINISHED'}
 
-    def export_scene(self, objects, output_dir):
+    def export_scene(self, objects, output_dir, remove_suffixes):
         if not os.path.isdir(output_dir):
             raise Exception("The export directory '" + output_dir + "' does not exist.")
         root_folders = []
@@ -436,31 +444,41 @@ class E2SceneExportOperator(bpy.types.Operator):
                 root_folders.append(object)
         result = { "folders":{}, "imports": {} }
         for folder in root_folders:
-            if len(folder.e2_custom_props.folder_imported_from_dir) > 0:
-                result["imports"][folder.name] = normalise_disk_path(folder.e2_custom_props.folder_imported_from_dir)
+            if remove_suffixes is True:
+                fixed_name = remove_numeric_suffix(folder.name)
+                folder_name = fixed_name if fixed_name not in [n.name for n in root_folders] else folder.name
             else:
-                result["folders"][folder.name] = self.export_folder(folder)
+                folder_name = folder.name
+            if len(folder.e2_custom_props.folder_imported_from_dir) > 0:
+                result["imports"][folder_name] = normalise_disk_path(folder.e2_custom_props.folder_imported_from_dir)
+            else:
+                result["folders"][folder_name] = self.export_folder(folder, remove_suffixes)
         result = self.clean_result(result)    
         #print(json.dumps(result, indent=4, sort_keys=True))
         with open(os.path.join(output_dir, "hierarchy.json"), "w") as f:
             json.dump(result, f, indent=4, sort_keys=True)
 
-    def export_folder(self, folder):
+    def export_folder(self, folder, remove_suffixes):
         result = { "content":{}, "folders":{}, "imports": {} }
         if folder.e2_custom_props.folder_defines_frame is True:
             result["content"]["FRAME"] = self.export_frame(folder)
         if folder.e2_custom_props.folder_defines_rigid_body is True:
             result["content"]["RIGID_BODY"] = self.export_rigid_body(folder)
         for child in folder.children:
+            if remove_suffixes is True:
+                fixed_name = remove_numeric_suffix(child.name)
+                child_name = fixed_name if fixed_name not in [n.name for n in folder.children] else child.name
+            else:
+                child_name = child.name
             if child.e2_custom_props.object_kind == "FOLDER":
                 if len(child.e2_custom_props.folder_imported_from_dir) > 0:
-                    result["imports"][child.name] = normalise_disk_path(child.e2_custom_props.folder_imported_from_dir)
+                    result["imports"][child_name] = normalise_disk_path(child.e2_custom_props.folder_imported_from_dir)
                 else:
-                    result["folders"][child.name] = self.export_folder(child)
+                    result["folders"][child_name] = self.export_folder(child, remove_suffixes)
             elif child.e2_custom_props.object_kind == "BATCH":
-                result["content"][child.name] = self.export_batch(child)
+                result["content"][child_name] = self.export_batch(child)
             elif child.e2_custom_props.object_kind == "COLLIDER":
-                result["content"][child.name] = self.export_collider(child)
+                result["content"][child_name] = self.export_collider(child)
         return self.clean_result(result)
 
     def export_frame(self, object):
@@ -627,6 +645,9 @@ class E2SceneIOPanel(bpy.types.Panel):
         row.prop(scene, "e2_scene_export_dir")
 
         row = layout.row()
+        row.prop(scene, "e2_scene_remove_name_numeric_suffixes_whenever_possible")
+
+        row = layout.row()
         row.operator("scene.e2_export")
 
         row = layout.row()
@@ -651,6 +672,12 @@ def register():
     bpy.utils.register_class(E2SceneImportOperator)
     bpy.utils.register_class(E2SceneIOPanel)
     bpy.types.Object.e2_custom_props = bpy.props.PointerProperty(type=E2ObjectProps)
+    bpy.types.Scene.e2_scene_remove_name_numeric_suffixes_whenever_possible = bpy.props.BoolProperty(
+            name="Try not to export numeric suffixes of names?",
+            description=("During export try to ignore numeric suffixes\n"+
+                         "of names, like '.001',  whenever possible."),
+            default=True
+            )
     bpy.types.Scene.e2_scene_export_dir = bpy.props.StringProperty(
             name="Export dir",
             description="A directory under which the scene will be exported",
@@ -678,6 +705,7 @@ def unregister():
     del bpy.types.Scene.e2_scene_import_under_folder
     del bpy.types.Scene.e2_scene_import_dir
     del bpy.types.Scene.e2_scene_export_dir
+    del bpy.types.Scene.e2_scene_remove_name_numeric_suffixes_whenever_possible
     del bpy.types.Object.e2_custom_props
     bpy.utils.unregister_class(E2SceneIOPanel)
     bpy.utils.unregister_class(E2SceneImportOperator)
