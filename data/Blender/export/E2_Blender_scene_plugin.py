@@ -1,4 +1,6 @@
 import bpy
+import mathutils
+import math
 import os
 import json
 
@@ -149,53 +151,6 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             name="Is moveable?",
             description="Whether the rigid body is moveable during simulation or not",
             default=True
-            )
-    rigid_body_mass: bpy.props.FloatProperty(
-            name="Mass",
-            description="The mass of the rigid body. Value 0.0 means an infinite mass",
-            default=1.0,
-            unit='MASS',
-            min=0.0,
-            max=10000.0,
-            step=0.001
-            )
-    rigid_body_compute_inverted_inertia_tesor_from_colliders: bpy.props.BoolProperty(
-            name="Compute inverted inertia tensor from colliders?",
-            description="Whether to compute the inverted inertia tensor from colliders or not",
-            default=True
-            )
-    rigid_body_inverted_inertia_tensor_row_0: bpy.props.FloatVectorProperty(
-            name="",
-            description="Row 0 of the inverted inertia tensor",
-            size=3,
-            default=(1.0, 0.0, 0.0),
-            unit='NONE',
-            subtype='NONE',
-            min=0.0,
-            max=100.0,
-            step=0.00001
-            )
-    rigid_body_inverted_inertia_tensor_row_1: bpy.props.FloatVectorProperty(
-            name="",
-            description="Row 1 of the inverted inertia tensor",
-            size=3,
-            default=(0.0, 1.0, 0.0),
-            unit='NONE',
-            subtype='NONE',
-            min=0.0,
-            max=100.0,
-            step=0.00001
-            )
-    rigid_body_inverted_inertia_tensor_row_2: bpy.props.FloatVectorProperty(
-            name="",
-            description="Row 2 of the inverted inertia tensor",
-            size=3,
-            default=(0.0, 0.0, 1.0),
-            unit='NONE',
-            subtype='NONE',
-            min=0.0,
-            max=100.0,
-            step=0.00001
             )
     rigid_body_linear_velocity: bpy.props.FloatVectorProperty(
             name="Linear velocity",
@@ -360,22 +315,6 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(object_props, "rigid_body_is_moveable")
         
         if object_props.rigid_body_is_moveable is True:
-            row = layout.row()
-            row.prop(object_props, "rigid_body_mass")
-            
-            row = layout.row()
-            row.prop(object_props, "rigid_body_compute_inverted_inertia_tesor_from_colliders")
-            if object_props.rigid_body_compute_inverted_inertia_tesor_from_colliders is False:
-                box = layout.box()
-                row = box.row()
-                row.label(text="Inverted inertia tesor:")
-                row = box.row()
-                row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_0")
-                row = box.row()
-                row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_1")
-                row = box.row()
-                row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_2")
-                
             row = layout.row()
             row.prop(object_props, "rigid_body_linear_velocity")
             
@@ -615,44 +554,31 @@ class E2SceneExportOperator(bpy.types.Operator):
 
     def export_rigid_body(self, object):
         object_props = object.e2_custom_props
-        if object_props.rigid_body_compute_inverted_inertia_tesor_from_colliders is True:
-            pass
         result = {
             "object_kind": "RIGID_BODY",
             "is_moveable": str(object_props.rigid_body_is_moveable),
-            "mass_inverted": num2str(1.0 / object_props.rigid_body_mass if object_props.rigid_body_mass > 0.0001 else 0.0),
-            "inertia_tesor_inverted": {
-                "00": num2str(object_props.rigid_body_inverted_inertia_tensor_row_0[0]),
-                "01": num2str(object_props.rigid_body_inverted_inertia_tensor_row_0[1]),
-                "02": num2str(object_props.rigid_body_inverted_inertia_tensor_row_0[2]),
-                "10": num2str(object_props.rigid_body_inverted_inertia_tensor_row_1[0]),
-                "11": num2str(object_props.rigid_body_inverted_inertia_tensor_row_1[1]),
-                "12": num2str(object_props.rigid_body_inverted_inertia_tensor_row_1[2]),
-                "20": num2str(object_props.rigid_body_inverted_inertia_tensor_row_2[0]),
-                "21": num2str(object_props.rigid_body_inverted_inertia_tensor_row_2[1]),
-                "22": num2str(object_props.rigid_body_inverted_inertia_tensor_row_2[2])
-                },
-                "linear_velocity": {
-                    "x": num2str(object_props.rigid_body_linear_velocity[0]),
-                    "y": num2str(object_props.rigid_body_linear_velocity[1]),
-                    "z": num2str(object_props.rigid_body_linear_velocity[2])
-                },
-                "angular_velocity": {
-                    "x": num2str(object_props.rigid_body_angular_velocity[0]),
-                    "y": num2str(object_props.rigid_body_angular_velocity[1]),
-                    "z": num2str(object_props.rigid_body_angular_velocity[2])
-                },
-                "external_linear_acceleration": {
-                    "x": num2str(object_props.rigid_body_external_linear_acceleration[0]),
-                    "y": num2str(object_props.rigid_body_external_linear_acceleration[1]),
-                    "z": num2str(object_props.rigid_body_external_linear_acceleration[2])
-                },
-                "external_angular_acceleration": {
-                    "x": num2str(object_props.rigid_body_external_angular_acceleration[0]),
-                    "y": num2str(object_props.rigid_body_external_angular_acceleration[1]),
-                    "z": num2str(object_props.rigid_body_external_angular_acceleration[2])
-                }
         }
+        if object_props.rigid_body_is_moveable is True:
+            result["linear_velocity"] = {
+                "x": num2str(object_props.rigid_body_linear_velocity[0]),
+                "y": num2str(object_props.rigid_body_linear_velocity[1]),
+                "z": num2str(object_props.rigid_body_linear_velocity[2])
+                }
+            result["angular_velocity"] = {
+                "x": num2str(object_props.rigid_body_angular_velocity[0]),
+                "y": num2str(object_props.rigid_body_angular_velocity[1]),
+                "z": num2str(object_props.rigid_body_angular_velocity[2])
+                }
+            result["external_linear_acceleration"] = {
+                "x": num2str(object_props.rigid_body_external_linear_acceleration[0]),
+                "y": num2str(object_props.rigid_body_external_linear_acceleration[1]),
+                "z": num2str(object_props.rigid_body_external_linear_acceleration[2])
+                }
+            result["external_angular_acceleration"] = {
+                "x": num2str(object_props.rigid_body_external_angular_acceleration[0]),
+                "y": num2str(object_props.rigid_body_external_angular_acceleration[1]),
+                "z": num2str(object_props.rigid_body_external_angular_acceleration[2])
+                }
         return result
     
     def clean_result(self, result):
