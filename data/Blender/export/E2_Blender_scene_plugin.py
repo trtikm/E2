@@ -1,4 +1,6 @@
 import bpy
+import os
+import json
 
 
 ######################################################
@@ -9,9 +11,9 @@ import bpy
 class E2ObjectProps(bpy.types.PropertyGroup):
     OBJECT_KIND=[
         # Python ident, UI name, description, UID
-        ("FOLDER", "Folder", "A folder.", 1),
-        ("BATCH", "Batch", "A render batch.", 2),
-        ("COLLIDER", "Collider", "A collider.", 3),
+        ("FOLDER", "FOLDER", "A folder.", 1),
+        ("BATCH", "BATCH", "A render batch.", 2),
+        ("COLLIDER", "COLLIDER", "A collider.", 3),
         # === Object kinds below are embedded to a folder ===
         #("RIGID_BODY", "Rigid body", "A rigid body.", 4),
         #("SENSOR", "Sensor", "A sensor.", 5),
@@ -53,10 +55,10 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     
     BATCH_KIND=[
         # Python ident, UI name, description, UID
-        ("GENERIC_BOX", "Generic box", "A generic box.", 1),
-        ("GENERIC_CAPSULE", "Generic capsule", "A generic capsule.", 2),
-        ("GENERIC_SPHERE", "Generic sphere", "A generic sphere.", 3),
-        ("REGULAR_GFX_BATCH", "Regular gfx batch", "A regular gfx batch created by E2 model exporter.", 4),
+        ("GENERIC_BOX", "GENERIC_BOX", "A generic box.", 1),
+        ("GENERIC_CAPSULE", "GENERIC_CAPSULE", "A generic capsule.", 2),
+        ("GENERIC_SPHERE", "GENERIC_SPHERE", "A generic sphere.", 3),
+        ("REGULAR_GFX_BATCH", "REGULAR_GFX_BATCH", "A regular gfx batch created by E2 model exporter.", 4),
     ]
     batch_kind: bpy.props.EnumProperty(
             name="Batch kind",
@@ -86,10 +88,10 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     
     COLLIDER_KIND=[
         # Python ident, UI name, description, UID
-        ("BOX", "Box", "A box collider.", 1),
-        ("CAPSULE", "Capsule", "A capsule collider.", 2),
-        ("SPHERE", "Sphere", "A sphere collider.", 3),
-        ("TRIANGLE_MESH", "Triangle mesh", "A triangle mesh collider.", 4),
+        ("BOX", "BOX", "A box collider.", 1),
+        ("CAPSULE", "CAPSULE", "A capsule collider.", 2),
+        ("SPHERE", "SPHERE", "A sphere collider.", 3),
+        ("TRIANGLE_MESH", "TRIANGLE_MESH", "A triangle mesh collider.", 4),
     ]
     collider_kind: bpy.props.EnumProperty(
             name="Collider kind",
@@ -100,14 +102,14 @@ class E2ObjectProps(bpy.types.PropertyGroup):
 
     COLLIDER_COLLISION_CLASS=[
         # Python ident, UI name, description, UID
-        ("COMMON_SCENE_OBJECT", "Common scene object", "A common scene collider.", 1),
-        ("INFINITE_MASS_OBJECT", "Infinite mass object", "An infinite mass object, like ground.", 2),
-        ("AGENT_MOTION_OBJECT", "Agent motion object", "An agent motion object, like roller.", 3),
-        ("SIGHT_TARGET", "Sight target", "A sight target.", 4),
-        ("RAY_CAST_SIGHT", "Ray cast target", "A ray cast target", 5),
-        ("SENSOR_GENERAL", "Sensor general", "A sensor colliding with activators and object colliders.", 6),
-        ("SENSOR_SPECIAL", "Sensor special", "A sensor colliding only with activators.", 7),
-        ("ACTIVATOR", "Activator", "An actoivator collider.", 8),
+        ("COMMON_SCENE_OBJECT", "COMMON_SCENE_OBJECT", "A common scene collider.", 1),
+        ("INFINITE_MASS_OBJECT", "INFINITE_MASS_OBJECT", "An infinite mass object, like ground.", 2),
+        ("AGENT_MOTION_OBJECT", "AGENT_MOTION_OBJECT", "An agent motion object, like roller.", 3),
+        ("SIGHT_TARGET", "SIGHT_TARGET", "A sight target.", 4),
+        ("RAY_CAST_SIGHT", "RAY_CAST_SIGHT", "A ray cast target", 5),
+        ("SENSOR_GENERAL", "SENSOR_GENERAL", "A sensor colliding with activators and object colliders.", 6),
+        ("SENSOR_SPECIAL", "SENSOR_SPECIAL", "A sensor colliding only with activators.", 7),
+        ("ACTIVATOR", "ACTIVATOR", "An actoivator collider.", 8),
     ]
     collider_collision_class: bpy.props.EnumProperty(
             name="Collision class",
@@ -118,20 +120,20 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     
     COLLIDER_MATERIAL_TYPE=[
         # Python ident, UI name, description, UID
-        ("ASPHALT", "Asphalt", "A collision material asphalt.", 1),
-        ("CONCRETE", "Concrete", "A collision material concrete.", 2),
-        ("DIRT", "Dirt", "A collision material dirt.", 3),
-        ("GLASS", "Glass", "A collision material glass.", 4),
-        ("GRASS", "Grass", "A collision material grass.", 5),
-        ("GUM", "Gum", "A collision material gum.", 6),
-        ("ICE", "Ice", "A collision material ice.", 7),
-        ("LEATHER", "Leather", "A collision material leather.", 8),
-        ("MUD", "Mud", "A collision material mud.", 9),
-        ("PLASTIC", "Plastic", "A collision material plastic.", 10),
-        ("RUBBER", "Rubber", "A collision material rubber.", 11),
-        ("STEEL", "Steel", "A collision material steel.", 12),
-        ("WOOD", "Wood", "A collision material wood.", 13),
-        ("NO_FRINCTION_NO_BOUNCING", "No friction no bouncing", "A collision material 'no friction no bouncing'.", 14),
+        ("ASPHALT", "ASPHALT", "A collision material asphalt.", 1),
+        ("CONCRETE", "CONCRETE", "A collision material concrete.", 2),
+        ("DIRT", "DIRT", "A collision material dirt.", 3),
+        ("GLASS", "GLASS", "A collision material glass.", 4),
+        ("GRASS", "GRASS", "A collision material grass.", 5),
+        ("GUM", "GUM", "A collision material gum.", 6),
+        ("ICE", "ICE", "A collision material ice.", 7),
+        ("LEATHER", "LEATHER", "A collision material leather.", 8),
+        ("MUD", "MUD", "A collision material mud.", 9),
+        ("PLASTIC", "PLASTIC", "A collision material plastic.", 10),
+        ("RUBBER", "RUBBER", "A collision material rubber.", 11),
+        ("STEEL", "STEEL", "A collision material steel.", 12),
+        ("WOOD", "WOOD", "A collision material wood.", 13),
+        ("NO_FRINCTION_NO_BOUNCING", "NO_FRINCTION_NO_BOUNCING", "A collision material 'no friction no bouncing'.", 14),
     ]
     collider_material_type: bpy.props.EnumProperty(
             name="Collision material",
@@ -263,6 +265,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             self.draw_collider(layout, object, object_props)
 
     def draw_folder(self, layout, object, object_props):
+        self.warn_root_object_is_not_folder(object, layout)
         self.warn_parent_is_not_folder(object, layout)
         self.warn_folder_is_scaled(object, layout)
 
@@ -296,9 +299,12 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(object, "rotation_mode")    
 
     def draw_batch(self, layout, object, object_props):
+        self.warn_root_object_is_not_folder(object, layout)
         self.warn_parent_is_not_folder(object, layout)
+        self.warn_has_children(object, layout)
         self.warn_origin_moved(object, layout)
         self.warn_no_frame_found(object.parent, layout)
+        self.warn_wrong_shape_geometry(object, object_props.batch_kind, layout)
 
         row = layout.row()
         row.prop(object_props, "batch_kind")
@@ -323,10 +329,13 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 row.label(text="!!! WARNING: Failed to find a material for the active object !!!")
 
     def draw_collider(self, layout, object, object_props):
+        self.warn_root_object_is_not_folder(object, layout)
         self.warn_parent_is_not_folder(object, layout)
+        self.warn_has_children(object, layout)
         self.warn_origin_moved(object, layout)
         self.warn_no_frame_found(object.parent, layout)
-        self.warn_frame_already_has_collider(object.parent, layout)
+        #self.warn_frame_already_has_collider(object.parent, layout)
+        self.warn_wrong_shape_geometry(object, object_props.collider_kind, layout)
 
         row = layout.row()
         row.prop(object_props, "collider_kind")
@@ -379,6 +388,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row = layout.row()
             row.prop(object_props, "rigid_body_external_angular_acceleration")
 
+    def warn_root_object_is_not_folder(self, object, layout):        
+        if object.parent is None and object.e2_custom_props.object_kind != "FOLDER":
+            row = layout.row()
+            row.label(text="!!! ERROR: An object without a parent can only be a folder !!!")
+
     def warn_parent_is_not_folder(self, object, layout):        
         if object.parent is not None and object.parent.e2_custom_props.object_kind != "FOLDER":
             row = layout.row()
@@ -388,6 +402,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if any(abs(folder.scale[i] - 1.0) > 0.0001 for i in range(3)):
             row = layout.row()
             row.label(text="!!! ERROR: The folder is scaled !!!")
+
+    def warn_has_children(self, object, layout):
+        if len(object.children) > 0:
+            row = layout.row()
+            row.label(text="!!! ERROR: The " + object.e2_custom_props.object_kind + " has a child object !!!")
 
     def warn_origin_moved(self, object, layout):
         if any(abs(object.location[i]) > 0.0001 for i in range(3)):
@@ -425,11 +444,33 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 row.label(text="!!! ERROR: Some parent folder already defines a rigid body !!!")
                 break
             folder = folder.parent
+            
+    def warn_wrong_shape_geometry(self, object, kind, layout):
+        sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
+        if "CAPSULE" in kind:
+            if abs(sizes[1] - sizes[0]) > 0.0001:
+                row = layout.row()
+                row.label(text="!!! WARNING: The capsule is not scaled uniformly along axes x and y !!!")
+            if sizes[2] - min(sizes[0], sizes[1]) < 0.0001:
+                row = layout.row()
+                row.label(text="!!! WARNING: The capsule is not scaled big enough along the z axis !!!")
+        elif "SPHERE" in kind:
+            if any(abs(sizes[i+1] - sizes[0]) > 0.0001 for i in range(2)):
+                row = layout.row()
+                row.label(text="!!! WARNING: The sphere is not scaled uniformly along all axes !!!")
 
 
 ######################################################
 # SCENE IMPORT AND EXPORT
 ######################################################
+
+
+def normalise_disk_path(path):
+    return str(path).replace("\\", "/")
+
+
+def num2str(num, precision=6):
+    return format(num, "." + str(precision) + "f") if isinstance(num, float) else str(num)
 
 
 class E2SceneExportOperator(bpy.types.Operator):
@@ -438,10 +479,6 @@ class E2SceneExportOperator(bpy.types.Operator):
     bl_label = "Export scene"
     bl_options = {'REGISTER', 'UNDO'}
     
-    def export_scene(self, objects, output_dir):
-        for ob in objects:
-            print(ob)
-
     def execute(self, context):
         try:
             print("E2 Scene exporter: Exporting scene using to dir: " + context.scene.e2_scene_export_dir)
@@ -451,6 +488,179 @@ class E2SceneExportOperator(bpy.types.Operator):
             print("E2 Scene exporter: Export has FAILED. Details:\n" + str(e))
         return{'FINISHED'}
 
+    def export_scene(self, objects, output_dir):
+        if not os.path.isdir(output_dir):
+            raise Exception("The export directory '" + output_dir + "' does not exist.")
+        root_folders = []
+        for object in objects:
+            if object.parent is None and object.e2_custom_props.object_kind == "FOLDER":
+                root_folders.append(object)
+        result = { "folders":{}, "imports": {} }
+        for folder in root_folders:
+            if len(folder.e2_custom_props.folder_imported_from_dir) > 0:
+                result["imports"][folder.name] = normalise_disk_path(folder.e2_custom_props.folder_imported_from_dir)
+            else:
+                result["folders"][folder.name] = self.export_folder(folder)
+        result = self.clean_result(result)    
+        #print(json.dumps(result, indent=4, sort_keys=True))
+        with open(os.path.join(output_dir, "hierarchy.json"), "w") as f:
+            json.dump(result, f, indent=4, sort_keys=True)
+
+    def export_folder(self, folder):
+        result = { "content":{}, "folders":{}, "imports": {} }
+        if folder.e2_custom_props.folder_defines_frame is True:
+            result["content"]["FRAME"] = self.export_frame(folder)
+        if folder.e2_custom_props.folder_defines_rigid_body is True:
+            result["content"]["RIGID_BODY"] = self.export_rigid_body(folder)
+        for child in folder.children:
+            if child.e2_custom_props.object_kind == "FOLDER":
+                if len(child.e2_custom_props.folder_imported_from_dir) > 0:
+                    result["imports"][child.name] = normalise_disk_path(child.e2_custom_props.folder_imported_from_dir)
+                else:
+                    result["folders"][child.name] = self.export_folder(child)
+            elif child.e2_custom_props.object_kind == "BATCH":
+                result["content"][child.name] = self.export_batch(child)
+            elif child.e2_custom_props.object_kind == "COLLIDER":
+                result["content"][child.name] = self.export_collider(child)
+        return self.clean_result(result)
+
+    def export_frame(self, object):
+        result = {
+            "object_kind": "FRAME",
+            "origin": {
+                "x": num2str(object.location.x),
+                "y": num2str(object.location.y),
+                "z": num2str(object.location.z)
+            },
+            "orientation": {
+                "x": num2str(object.rotation_quaternion.x),
+                "y": num2str(object.rotation_quaternion.y),
+                "z": num2str(object.rotation_quaternion.z),
+                "w": num2str(object.rotation_quaternion.w)
+            }
+        }
+        return result
+
+    def export_batch(self, object):
+        result = {
+            "object_kind": object.e2_custom_props.object_kind,
+            "batch_kind": object.e2_custom_props.batch_kind
+        }
+        if object.e2_custom_props.batch_kind == "REGULAR_GFX_BATCH":
+            result["path"] = self.normalise_disk_path(object.e2_custom_props.batch_reguar_disk_path)
+        else:
+            sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
+            if object.e2_custom_props.batch_kind == "GENERIC_BOX":
+                result["half_sizes_along_axes"] = {
+                    "x": num2str(sizes.x),
+                    "y": num2str(sizes.y),
+                    "z": num2str(sizes.z)
+                }
+            elif object.e2_custom_props.batch_kind == "GENERIC_CAPSULE":
+                thickness = max(0.001, min(sizes.x, sizes.y))
+                result["thickness_from_central_line"] = num2str(thickness)
+                distance = max(0.002, sizes.z - thickness)
+                result["half_distance_between_end_points"] = num2str(distance)
+                result["num_lines_per_quarter_of_circle"] = num2str(
+                    max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
+                    )
+            elif object.e2_custom_props.batch_kind == "GENERIC_SPHERE":
+                result["radius"] = max(0.001, min(sizes))
+                result["num_lines_per_quarter_of_circle"] = num2str(
+                    max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
+                    )
+            try:
+                material = object.data.materials[0].diffuse_color
+                result["colour"] = {
+                    "r": num2str(material[0]),
+                    "g": num2str(material[1]),
+                    "b": num2str(material[2]),
+                    "a": num2str(material[3])
+                }
+            except Exception as e:
+                result["colour"] = { "r": "0.75", "g": "0.75", "b": "1.0", "a": "1.0" }
+        return result
+
+    def export_collider(self, object):
+        result = {
+            "object_kind": object.e2_custom_props.object_kind,
+            "collider_kind": object.e2_custom_props.collider_kind
+        }
+        if object.e2_custom_props.collider_kind == "TRIANGLE_MESH":
+            pass
+        else:
+            sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
+            if object.e2_custom_props.collider_kind == "BOX":
+                result["half_sizes_along_axes"] = {
+                    "x": num2str(sizes.x),
+                    "y": num2str(sizes.y),
+                    "z": num2str(sizes.z)
+                }
+            elif object.e2_custom_props.collider_kind == "CAPSULE":
+                thickness = max(0.001, min(sizes.x, sizes.y))
+                result["thickness_from_central_line"] = num2str(thickness)
+                distance = max(0.002, sizes.z - thickness)
+                result["half_distance_between_end_points"] = num2str(distance)
+                result["num_lines_per_quarter_of_circle"] = num2str(
+                    max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
+                    )
+            elif object.e2_custom_props.collider_kind == "SPHERE":
+                result["radius"] = max(0.001, min(sizes))
+                result["num_lines_per_quarter_of_circle"] = num2str(
+                    max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
+                    )
+            result["collision_material"] = str(object.e2_custom_props.collider_collision_class)
+            result["collision_class"] = str(object.e2_custom_props.collider_material_type)
+        return result
+
+    def export_rigid_body(self, object):
+        object_props = object.e2_custom_props
+        if object_props.rigid_body_compute_inverted_inertia_tesor_from_colliders is True:
+            pass
+        result = {
+            "object_kind": "RIGID_BODY",
+            "is_moveable": str(object_props.rigid_body_is_moveable),
+            "mass_inverted": num2str(1.0 / object_props.rigid_body_mass if object_props.rigid_body_mass > 0.0001 else 0.0),
+            "inertia_tesor_inverted": {
+                "00": num2str(object_props.rigid_body_inverted_inertia_tensor_row_0[0]),
+                "01": num2str(object_props.rigid_body_inverted_inertia_tensor_row_0[1]),
+                "02": num2str(object_props.rigid_body_inverted_inertia_tensor_row_0[2]),
+                "10": num2str(object_props.rigid_body_inverted_inertia_tensor_row_1[0]),
+                "11": num2str(object_props.rigid_body_inverted_inertia_tensor_row_1[1]),
+                "12": num2str(object_props.rigid_body_inverted_inertia_tensor_row_1[2]),
+                "20": num2str(object_props.rigid_body_inverted_inertia_tensor_row_2[0]),
+                "21": num2str(object_props.rigid_body_inverted_inertia_tensor_row_2[1]),
+                "22": num2str(object_props.rigid_body_inverted_inertia_tensor_row_2[2])
+                },
+                "linear_velocity": {
+                    "x": num2str(object_props.rigid_body_linear_velocity[0]),
+                    "y": num2str(object_props.rigid_body_linear_velocity[1]),
+                    "z": num2str(object_props.rigid_body_linear_velocity[2])
+                },
+                "angular_velocity": {
+                    "x": num2str(object_props.rigid_body_angular_velocity[0]),
+                    "y": num2str(object_props.rigid_body_angular_velocity[1]),
+                    "z": num2str(object_props.rigid_body_angular_velocity[2])
+                },
+                "external_linear_acceleration": {
+                    "x": num2str(object_props.rigid_body_external_linear_acceleration[0]),
+                    "y": num2str(object_props.rigid_body_external_linear_acceleration[1]),
+                    "z": num2str(object_props.rigid_body_external_linear_acceleration[2])
+                },
+                "external_angular_acceleration": {
+                    "x": num2str(object_props.rigid_body_external_angular_acceleration[0]),
+                    "y": num2str(object_props.rigid_body_external_angular_acceleration[1]),
+                    "z": num2str(object_props.rigid_body_external_angular_acceleration[2])
+                }
+        }
+        return result
+    
+    def clean_result(self, result):
+        for key in ["content", "folders", "imports"]:
+            if key in result and len(result[key]) == 0:
+                del result[key]
+        return result
+    
 
 class E2SceneImportOperator(bpy.types.Operator):
     """ E2 scene importer: Imports the scene from the import dir
