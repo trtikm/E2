@@ -12,11 +12,12 @@ class E2ObjectProps(bpy.types.PropertyGroup):
         ("FOLDER", "Folder", "A folder.", 1),
         ("BATCH", "Batch", "A render batch.", 2),
         ("COLLIDER", "Collider", "A collider.", 3),
-        ("RIGID_BODY", "Rigid body", "A rigid body.", 4),
-        ("SENSOR", "Sensor", "A sensor.", 5),
-        ("ACTIVATOR", "Activator", "An activator.", 6),
-        ("DEVICE", "Device", "A device.", 7),
-        ("AGENT", "Agent", "An agent.", 8),
+        # === Object kinds below are embedded to a folder ===
+        #("RIGID_BODY", "Rigid body", "A rigid body.", 4),
+        #("SENSOR", "Sensor", "A sensor.", 5),
+        #("ACTIVATOR", "Activator", "An activator.", 6),
+        #("DEVICE", "Device", "A device.", 7),
+        #("AGENT", "Agent", "An agent.", 8),
     ]
     object_kind: bpy.props.EnumProperty(
             name="Object kind",
@@ -37,9 +38,14 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             subtype='NONE'
             )
     folder_defines_frame: bpy.props.BoolProperty(
-            name="Defines also frame?",
-            description="Whether folder's coord system defines also the frame",
+            name="Add 'frame' to the folder.",
+            description="Whether to add folder's coord system as a frame record\ninto the folder or not",
             default=True
+            )
+    folder_defines_rigid_body: bpy.props.BoolProperty(
+            name="Add 'rigid body' to the folder.",
+            description="Whether to add a rigid body record into the folder or not",
+            default=False
             )
     
     #====================================================
@@ -249,106 +255,176 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
 
         row = layout.row()
         row.prop(object_props, "object_kind")
-        
         if object_props.object_kind == "FOLDER":
-            if any(abs(object.scale[i] - 1.0) > 0.0001 for i in range(3)):
-                row = layout.row()
-                row.label(text="!!! WARNING: The folder is scaled !!!")
-
-            if len(object_props.folder_imported_from_dir) > 0:
-                row = layout.row()
-                row.label(text="Imported from: " + str(object_props.folder_imported_from_dir))
-
-            row = layout.row()
-            row.prop(object_props, "folder_defines_frame")
-            
-            if object_props.folder_defines_frame is True:
-                row = layout.row()
-                row.prop(object, "location")
-    
-                row = layout.row()
-                if object.rotation_mode == "AXIS_ANGLE":
-                    row.prop(object, "rotation_axis_angle")
-                elif object.rotation_mode == "QUATERNION":
-                    row.prop(object, "rotation_quaternion")
-                else:
-                    row.prop(object, "rotation_euler")
-                
-                row = layout.row()
-                row.prop(object, "rotation_mode")    
-
+            self.draw_folder(layout, object, object_props)
         elif object_props.object_kind == "BATCH":
-            row = layout.row()
-            row.prop(object_props, "batch_kind")
-            if object_props.batch_kind == "REGULAR_GFX_BATCH":
-                row = layout.row()
-                row.prop(object_props, "batch_reguar_disk_path")
-            else:
-                row = layout.row()
-                row.prop(object, "scale")
-                row = layout.row()
-                if object.type != 'EMPTY':
-                    row.prop(object, "dimensions")
-
-                if object_props.batch_kind != "GENERIC_BOX":
-                    row = layout.row()
-                    row.prop(object_props, "batch_generic_num_lines_per_quarter_of_circle")
-
-                row = layout.row()
-                try:
-                    row.prop(object.data.materials[0], "diffuse_color")
-                except Exception as e:
-                    row.label(text="!!! WARNING: Failed to find a material for the active object !!!")
-
+            self.draw_batch(layout, object, object_props)
         elif object_props.object_kind == "COLLIDER":
-            row = layout.row()
-            row.prop(object_props, "collider_kind")
+            self.draw_collider(layout, object, object_props)
 
+    def draw_folder(self, layout, object, object_props):
+        self.warn_parent_is_not_folder(object, layout)
+        self.warn_folder_is_scaled(object, layout)
+
+        if len(object_props.folder_imported_from_dir) > 0:
             row = layout.row()
-            if object.type == 'EMPTY':
-                row.prop(object, "scale")
-            else:
+            row.label(text="Imported from: " + str(object_props.folder_imported_from_dir))
+
+        row = layout.row()
+        row.prop(object_props, "folder_defines_frame")
+        if object_props.folder_defines_frame is True:
+            self.draw_frame(layout.box(), object, object_props)
+
+        row = layout.row()
+        row.prop(object_props, "folder_defines_rigid_body")
+        if object_props.folder_defines_rigid_body is True:
+            self.draw_rigid_body(layout.box(), object, object_props)
+
+    def draw_frame(self, layout, object, object_props):
+        row = layout.row()
+        row.prop(object, "location")
+
+        row = layout.row()
+        if object.rotation_mode == "AXIS_ANGLE":
+            row.prop(object, "rotation_axis_angle")
+        elif object.rotation_mode == "QUATERNION":
+            row.prop(object, "rotation_quaternion")
+        else:
+            row.prop(object, "rotation_euler")
+        
+        row = layout.row()
+        row.prop(object, "rotation_mode")    
+
+    def draw_batch(self, layout, object, object_props):
+        self.warn_parent_is_not_folder(object, layout)
+        self.warn_origin_moved(object, layout)
+        self.warn_no_frame_found(object.parent, layout)
+
+        row = layout.row()
+        row.prop(object_props, "batch_kind")
+        if object_props.batch_kind == "REGULAR_GFX_BATCH":
+            row = layout.row()
+            row.prop(object_props, "batch_reguar_disk_path")
+        else:
+            row = layout.row()
+            row.prop(object, "scale")
+            row = layout.row()
+            if object.type != 'EMPTY':
                 row.prop(object, "dimensions")
 
-            row = layout.row()
-            row.prop(object_props, "collider_collision_class")
+            if object_props.batch_kind != "GENERIC_BOX":
+                row = layout.row()
+                row.prop(object_props, "batch_generic_num_lines_per_quarter_of_circle")
 
             row = layout.row()
-            row.prop(object_props, "collider_material_type")
+            try:
+                row.prop(object.data.materials[0], "diffuse_color")
+            except Exception as e:
+                row.label(text="!!! WARNING: Failed to find a material for the active object !!!")
 
-        elif object_props.object_kind == "RIGID_BODY":
-            row = layout.row()
-            row.prop(object_props, "rigid_body_is_moveable")
+    def draw_collider(self, layout, object, object_props):
+        self.warn_parent_is_not_folder(object, layout)
+        self.warn_origin_moved(object, layout)
+        self.warn_no_frame_found(object.parent, layout)
+        self.warn_frame_already_has_collider(object.parent, layout)
+
+        row = layout.row()
+        row.prop(object_props, "collider_kind")
+
+        row = layout.row()
+        if object.type == 'EMPTY':
+            row.prop(object, "scale")
+        else:
+            row.prop(object, "dimensions")
+
+        row = layout.row()
+        row.prop(object_props, "collider_collision_class")
+
+        row = layout.row()
+        row.prop(object_props, "collider_material_type")
+    
+    def draw_rigid_body(self, layout, object, object_props):
+        self.warn_no_frame_found(object, layout)
+        self.warn_rigid_body_in_parent_folder(object.parent, layout)
             
-            if object_props.rigid_body_is_moveable is True:
-                row = layout.row()
-                row.prop(object_props, "rigid_body_mass")
+        row = layout.row()
+        row.prop(object_props, "rigid_body_is_moveable")
+        
+        if object_props.rigid_body_is_moveable is True:
+            row = layout.row()
+            row.prop(object_props, "rigid_body_mass")
+            
+            row = layout.row()
+            row.prop(object_props, "rigid_body_compute_inverted_inertia_tesor_from_colliders")
+            if object_props.rigid_body_compute_inverted_inertia_tesor_from_colliders is False:
+                box = layout.box()
+                row = box.row()
+                row.label(text="Inverted inertia tesor:")
+                row = box.row()
+                row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_0")
+                row = box.row()
+                row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_1")
+                row = box.row()
+                row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_2")
                 
-                row = layout.row()
-                row.prop(object_props, "rigid_body_compute_inverted_inertia_tesor_from_colliders")
-                if object_props.rigid_body_compute_inverted_inertia_tesor_from_colliders is False:
-                    row = layout.row()
-                    row.label(text="Inverted inertia tesor:")
-                    row = layout.row()
-                    row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_0")
-                    row = layout.row()
-                    row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_1")
-                    row = layout.row()
-                    row.prop(object_props, "rigid_body_inverted_inertia_tensor_row_2")
-                    
-                #layout.separator()
-                row = layout.row()
-                row.prop(object_props, "rigid_body_linear_velocity")
-                
-                row = layout.row()
-                row.prop(object_props, "rigid_body_angular_velocity")
+            row = layout.row()
+            row.prop(object_props, "rigid_body_linear_velocity")
+            
+            row = layout.row()
+            row.prop(object_props, "rigid_body_angular_velocity")
 
-                row = layout.row()
-                row.prop(object_props, "rigid_body_external_linear_acceleration")
-                
-                row = layout.row()
-                row.prop(object_props, "rigid_body_external_angular_acceleration")
+            row = layout.row()
+            row.prop(object_props, "rigid_body_external_linear_acceleration")
+            
+            row = layout.row()
+            row.prop(object_props, "rigid_body_external_angular_acceleration")
 
+    def warn_parent_is_not_folder(self, object, layout):        
+        if object.parent is not None and object.parent.e2_custom_props.object_kind != "FOLDER":
+            row = layout.row()
+            row.label(text="!!! ERROR: The direct parent object is not a folder !!!")
+
+    def warn_folder_is_scaled(self, folder, layout):
+        if any(abs(folder.scale[i] - 1.0) > 0.0001 for i in range(3)):
+            row = layout.row()
+            row.label(text="!!! ERROR: The folder is scaled !!!")
+
+    def warn_origin_moved(self, object, layout):
+        if any(abs(object.location[i]) > 0.0001 for i in range(3)):
+            row = layout.row()
+            row.label(text="!!! WARNING: The " + object.e2_custom_props.object_kind + " is moved from the origin !!!")
+
+    def warn_no_frame_found(self, folder, layout):
+        has_frame = False
+        while folder != None:
+            if folder.e2_custom_props.folder_defines_frame is True:
+                has_frame = True
+                break
+            folder = folder.parent
+        if has_frame is False:
+            row = layout.row()
+            row.label(text="!!! ERROR: Neither this nor any parent folder defines a frame !!!")
+
+    def warn_frame_already_has_collider(self, folder, layout):
+        collider_count = 0
+        while folder != None:
+            for folder_child in folder.children:
+                if folder_child.e2_custom_props.object_kind == "COLLIDER":
+                    collider_count += 1
+            if folder.e2_custom_props.folder_defines_frame is True:
+                break
+            folder = folder.parent
+        if collider_count > 1:
+            row = layout.row()
+            row.label(text="!!! WARNING: The closest parent folder with frame already has a collider !!!")
+
+    def warn_rigid_body_in_parent_folder(self, folder, layout):
+        while folder != None:
+            if folder.e2_custom_props.folder_defines_rigid_body is True:
+                row = layout.row()
+                row.label(text="!!! ERROR: Some parent folder already defines a rigid body !!!")
+                break
+            folder = folder.parent
 
 
 ######################################################
