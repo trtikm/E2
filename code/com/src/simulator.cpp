@@ -197,6 +197,7 @@ void  simulator::simulate()
 
     simulation_context&  ctx = *context();
 
+    ctx.clear_collision_contacts();
     collision_scene()->compute_contacts_of_all_dynamic_objects(
             [this, &ctx](
                 angeo::contact_id const&  cid,
@@ -208,6 +209,8 @@ void  simulator::simulate()
 
                     object_guid const  collider_1_guid = ctx.to_collider_guid(coid_1);
                     object_guid const  collider_2_guid = ctx.to_collider_guid(coid_2);
+
+                    ctx.insert_collision_contact({ collider_1_guid, collider_2_guid, contact_point, unit_normal, penetration_depth });
 
                     object_guid const  owner_1_guid = ctx.owner_of_collider(collider_1_guid);
                     object_guid const  owner_2_guid = ctx.owner_of_collider(collider_2_guid);

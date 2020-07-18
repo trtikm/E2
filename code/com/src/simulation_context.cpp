@@ -57,6 +57,8 @@ simulation_context::simulation_context(
     , m_agids_to_guids()
     , m_moveable_colliders()
     , m_moveable_rigid_bodies()
+    , m_collision_contacts()
+    , m_from_colliders_to_contacts()
     , m_requests_queue_scene_import()
     , m_cache_of_imported_scenes()
 {
@@ -1882,6 +1884,52 @@ simulation_context::agent_guid_iterator  simulation_context::agents_begin() cons
 simulation_context::agent_guid_iterator  simulation_context::agents_end() const
 {
     return agent_guid_iterator(m_agents.valid_indices().end());
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+// COLLISION CONTACTS API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+bool  simulation_context::is_valid_collision_contact_index(natural_32_bit const  contact_index) const
+{
+    return m_collision_contacts.valid(contact_index);
+}
+
+
+std::vector<natural_32_bit> const&  simulation_context::collision_contacts_of_collider(object_guid const  collider_guid) const
+{
+    static std::vector<natural_32_bit> const  no_contacts;
+    ASSUMPTION(is_valid_collider_guid(collider_guid));
+    auto const it = m_from_colliders_to_contacts.find(collider_guid);
+    return it == m_from_colliders_to_contacts.end() ? no_contacts : it->second;
+}
+
+
+simulation_context::collision_contact const&  simulation_context::get_collision_contact(natural_32_bit const  contact_index) const
+{
+    ASSUMPTION(is_valid_collision_contact_index(contact_index));
+    return m_collision_contacts.at(contact_index);
+}
+
+
+// Disabled (not const) for modules.
+
+
+natural_32_bit  simulation_context::insert_collision_contact(collision_contact const&  cc)
+{
+    natural_32_bit const  index = m_collision_contacts.insert(cc);
+    m_from_colliders_to_contacts[cc.first_collider()].push_back(index);
+    m_from_colliders_to_contacts[cc.second_collider()].push_back(index);
+    return index;
+}
+
+
+void  simulation_context::clear_collision_contacts()
+{
+    m_collision_contacts.clear();
+    m_from_colliders_to_contacts.clear();
 }
 
 

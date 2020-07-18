@@ -422,6 +422,62 @@ struct simulation_context
     agent_guid_iterator  agents_begin() const;
     agent_guid_iterator  agents_end() const;
 
+    /////////////////////////////////////////////////////////////////////////////////////
+    // COLLISION CONTACTS API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    struct  collision_contact
+    {
+        collision_contact()
+            : m_first_collider(invalid_object_guid())
+            , m_second_collider(invalid_object_guid())
+            , m_contact_point(vector3_zero())
+            , m_unit_normal(vector3_unit_z())
+            , m_penetration_depth(0.0f)
+        {}
+        collision_contact(object_guid const  first_collider_, object_guid  const  second_collider_,
+                          vector3 const&  contact_point_, vector3 const&  unit_normal_,
+                          float_32_bit const penetration_depth_)
+            : m_first_collider(first_collider_)
+            , m_second_collider(second_collider_)
+            , m_contact_point(contact_point_)
+            , m_unit_normal(unit_normal_)
+            , m_penetration_depth(penetration_depth_)
+        {}
+
+        object_guid  first_collider() const { return m_first_collider; }
+        object_guid  second_collider() const { return m_second_collider; }
+        vector3 const&  contact_point() const { return m_contact_point; }
+        vector3 const&  unit_normal() const { return m_unit_normal; }
+        float_32_bit  penetration_depth() const { return m_penetration_depth; }
+
+        object_guid  other_collider(object_guid const  collider_guid) const
+        {
+            return collider_guid == m_first_collider ? m_second_collider :
+                  (collider_guid == m_second_collider ? m_first_collider : invalid_object_guid());
+        }
+
+        vector3  unit_normal(object_guid const  collider_guid) const
+        {
+            return collider_guid == m_first_collider ? m_unit_normal : -m_unit_normal;
+        }
+
+    private:
+
+        object_guid  m_first_collider;
+        object_guid  m_second_collider;
+        vector3  m_contact_point;
+        vector3  m_unit_normal;
+        float_32_bit  m_penetration_depth;
+    };
+
+    bool  is_valid_collision_contact_index(natural_32_bit const  contact_index) const;
+    std::vector<natural_32_bit> const&  collision_contacts_of_collider(object_guid const  collider_guid) const;
+    collision_contact const&  get_collision_contact(natural_32_bit const  contact_index) const;
+    // Disabled (not const) for modules.
+    natural_32_bit  insert_collision_contact(collision_contact const&  cc);
+    void  clear_collision_contacts();
+
 private:
 
     using  index_type = object_guid::index_type;
@@ -533,6 +589,10 @@ private:
 
     std::unordered_set<index_type>  m_moveable_colliders;
     std::unordered_set<index_type>  m_moveable_rigid_bodies;
+
+    dynamic_array<collision_contact, natural_32_bit>  m_collision_contacts;
+    std::unordered_map<object_guid, std::vector<natural_32_bit> >  m_from_colliders_to_contacts;
+
 
     struct  imported_scene_data
     {
