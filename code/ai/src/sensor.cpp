@@ -242,9 +242,6 @@ void  sensor::on_collision_contact(scene::collicion_contant_info_ptr const  cont
     if (!m_owner_id.valid())
         return;
 
-    if (contact_info->self_collision_class == angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR)
-        return;
-
     m_collision_contacts_buffer.push_back({ contact_info, other_id });
 }
 

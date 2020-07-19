@@ -291,6 +291,7 @@ struct simulation_context
     collider_guid_iterator  moveable_colliders_end() const;
     object_guid  frame_of_collider(object_guid const  collider_guid) const;
     object_guid  owner_of_collider(object_guid const  collider_guid) const;
+    object_guid  rigid_body_of_collider(object_guid const  collider_guid) const;
     angeo::COLLISION_MATERIAL_TYPE  collision_material_of(object_guid const  collider_guid) const;
     angeo::COLLISION_CLASS  collision_class_of(object_guid const  collider_guid) const;
     angeo::COLLISION_SHAPE_TYPE  collider_shape_type(object_guid const  collider_guid) const;
@@ -527,15 +528,16 @@ private:
             , owner(invalid_object_guid())
         {}
         folder_element_collider(module_specific_id const&  id_, index_type const  folder_index_, std::string const&  name,
-                object_guid const  frame_,
-                object_guid const  owner_
+                object_guid const  frame_, object_guid const  owner_, object_guid const  rigid_body_
                 )
             : base_type(id_, folder_index_, name)
             , frame(frame_)
             , owner(owner_)
+            , rigid_body(rigid_body_)
         {}
         object_guid  frame;
-        object_guid  owner; // Can be either a rigid body, a sensor, or an activator.
+        object_guid  owner; // Can be either a rigid body, a device, or an agent.
+        object_guid  rigid_body; // Can also be equal to the 'invalid_object_guid()'.
     };
 
     struct  folder_element_rigid_body : public folder_element<angeo::rigid_body_id>

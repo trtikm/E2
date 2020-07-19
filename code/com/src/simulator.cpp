@@ -51,14 +51,14 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_in_wireframe(false)
     , render_scene_batches(true)
     , render_colliders_of_rigid_bodies(true)
+    , render_colliders_of_fields(true)
     , render_colliders_of_sensors(true)
-    , render_colliders_of_activators(true)
     , render_colliders_of_agents(true)
     , render_colliders_of_ray_casts(true)
     , render_collision_contacts(true)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
+    , colour_of_field_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
     , colour_of_sensor_collider{ 0.0f, 0.85f, 0.85f, 1.0f }
-    , colour_of_activator_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
     , colour_of_agent_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_ray_cast_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_collision_contact{ 1.0f, 0.5f, 0.5f, 1.0f }
@@ -340,8 +340,8 @@ void  simulator::render()
         render_frames();
 
     if (cfg.render_colliders_of_rigid_bodies
+            || cfg.render_colliders_of_fields
             || cfg.render_colliders_of_sensors
-            || cfg.render_colliders_of_activators
             || cfg.render_colliders_of_agents
             || cfg.render_colliders_of_ray_casts
             )
@@ -588,29 +588,31 @@ void  simulator::render_colliders()
 
         switch (ctx.collision_class_of(collider_guid))
         {
+        case angeo::COLLISION_CLASS::STATIC_OBJECT:
+        case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+        case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+            if (!cfg.render_colliders_of_rigid_bodies)
+                continue;
+            break;
         case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
             if (!cfg.render_colliders_of_agents)
                 continue;
             break;
-        case angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT:
-        case angeo::COLLISION_CLASS::INFINITE_MASS_OBJECT:
-            if (!cfg.render_colliders_of_rigid_bodies)
+        case angeo::COLLISION_CLASS::FIELD_AREA:
+            if (!cfg.render_colliders_of_fields)
                 continue;
             break;
-        case angeo::COLLISION_CLASS::RAY_CAST_SIGHT:
-        case angeo::COLLISION_CLASS::SIGHT_TARGET:
-            if (!cfg.render_colliders_of_ray_casts)
-                continue;
-            break;
-        case angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR:
-            if (!cfg.render_colliders_of_activators)
-                continue;
-            break;
-        case angeo::COLLISION_CLASS::TRIGGER_GENERAL:
-        case angeo::COLLISION_CLASS::TRIGGER_SPECIAL:
+        case angeo::COLLISION_CLASS::SENSOR_DEDICATED:
+        case angeo::COLLISION_CLASS::SENSOR_WIDE_RANGE:
+        case angeo::COLLISION_CLASS::SENSOR_NARROW_RANGE:
             if (!cfg.render_colliders_of_sensors)
                 continue;
             break;
+        case angeo::COLLISION_CLASS::RAY_CAST_TARGET:
+            if (!cfg.render_colliders_of_ray_casts)
+                continue;
+            break;
+        default: UNREACHABLE(); break;
         }
 
         gfx::batch  batch;
@@ -689,23 +691,24 @@ gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_gui
     vector4  colour;
     switch (ctx.collision_class_of(collider_guid))
     {
+    case angeo::COLLISION_CLASS::STATIC_OBJECT:
+    case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+    case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+        colour = cfg.colour_of_rigid_body_collider;
+        break;
     case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
         colour = cfg.colour_of_agent_collider;
         break;
-    case angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT:
-    case angeo::COLLISION_CLASS::INFINITE_MASS_OBJECT:
-        colour = cfg.colour_of_rigid_body_collider;
+    case angeo::COLLISION_CLASS::FIELD_AREA:
+        colour = cfg.colour_of_field_collider;
         break;
-    case angeo::COLLISION_CLASS::RAY_CAST_SIGHT:
-    case angeo::COLLISION_CLASS::SIGHT_TARGET:
-        colour = cfg.colour_of_ray_cast_collider;
-        break;
-    case angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR:
-        colour = cfg.colour_of_activator_collider;
-        break;
-    case angeo::COLLISION_CLASS::TRIGGER_GENERAL:
-    case angeo::COLLISION_CLASS::TRIGGER_SPECIAL:
+    case angeo::COLLISION_CLASS::SENSOR_DEDICATED:
+    case angeo::COLLISION_CLASS::SENSOR_WIDE_RANGE:
+    case angeo::COLLISION_CLASS::SENSOR_NARROW_RANGE:
         colour = cfg.colour_of_sensor_collider;
+        break;
+    case angeo::COLLISION_CLASS::RAY_CAST_TARGET:
+        colour = cfg.colour_of_ray_cast_collider;
         break;
     default: UNREACHABLE(); break;
     }

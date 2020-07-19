@@ -9,20 +9,24 @@ namespace angeo {
 
 enum struct  COLLISION_CLASS : natural_8_bit
 {
-    COMMON_SCENE_OBJECT     = 0,
-    INFINITE_MASS_OBJECT    = 1,
-    AGENT_MOTION_OBJECT     = 2,
-    SIGHT_TARGET            = 3,
-    RAY_CAST_SIGHT          = 4,
-    TRIGGER_GENERAL         = 5,
-    TRIGGER_SPECIAL         = 6,
-    TRIGGER_ACTIVATOR       = 7,
+    // HINT: Colliders of the following classes are often used for building collision shapes of rigid bodies:
+    STATIC_OBJECT               = 0,
+    COMMON_MOVEABLE_OBJECT      = 1,
+    HEAVY_MOVEABLE_OBJECT       = 2,
+    AGENT_MOTION_OBJECT         = 3,
+
+    // HINT: Colliders of the following classes are often used for sensing and message/request processing in agents and devices:
+    FIELD_AREA                  = 4,
+    SENSOR_DEDICATED            = 5,
+    SENSOR_WIDE_RANGE           = 6,
+    SENSOR_NARROW_RANGE         = 7,
+    RAY_CAST_TARGET             = 8,
 };
 
 
 constexpr natural_8_bit  get_num_collision_classes()
 {
-    return (natural_8_bit)COLLISION_CLASS::TRIGGER_ACTIVATOR + (natural_8_bit)1;
+    return (natural_8_bit)COLLISION_CLASS::RAY_CAST_TARGET + (natural_8_bit)1;
 }
 
 inline natural_8_bit  as_number(COLLISION_CLASS const  cc) { return (natural_8_bit)cc; }

@@ -13,7 +13,7 @@ bool  has_contact_with_force_field_sensitive_object(std::vector<scene::collicion
     for (scene::collicion_contant_info_ptr  info : contact_infos)
         switch (info->other_collision_class)
         {
-        case angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT:
+        case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
         case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
             return true;
         default:

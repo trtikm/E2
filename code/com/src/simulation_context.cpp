@@ -316,12 +316,12 @@ void  simulation_context::import_gfxtuner_scene_node(import_scene_props const&  
         {
             switch(angeo::read_collison_class_from_string(folder_it->second.begin()->second.get<std::string>("collision_class")))
             {
-            case angeo::COLLISION_CLASS::RAY_CAST_SIGHT:
-            case angeo::COLLISION_CLASS::SIGHT_TARGET:
-            case angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR:
-            case angeo::COLLISION_CLASS::TRIGGER_GENERAL:
-            case angeo::COLLISION_CLASS::TRIGGER_SPECIAL:
-                continue;
+            case angeo::COLLISION_CLASS::STATIC_OBJECT:
+            case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+            case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+            case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+                break;
+            default: continue;
             }
 
             object_guid  rigid_body_guid = invalid_object_guid();
@@ -1279,6 +1279,13 @@ object_guid  simulation_context::owner_of_collider(object_guid const  collider_g
 }
 
 
+object_guid  simulation_context::rigid_body_of_collider(object_guid const  collider_guid) const
+{
+    ASSUMPTION(is_valid_collider_guid(collider_guid));
+    return m_colliders.at(collider_guid.index).rigid_body;
+}
+
+
 angeo::COLLISION_MATERIAL_TYPE  simulation_context::collision_material_of(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
@@ -1365,15 +1372,15 @@ object_guid  simulation_context::insert_collider(
                 rigid_body_guid = it->second;
                 if (owner_guid == invalid_object_guid())
                     owner_guid = rigid_body_guid;
-                return false;
+                return owner_guid == rigid_body_guid;
             }
-            it = fct.content.find(to_string(OBJECT_KIND::SENSOR));
+            it = fct.content.find(to_string(OBJECT_KIND::DEVICE));
             if (it != fct.content.end())
             {
                 owner_guid = it->second;
                 return rigid_body_guid == invalid_object_guid();
             }
-            it = fct.content.find(to_string(OBJECT_KIND::ACTIVATOR));
+            it = fct.content.find(to_string(OBJECT_KIND::AGENT));
             if (it != fct.content.end())
             {
                 owner_guid = it->second;
@@ -1381,6 +1388,7 @@ object_guid  simulation_context::insert_collider(
             }
             return true;
         });
+    //ASSUMPTION(owner_guid != invalid_object_guid());
 
     bool const  is_moveable = rigid_body_guid != invalid_object_guid() && is_rigid_body_moveable(rigid_body_guid);
 
@@ -1388,25 +1396,9 @@ object_guid  simulation_context::insert_collider(
     coids_builder(frame_world_matrix(frame_guid), is_moveable, coids);
     ASSUMPTION(!coids.empty());
 
-    object_guid  owner_of_collider_guid = owner_guid;
-    switch (m_collision_scene_ptr->get_collision_class(coids.front()))
-    {
-    case angeo::COLLISION_CLASS::RAY_CAST_SIGHT:
-    case angeo::COLLISION_CLASS::SIGHT_TARGET:
-    case angeo::COLLISION_CLASS::TRIGGER_ACTIVATOR:
-    case angeo::COLLISION_CLASS::TRIGGER_GENERAL:
-    case angeo::COLLISION_CLASS::TRIGGER_SPECIAL:
-        if (owner_of_collider_guid == rigid_body_guid)
-            owner_of_collider_guid = invalid_object_guid();
-        break;
-    default:
-        ASSUMPTION(owner_of_collider_guid == rigid_body_guid && rigid_body_guid != invalid_object_guid());
-        break;
-    }
-
     object_guid const  collider_guid = {
             OBJECT_KIND::COLLIDER,
-            m_colliders.insert({ coids, under_folder_guid.index, name, frame_guid, owner_of_collider_guid })
+            m_colliders.insert({ coids, under_folder_guid.index, name, frame_guid, owner_guid, rigid_body_guid })
             };
 
     for (angeo::collision_object_id  coid : coids)
@@ -1414,14 +1406,26 @@ object_guid  simulation_context::insert_collider(
 
     m_folders.at(under_folder_guid.index).content.insert({ name, collider_guid });
 
-    if (owner_of_collider_guid != invalid_object_guid())
-        switch (owner_of_collider_guid.kind)
+    if (owner_guid != invalid_object_guid())
+        switch (owner_guid.kind)
         {
         case OBJECT_KIND::RIGID_BODY: m_rigid_bodies.at(owner_guid.index).colliders.push_back(collider_guid); break;
         // TODO:
-        //case OBJECT_KIND::SENSOR: m_sensors.at(owner_guid.index).colliders.push_back(collider_guid); break;
-        //case OBJECT_KIND::ACTIVATOR: m_activators.at(owner_guid.index).colliders.push_back(collider_guid); break;
+        //case OBJECT_KIND::DEVICE: m_devices.at(owner_guid.index).colliders.push_back(collider_guid); break;
+        //case OBJECT_KIND::AGENT: m_agents.at(owner_guid.index).colliders.push_back(collider_guid); break;
         default: UNREACHABLE(); break;
+        }
+
+    if (rigid_body_guid != invalid_object_guid() && rigid_body_guid != owner_guid)
+        switch (m_collision_scene_ptr->get_collision_class(coids.front()))
+        {
+        case angeo::COLLISION_CLASS::STATIC_OBJECT:
+        case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+        case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+        case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+            m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(collider_guid);
+            break;
+        default: break;
         }
 
     if (is_moveable)

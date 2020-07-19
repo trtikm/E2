@@ -62,10 +62,10 @@ struct  simulator : public com::simulator
                 render_config().render_scene_batches = !render_config().render_scene_batches;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_R()) != 0UL)
                 render_config().render_colliders_of_rigid_bodies = !render_config().render_colliders_of_rigid_bodies;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_L()) != 0UL)
+                render_config().render_colliders_of_fields = !render_config().render_colliders_of_fields;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_S()) != 0UL)
                 render_config().render_colliders_of_sensors = !render_config().render_colliders_of_sensors;
-            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_C()) != 0UL)
-                render_config().render_colliders_of_activators = !render_config().render_colliders_of_activators;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_A()) != 0UL)
                 render_config().render_colliders_of_agents = !render_config().render_colliders_of_agents;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_Y()) != 0UL)

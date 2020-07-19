@@ -35,7 +35,7 @@ void  set_collider_props_to_defaults(std::string const&  shape_type, scn::collid
     props.m_shape_type = angeo::as_collision_shape_type(shape_type);
     props.m_as_dynamic = true;
     props.m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
-    props.m_collision_class = angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT;
+    props.m_collision_class = angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT;
     props.m_density_multiplier = 1.0f;
     if (props.m_shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
     {

@@ -292,8 +292,9 @@ void  action_controller_roller::filter_contacts(scene::node_id const&  nid, std:
     for (auto it = begin_and_end.first; it != begin_and_end.second; ++it)
         switch (it->second.data->other_collision_class)
         {
-        case angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT:
-        case angeo::COLLISION_CLASS::INFINITE_MASS_OBJECT:
+        case angeo::COLLISION_CLASS::STATIC_OBJECT:
+        case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+        case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
             contacts.push_back(it->second.data);
             break;
         default:

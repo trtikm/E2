@@ -59,14 +59,14 @@ struct  simulator : public osi::simulator
         bool  render_in_wireframe;
         bool  render_scene_batches;
         bool  render_colliders_of_rigid_bodies;
+        bool  render_colliders_of_fields;
         bool  render_colliders_of_sensors;
-        bool  render_colliders_of_activators;
         bool  render_colliders_of_agents;
         bool  render_colliders_of_ray_casts;
         bool  render_collision_contacts;
         vector4  colour_of_rigid_body_collider;
+        vector4  colour_of_field_collider;
         vector4  colour_of_sensor_collider;
-        vector4  colour_of_activator_collider;
         vector4  colour_of_agent_collider;
         vector4  colour_of_ray_cast_collider;
         vector4  colour_of_collision_contact;
