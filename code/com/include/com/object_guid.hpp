@@ -11,16 +11,14 @@ namespace com {
 
 enum struct  OBJECT_KIND : natural_8_bit
 {
-    FRAME,
-    BATCH,
-    COLLIDER,
-    RIGID_BODY,
-    SENSOR,
-    ACTIVATOR,
-    DEVICE,
-    AGENT,
-    FOLDER,
-    NONE
+    FOLDER          = 0U,
+    FRAME           = 1U,
+    BATCH           = 2U,
+    COLLIDER        = 3U,
+    RIGID_BODY      = 4U,
+    DEVICE          = 5U,
+    AGENT           = 6U,
+    NONE            = 7U,
 };
 
 

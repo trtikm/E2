@@ -39,8 +39,6 @@ simulation_context::simulation_context(
     , m_batches()
     , m_colliders()
     , m_rigid_bodies()
-    , m_sensors()
-    , m_activators()
     , m_devices()
     , m_agents()
     , m_frames_provider()
@@ -51,8 +49,6 @@ simulation_context::simulation_context(
     , m_batches_to_guids()
     , m_coids_to_guids()
     , m_rbids_to_guids()
-    , m_seids_to_guids()
-    , m_acids_to_guids()
     , m_deids_to_guids()
     , m_agids_to_guids()
     , m_moveable_colliders()
@@ -612,15 +608,13 @@ object_guid  simulation_context::folder_of(object_guid const  guid) const
 {
     switch (guid.kind)
     {
+    case OBJECT_KIND::FOLDER: return guid == invalid_object_guid() ? invalid_object_guid() : folder_content(guid).parent_folder;
     case OBJECT_KIND::FRAME: return folder_of_frame(guid);
     case OBJECT_KIND::BATCH: return folder_of_batch(guid);
     case OBJECT_KIND::COLLIDER: return folder_of_collider(guid);
     case OBJECT_KIND::RIGID_BODY: return folder_of_rigid_body(guid);
-    case OBJECT_KIND::SENSOR: return folder_of_sensor(guid);
-    case OBJECT_KIND::ACTIVATOR: return folder_of_activator(guid);
     case OBJECT_KIND::DEVICE: return folder_of_device(guid);
     case OBJECT_KIND::AGENT: return folder_of_agent(guid);
-    case OBJECT_KIND::FOLDER: return guid == invalid_object_guid() ? invalid_object_guid() : folder_content(guid).parent_folder;
     case OBJECT_KIND::NONE: return invalid_object_guid();
     default:
         UNREACHABLE();
@@ -633,15 +627,13 @@ std::string const&  simulation_context::name_of(object_guid const  guid) const
     static std::string  empty;
     switch (guid.kind)
     {
+    case OBJECT_KIND::FOLDER: return guid == invalid_object_guid() ? empty : folder_content(guid).folder_name;
     case OBJECT_KIND::FRAME: return name_of_frame(guid);
     case OBJECT_KIND::BATCH: return name_of_batch(guid);
     case OBJECT_KIND::COLLIDER: return name_of_collider(guid);
     case OBJECT_KIND::RIGID_BODY: return name_of_rigid_body(guid);
-    case OBJECT_KIND::SENSOR: return name_of_sensor(guid);
-    case OBJECT_KIND::ACTIVATOR: return name_of_activator(guid);
     case OBJECT_KIND::DEVICE: return name_of_device(guid);
     case OBJECT_KIND::AGENT: return name_of_agent(guid);
-    case OBJECT_KIND::FOLDER: return guid == invalid_object_guid() ? empty : folder_content(guid).folder_name;
     case OBJECT_KIND::NONE: return empty;
     default:
         UNREACHABLE();
@@ -1716,92 +1708,6 @@ void  simulation_context::set_rigid_body_inverted_inertia_tensor(object_guid con
     ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
     m_rigid_body_simulator_ptr->set_inverted_inertia_tensor_in_local_space(m_rigid_bodies.at(rigid_body_guid.index).id,
                                                                            inverted_inertia_tensor);
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-// SENSORS API
-/////////////////////////////////////////////////////////////////////////////////////
-
-
-bool  simulation_context::is_valid_sensor_guid(object_guid const  sensor_guid) const
-{
-    return sensor_guid.kind == OBJECT_KIND::SENSOR && m_sensors.valid(sensor_guid.index);
-}
-
-
-object_guid  simulation_context::folder_of_sensor(object_guid const  sensor_guid) const
-{
-    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
-    return { OBJECT_KIND::FOLDER, m_frames.at(sensor_guid.index).folder_index };
-}
-
-
-std::string const&  simulation_context::name_of_sensor(object_guid const  sensor_guid) const
-{
-    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
-    return m_sensors.at(sensor_guid.index).element_name;
-}
-
-
-object_guid  simulation_context::to_sensor_guid(ai::object_id const  seid) const
-{
-    return m_seids_to_guids.at(seid);
-}
-
-
-simulation_context::sensor_guid_iterator  simulation_context::sensors_begin() const
-{
-    return sensor_guid_iterator(m_sensors.valid_indices().begin());
-}
-
-
-simulation_context::sensor_guid_iterator  simulation_context::sensors_end() const
-{
-    return sensor_guid_iterator(m_sensors.valid_indices().end());
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-// ACTIVATORS API
-/////////////////////////////////////////////////////////////////////////////////////
-
-
-bool  simulation_context::is_valid_activator_guid(object_guid const  activator_guid) const
-{
-    return activator_guid.kind == OBJECT_KIND::ACTIVATOR && m_activators.valid(activator_guid.index);
-}
-
-
-object_guid  simulation_context::folder_of_activator(object_guid const  activator_guid) const
-{
-    ASSUMPTION(is_valid_activator_guid(activator_guid));
-    return { OBJECT_KIND::FOLDER, m_frames.at(activator_guid.index).folder_index };
-}
-
-
-std::string const&  simulation_context::name_of_activator(object_guid const  activator_guid) const
-{
-    ASSUMPTION(is_valid_activator_guid(activator_guid));
-    return m_activators.at(activator_guid.index).element_name;
-}
-
-
-object_guid  simulation_context::to_activator_guid(ai::object_id const  acid) const
-{
-    return m_acids_to_guids.at(acid);
-}
-
-
-simulation_context::activator_guid_iterator  simulation_context::activators_begin() const
-{
-    return activator_guid_iterator(m_activators.valid_indices().begin());
-}
-
-
-simulation_context::activator_guid_iterator  simulation_context::activators_end() const
-{
-    return activator_guid_iterator(m_activators.valid_indices().end());
 }
 
 

@@ -212,13 +212,16 @@ void  simulator::simulate()
 
                     ctx.insert_collision_contact({ collider_1_guid, collider_2_guid, contact_point, unit_normal, penetration_depth });
 
-                    object_guid const  owner_1_guid = ctx.owner_of_collider(collider_1_guid);
-                    object_guid const  owner_2_guid = ctx.owner_of_collider(collider_2_guid);
+                    object_guid const  rb_1_guid = ctx.rigid_body_of_collider(collider_1_guid);
+                    object_guid const  rb_2_guid = ctx.rigid_body_of_collider(collider_2_guid);
 
-                    if (owner_1_guid.kind != OBJECT_KIND::RIGID_BODY || owner_2_guid.kind != OBJECT_KIND::RIGID_BODY)
+                    //INVARIANT(rb_1_guid != rb_2_guid);
+                    if (rb_1_guid == rb_2_guid) return true; // TODO: replace this 'if' statement by the invariant above!!!
+
+                    if (rb_1_guid == invalid_object_guid() || rb_2_guid == invalid_object_guid())
                         return true;
 
-                    INVARIANT(ctx.is_rigid_body_moveable(owner_1_guid) || ctx.is_rigid_body_moveable(owner_2_guid));
+                    INVARIANT(ctx.is_rigid_body_moveable(rb_1_guid) || ctx.is_rigid_body_moveable(rb_2_guid));
 
                     angeo::COLLISION_MATERIAL_TYPE const  material_1 = ctx.collision_material_of(collider_1_guid);
                     angeo::COLLISION_MATERIAL_TYPE const  material_2 = ctx.collision_material_of(collider_2_guid);
@@ -240,8 +243,8 @@ void  simulator::simulate()
                     }
                     std::vector<angeo::motion_constraint_system::constraint_id>  output_constraint_ids;
                     m_rigid_body_simulator_ptr->insert_contact_constraints(
-                            ctx.from_rigid_body_guid(owner_1_guid),
-                            ctx.from_rigid_body_guid(owner_2_guid),
+                            ctx.from_rigid_body_guid(rb_1_guid),
+                            ctx.from_rigid_body_guid(rb_2_guid),
                             cid,
                             contact_point,
                             unit_normal,

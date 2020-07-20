@@ -372,32 +372,6 @@ struct simulation_context
     void  set_rigid_body_inverted_inertia_tensor(object_guid const  rigid_body_guid, matrix33 const&  inverted_inertia_tensor);
 
     /////////////////////////////////////////////////////////////////////////////////////
-    // SENSORS API
-    /////////////////////////////////////////////////////////////////////////////////////
-
-    using  sensor_guid_iterator = object_guid_iterator<OBJECT_KIND::SENSOR>;
-
-    bool  is_valid_sensor_guid(object_guid const  sensor_guid) const;
-    object_guid  folder_of_sensor(object_guid const  sensor_guid) const;
-    std::string const&  name_of_sensor(object_guid const  sensor_guid) const;
-    object_guid  to_sensor_guid(ai::object_id const  seid) const;
-    sensor_guid_iterator  sensors_begin() const;
-    sensor_guid_iterator  sensors_end() const;
-
-    /////////////////////////////////////////////////////////////////////////////////////
-    // ACTIVATORS API
-    /////////////////////////////////////////////////////////////////////////////////////
-
-    using  activator_guid_iterator = object_guid_iterator<OBJECT_KIND::ACTIVATOR>;
-
-    bool  is_valid_activator_guid(object_guid const  activator_guid) const;
-    object_guid  folder_of_activator(object_guid const  activator_guid) const;
-    std::string const&  name_of_activator(object_guid const  activator_guid) const;
-    object_guid  to_activator_guid(ai::object_id const  acid) const;
-    activator_guid_iterator  activators_begin() const;
-    activator_guid_iterator  activators_end() const;
-
-    /////////////////////////////////////////////////////////////////////////////////////
     // DEVICES API
     /////////////////////////////////////////////////////////////////////////////////////
 
@@ -559,8 +533,6 @@ private:
     };
 
     // TODO: folder_element_* below are NOT properly implemented, i.e. they have been ignored so far.
-    using  folder_element_sensor = folder_element<ai::object_id>;
-    using  folder_element_activator = folder_element<ai::object_id>;
     using  folder_element_device = folder_element<ai::object_id>;
     using  folder_element_agent = folder_element<ai::object_id>;
 
@@ -570,8 +542,6 @@ private:
     dynamic_array<folder_element_batch, index_type>  m_batches;
     dynamic_array<folder_element_collider, index_type>  m_colliders;
     dynamic_array<folder_element_rigid_body, index_type>  m_rigid_bodies;
-    dynamic_array<folder_element_sensor, index_type>  m_sensors;
-    dynamic_array<folder_element_activator, index_type>  m_activators;
     dynamic_array<folder_element_device, index_type>  m_devices;
     dynamic_array<folder_element_agent, index_type>  m_agents;
 
@@ -584,8 +554,6 @@ private:
     std::unordered_map<std::string, object_guid>  m_batches_to_guids;
     std::unordered_map<angeo::collision_object_id, object_guid>  m_coids_to_guids;
     std::unordered_map<angeo::rigid_body_id, object_guid>  m_rbids_to_guids;
-    std::unordered_map<ai::object_id, object_guid>  m_seids_to_guids;
-    std::unordered_map<ai::object_id, object_guid>  m_acids_to_guids;
     std::unordered_map<ai::object_id, object_guid>  m_deids_to_guids;
     std::unordered_map<ai::object_id, object_guid>  m_agids_to_guids;
 
