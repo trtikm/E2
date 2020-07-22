@@ -3,10 +3,15 @@
 
 #   include <com/object_guid.hpp>
 #   include <com/frame_of_reference.hpp>
+#   include <com/device_simulator.hpp>
 #   include <gfx/batch.hpp>
 #   include <gfx/batch_generators.hpp>
-#   include <angeo/collision_scene.hpp>
-#   include <angeo/rigid_body_simulator.hpp>
+#   include <angeo/collision_object_id.hpp>
+#   include <angeo/collision_shape_id.hpp>
+#   include <angeo/collision_material.hpp>
+#   include <angeo/collision_class.hpp>
+#   include <angeo/collision_object_id.hpp>
+#   include <angeo/rigid_body.hpp>
 //#   include <ai/simulator.hpp>
 #   include <ai/object_id.hpp>
 #   include <utility/basic_numeric_types.hpp>
@@ -19,7 +24,16 @@
 #   include <functional>
 #   include <memory>
 
-namespace ai { struct simulator; }
+namespace angeo {
+    struct collision_scene;
+    struct  rigid_body_simulator;
+}
+namespace ai {
+    struct simulator;
+}
+namespace com {
+    struct devices_manager;
+}
 
 namespace com {
 
@@ -34,6 +48,7 @@ struct simulation_context
     static simulation_context_ptr  create(
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
+            std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
             std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
             );
 
@@ -299,6 +314,9 @@ struct simulation_context
     float_32_bit  collider_capsule_half_distance_between_end_points(object_guid const  collider_guid) const;
     float_32_bit  collider_capsule_thickness_from_central_line(object_guid const  collider_guid) const;
     float_32_bit  collider_sphere_radius(object_guid const  collider_guid) const;
+    bool  is_collider_enabled(object_guid const  collider_guid) const;
+    void  request_enable_collider(object_guid const  collider_guid, bool const  state) const;
+    void  request_enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state) const;
     // Disabled (not const) for modules.
     std::vector<angeo::collision_object_id> const&  from_collider_guid(object_guid const  collider_guid);
     void  relocate_collider(object_guid const  collider_guid, matrix44 const&  world_matrix);
@@ -380,9 +398,10 @@ struct simulation_context
     bool  is_valid_device_guid(object_guid const  device_guid) const;
     object_guid  folder_of_device(object_guid const  device_guid) const;
     std::string const&  name_of_device(object_guid const  device_guid) const;
-    object_guid  to_device_guid(ai::object_id const  deid) const;
+    object_guid  to_device_guid(com::device_simulator::device_id const  deid) const;
     device_guid_iterator  devices_begin() const;
     device_guid_iterator  devices_end() const;
+    void  request_enable_sensor(object_guid const  device_guid, object_guid const  collider_guid, bool const  state) const;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // AGENTS API
@@ -532,8 +551,9 @@ private:
         std::vector<object_guid>  colliders; // Only those whose owner is this rigid body.
     };
 
+    using  folder_element_device = folder_element<com::device_simulator::device_id>;
+
     // TODO: folder_element_* below are NOT properly implemented, i.e. they have been ignored so far.
-    using  folder_element_device = folder_element<ai::object_id>;
     using  folder_element_agent = folder_element<ai::object_id>;
 
     object_guid  m_root_folder;
@@ -548,13 +568,14 @@ private:
     frames_provider  m_frames_provider;
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
+    std::shared_ptr<com::device_simulator>  m_device_simulator_ptr;
     std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
 
     std::unordered_map<frame_id, object_guid>  m_frids_to_guids;
     std::unordered_map<std::string, object_guid>  m_batches_to_guids;
     std::unordered_map<angeo::collision_object_id, object_guid>  m_coids_to_guids;
     std::unordered_map<angeo::rigid_body_id, object_guid>  m_rbids_to_guids;
-    std::unordered_map<ai::object_id, object_guid>  m_deids_to_guids;
+    std::unordered_map<com::device_simulator::device_id, object_guid>  m_deids_to_guids;
     std::unordered_map<ai::object_id, object_guid>  m_agids_to_guids;
 
     std::unordered_set<index_type>  m_moveable_colliders;
@@ -595,6 +616,7 @@ private:
     simulation_context(
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
+            std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
             std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
             );
 

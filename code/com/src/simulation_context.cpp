@@ -1,4 +1,6 @@
 #include <com/simulation_context.hpp>
+#include <angeo/collision_scene.hpp>
+#include <angeo/rigid_body_simulator.hpp>
 #include <angeo/mass_and_inertia_tensor.hpp>
 #include <utility/async_resource_load.hpp>
 #include <utility/timeprof.hpp>
@@ -16,6 +18,7 @@ namespace com {
 simulation_context_ptr  simulation_context::create(
         std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
         std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
+        std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
         std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
         )
 {
@@ -23,6 +26,7 @@ simulation_context_ptr  simulation_context::create(
     return std::shared_ptr<simulation_context>(new simulation_context(
                 collision_scene_ptr_,
                 rigid_body_simulator_ptr_,
+                device_simulator_ptr_,
                 ai_simulator_ptr_
                 ));
 }
@@ -31,6 +35,7 @@ simulation_context_ptr  simulation_context::create(
 simulation_context::simulation_context(
         std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
         std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
+        std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
         std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
         )
     : m_root_folder()
@@ -44,6 +49,7 @@ simulation_context::simulation_context(
     , m_frames_provider()
     , m_collision_scene_ptr(collision_scene_ptr_)
     , m_rigid_body_simulator_ptr(rigid_body_simulator_ptr_)
+    , m_device_simulator_ptr(device_simulator_ptr_)
     , m_ai_simulator_ptr(ai_simulator_ptr_)
     , m_frids_to_guids()
     , m_batches_to_guids()
@@ -1327,6 +1333,35 @@ float_32_bit  simulation_context::collider_sphere_radius(object_guid const  coll
 }
 
 
+bool  simulation_context::is_collider_enabled(object_guid const  collider_guid) const
+{
+    ASSUMPTION(is_valid_collider_guid(collider_guid));
+    return m_collision_scene_ptr->is_collider_enabled(m_colliders.at(collider_guid.index).id.front());
+}
+
+
+void  simulation_context::request_enable_collider(object_guid const  collider_guid, bool const  state) const
+{
+    ASSUMPTION(is_valid_collider_guid(collider_guid));
+    for (angeo::collision_object_id  coid : m_colliders.at(collider_guid.index).id)
+        m_collision_scene_ptr->enable_collider(coid, state);
+}
+
+
+void  simulation_context::request_enable_colliding(
+        object_guid const  collider_1, object_guid const  collider_2, const bool  state
+        ) const
+{
+    ASSUMPTION(is_valid_collider_guid(collider_1) && is_valid_collider_guid(collider_2));
+    for (angeo::collision_object_id  coid_1 : m_colliders.at(collider_1.index).id)
+        for (angeo::collision_object_id  coid_2 : m_colliders.at(collider_2.index).id)
+            if (state)
+                m_collision_scene_ptr->enable_colliding(coid_1, coid_2);
+            else
+                m_collision_scene_ptr->disable_colliding(coid_1, coid_2);
+}
+
+
 // Disabled (not const) for modules.
 
 
@@ -1736,7 +1771,7 @@ std::string const&  simulation_context::name_of_device(object_guid const  device
 }
 
 
-object_guid  simulation_context::to_device_guid(ai::object_id const  deid) const
+object_guid  simulation_context::to_device_guid(com::device_simulator::device_id const  deid) const
 {
     return m_deids_to_guids.at(deid);
 }

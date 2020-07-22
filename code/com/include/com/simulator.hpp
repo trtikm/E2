@@ -9,6 +9,7 @@
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
+#   include <com/device_simulator.hpp>
 //#   include <ai/simulator.hpp>
 #   include <unordered_map>
 #   include <vector>
@@ -109,6 +110,9 @@ struct  simulator : public osi::simulator
     std::shared_ptr<angeo::rigid_body_simulator>  rigid_body_simulator() { return m_rigid_body_simulator_ptr; }
     std::shared_ptr<angeo::rigid_body_simulator const>  rigid_body_simulator() const { return m_rigid_body_simulator_ptr; }
 
+    std::shared_ptr<com::device_simulator>  device_simulator() { return m_device_simulator_ptr; }
+    std::shared_ptr<com::device_simulator const>  device_simulator() const { return m_device_simulator_ptr; }
+
     std::shared_ptr<ai::simulator>  ai_simulator() { return m_ai_simulator_ptr; }
     std::shared_ptr<ai::simulator const>  ai_simulator() const { return m_ai_simulator_ptr; }
 
@@ -149,6 +153,7 @@ private:
 
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
+    std::shared_ptr<com::device_simulator>  m_device_simulator_ptr;
     std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
 
     simulation_context_ptr  m_context;

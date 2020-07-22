@@ -119,9 +119,15 @@ void  simulator::terminate()
 simulator::simulator(std::string const&  data_root_dir)
     : m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
+    , m_device_simulator_ptr(std::make_shared<com::device_simulator>())
     , m_ai_simulator_ptr()
 
-    , m_context(simulation_context::create(m_collision_scene_ptr, m_rigid_body_simulator_ptr, m_ai_simulator_ptr))
+    , m_context(simulation_context::create(
+            m_collision_scene_ptr,
+            m_rigid_body_simulator_ptr,
+            m_device_simulator_ptr,
+            m_ai_simulator_ptr
+            ))
 
     , m_simulation_config()
     , m_render_config(get_window_props(), data_root_dir)
@@ -260,6 +266,7 @@ void  simulator::simulate()
             true
             );
 
+    device_simulator()->next_round((simulation_context const&)ctx, round_seconds());
     //ai_simulator()->next_round(round_seconds(), get_keyboard_props(), get_mouse_props(), get_window_props());
 
     rigid_body_simulator()->solve_constraint_system(round_seconds(), round_seconds() * 0.75f);

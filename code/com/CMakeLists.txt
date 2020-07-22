@@ -7,6 +7,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/com/frame_of_reference.hpp
     ./src/frame_of_reference.cpp
 
+    ./include/com/device_simulator.hpp
+    ./src/device_simulator.cpp
+
     ./include/com/simulation_context.hpp
     ./src/simulation_context.cpp
     
