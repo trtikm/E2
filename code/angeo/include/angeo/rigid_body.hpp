@@ -33,7 +33,7 @@ struct  rigid_body
 
     linear_and_angular_vector  m_velocity; // Must be updated after each time step.
     linear_and_angular_vector  m_acceleration_from_constraints; // Must be cleared in the end of each time step.
-    linear_and_angular_vector  m_acceleration_from_external_forces; // The linear and algular components depend on fields 'm_inverted_mass' and 'm_inverted_inertia_tensor', respectively.
+    linear_and_angular_vector  m_acceleration_from_external_forces;
 
     float_32_bit  m_inverted_mass;  // The value 0.0f means the mass is infinite. 
     matrix33  m_inverted_inertia_tensor; // Zero matrix means an infinite inertia. Must be updated after each time step.

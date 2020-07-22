@@ -70,6 +70,8 @@ rigid_body_simulator::rigid_body_simulator()
     , m_rigid_bodies()
     , m_inverted_inertia_tensors() 
     , m_invalid_rigid_body_ids()
+    , m_linear_accelerations_from_sources()
+    , m_angular_accelerations_from_sources()
 {}
 
 
@@ -129,6 +131,9 @@ rigid_body_id  rigid_body_simulator::insert_rigid_body(
 
 void  rigid_body_simulator::erase_rigid_body(rigid_body_id const  id)
 {
+    remove_linear_accelerations_from_all_sources(id);
+    remove_angular_accelerations_from_all_sources(id);
+
     m_invalid_rigid_body_ids.insert(id);
 
     --m_statistics.m_num_rigid_bodies;
@@ -158,6 +163,112 @@ void  rigid_body_simulator::set_orientation(rigid_body_id const  id, quaternion 
     m_rigid_bodies.at(id).m_orientation = orientation;
     update_dependent_variables_of_rigid_body(id);
     erase_from_contact_cache(id);
+}
+
+
+void  rigid_body_simulator::set_linear_acceleration_from_source(
+        rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration
+        )
+{
+    rigid_body&  rb = m_rigid_bodies.at(id);
+    auto&  accels = m_linear_accelerations_from_sources[id];
+
+    auto  it = accels.find(source_guid);
+    if (it == accels.end())
+        it = accels.insert({ source_guid, acceleration }).first;
+    else
+    {
+        rb.m_acceleration_from_external_forces.m_linear -= it->second;
+        it->second = acceleration;
+    }
+
+    rb.m_acceleration_from_external_forces.m_linear += it->second;
+}
+
+
+void  rigid_body_simulator::set_angular_acceleration_from_source(
+        rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration
+        )
+{
+    rigid_body&  rb = m_rigid_bodies.at(id);
+    auto&  accels = m_angular_accelerations_from_sources[id];
+
+    auto  it = accels.find(source_guid);
+    if (it == accels.end())
+        it = accels.insert({ source_guid, acceleration }).first;
+    else
+    {
+        rb.m_acceleration_from_external_forces.m_angular -= it->second;
+        it->second = acceleration;
+    }
+
+    rb.m_acceleration_from_external_forces.m_angular += it->second;
+}
+
+
+void  rigid_body_simulator::remove_linear_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid)
+{
+    auto const  accels_it = m_linear_accelerations_from_sources.find(id);
+    if (accels_it == m_linear_accelerations_from_sources.end())
+        return;
+
+    auto  it = accels_it->second.find(source_guid);
+    if (it == accels_it->second.end())
+        return;
+
+    m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear -= it->second;
+
+    accels_it->second.erase(it);
+
+    if (accels_it->second.empty())
+        m_linear_accelerations_from_sources.erase(accels_it);
+}
+
+
+void  rigid_body_simulator::remove_angular_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid)
+{
+    auto const  accels_it = m_angular_accelerations_from_sources.find(id);
+    if (accels_it == m_angular_accelerations_from_sources.end())
+        return;
+
+    auto  it = accels_it->second.find(source_guid);
+    if (it == accels_it->second.end())
+        return;
+
+    m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular -= it->second;
+
+    accels_it->second.erase(it);
+
+    if (accels_it->second.empty())
+        m_angular_accelerations_from_sources.erase(accels_it);
+}
+
+
+void  rigid_body_simulator::remove_linear_accelerations_from_all_sources(rigid_body_id const  id)
+{
+    auto const  accels_it = m_linear_accelerations_from_sources.find(id);
+    if (accels_it == m_linear_accelerations_from_sources.end())
+        return;
+
+    rigid_body&  rb = m_rigid_bodies.at(id);
+    for (auto const&  guid_and_accel : accels_it->second)
+        rb.m_acceleration_from_external_forces.m_linear -= guid_and_accel.second;
+
+    m_linear_accelerations_from_sources.erase(accels_it);
+}
+
+
+void  rigid_body_simulator::remove_angular_accelerations_from_all_sources(rigid_body_id const  id)
+{
+    auto const  accels_it = m_angular_accelerations_from_sources.find(id);
+    if (accels_it == m_angular_accelerations_from_sources.end())
+        return;
+
+    rigid_body&  rb = m_rigid_bodies.at(id);
+    for (auto const&  guid_and_accel : accels_it->second)
+        rb.m_acceleration_from_external_forces.m_angular -= guid_and_accel.second;
+
+    m_angular_accelerations_from_sources.erase(accels_it);
 }
 
 

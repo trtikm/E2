@@ -6,6 +6,7 @@
 #   include <angeo/motion_constraint_system.hpp>
 #   include <angeo/contact_id.hpp>
 #   include <angeo/collision_material.hpp>
+#   include <com/object_guid.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <vector>
 #   include <unordered_set>
@@ -62,10 +63,21 @@ struct  rigid_body_simulator
     void  set_linear_velocity(rigid_body_id const  id, vector3 const&  velocity) { m_rigid_bodies.at(id).m_velocity.m_linear = velocity; }
     void  set_angular_velocity(rigid_body_id const  id, vector3 const&  velocity) { m_rigid_bodies.at(id).m_velocity.m_angular = velocity; }
 
-    vector3 const&  get_external_linear_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear; }
-    vector3 const&  get_external_angular_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular; }
-    void  set_external_linear_acceleration(rigid_body_id const  id, vector3 const&  acceleration) { m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear = acceleration; }
-    void  set_external_angular_acceleration(rigid_body_id const  id, vector3 const&  acceleration) { m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular = acceleration; }
+    vector3 const&  get_linear_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear; }
+    vector3 const&  get_angular_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular; }
+    void  set_linear_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration);
+    void  set_angular_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration);
+    void  remove_linear_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid);
+    void  remove_angular_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid);
+    void  remove_linear_accelerations_from_all_sources(rigid_body_id const  id);
+    void  remove_angular_accelerations_from_all_sources(rigid_body_id const  id);
+
+    // Deprecaded section - begin
+        vector3 const&  get_external_linear_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear; }
+        vector3 const&  get_external_angular_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular; }
+        void  set_external_linear_acceleration(rigid_body_id const  id, vector3 const&  acceleration) { m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear = acceleration; }
+        void  set_external_angular_acceleration(rigid_body_id const  id, vector3 const&  acceleration) { m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular = acceleration; }
+    // Deprecaded section - end
 
     float_32_bit  get_inverted_mass(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_inverted_mass; }
     void  set_inverted_mass(rigid_body_id const  id, float_32_bit const  inverted_mass) { m_rigid_bodies.at(id).m_inverted_mass = inverted_mass; }
@@ -219,6 +231,8 @@ private:
     std::vector<rigid_body>  m_rigid_bodies;
     std::vector<matrix33>  m_inverted_inertia_tensors;  // Always in the local space. Zero matrix means an infinite inertia.
     std::unordered_set<rigid_body_id>  m_invalid_rigid_body_ids;
+    std::unordered_map<rigid_body_id, std::unordered_map<com::object_guid, vector3> >  m_linear_accelerations_from_sources;
+    std::unordered_map<rigid_body_id, std::unordered_map<com::object_guid, vector3> >  m_angular_accelerations_from_sources;
 };
 
 
