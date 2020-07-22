@@ -68,6 +68,7 @@ collision_scene::collision_scene()
     , m_does_proximity_dynamic_need_rebalancing(false)
 
     , m_disabled_colliding()
+    , m_disabled_colliders()
 
     , m_invalid_object_ids()
 
@@ -571,6 +572,7 @@ void  collision_scene::clear()
     m_does_proximity_dynamic_need_rebalancing = false;
 
     m_disabled_colliding.clear();
+    m_disabled_colliders.clear();
 
     for (auto&  vec : m_invalid_object_ids)
         vec.clear();
@@ -653,6 +655,21 @@ void  collision_scene::enable_colliding(
 }
 
 
+void  collision_scene::enable_collider(collision_object_id const  coid, bool const  state)
+{
+    if (state)
+        m_disabled_colliders.erase(coid);
+    else
+        m_disabled_colliders.insert(coid);
+}
+
+
+bool  collision_scene::is_collider_enabled(collision_object_id const  coid) const
+{
+    return m_disabled_colliders.count(coid) == 0UL;
+}
+
+
 void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor const&  acceptor, bool  with_static)
 {
     TMPROF_BLOCK();
@@ -699,7 +716,8 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor 
                         cluster.clear();
                         current_leaf_node_index = leaf_node_index;
                     }
-                    cluster.insert(coid);
+                    if (is_collider_enabled(coid))
+                        cluster.insert(coid);
                     return true;
                 }
             );
@@ -720,6 +738,9 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
 {
     TMPROF_BLOCK();
 
+    if (!is_collider_enabled(coid))
+        return;
+
     vector3 const  min_corner_of_objects_bbox = get_object_aabb_min_corner(coid);
     vector3 const  max_corner_of_objects_bbox = get_object_aabb_max_corner(coid);
 
@@ -735,6 +756,8 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                             return true;
                         collision_object_id_pair const coid_pair = make_collision_object_id_pair(coid, other_coid);
                         if (!are_colliding(get_collision_class(coid_pair.first), get_collision_class(coid_pair.second)))
+                            return true;
+                        if (!is_collider_enabled(other_coid))
                             return true;
                         if (m_disabled_colliding.count(coid_pair) != 0UL)
                             return true;
@@ -755,6 +778,8 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                             return true;
                         collision_object_id_pair const coid_pair = make_collision_object_id_pair(coid, other_coid);
                         if (!are_colliding(get_collision_class(coid_pair.first), get_collision_class(coid_pair.second)))
+                            return true;
+                        if (!is_collider_enabled(other_coid))
                             return true;
                         if (m_disabled_colliding.count(coid_pair) != 0UL)
                             return true;

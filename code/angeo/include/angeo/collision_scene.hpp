@@ -147,6 +147,9 @@ struct  collision_scene
     void  disable_colliding(collision_object_id const  coid_1, collision_object_id const  coid_2);
     void  enable_colliding(collision_object_id const  coid_1, collision_object_id const  coid_2);
 
+    void  enable_collider(collision_object_id const  coid, bool const  state);
+    bool  is_collider_enabled(collision_object_id const  coid) const;
+
     void  compute_contacts_of_all_dynamic_objects(contact_acceptor const&  acceptor, bool  with_static = true);
     void  compute_contacts_of_single_dynamic_object(
             collision_object_id const  coid,
@@ -358,6 +361,7 @@ private:
     mutable bool  m_does_proximity_dynamic_need_rebalancing;
 
     std::unordered_set<collision_object_id_pair>  m_disabled_colliding;
+    std::unordered_set<collision_object_id>  m_disabled_colliders;
 
     std::array<std::vector<natural_32_bit>, get_max_collision_shape_type_id() + 1U>  m_invalid_object_ids;
 
