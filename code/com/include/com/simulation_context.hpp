@@ -85,49 +85,29 @@ struct simulation_context
     //      the API function again to obtain a valid iterator/refences/pointer for that round.
 
     // IMPORTANT NOTE:
-    //      Non-const methods are NOT supposed to be accessible from modules managing objects of kinds 'OBJECT_KIND',
+    //      Non-const functions are NOT supposed to be accessible from modules managing objects of kinds 'OBJECT_KIND',
     //      like collison scene, physics, AI. If any of these modules needs an access to the context, then they should
     //      only be provided by a const reference to the context.
 
     // IMPORTANT NOTE:
-    //      Each method whose name starts with 'request_' only inserts the corresponding request to an internal 
-    //      queue for later processing and then returns immediatelly. An effect of most requests can be seen
-    //      in the next simulation round. But for some requests, like request_import_scene_from_directory, there
-    //      may pass several simulation rounds till the effect is actually visible.
+    //      Each API function whose name starts with 'request_' only inserts the corresponding request to an internal 
+    //      queue for later processing and then returns immediatelly. Requests from functions whose names start with
+    //      'request_early_' should be applied right before physics simulator solves its constranit system for
+    //      collision and joint resolving impulses. Requests from all other request functions should be applied
+    //      in the end of the currently processed simulation round. In all cases, no module should observe an effect
+    //      of any request sent in the current simulation rounds earlier than in the next simulation round (the only
+    //      exception is the physics simulator which may observe the effect of the early requests, as explained
+    //      above). Note that for some requests, like request_import_scene_from_directory, there may pass several
+    //      simulation rounds till the effect becomes observable.
 
-    /////////////////////////////////////////////////////////////////////////////////////
-    // REQUESTS PROCESSING API
-    /////////////////////////////////////////////////////////////////////////////////////
+    // INVARIANT:
+    //      Function 'process_pending_early_requests()' applies requests from calls to functions whose names start
+    //      with 'request_early_'. The requests are applied in exactly the same order as the functions were called.
+    //      Function 'process_pending_requests()' applies requests from calls to all other request functions. These
+    //      requests are also applied in exactly the same order as the functions were called.
 
-    // Disabled (not const) for modules.
-    void  process_pending_requests();
-    void  process_pending_requests_import_scene();
-
-    /////////////////////////////////////////////////////////////////////////////////////
-    // SCENE IMPORT/EXPORT API
-    /////////////////////////////////////////////////////////////////////////////////////
-
-    struct  import_scene_props
-    {
-        boost::property_tree::ptree const*  hierarchy;
-        std::unordered_map<std::string, gfx::effects_config> const* effects;
-    };
-
-    void  request_import_scene_from_directory(std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
-                                              bool const  cache_imported_scene) const;
-    // Disabled (not const) for modules.
-    void  import_scene(import_scene_props const&  props, object_guid const  under_folder_guid);
-    void  import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid);
-    void  import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid);
-
-    /////////////////////////////////////////////////////////////////////////////////////
-    // ACCESS PATH API
-    /////////////////////////////////////////////////////////////////////////////////////
-
-    object_guid  from_absolute_path(std::string const&  path) const;
-    std::string  to_absolute_path(object_guid const  guid) const;
-    object_guid  from_relative_path(object_guid const  base_guid, std::string const&  relative_path) const;
-    std::string  to_relative_path(object_guid const  guid, object_guid const  relative_base_guid) const;
+    // IMPORTANT NOTE:
+    //      No function in this module is thread safe. TODO: Change that!!!
 
     /////////////////////////////////////////////////////////////////////////////////////
     // FOLDER API
@@ -159,11 +139,9 @@ struct simulation_context
                                  folder_visitor_type const&  visitor) const;
     void  for_each_child_folder(object_guid const  folder_guid, bool const  recursively, bool const  including_passed_folder,
                                 folder_visitor_type const&  visitor) const;
-    void  request_insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name) const;
-    void  request_erase_non_root_empty_folder(object_guid const  folder_guid) const;
+    object_guid  insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name) const;
+    void  erase_non_root_empty_folder(object_guid const  folder_guid) const;
     // Disabled (not const) for modules.
-    object_guid  insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name);
-    void  erase_non_root_empty_folder(object_guid const  folder_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // FRAMES API
@@ -185,7 +163,8 @@ struct simulation_context
     angeo::coordinate_system const&  frame_coord_system_in_world_space(object_guid const  frame_guid) const;
     angeo::coordinate_system_explicit const&  frame_explicit_coord_system_in_world_space(object_guid const  frame_guid) const;
     matrix44 const&  frame_world_matrix(object_guid const  frame_guid) const;
-    void  request_insert_frame(object_guid const  under_folder_guid) const;
+    object_guid  insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
+                              vector3 const&  origin, quaternion const&  orientation) const;
     void  request_erase_frame(object_guid const  frame_guid) const;
     // Disabled (not const) for modules.
     void  set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid);
@@ -315,40 +294,43 @@ struct simulation_context
     float_32_bit  collider_capsule_thickness_from_central_line(object_guid const  collider_guid) const;
     float_32_bit  collider_sphere_radius(object_guid const  collider_guid) const;
     bool  is_collider_enabled(object_guid const  collider_guid) const;
-    void  request_enable_collider(object_guid const  collider_guid, bool const  state) const;
-    void  request_enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state) const;
-    // Disabled (not const) for modules.
-    std::vector<angeo::collision_object_id> const&  from_collider_guid(object_guid const  collider_guid);
-    void  relocate_collider(object_guid const  collider_guid, matrix44 const&  world_matrix);
-    object_guid  insert_collider(
-            object_guid const  under_folder_guid, std::string const&  name,
-            std::function<void(matrix44 const&, bool, std::vector<angeo::collision_object_id>&)> const&  coids_builder
-            );
     object_guid  insert_collider_box(
             object_guid const  under_folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class
-            );
+            ) const;
     object_guid  insert_collider_capsule(
             object_guid const  under_folder_guid, std::string const&  name,
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class
-            );
+            ) const;
     object_guid  insert_collider_sphere(
             object_guid const  under_folder_guid, std::string const&  name,
             float_32_bit const  radius,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class
-            );
+            ) const;
     object_guid  insert_collider_triangle_mesh(
             object_guid const  under_folder_guid, std::string const&  name_prefix,
             natural_32_bit const  num_triangles,
             std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class
+            ) const;
+    void  request_enable_collider(object_guid const  collider_guid, bool const  state) const;
+    void  request_enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state) const;
+    void  request_erase_collider(object_guid const  collider_guid) const;
+    // Disabled (not const) for modules.
+    void  enable_collider(object_guid const  collider_guid, bool const  state);
+    void  enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state);
+    std::vector<angeo::collision_object_id> const&  from_collider_guid(object_guid const  collider_guid);
+    void  relocate_collider(object_guid const  collider_guid, matrix44 const&  world_matrix);
+    object_guid  insert_collider(
+            object_guid const  under_folder_guid, std::string const&  name,
+            std::function<void(matrix44 const&, bool, std::vector<angeo::collision_object_id>&)> const&  coids_builder
             );
     void  erase_collider(object_guid const  collider_guid);
 
@@ -371,18 +353,17 @@ struct simulation_context
     vector3 const&  mass_centre_of_rigid_body(object_guid const  rigid_body_guid) const;
     quaternion const&  orientation_of_rigid_body(object_guid const  rigid_body_guid) const;
     std::vector<object_guid> const&  colliders_of_rigid_body(object_guid const  rigid_body_guid) const;
-    // Disabled (not const) for modules.
-    angeo::rigid_body_id  from_rigid_body_guid(object_guid const  rigid_body_guid);
     object_guid  insert_rigid_body(
             object_guid const  under_folder_guid,
-            float_32_bit const  mass_inverted,
-            matrix33 const&  inertia_tensor_inverted,
-            vector3 const&  linear_velocity,
-            vector3 const&  angular_velocity,
-            vector3 const&  external_linear_acceleration,
-            vector3 const&  external_angular_acceleration,
-            bool const  is_moveable
-            );
+            bool const  is_moveable,
+            vector3 const&  linear_velocity = vector3_zero(),
+            vector3 const&  angular_velocity = vector3_zero(),
+            vector3 const&  linear_acceleration = vector3_zero(),
+            vector3 const&  angular_acceleration = vector3_zero()
+            ) const;
+    void  request_erase_rigid_body(object_guid const  rigid_body_guid) const;
+    // Disabled (not const) for modules.
+    angeo::rigid_body_id  from_rigid_body_guid(object_guid const  rigid_body_guid);
     void  erase_rigid_body(object_guid const  rigid_body_guid);
     void  set_rigid_body_mass_centre(object_guid const  rigid_body_guid, vector3 const&  position);
     void  set_rigid_body_orientation(object_guid const  rigid_body_guid, quaternion const&  orientation);
@@ -471,6 +452,42 @@ struct simulation_context
     // Disabled (not const) for modules.
     natural_32_bit  insert_collision_contact(collision_contact const&  cc);
     void  clear_collision_contacts();
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // ACCESS PATH API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    object_guid  from_absolute_path(std::string const&  path) const;
+    std::string  to_absolute_path(object_guid const  guid) const;
+    object_guid  from_relative_path(object_guid const  base_guid, std::string const&  relative_path) const;
+    std::string  to_relative_path(object_guid const  guid, object_guid const  relative_base_guid) const;
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // REQUESTS PROCESSING API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    // Disabled (not const) for modules.
+    void  process_rigid_bodies_with_invalidated_shape();
+    void  process_pending_early_requests();
+    void  process_pending_requests();
+    void  process_pending_requests_import_scene();
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // SCENE IMPORT/EXPORT API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    struct  import_scene_props
+    {
+        boost::property_tree::ptree const*  hierarchy;
+        std::unordered_map<std::string, gfx::effects_config> const* effects;
+    };
+
+    void  request_import_scene_from_directory(std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
+                                              bool const  cache_imported_scene) const;
+    // Disabled (not const) for modules.
+    void  import_scene(import_scene_props const&  props, object_guid const  under_folder_guid);
+    void  import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid);
+    void  import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid);
 
 private:
 
@@ -584,6 +601,45 @@ private:
     dynamic_array<collision_contact, natural_32_bit>  m_collision_contacts;
     std::unordered_map<object_guid, std::vector<natural_32_bit> >  m_from_colliders_to_contacts;
 
+    /////////////////////////////////////////////////////////////////////////////////////
+    // EARLY REQUESTS HANDLING
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    std::unordered_set<object_guid>  m_rigid_bodies_with_invalidated_shape;
+
+    enum REQUST_EARLY_KIND
+    {
+        TODO
+    };
+
+    mutable std::vector<REQUST_EARLY_KIND>  m_pending_requests_early;
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // REQUESTS HANDLING
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    enum REQUST_KIND
+    {
+        REQUST_ERASE_FRAME          = 0,
+        REQUST_ENABLE_COLLIDER      = 1,
+        REQUST_ENABLE_COLLIDING     = 2,
+        REQUST_ERASE_COLLIDER       = 3,
+        REQUST_ERASE_RIGID_BODY     = 4,
+    };
+
+    struct  requst_data_enable_collider { object_guid  collider_guid; bool  state; };
+    struct  requst_data_enable_colliding { object_guid  collider_1; object_guid  collider_2; bool  state; };
+
+    mutable std::vector<REQUST_KIND>  m_pending_requests;
+    mutable std::vector<object_guid>  m_requests_erase_frame;
+    mutable std::vector<requst_data_enable_collider>  m_requst_enable_collider;
+    mutable std::vector<requst_data_enable_colliding>  m_requst_enable_colliding;
+    mutable std::vector<object_guid>  m_requests_erase_collider;
+    mutable std::vector<object_guid>  m_requests_erase_rigid_body;
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // SCENE IMPORT REQUESTS HANDLING
+    /////////////////////////////////////////////////////////////////////////////////////
 
     struct  imported_scene_data
     {
@@ -612,6 +668,10 @@ private:
 
     mutable std::vector<request_props_imported_scene> m_requests_queue_scene_import;
     std::unordered_map<std::string, imported_scene> m_cache_of_imported_scenes;
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // IMPLEMENTATION DETAILS
+    /////////////////////////////////////////////////////////////////////////////////////
 
     simulation_context(
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,

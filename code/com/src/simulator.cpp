@@ -170,7 +170,7 @@ void  simulator::round()
             SLOG(render_config().fps_prefix << FPS() << "\n");
 
         on_begin_simulation();
-            context()->process_pending_requests();
+            context()->process_pending_requests_import_scene();
             if (!simulation_config().paused)
             {
                 simulate();
@@ -269,6 +269,9 @@ void  simulator::simulate()
     device_simulator()->next_round((simulation_context const&)ctx, round_seconds());
     //ai_simulator()->next_round(round_seconds(), get_keyboard_props(), get_mouse_props(), get_window_props());
 
+    ctx.process_rigid_bodies_with_invalidated_shape();
+    ctx.process_pending_early_requests();
+
     rigid_body_simulator()->solve_constraint_system(round_seconds(), round_seconds() * 0.75f);
     rigid_body_simulator()->integrate_motion_of_rigid_bodies(round_seconds());
     rigid_body_simulator()->prepare_contact_cache_and_constraint_system_for_next_frame();
@@ -282,6 +285,8 @@ void  simulator::simulate()
 
     for (auto  col_it = ctx.moveable_colliders_begin(), col_end = ctx.moveable_colliders_end(); col_it != col_end; ++col_it)
         ctx.relocate_collider(*col_it, ctx.frame_world_matrix(ctx.frame_of_collider(*col_it)));
+
+    ctx.process_pending_requests();
 }
 
 

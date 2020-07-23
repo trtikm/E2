@@ -11,6 +11,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
+#include <algorithm>
 
 namespace com {
 
@@ -61,500 +62,21 @@ simulation_context::simulation_context(
     , m_moveable_rigid_bodies()
     , m_collision_contacts()
     , m_from_colliders_to_contacts()
+    // EARLY REQUESTS HANDLING
+    , m_rigid_bodies_with_invalidated_shape()
+    , m_pending_requests_early()
+    // REQUESTS HANDLING
+    , m_pending_requests()
+    , m_requests_erase_frame()
+    , m_requst_enable_collider()
+    , m_requst_enable_colliding()
+    , m_requests_erase_collider()
+    , m_requests_erase_rigid_body()
+    // SCENE IMPORT REQUESTS HANDLING
     , m_requests_queue_scene_import()
     , m_cache_of_imported_scenes()
 {
     m_root_folder = { OBJECT_KIND::FOLDER, m_folders.insert(folder_content_type("ROOT", invalid_object_guid())) };
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-// REQUESTS PROCESSING API
-/////////////////////////////////////////////////////////////////////////////////////
-
-
-// Disabled (not const) for modules.
-void  simulation_context::process_pending_requests()
-{
-    process_pending_requests_import_scene();
-}
-
-
-void  simulation_context::process_pending_requests_import_scene()
-{
-    for (natural_32_bit  i = 0U; i < (natural_32_bit)m_requests_queue_scene_import.size(); )
-        if (m_requests_queue_scene_import.at(i).scene.is_load_finished())
-        {
-            std::swap(m_requests_queue_scene_import.at(i), m_requests_queue_scene_import.back());
-            request_props_imported_scene const  request = m_requests_queue_scene_import.back();
-            m_requests_queue_scene_import.pop_back();
-
-            if (request.scene.loaded_successfully())
-                try
-                {
-                import_scene({ &request.scene.hierarchy(), &request.scene.effects() }, request.folder_guid);
-                    if (request.store_in_cache)
-                        m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
-                }
-                catch (std::exception const&  e)
-                {
-                    LOG(error, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
-                    // To prevent subsequent attempts to load the scene from disk.
-                    m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
-                }
-            else
-                // To prevent subsequent attempts to load the scene from disk.
-                m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
-        }
-        else
-            ++i;
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-// SCENE IMPORT/EXPORT API
-/////////////////////////////////////////////////////////////////////////////////////
-
-
-simulation_context::imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : m_hierarchy()
-    , m_effects()
-{
-    boost::filesystem::path const  scene_dir = finaliser->get_key().get_unique_id();
-
-    {
-        boost::filesystem::path  pathname = scene_dir / "hierarchy.json";
-
-        if (!boost::filesystem::is_regular_file(pathname))
-            throw std::runtime_error(msgstream() << "Cannot access scene file '" << pathname << "'.");
-
-        std::ifstream  istr(pathname.string(), std::ios_base::binary);
-        if (!istr.good())
-            throw std::runtime_error(msgstream() << "Cannot open the scene file '" << pathname << "'.");
-
-        boost::property_tree::read_json(istr, m_hierarchy);
-    }
-
-    {
-        boost::filesystem::path  pathname = scene_dir / "effects.json";
-
-        if (!boost::filesystem::is_regular_file(pathname))
-            throw std::runtime_error(msgstream() << "Cannot access effects file '" << pathname << "'.");
-
-        std::ifstream  istr(pathname.string(), std::ios_base::binary);
-        if (!istr.good())
-            throw std::runtime_error(msgstream() << "Cannot open the effects file '" << pathname << "'.");
-
-        boost::property_tree::ptree  ptree;
-        boost::property_tree::read_json(istr, ptree);
-        for (auto it = ptree.begin(); it != ptree.end(); ++it)
-        {
-            gfx::effects_config::light_types  light_types;
-            for (auto const& lt_and_tree : it->second.get_child("light_types"))
-                light_types.insert((gfx::LIGHT_TYPE)lt_and_tree.second.get_value<int>());
-            gfx::effects_config::lighting_data_types  lighting_data_types;
-            for (auto const& ldt_and_tree : it->second.get_child("lighting_data_types"))
-                lighting_data_types.insert({
-                    (gfx::LIGHTING_DATA_TYPE)std::atoi(ldt_and_tree.first.c_str()),
-                    (gfx::SHADER_DATA_INPUT_TYPE)ldt_and_tree.second.get_value<int>()
-                });
-            gfx::effects_config::shader_output_types  shader_output_types;
-            for (auto const& sot_and_tree : it->second.get_child("shader_output_types"))
-                shader_output_types.insert((gfx::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
-
-            m_effects[it->first] = gfx::effects_config(
-                    nullptr,
-                    light_types,
-                    lighting_data_types,
-                    (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("lighting_algo_location"),
-                    shader_output_types,
-                    (gfx::FOG_TYPE)it->second.get<int>("fog_type"),
-                    (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("fog_algo_location")
-                    );
-        }
-    }
-}
-
-
-simulation_context::imported_scene::imported_scene(boost::filesystem::path const&  path)
-    : async::resource_accessor<imported_scene_data>(
-            { "com::simulation_context::imported_scene", boost::filesystem::absolute(path).string() }, 1U, nullptr
-            )
-{}
-
-
-void  simulation_context::request_import_scene_from_directory(
-        std::string const&  directory_on_the_disk, object_guid const  under_folder_guid, bool const  cache_imported_scene
-        ) const
-{
-    m_requests_queue_scene_import.push_back({ imported_scene(directory_on_the_disk), under_folder_guid, cache_imported_scene });
-}
-
-
-// Disabled (not const) for modules.
-
-
-void  simulation_context::import_scene(import_scene_props const&  props, object_guid const  under_folder_guid)
-{
-    if (props.hierarchy->count("@pivot") != 0UL)
-    {
-        import_gfxtuner_scene(props, under_folder_guid);
-        return;
-    }
-    // TODO!
-}
-
-
-void  simulation_context::import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid)
-{
-    ASSUMPTION(props.hierarchy->count("@pivot") != 0UL);
-
-    for (auto  it = props.hierarchy->begin(); it != props.hierarchy->end(); ++it)
-    {
-        if (it->first.empty() || it->first.front() == '@')
-            continue;
-
-        folder_content_type const&  fct = folder_content(under_folder_guid);
-
-        std::string  name = it->first;
-        if (fct.child_folders.count(name) != 0)
-        {
-            natural_32_bit  counter = 0U;
-            for ( ; fct.child_folders.count(name + '.' + std::to_string(counter)) != 0U; ++counter)
-                ;
-            name = name + '.' + std::to_string(counter);
-        }
-
-        object_guid const  folder_guid = insert_folder(under_folder_guid, name);
-
-        import_gfxtuner_scene_node({ &it->second, props.effects }, folder_guid);
-
-        for_each_child_folder(folder_guid, true, true,
-            [this](object_guid const  folder_guid, folder_content_type const&  fct) -> bool {
-                auto const  it = fct.content.find(to_string(OBJECT_KIND::RIGID_BODY));
-                if (it == fct.content.end() || it->second.kind != OBJECT_KIND::RIGID_BODY || !is_rigid_body_moveable(it->second))
-                    return true;
-                angeo::mass_and_inertia_tensor_builder  builder;
-                for (object_guid  collider_guid : m_rigid_bodies.at(it->second.index).colliders)
-                    switch (collider_shape_type(collider_guid))
-                    {
-                    case angeo::COLLISION_SHAPE_TYPE::BOX:
-                        builder.insert_box(
-                                collider_box_half_sizes_along_axes(collider_guid),
-                                frame_world_matrix(frame_of_collider(collider_guid)),
-                                collision_material_of(collider_guid),
-                                1.0f // TODO!
-                                );
-                        break;
-                    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
-                        builder.insert_capsule(
-                                collider_capsule_half_distance_between_end_points(collider_guid),
-                                collider_capsule_thickness_from_central_line(collider_guid),
-                                frame_world_matrix(frame_of_collider(collider_guid)),
-                                collision_material_of(collider_guid),
-                                1.0f // TODO!
-                                );
-                        break;
-                    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
-                        builder.insert_sphere(
-                                translation_vector(frame_world_matrix(frame_of_collider(collider_guid))),
-                                collider_sphere_radius(collider_guid),
-                                collision_material_of(collider_guid),
-                                1.0f // TODO!
-                                );
-                        break;
-                    default:
-                        NOT_IMPLEMENTED_YET();
-                        break;
-                    }
-                float_32_bit  mass_inverted;
-                matrix33  inertia_tensor_inverted;
-                vector3  center_of_mass_in_world_space;
-                builder.run(mass_inverted, inertia_tensor_inverted, center_of_mass_in_world_space);
-                set_rigid_body_inverted_mass(it->second, mass_inverted);
-                set_rigid_body_inverted_inertia_tensor(it->second, inertia_tensor_inverted);
-
-                object_guid const  rb_frame_guid = frame_of_rigid_body(it->second);
-                matrix44 const&  W = frame_world_matrix(rb_frame_guid);
-                vector3 const  origin_shift_in_world_space = center_of_mass_in_world_space - translation_vector(W);
-                vector3 const  origin_shift_in_local_space = transform_vector(origin_shift_in_world_space, inverse44(W));
-                frame_translate(rb_frame_guid, origin_shift_in_world_space);
-                std::vector<object_guid>  child_frame_guids;
-                direct_children_frames(rb_frame_guid, child_frame_guids);
-                for (object_guid  child_guid : child_frame_guids)
-                    frame_translate(child_guid, -origin_shift_in_world_space);
-                set_rigid_body_mass_centre(it->second, frame_coord_system_in_world_space(rb_frame_guid).origin());
-                
-                return true;
-            });
-    }
-}
-
-
-void  simulation_context::import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid)
-{
-    boost::property_tree::ptree const&  origin_tree = props.hierarchy->find("origin")->second;
-    vector3  origin(
-            origin_tree.get<scalar>("x"),
-            origin_tree.get<scalar>("y"),
-            origin_tree.get<scalar>("z")
-            );
-
-    boost::property_tree::ptree const&  orientation_tree = props.hierarchy->find("orientation")->second;
-    quaternion  orientation = make_quaternion_xyzw(
-            orientation_tree.get<scalar>("x"),
-            orientation_tree.get<scalar>("y"),
-            orientation_tree.get<scalar>("z"),
-            orientation_tree.get<scalar>("w")
-            );
-
-    frame_relocate(insert_frame(folder_guid), origin, orientation);
-
-    boost::property_tree::ptree const&  folders = props.hierarchy->find("folders")->second;
-
-    bool  has_static_collider = false;
-    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
-        if (folder_it->first == "collider" && !folder_it->second.begin()->second.get<bool>("is_dynamic"))
-        {
-            switch(angeo::read_collison_class_from_string(folder_it->second.begin()->second.get<std::string>("collision_class")))
-            {
-            case angeo::COLLISION_CLASS::STATIC_OBJECT:
-            case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
-            case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
-            case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
-                break;
-            default: continue;
-            }
-
-            object_guid  rigid_body_guid = invalid_object_guid();
-            for_each_parent_folder(folder_guid, true,
-                [this, &rigid_body_guid](object_guid const  folder_guid, folder_content_type const&  fct) -> bool {
-                    auto  it = fct.content.find(to_string(OBJECT_KIND::RIGID_BODY));
-                    if (it == fct.content.end())
-                        return true;
-                    rigid_body_guid = it->second;
-                    return false;
-                });
-            if (rigid_body_guid != invalid_object_guid())
-                m_moveable_rigid_bodies.erase(rigid_body_guid.index);
-
-            has_static_collider = true;
-
-            break;
-        }
-
-    auto rb_it = folders.find("rigid_body");
-    if (rb_it != folders.not_found())
-    {
-        boost::property_tree::ptree const&  data = rb_it->second.begin()->second;
-
-        auto const  load_vector = [&data](std::string const&  key) -> vector3 {
-            boost::property_tree::path const  key_path(key, '/');
-            return vector3(data.get<float_32_bit>(key_path / "x", 0.0f),
-                            data.get<float_32_bit>(key_path / "y", 0.0f),
-                            data.get<float_32_bit>(key_path / "z", 0.0f));
-        };
-
-        auto const  load_matrix33 = [&data](std::string const&  key) -> matrix33 {
-            matrix33  M;
-            boost::property_tree::path const  key_path(key, '/');
-            M(0,0) = data.get<float_32_bit>(key_path / "00", 0.0f);
-            M(0,1) = data.get<float_32_bit>(key_path / "01", 0.0f);
-            M(0,2) = data.get<float_32_bit>(key_path / "02", 0.0f);
-            M(1,0) = data.get<float_32_bit>(key_path / "10", 0.0f);
-            M(1,1) = data.get<float_32_bit>(key_path / "11", 0.0f);
-            M(1,2) = data.get<float_32_bit>(key_path / "12", 0.0f);
-            M(2,0) = data.get<float_32_bit>(key_path / "20", 0.0f);
-            M(2,1) = data.get<float_32_bit>(key_path / "21", 0.0f);
-            M(2,2) = data.get<float_32_bit>(key_path / "22", 0.0f);
-            return M;
-        };
-
-        insert_rigid_body(
-                folder_guid,
-                data.get<float_32_bit>("mass_inverted", 0.0f),
-                load_matrix33("inertia_tensor_inverted"),
-                load_vector("linear_velocity"),
-                load_vector("angular_velocity"),
-                load_vector("external_linear_acceleration"),
-                load_vector("external_angular_acceleration"),
-                !has_static_collider
-                );
-    }
-
-    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
-        if (folder_it->first == "batches")
-        {
-            object_guid const  batches_folder_guid = insert_folder(folder_guid, folder_it->first);
-            for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
-            {
-                std::string const  batch_id = record_it->second.get<std::string>("id");
-                if (boost::starts_with(batch_id, gfx::get_sketch_id_prefix()))
-                {
-                    boost::property_tree::ptree  props;
-                    gfx::read_sketch_info_from_id(batch_id, props);
-                    vector3  box_half_sizes_along_axes;
-                    float_32_bit  capsule_half_distance;
-                    float_32_bit  capsule_thickness;
-                    float_32_bit  sphere_radius;
-                    natural_8_bit  num_lines;
-                    vector4  colour;
-                    gfx::FOG_TYPE  fog_type;
-                    bool wireframe;
-                    if (gfx::parse_box_info_from_id(props, box_half_sizes_along_axes, colour, fog_type, wireframe))
-                        if (wireframe)
-                            insert_batch_wireframe_box(batches_folder_guid, record_it->first, box_half_sizes_along_axes, colour);
-                        else
-                            insert_batch_solid_box(batches_folder_guid, record_it->first, box_half_sizes_along_axes, colour);
-                    else if (gfx::parse_capsule_info_from_id(props, capsule_half_distance, capsule_thickness, num_lines, colour, fog_type, wireframe))
-                        if (wireframe)
-                            insert_batch_wireframe_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
-                                                           capsule_thickness, num_lines, colour);
-                        else
-                            insert_batch_solid_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
-                                                       capsule_thickness, num_lines, colour);
-                    else if (gfx::parse_sphere_info_from_id(props, sphere_radius, num_lines, colour, fog_type, wireframe))
-                        if (wireframe)
-                            insert_batch_wireframe_sphere(batches_folder_guid, record_it->first, sphere_radius, num_lines, colour);
-                        else
-                            insert_batch_solid_sphere(batches_folder_guid, record_it->first, sphere_radius, num_lines, colour);
-                    else { UNREACHABLE(); }
-                }
-                else
-                    load_batch(
-                            batches_folder_guid,
-                            to_string(OBJECT_KIND::BATCH) + record_it->first,
-                            record_it->second.get<std::string>("id"),
-                            props.effects->at(record_it->second.get<std::string>("effects")),
-                            record_it->second.get<std::string>("skin")
-                            );
-            }
-        }
-        else if (folder_it->first == "collider")
-        {
-            boost::property_tree::ptree const&  data = folder_it->second.begin()->second;
-            angeo::COLLISION_SHAPE_TYPE const  shape_type = angeo::as_collision_shape_type(data.get<std::string>("shape_type"));
-            if (shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
-                insert_collider_box(
-                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".box",
-                        vector3(data.get<float_32_bit>("half_size_along_x"),
-                                data.get<float_32_bit>("half_size_along_y"),
-                                data.get<float_32_bit>("half_size_along_z")),
-                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
-                        );
-            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
-                insert_collider_capsule(
-                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".capsule",
-                        data.get<float_32_bit>("half_distance_between_end_points"),
-                        data.get<float_32_bit>("thickness_from_central_line"),
-                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
-                        );
-            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
-                insert_collider_sphere(
-                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".sphere",
-                        data.get<float_32_bit>("radius"),
-                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
-                        );
-            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
-            {
-                boost::filesystem::path const  buffers_dir = data.get<std::string>("buffers_directory");
-                gfx::buffer  vertex_buffer(buffers_dir / "vertices.txt", std::numeric_limits<async::load_priority_type>::max());
-                gfx::buffer  index_buffer(buffers_dir / "indices.txt", std::numeric_limits<async::load_priority_type>::max());
-                if (!vertex_buffer.wait_till_load_is_finished())
-                    throw std::runtime_error("Load of file 'vertices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
-                if (!index_buffer.wait_till_load_is_finished())
-                    throw std::runtime_error("Load of file 'indices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
-
-                struct  collider_triangle_mesh_vertex_getter
-                {
-                    collider_triangle_mesh_vertex_getter(gfx::buffer const  vertex_buffer_, gfx::buffer const  index_buffer_)
-                        : vertex_buffer(vertex_buffer_)
-                        , index_buffer(index_buffer_)
-                    {
-                        ASSUMPTION(vertex_buffer.loaded_successfully() && index_buffer.loaded_successfully());
-                        ASSUMPTION(
-                            vertex_buffer.num_bytes_per_component() == sizeof(float_32_bit) &&
-                            vertex_buffer.num_components_per_primitive() == 3U &&
-                            vertex_buffer.has_integral_components() == false
-                            );
-                        ASSUMPTION(
-                            index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
-                            index_buffer.num_components_per_primitive() == 3U &&
-                            index_buffer.has_integral_components() == true
-                            );
-                    }
-
-                    vector3  operator()(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
-                    {
-                        return vector3(((float_32_bit const*)vertex_buffer.data().data()) + 3U * read_index_buffer(triangle_index, vertex_index));
-                    }
-
-                    natural_32_bit  read_index_buffer(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
-                    {
-                        return *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index);
-                    }
-
-                    gfx::buffer  get_vertex_buffer() const { return vertex_buffer; }
-                    gfx::buffer  get_index_buffer() const { return index_buffer; }
-
-                private:
-                    gfx::buffer  vertex_buffer;
-                    gfx::buffer  index_buffer;
-                };
-
-                insert_collider_triangle_mesh(
-                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".triangle.",
-                        index_buffer.num_primitives(),
-                        collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
-                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
-                        );
-            }
-            else
-            {
-                NOT_IMPLEMENTED_YET();
-            }
-        }
-
-    boost::property_tree::ptree const&  children = props.hierarchy->find("children")->second;
-    for (auto child_it = children.begin(); child_it != children.end(); ++child_it)
-        import_gfxtuner_scene_node({ &child_it->second, props.effects }, insert_folder(folder_guid, child_it->first));
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-// ACCESS PATH API
-/////////////////////////////////////////////////////////////////////////////////////
-
-
-object_guid  simulation_context::from_absolute_path(std::string const&  path) const
-{
-    NOT_IMPLEMENTED_YET();
-    return invalid_object_guid();
-}
-
-
-std::string  simulation_context::to_absolute_path(object_guid const  guid) const
-{
-    NOT_IMPLEMENTED_YET();
-    return "";
-}
-
-
-object_guid  simulation_context::from_relative_path(object_guid const  base_guid, std::string const&  relative_path) const
-{
-    NOT_IMPLEMENTED_YET();
-    return invalid_object_guid();
-}
-
-
-std::string  simulation_context::to_relative_path(object_guid const  guid, object_guid const  relative_base_guid) const
-{
-    NOT_IMPLEMENTED_YET();
-    return "";
 }
 
 
@@ -684,40 +206,33 @@ void  simulation_context::for_each_child_folder(object_guid const  folder_guid, 
 }
 
 
-void  simulation_context::request_insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name) const
-{
-    NOT_IMPLEMENTED_YET();
-}
-
-
-void  simulation_context::request_erase_non_root_empty_folder(object_guid const  folder_guid) const
-{
-    NOT_IMPLEMENTED_YET();
-}
-
-
-// Disabled (not const) for modules.
-
-
-object_guid  simulation_context::insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name)
+object_guid  simulation_context::insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name) const
 {
     ASSUMPTION(folder_content(under_folder_guid).child_folders.count(folder_name) == 0ULL);
-    object_guid const  new_folder_guid = { OBJECT_KIND::FOLDER, m_folders.insert(folder_content_type(folder_name, under_folder_guid)) };
-    m_folders.at(under_folder_guid.index).child_folders.insert({ folder_name, new_folder_guid });
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    object_guid const  new_folder_guid = {
+            OBJECT_KIND::FOLDER,
+            self->m_folders.insert(folder_content_type(folder_name, under_folder_guid))
+            };
+    self->m_folders.at(under_folder_guid.index).child_folders.insert({ folder_name, new_folder_guid });
     return new_folder_guid;
 }
 
 
-void  simulation_context::erase_non_root_empty_folder(object_guid const  folder_guid)
+void  simulation_context::erase_non_root_empty_folder(object_guid const  folder_guid) const
 {
     ASSUMPTION(is_folder_empty(folder_guid));
     if (folder_guid != root_folder())
     {
+        simulation_context* const  self = const_cast<simulation_context*>(this);
         folder_content_type const&  erased_folder = m_folders.at(folder_guid.index);
-        m_folders.at(erased_folder.parent_folder.index).child_folders.erase(erased_folder.folder_name);
-        m_folders.erase(folder_guid.index);
+        self->m_folders.at(erased_folder.parent_folder.index).child_folders.erase(erased_folder.folder_name);
+        self->m_folders.erase(folder_guid.index);
     }
 }
+
+
+// Disabled (not const) for modules.
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -830,15 +345,22 @@ matrix44 const&  simulation_context::frame_world_matrix(object_guid const  frame
 }
 
 
-void  simulation_context::request_insert_frame(object_guid const  under_folder_guid) const
+object_guid  simulation_context::insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
+                                              vector3 const&  origin, quaternion const&  orientation) const
 {
-    NOT_IMPLEMENTED_YET();
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    object_guid const  frame_guid = self->insert_frame(under_folder_guid);
+    if (is_valid_frame_guid(parent_frame_guid))
+        self->set_parent_frame(frame_guid, parent_frame_guid);
+    self->frame_relocate(frame_guid, origin, orientation);
+    return frame_guid;
 }
 
 
 void  simulation_context::request_erase_frame(object_guid const  frame_guid) const
 {
-    NOT_IMPLEMENTED_YET();
+    m_requests_erase_frame.push_back(frame_guid);
+    m_pending_requests.push_back(REQUST_ERASE_FRAME);
 }
 
 
@@ -1340,7 +862,97 @@ bool  simulation_context::is_collider_enabled(object_guid const  collider_guid) 
 }
 
 
+object_guid  simulation_context::insert_collider_box(
+        object_guid const  under_folder_guid, std::string const&  name,
+        vector3 const&  half_sizes_along_axes,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class
+        ) const
+{
+    return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name,
+        [this, &half_sizes_along_axes, material, collision_class]
+        (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            coids.push_back(m_collision_scene_ptr->insert_box(half_sizes_along_axes, W, material, collision_class, is_dynamic));
+        });
+}
+
+
+object_guid  simulation_context::insert_collider_capsule(
+        object_guid const  under_folder_guid, std::string const&  name,
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class
+        ) const
+{
+    return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name,
+        [this, half_distance_between_end_points, thickness_from_central_line, material, collision_class]
+            (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            coids.push_back(m_collision_scene_ptr->insert_capsule(half_distance_between_end_points, thickness_from_central_line,
+                                                                  W, material, collision_class, is_dynamic));
+        });
+}
+
+
+object_guid  simulation_context::insert_collider_sphere(
+        object_guid const  under_folder_guid, std::string const&  name,
+        float_32_bit const  radius,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class
+        ) const
+{
+    return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name,
+        [this, radius, material, collision_class]
+        (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            coids.push_back(m_collision_scene_ptr->insert_sphere(radius, W, material, collision_class, is_dynamic));
+        });
+}
+
+
+object_guid  simulation_context::insert_collider_triangle_mesh(
+        object_guid const  under_folder_guid, std::string const&  name_prefix,
+        natural_32_bit const  num_triangles,
+        std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class
+        ) const
+{
+    return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name_prefix,
+            [this, num_triangles, &getter_of_end_points_in_model_space, material, collision_class]
+            (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+                m_collision_scene_ptr->insert_triangle_mesh(num_triangles, getter_of_end_points_in_model_space,
+                                                            W, material, collision_class, is_dynamic, coids);
+            });
+}
+
+
 void  simulation_context::request_enable_collider(object_guid const  collider_guid, bool const  state) const
+{
+    m_requst_enable_collider.push_back({collider_guid, state});
+    m_pending_requests.push_back(REQUST_ENABLE_COLLIDER);
+}
+
+
+void  simulation_context::request_enable_colliding(
+        object_guid const  collider_1, object_guid const  collider_2, const bool  state
+        ) const
+{
+    m_requst_enable_colliding.push_back({collider_1, collider_2, state});
+    m_pending_requests.push_back(REQUST_ENABLE_COLLIDING);
+}
+
+
+void  simulation_context::request_erase_collider(object_guid const  collider_guid) const
+{
+    m_requests_erase_collider.push_back(collider_guid);
+    m_pending_requests.push_back(REQUST_ERASE_COLLIDER);
+}
+
+
+// Disabled (not const) for modules.
+
+
+void  simulation_context::enable_collider(object_guid const  collider_guid, bool const  state)
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
     for (angeo::collision_object_id  coid : m_colliders.at(collider_guid.index).id)
@@ -1348,9 +960,7 @@ void  simulation_context::request_enable_collider(object_guid const  collider_gu
 }
 
 
-void  simulation_context::request_enable_colliding(
-        object_guid const  collider_1, object_guid const  collider_2, const bool  state
-        ) const
+void  simulation_context::enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state)
 {
     ASSUMPTION(is_valid_collider_guid(collider_1) && is_valid_collider_guid(collider_2));
     for (angeo::collision_object_id  coid_1 : m_colliders.at(collider_1.index).id)
@@ -1360,9 +970,6 @@ void  simulation_context::request_enable_colliding(
             else
                 m_collision_scene_ptr->disable_colliding(coid_1, coid_2);
 }
-
-
-// Disabled (not const) for modules.
 
 
 std::vector<angeo::collision_object_id> const&  simulation_context::from_collider_guid(object_guid const  collider_guid)
@@ -1436,93 +1043,23 @@ object_guid  simulation_context::insert_collider(
     if (owner_guid != invalid_object_guid())
         switch (owner_guid.kind)
         {
-        case OBJECT_KIND::RIGID_BODY: m_rigid_bodies.at(owner_guid.index).colliders.push_back(collider_guid); break;
+        case OBJECT_KIND::RIGID_BODY: break;
         // TODO:
         //case OBJECT_KIND::DEVICE: m_devices.at(owner_guid.index).colliders.push_back(collider_guid); break;
         //case OBJECT_KIND::AGENT: m_agents.at(owner_guid.index).colliders.push_back(collider_guid); break;
         default: UNREACHABLE(); break;
         }
 
-    if (rigid_body_guid != invalid_object_guid() && rigid_body_guid != owner_guid)
-        switch (m_collision_scene_ptr->get_collision_class(coids.front()))
-        {
-        case angeo::COLLISION_CLASS::STATIC_OBJECT:
-        case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
-        case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
-        case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
-            m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(collider_guid);
-            break;
-        default: break;
-        }
+    if (rigid_body_guid != invalid_object_guid())
+        m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(collider_guid);
 
     if (is_moveable)
+    {
         m_moveable_colliders.insert(collider_guid.index);
+        m_rigid_bodies_with_invalidated_shape.insert(rigid_body_guid);
+    }
 
     return collider_guid;
-}
-
-
-object_guid  simulation_context::insert_collider_box(
-        object_guid const  under_folder_guid, std::string const&  name,
-        vector3 const&  half_sizes_along_axes,
-        angeo::COLLISION_MATERIAL_TYPE const  material,
-        angeo::COLLISION_CLASS const  collision_class
-        )
-{
-    return insert_collider(under_folder_guid, name,
-        [this, &half_sizes_along_axes, material, collision_class]
-        (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
-            coids.push_back(m_collision_scene_ptr->insert_box(half_sizes_along_axes, W, material, collision_class, is_dynamic));
-        });
-}
-
-
-object_guid  simulation_context::insert_collider_capsule(
-        object_guid const  under_folder_guid, std::string const&  name,
-        float_32_bit const  half_distance_between_end_points,
-        float_32_bit const  thickness_from_central_line,
-        angeo::COLLISION_MATERIAL_TYPE const  material,
-        angeo::COLLISION_CLASS const  collision_class
-        )
-{
-    return insert_collider(under_folder_guid, name,
-        [this, half_distance_between_end_points, thickness_from_central_line, material, collision_class]
-            (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
-            coids.push_back(m_collision_scene_ptr->insert_capsule(half_distance_between_end_points, thickness_from_central_line,
-                                                                  W, material, collision_class, is_dynamic));
-        });
-}
-
-
-object_guid  simulation_context::insert_collider_sphere(
-        object_guid const  under_folder_guid, std::string const&  name,
-        float_32_bit const  radius,
-        angeo::COLLISION_MATERIAL_TYPE const  material,
-        angeo::COLLISION_CLASS const  collision_class
-        )
-{
-    return insert_collider(under_folder_guid, name,
-        [this, radius, material, collision_class]
-        (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
-            coids.push_back(m_collision_scene_ptr->insert_sphere(radius, W, material, collision_class, is_dynamic));
-        });
-}
-
-
-object_guid  simulation_context::insert_collider_triangle_mesh(
-        object_guid const  under_folder_guid, std::string const&  name_prefix,
-        natural_32_bit const  num_triangles,
-        std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
-        angeo::COLLISION_MATERIAL_TYPE const  material,
-        angeo::COLLISION_CLASS const  collision_class
-        )
-{
-    return insert_collider(under_folder_guid, name_prefix,
-            [this, num_triangles, &getter_of_end_points_in_model_space, material, collision_class]
-            (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
-                m_collision_scene_ptr->insert_triangle_mesh(num_triangles, getter_of_end_points_in_model_space,
-                                                            W, material, collision_class, is_dynamic, coids);
-            });
 }
 
 
@@ -1534,6 +1071,15 @@ void  simulation_context::erase_collider(object_guid const  collider_guid)
         );
 
     auto const&  elem = m_colliders.at(collider_guid.index);
+    if (is_valid_rigid_body_guid(elem.rigid_body))
+    {
+        auto&  rb_colliders = m_rigid_bodies.at(elem.rigid_body.index).colliders;
+        auto const  self_it = std::find(rb_colliders.begin(), rb_colliders.end(), collider_guid);
+        ASSUMPTION(self_it != rb_colliders.end());
+        rb_colliders.erase(self_it);
+        if (is_rigid_body_moveable(elem.rigid_body))
+            m_rigid_bodies_with_invalidated_shape.insert(elem.rigid_body);
+    }
     for (angeo::collision_object_id  coid : elem.id)
         m_collision_scene_ptr->erase_object(coid);
     m_folders.at(elem.folder_index).content.erase(elem.element_name);
@@ -1633,26 +1179,14 @@ std::vector<object_guid> const&  simulation_context::colliders_of_rigid_body(obj
 }
 
 
-// Disabled (not const) for modules.
-
-
-angeo::rigid_body_id  simulation_context::from_rigid_body_guid(object_guid const  rigid_body_guid)
-{
-    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
-    return m_rigid_bodies.at(rigid_body_guid.index).id;
-}
-
-
 object_guid  simulation_context::insert_rigid_body(
         object_guid const  under_folder_guid,
-        float_32_bit const  mass_inverted,
-        matrix33 const&  inertia_tensor_inverted,
+        bool const  is_moveable,
         vector3 const&  linear_velocity,
         vector3 const&  angular_velocity,
-        vector3 const&  external_linear_acceleration,
-        vector3 const&  external_angular_acceleration,
-        bool const  is_moveable
-        )
+        vector3 const&  linear_acceleration,
+        vector3 const&  angular_acceleration
+        ) const
 {
     ASSUMPTION((
         folder_content(under_folder_guid).content.count(to_string(OBJECT_KIND::RIGID_BODY)) == 0UL &&
@@ -1676,27 +1210,62 @@ object_guid  simulation_context::insert_rigid_body(
     angeo::rigid_body_id const  rbid = m_rigid_body_simulator_ptr->insert_rigid_body(
             frame_coord_system_in_world_space(frame_guid).origin(),
             frame_coord_system_in_world_space(frame_guid).orientation(),
-            mass_inverted,
-            inertia_tensor_inverted,
+            0.0f,
+            matrix33_zero(),
             linear_velocity,
             angular_velocity,
-            external_linear_acceleration,
-            external_angular_acceleration
+            linear_acceleration,
+            angular_acceleration
             );
+
+    simulation_context* const  self = const_cast<simulation_context*>(this);
 
     object_guid const  rigid_body_guid = {
             OBJECT_KIND::RIGID_BODY,
-            m_rigid_bodies.insert({ rbid, under_folder_guid.index, frame_guid })
+            self->m_rigid_bodies.insert({ rbid, under_folder_guid.index, frame_guid })
             };
 
-    m_rbids_to_guids.insert({ rbid, rigid_body_guid });
+    self->m_rbids_to_guids.insert({ rbid, rigid_body_guid });
 
-    m_folders.at(under_folder_guid.index).content.insert({ to_string(OBJECT_KIND::RIGID_BODY), rigid_body_guid });
+    self->m_folders.at(under_folder_guid.index).content.insert({ to_string(OBJECT_KIND::RIGID_BODY), rigid_body_guid });
+
+    for_each_child_folder(under_folder_guid, true, true,
+        [self, rigid_body_guid](object_guid const  folder_guid, folder_content_type const&  fct) -> bool {
+            for (auto const&  name_and_guid : fct.content)
+                if (name_and_guid.second.kind == OBJECT_KIND::COLLIDER)
+                {
+                    self->m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(name_and_guid.second);
+                    self->m_colliders.at(name_and_guid.second.index).rigid_body = rigid_body_guid;
+                }
+            return true;
+        });
 
     if (is_moveable)
-        m_moveable_rigid_bodies.insert(rigid_body_guid.index);
+    {
+        self->m_moveable_rigid_bodies.insert(rigid_body_guid.index);
+        for (object_guid  collider_guid : m_rigid_bodies.at(rigid_body_guid.index).colliders)
+            self->m_moveable_colliders.insert(collider_guid.index);
+        self->m_rigid_bodies_with_invalidated_shape.insert(rigid_body_guid);
+    }
 
     return rigid_body_guid;
+}
+
+
+void  simulation_context::request_erase_rigid_body(object_guid const  rigid_body_guid) const
+{
+    m_requests_erase_rigid_body.push_back(rigid_body_guid);
+    m_pending_requests.push_back(REQUST_ERASE_RIGID_BODY);
+}
+
+
+// Disabled (not const) for modules.
+
+
+angeo::rigid_body_id  simulation_context::from_rigid_body_guid(object_guid const  rigid_body_guid)
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    return m_rigid_bodies.at(rigid_body_guid.index).id;
 }
 
 
@@ -1708,6 +1277,11 @@ void  simulation_context::erase_rigid_body(object_guid const  rigid_body_guid)
         );
 
     auto const&  elem = m_rigid_bodies.at(rigid_body_guid.index);
+    for (object_guid  collider_guid : elem.colliders)
+    {
+        m_colliders.at(collider_guid.index).rigid_body = invalid_object_guid();
+        m_moveable_colliders.erase(collider_guid.index);
+    }
     m_rigid_body_simulator_ptr->erase_rigid_body(elem.id);
     m_folders.at(elem.folder_index).content.erase(elem.element_name);
     m_rbids_to_guids.erase(elem.id);
@@ -1875,6 +1449,541 @@ void  simulation_context::clear_collision_contacts()
 {
     m_collision_contacts.clear();
     m_from_colliders_to_contacts.clear();
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+// ACCESS PATH API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+object_guid  simulation_context::from_absolute_path(std::string const&  path) const
+{
+    NOT_IMPLEMENTED_YET();
+    return invalid_object_guid();
+}
+
+
+std::string  simulation_context::to_absolute_path(object_guid const  guid) const
+{
+    NOT_IMPLEMENTED_YET();
+    return "";
+}
+
+
+object_guid  simulation_context::from_relative_path(object_guid const  base_guid, std::string const&  relative_path) const
+{
+    NOT_IMPLEMENTED_YET();
+    return invalid_object_guid();
+}
+
+
+std::string  simulation_context::to_relative_path(object_guid const  guid, object_guid const  relative_base_guid) const
+{
+    NOT_IMPLEMENTED_YET();
+    return "";
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+// REQUESTS PROCESSING API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+// Disabled (not const) for modules.
+
+
+void  simulation_context::process_rigid_bodies_with_invalidated_shape()
+{
+    for (object_guid  rb_guid : m_rigid_bodies_with_invalidated_shape)
+    {
+        if (!is_valid_rigid_body_guid(rb_guid) || !is_rigid_body_moveable(rb_guid))
+            continue;
+
+        angeo::mass_and_inertia_tensor_builder  builder;
+        for (object_guid  collider_guid : m_rigid_bodies.at(rb_guid.index).colliders)
+        {
+            switch (collision_class_of(collider_guid))
+            {
+            case angeo::COLLISION_CLASS::STATIC_OBJECT:
+            case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+            case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+            case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+                break;
+            default: continue;
+            }
+
+            switch (collider_shape_type(collider_guid))
+            {
+            case angeo::COLLISION_SHAPE_TYPE::BOX:
+                builder.insert_box(
+                        collider_box_half_sizes_along_axes(collider_guid),
+                        frame_world_matrix(frame_of_collider(collider_guid)),
+                        collision_material_of(collider_guid),
+                        1.0f // TODO!
+                        );
+                break;
+            case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+                builder.insert_capsule(
+                        collider_capsule_half_distance_between_end_points(collider_guid),
+                        collider_capsule_thickness_from_central_line(collider_guid),
+                        frame_world_matrix(frame_of_collider(collider_guid)),
+                        collision_material_of(collider_guid),
+                        1.0f // TODO!
+                        );
+                break;
+            case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+                builder.insert_sphere(
+                        translation_vector(frame_world_matrix(frame_of_collider(collider_guid))),
+                        collider_sphere_radius(collider_guid),
+                        collision_material_of(collider_guid),
+                        1.0f // TODO!
+                        );
+                break;
+            default:
+                NOT_IMPLEMENTED_YET();
+                break;
+            }
+        }
+        float_32_bit  mass_inverted;
+        matrix33  inertia_tensor_inverted;
+        vector3  center_of_mass_in_world_space;
+        builder.run(mass_inverted, inertia_tensor_inverted, center_of_mass_in_world_space);
+        set_rigid_body_inverted_mass(rb_guid, mass_inverted);
+        set_rigid_body_inverted_inertia_tensor(rb_guid, inertia_tensor_inverted);
+
+        object_guid const  rb_frame_guid = frame_of_rigid_body(rb_guid);
+        matrix44 const&  W = frame_world_matrix(rb_frame_guid);
+        vector3 const  origin_shift_in_world_space = center_of_mass_in_world_space - translation_vector(W);
+        vector3 const  origin_shift_in_local_space = transform_vector(origin_shift_in_world_space, inverse44(W));
+        frame_translate(rb_frame_guid, origin_shift_in_world_space);
+        std::vector<object_guid>  child_frame_guids;
+        direct_children_frames(rb_frame_guid, child_frame_guids);
+        for (object_guid  child_guid : child_frame_guids)
+            frame_translate(child_guid, -origin_shift_in_world_space);
+        set_rigid_body_mass_centre(rb_guid, frame_coord_system_in_world_space(rb_frame_guid).origin());
+    }
+    m_rigid_bodies_with_invalidated_shape.clear();
+}
+
+
+void  simulation_context::process_pending_early_requests()
+{
+}
+
+
+void  simulation_context::process_pending_requests()
+{
+    std::vector<object_guid>::const_iterator  erase_frame_it = m_requests_erase_frame.begin();
+    std::vector<requst_data_enable_collider>::const_iterator  enable_collider_it = m_requst_enable_collider.begin();
+    std::vector<requst_data_enable_colliding>::const_iterator  enable_colliding_it = m_requst_enable_colliding.begin();
+    std::vector<object_guid>::const_iterator  erase_collider_it = m_requests_erase_collider.begin();
+    std::vector<object_guid>::const_iterator  erase_rigid_body_it = m_requests_erase_rigid_body.begin();
+
+    for (REQUST_KIND  kind : m_pending_requests)
+        switch (kind)
+        {
+        case REQUST_ERASE_FRAME:
+            erase_frame(*erase_frame_it);
+            ++erase_frame_it;
+            break;
+        case REQUST_ENABLE_COLLIDER:
+            enable_collider(enable_collider_it->collider_guid, enable_collider_it->state);
+            ++enable_collider_it;
+            break;
+        case REQUST_ENABLE_COLLIDING:
+            enable_colliding(enable_colliding_it->collider_1, enable_colliding_it->collider_2, enable_colliding_it->state);
+            ++enable_colliding_it;
+            break;
+        case REQUST_ERASE_COLLIDER:
+            erase_collider(*erase_collider_it);
+            ++erase_collider_it;
+            break;
+        case REQUST_ERASE_RIGID_BODY:
+            erase_rigid_body(*erase_rigid_body_it);
+            ++erase_rigid_body_it;
+            break;
+        default:
+            break;
+        }
+
+    m_requests_erase_frame.clear();
+    m_requst_enable_collider.clear();
+    m_requst_enable_colliding.clear();
+    m_requests_erase_collider.clear();
+    m_requests_erase_rigid_body.clear();
+}
+
+
+void  simulation_context::process_pending_requests_import_scene()
+{
+    for (natural_32_bit  i = 0U; i < (natural_32_bit)m_requests_queue_scene_import.size(); )
+        if (m_requests_queue_scene_import.at(i).scene.is_load_finished())
+        {
+            std::swap(m_requests_queue_scene_import.at(i), m_requests_queue_scene_import.back());
+            request_props_imported_scene const  request = m_requests_queue_scene_import.back();
+            m_requests_queue_scene_import.pop_back();
+
+            if (request.scene.loaded_successfully())
+                try
+                {
+                    import_scene({ &request.scene.hierarchy(), &request.scene.effects() }, request.folder_guid);
+                    if (request.store_in_cache)
+                        m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+                }
+                catch (std::exception const&  e)
+                {
+                    LOG(error, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
+                    // To prevent subsequent attempts to load the scene from disk.
+                    m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+                }
+            else
+                // To prevent subsequent attempts to load the scene from disk.
+                m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+        }
+        else
+            ++i;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+// SCENE IMPORT/EXPORT API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+simulation_context::imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser)
+    : m_hierarchy()
+    , m_effects()
+{
+    boost::filesystem::path const  scene_dir = finaliser->get_key().get_unique_id();
+
+    {
+        boost::filesystem::path  pathname = scene_dir / "hierarchy.json";
+
+        if (!boost::filesystem::is_regular_file(pathname))
+            throw std::runtime_error(msgstream() << "Cannot access scene file '" << pathname << "'.");
+
+        std::ifstream  istr(pathname.string(), std::ios_base::binary);
+        if (!istr.good())
+            throw std::runtime_error(msgstream() << "Cannot open the scene file '" << pathname << "'.");
+
+        boost::property_tree::read_json(istr, m_hierarchy);
+    }
+
+    {
+        boost::filesystem::path  pathname = scene_dir / "effects.json";
+
+        if (!boost::filesystem::is_regular_file(pathname))
+            throw std::runtime_error(msgstream() << "Cannot access effects file '" << pathname << "'.");
+
+        std::ifstream  istr(pathname.string(), std::ios_base::binary);
+        if (!istr.good())
+            throw std::runtime_error(msgstream() << "Cannot open the effects file '" << pathname << "'.");
+
+        boost::property_tree::ptree  ptree;
+        boost::property_tree::read_json(istr, ptree);
+        for (auto it = ptree.begin(); it != ptree.end(); ++it)
+        {
+            gfx::effects_config::light_types  light_types;
+            for (auto const& lt_and_tree : it->second.get_child("light_types"))
+                light_types.insert((gfx::LIGHT_TYPE)lt_and_tree.second.get_value<int>());
+            gfx::effects_config::lighting_data_types  lighting_data_types;
+            for (auto const& ldt_and_tree : it->second.get_child("lighting_data_types"))
+                lighting_data_types.insert({
+                    (gfx::LIGHTING_DATA_TYPE)std::atoi(ldt_and_tree.first.c_str()),
+                    (gfx::SHADER_DATA_INPUT_TYPE)ldt_and_tree.second.get_value<int>()
+                });
+            gfx::effects_config::shader_output_types  shader_output_types;
+            for (auto const& sot_and_tree : it->second.get_child("shader_output_types"))
+                shader_output_types.insert((gfx::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
+
+            m_effects[it->first] = gfx::effects_config(
+                    nullptr,
+                    light_types,
+                    lighting_data_types,
+                    (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("lighting_algo_location"),
+                    shader_output_types,
+                    (gfx::FOG_TYPE)it->second.get<int>("fog_type"),
+                    (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("fog_algo_location")
+                    );
+        }
+    }
+}
+
+
+simulation_context::imported_scene::imported_scene(boost::filesystem::path const&  path)
+    : async::resource_accessor<imported_scene_data>(
+            { "com::simulation_context::imported_scene", boost::filesystem::absolute(path).string() }, 1U, nullptr
+            )
+{}
+
+
+void  simulation_context::request_import_scene_from_directory(
+        std::string const&  directory_on_the_disk, object_guid const  under_folder_guid, bool const  cache_imported_scene
+        ) const
+{
+    m_requests_queue_scene_import.push_back({ imported_scene(directory_on_the_disk), under_folder_guid, cache_imported_scene });
+}
+
+
+// Disabled (not const) for modules.
+
+
+void  simulation_context::import_scene(import_scene_props const&  props, object_guid const  under_folder_guid)
+{
+    if (props.hierarchy->count("@pivot") != 0UL)
+    {
+        import_gfxtuner_scene(props, under_folder_guid);
+        return;
+    }
+    // TODO!
+}
+
+
+void  simulation_context::import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid)
+{
+    ASSUMPTION(props.hierarchy->count("@pivot") != 0UL);
+
+    for (auto  it = props.hierarchy->begin(); it != props.hierarchy->end(); ++it)
+    {
+        if (it->first.empty() || it->first.front() == '@')
+            continue;
+
+        folder_content_type const&  fct = folder_content(under_folder_guid);
+
+        std::string  name = it->first;
+        if (fct.child_folders.count(name) != 0)
+        {
+            natural_32_bit  counter = 0U;
+            for ( ; fct.child_folders.count(name + '.' + std::to_string(counter)) != 0U; ++counter)
+                ;
+            name = name + '.' + std::to_string(counter);
+        }
+
+        object_guid const  folder_guid = insert_folder(under_folder_guid, name);
+
+        import_gfxtuner_scene_node({ &it->second, props.effects }, folder_guid);
+    }
+
+    process_rigid_bodies_with_invalidated_shape();
+}
+
+
+void  simulation_context::import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid)
+{
+    boost::property_tree::ptree const&  origin_tree = props.hierarchy->find("origin")->second;
+    vector3  origin(
+            origin_tree.get<scalar>("x"),
+            origin_tree.get<scalar>("y"),
+            origin_tree.get<scalar>("z")
+            );
+
+    boost::property_tree::ptree const&  orientation_tree = props.hierarchy->find("orientation")->second;
+    quaternion  orientation = make_quaternion_xyzw(
+            orientation_tree.get<scalar>("x"),
+            orientation_tree.get<scalar>("y"),
+            orientation_tree.get<scalar>("z"),
+            orientation_tree.get<scalar>("w")
+            );
+
+    frame_relocate(insert_frame(folder_guid), origin, orientation);
+
+    boost::property_tree::ptree const&  folders = props.hierarchy->find("folders")->second;
+
+    bool  has_static_collider = false;
+    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
+        if (folder_it->first == "collider" && !folder_it->second.begin()->second.get<bool>("is_dynamic"))
+        {
+            switch(angeo::read_collison_class_from_string(folder_it->second.begin()->second.get<std::string>("collision_class")))
+            {
+            case angeo::COLLISION_CLASS::STATIC_OBJECT:
+            case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+            case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+            case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+                break;
+            default: continue;
+            }
+
+            has_static_collider = true;
+
+            break;
+        }
+    if (has_static_collider)
+    {
+        object_guid  rigid_body_guid = invalid_object_guid();
+        for_each_parent_folder(folder_guid, true,
+            [this, &rigid_body_guid](object_guid const  folder_guid, folder_content_type const&  fct) -> bool {
+                auto  it = fct.content.find(to_string(OBJECT_KIND::RIGID_BODY));
+                if (it == fct.content.end())
+                    return true;
+                rigid_body_guid = it->second;
+                return false;
+            });
+        if (rigid_body_guid != invalid_object_guid())
+            m_moveable_rigid_bodies.erase(rigid_body_guid.index);
+    }
+
+    auto rb_it = folders.find("rigid_body");
+    if (rb_it != folders.not_found())
+    {
+        boost::property_tree::ptree const&  data = rb_it->second.begin()->second;
+
+        auto const  load_vector = [&data](std::string const&  key) -> vector3 {
+            boost::property_tree::path const  key_path(key, '/');
+            return vector3(data.get<float_32_bit>(key_path / "x", 0.0f),
+                            data.get<float_32_bit>(key_path / "y", 0.0f),
+                            data.get<float_32_bit>(key_path / "z", 0.0f));
+        };
+
+        insert_rigid_body(
+                folder_guid,
+                !has_static_collider,
+                load_vector("linear_velocity"),
+                load_vector("angular_velocity"),
+                load_vector("external_linear_acceleration"),
+                load_vector("external_angular_acceleration")
+                );
+    }
+    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
+        if (folder_it->first == "batches")
+        {
+            object_guid const  batches_folder_guid = insert_folder(folder_guid, folder_it->first);
+            for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
+            {
+                std::string const  batch_id = record_it->second.get<std::string>("id");
+                if (boost::starts_with(batch_id, gfx::get_sketch_id_prefix()))
+                {
+                    boost::property_tree::ptree  props;
+                    gfx::read_sketch_info_from_id(batch_id, props);
+                    vector3  box_half_sizes_along_axes;
+                    float_32_bit  capsule_half_distance;
+                    float_32_bit  capsule_thickness;
+                    float_32_bit  sphere_radius;
+                    natural_8_bit  num_lines;
+                    vector4  colour;
+                    gfx::FOG_TYPE  fog_type;
+                    bool wireframe;
+                    if (gfx::parse_box_info_from_id(props, box_half_sizes_along_axes, colour, fog_type, wireframe))
+                        if (wireframe)
+                            insert_batch_wireframe_box(batches_folder_guid, record_it->first, box_half_sizes_along_axes, colour);
+                        else
+                            insert_batch_solid_box(batches_folder_guid, record_it->first, box_half_sizes_along_axes, colour);
+                    else if (gfx::parse_capsule_info_from_id(props, capsule_half_distance, capsule_thickness, num_lines, colour, fog_type, wireframe))
+                        if (wireframe)
+                            insert_batch_wireframe_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
+                                                           capsule_thickness, num_lines, colour);
+                        else
+                            insert_batch_solid_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
+                                                       capsule_thickness, num_lines, colour);
+                    else if (gfx::parse_sphere_info_from_id(props, sphere_radius, num_lines, colour, fog_type, wireframe))
+                        if (wireframe)
+                            insert_batch_wireframe_sphere(batches_folder_guid, record_it->first, sphere_radius, num_lines, colour);
+                        else
+                            insert_batch_solid_sphere(batches_folder_guid, record_it->first, sphere_radius, num_lines, colour);
+                    else { UNREACHABLE(); }
+                }
+                else
+                    load_batch(
+                            batches_folder_guid,
+                            to_string(OBJECT_KIND::BATCH) + record_it->first,
+                            record_it->second.get<std::string>("id"),
+                            props.effects->at(record_it->second.get<std::string>("effects")),
+                            record_it->second.get<std::string>("skin")
+                            );
+            }
+        }
+        else if (folder_it->first == "collider")
+        {
+            boost::property_tree::ptree const&  data = folder_it->second.begin()->second;
+            angeo::COLLISION_SHAPE_TYPE const  shape_type = angeo::as_collision_shape_type(data.get<std::string>("shape_type"));
+            if (shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
+                insert_collider_box(
+                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".box",
+                        vector3(data.get<float_32_bit>("half_size_along_x"),
+                                data.get<float_32_bit>("half_size_along_y"),
+                                data.get<float_32_bit>("half_size_along_z")),
+                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
+                        );
+            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
+                insert_collider_capsule(
+                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".capsule",
+                        data.get<float_32_bit>("half_distance_between_end_points"),
+                        data.get<float_32_bit>("thickness_from_central_line"),
+                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
+                        );
+            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
+                insert_collider_sphere(
+                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".sphere",
+                        data.get<float_32_bit>("radius"),
+                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
+                        );
+            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
+            {
+                boost::filesystem::path const  buffers_dir = data.get<std::string>("buffers_directory");
+                gfx::buffer  vertex_buffer(buffers_dir / "vertices.txt", std::numeric_limits<async::load_priority_type>::max());
+                gfx::buffer  index_buffer(buffers_dir / "indices.txt", std::numeric_limits<async::load_priority_type>::max());
+                if (!vertex_buffer.wait_till_load_is_finished())
+                    throw std::runtime_error("Load of file 'vertices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
+                if (!index_buffer.wait_till_load_is_finished())
+                    throw std::runtime_error("Load of file 'indices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
+
+                struct  collider_triangle_mesh_vertex_getter
+                {
+                    collider_triangle_mesh_vertex_getter(gfx::buffer const  vertex_buffer_, gfx::buffer const  index_buffer_)
+                        : vertex_buffer(vertex_buffer_)
+                        , index_buffer(index_buffer_)
+                    {
+                        ASSUMPTION(vertex_buffer.loaded_successfully() && index_buffer.loaded_successfully());
+                        ASSUMPTION(
+                            vertex_buffer.num_bytes_per_component() == sizeof(float_32_bit) &&
+                            vertex_buffer.num_components_per_primitive() == 3U &&
+                            vertex_buffer.has_integral_components() == false
+                            );
+                        ASSUMPTION(
+                            index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
+                            index_buffer.num_components_per_primitive() == 3U &&
+                            index_buffer.has_integral_components() == true
+                            );
+                    }
+
+                    vector3  operator()(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
+                    {
+                        return vector3(((float_32_bit const*)vertex_buffer.data().data()) + 3U * read_index_buffer(triangle_index, vertex_index));
+                    }
+
+                    natural_32_bit  read_index_buffer(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
+                    {
+                        return *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index);
+                    }
+
+                    gfx::buffer  get_vertex_buffer() const { return vertex_buffer; }
+                    gfx::buffer  get_index_buffer() const { return index_buffer; }
+
+                private:
+                    gfx::buffer  vertex_buffer;
+                    gfx::buffer  index_buffer;
+                };
+
+                insert_collider_triangle_mesh(
+                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".triangle.",
+                        index_buffer.num_primitives(),
+                        collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
+                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
+                        );
+            }
+            else
+            {
+                NOT_IMPLEMENTED_YET();
+            }
+        }
+
+    boost::property_tree::ptree const&  children = props.hierarchy->find("children")->second;
+    for (auto child_it = children.begin(); child_it != children.end(); ++child_it)
+        import_gfxtuner_scene_node({ &child_it->second, props.effects }, insert_folder(folder_guid, child_it->first));
 }
 
 
