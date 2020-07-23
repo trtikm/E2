@@ -3,6 +3,7 @@
 
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/rigid_body.hpp>
+#   include <angeo/custom_constraint_id.hpp>
 #   include <angeo/motion_constraint_system.hpp>
 #   include <angeo/contact_id.hpp>
 #   include <angeo/collision_material.hpp>
@@ -143,8 +144,6 @@ struct  rigid_body_simulator
                                     // constraints (if 'friction_info_ptr != nullptr', of course; for each vector3
                                     // in 'friction_info_ptr->m_unit_tangent_plane_vectors' one friction constraint).
             );
-
-    using custom_constraint_id = natural_32_bit;
 
     custom_constraint_id  gen_fresh_custom_constraint_id();
     void  release_generated_custom_constraint_id(custom_constraint_id const  id);

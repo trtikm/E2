@@ -17,7 +17,7 @@ struct  scene
     using  node_id = scene_node_id;
     using  record_id = scene_record_id;
     using  collision_object_id = scene_collision_object_id;
-    using  custom_constraint_id = angeo::rigid_body_simulator::custom_constraint_id;
+    using  custom_constraint_id = angeo::custom_constraint_id;
 
     struct  collicion_contant_info
     {

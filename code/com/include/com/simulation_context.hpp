@@ -12,6 +12,7 @@
 #   include <angeo/collision_class.hpp>
 #   include <angeo/collision_object_id.hpp>
 #   include <angeo/rigid_body.hpp>
+#   include <angeo/custom_constraint_id.hpp>
 //#   include <ai/simulator.hpp>
 #   include <ai/object_id.hpp>
 #   include <utility/basic_numeric_types.hpp>
@@ -353,6 +354,12 @@ struct simulation_context
     vector3 const&  mass_centre_of_rigid_body(object_guid const  rigid_body_guid) const;
     quaternion const&  orientation_of_rigid_body(object_guid const  rigid_body_guid) const;
     std::vector<object_guid> const&  colliders_of_rigid_body(object_guid const  rigid_body_guid) const;
+    vector3 const&  linear_velocity_of_rigid_body(object_guid const  rigid_body_guid) const;
+    vector3 const&  angular_velocity_of_rigid_body(object_guid const  rigid_body_guid) const;
+    vector3 const&  linear_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const;
+    vector3 const&  angular_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const;
+    angeo::custom_constraint_id  acquire_fresh_custom_constraint_id_from_physics() const;
+    void  release_acquired_custom_constraint_id_back_to_physics(angeo::custom_constraint_id const  ccid) const;
     object_guid  insert_rigid_body(
             object_guid const  under_folder_guid,
             bool const  is_moveable,
@@ -362,6 +369,29 @@ struct simulation_context
             vector3 const&  angular_acceleration = vector3_zero()
             ) const;
     void  request_erase_rigid_body(object_guid const  rigid_body_guid) const;
+    void  request_set_rigid_body_linear_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity) const;
+    void  request_set_rigid_body_angular_velocity(object_guid const  rigid_body_guid,  vector3 const&  velocity) const;
+    void  request_set_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+                                                                 vector3 const&  acceleration) const;
+    void  request_set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+                                                                  vector3 const&  acceleration) const;
+    void  request_remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid) const;
+    void  request_remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid) const;
+    void  request_early_insertion_of_custom_constraint_to_physics(
+            angeo::custom_constraint_id const  ccid,
+            object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
+            object_guid const  rigid_body_1, vector3 const&  linear_component_1, vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            float_32_bit const  variable_lower_bound, float_32_bit const  variable_upper_bound,
+            float_32_bit const  initial_value_for_cache_miss
+            ) const;
+    void  request_early_insertion_of_instant_constraint_to_physics(
+            object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
+            object_guid const  rigid_body_1, vector3 const&  linear_component_1, vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            float_32_bit const  variable_lower_bound, float_32_bit const  variable_upper_bound,
+            float_32_bit const  initial_value
+            ) const;
     // Disabled (not const) for modules.
     angeo::rigid_body_id  from_rigid_body_guid(object_guid const  rigid_body_guid);
     void  erase_rigid_body(object_guid const  rigid_body_guid);
@@ -369,6 +399,29 @@ struct simulation_context
     void  set_rigid_body_orientation(object_guid const  rigid_body_guid, quaternion const&  orientation);
     void  set_rigid_body_inverted_mass(object_guid const  rigid_body_guid, float_32_bit const  inverted_mass);
     void  set_rigid_body_inverted_inertia_tensor(object_guid const  rigid_body_guid, matrix33 const&  inverted_inertia_tensor);
+    void  set_rigid_body_linear_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity);
+    void  set_rigid_body_angular_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity);
+    void  set_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+                                                         vector3 const&  accel);
+    void  set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+                                                          vector3 const&  accel);
+    void  remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid);
+    void  remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid);
+    void  insert_custom_constraint_to_physics(
+            angeo::custom_constraint_id const  ccid,
+            object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
+            object_guid const  rigid_body_1, vector3 const&  linear_component_1, vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            float_32_bit const  variable_lower_bound, float_32_bit const  variable_upper_bound,
+            float_32_bit const  initial_value_for_cache_miss
+            );
+    void  insert_instant_constraint_to_physics(
+            object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
+            object_guid const  rigid_body_1, vector3 const&  linear_component_1, vector3 const&  angular_component_1,
+            float_32_bit const  bias,
+            float_32_bit const  variable_lower_bound, float_32_bit const  variable_upper_bound,
+            float_32_bit const  initial_value
+            );
 
     /////////////////////////////////////////////////////////////////////////////////////
     // DEVICES API
@@ -609,10 +662,30 @@ private:
 
     enum REQUST_EARLY_KIND
     {
-        TODO
+        REQUST_INSERT_CUSTOM_CONSTRAINT     = 0,
+        REQUST_INSERT_INSTANT_CONSTRAINT    = 1,
+    };
+
+    struct request_data_insertion_of_custom_constraint {
+        angeo::custom_constraint_id  ccid;
+        object_guid  rigid_body_0; vector3  linear_component_0; vector3  angular_component_0;
+        object_guid  rigid_body_1; vector3  linear_component_1; vector3  angular_component_1;
+        float_32_bit  bias;
+        float_32_bit  variable_lower_bound; float_32_bit  variable_upper_bound;
+        float_32_bit  initial_value_for_cache_miss;
+    };
+
+    struct request_data_insertion_of_instant_constraint {
+        object_guid  rigid_body_0; vector3  linear_component_0; vector3  angular_component_0;
+        object_guid  rigid_body_1; vector3  linear_component_1; vector3  angular_component_1;
+        float_32_bit  bias;
+        float_32_bit  variable_lower_bound; float_32_bit  variable_upper_bound;
+        float_32_bit  initial_value;
     };
 
     mutable std::vector<REQUST_EARLY_KIND>  m_pending_requests_early;
+    mutable std::vector<request_data_insertion_of_custom_constraint> m_requests_early_insert_custom_constraint;
+    mutable std::vector<request_data_insertion_of_instant_constraint> m_requests_early_insert_instant_constraint;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // REQUESTS HANDLING
@@ -620,15 +693,24 @@ private:
 
     enum REQUST_KIND
     {
-        REQUST_ERASE_FRAME          = 0,
-        REQUST_ENABLE_COLLIDER      = 1,
-        REQUST_ENABLE_COLLIDING     = 2,
-        REQUST_ERASE_COLLIDER       = 3,
-        REQUST_ERASE_RIGID_BODY     = 4,
+        REQUST_ERASE_FRAME                  = 0,
+        REQUST_ENABLE_COLLIDER              = 1,
+        REQUST_ENABLE_COLLIDING             = 2,
+        REQUST_ERASE_COLLIDER               = 3,
+        REQUST_ERASE_RIGID_BODY             = 4,
+        REQUST_SET_LINEAR_VELOCITY          = 5,
+        REQUST_SET_ANGULAR_VELOCITY         = 6,
+        REQUST_SET_LINEAR_ACCEL             = 7,
+        REQUST_SET_ANGULAR_ACCEL            = 8,
+        REQUST_DEL_LINEAR_ACCEL             = 9,
+        REQUST_DEL_ANGULAR_ACCEL            = 10,
     };
 
     struct  requst_data_enable_collider { object_guid  collider_guid; bool  state; };
     struct  requst_data_enable_colliding { object_guid  collider_1; object_guid  collider_2; bool  state; };
+    struct  requst_data_set_velocity { object_guid  rb_guid; vector3  velocity; };
+    struct  requst_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
+    struct  requst_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
 
     mutable std::vector<REQUST_KIND>  m_pending_requests;
     mutable std::vector<object_guid>  m_requests_erase_frame;
@@ -636,6 +718,12 @@ private:
     mutable std::vector<requst_data_enable_colliding>  m_requst_enable_colliding;
     mutable std::vector<object_guid>  m_requests_erase_collider;
     mutable std::vector<object_guid>  m_requests_erase_rigid_body;
+    mutable std::vector<requst_data_set_velocity>  m_requests_set_linear_velocity;
+    mutable std::vector<requst_data_set_velocity>  m_requests_set_angular_velocity;
+    mutable std::vector<requst_data_set_acceleration_from_source>  m_requests_set_linear_acceleration_from_source;
+    mutable std::vector<requst_data_set_acceleration_from_source>  m_requests_set_angular_acceleration_from_source;
+    mutable std::vector<requst_data_del_acceleration_from_source>  m_requests_del_linear_acceleration_from_source;
+    mutable std::vector<requst_data_del_acceleration_from_source>  m_requests_del_angular_acceleration_from_source;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // SCENE IMPORT REQUESTS HANDLING

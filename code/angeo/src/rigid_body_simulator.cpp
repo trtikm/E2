@@ -374,7 +374,7 @@ void  rigid_body_simulator::insert_contact_constraints(
 }
 
 
-rigid_body_simulator::custom_constraint_id  rigid_body_simulator::gen_fresh_custom_constraint_id()
+custom_constraint_id  rigid_body_simulator::gen_fresh_custom_constraint_id()
 {
     if (m_released_custom_constraint_ids.empty())
         return ++m_max_generated_custom_constraint_id;

@@ -46,6 +46,7 @@ add_library(${THIS_TARGET_NAME}
     ./src/collision_scene.cpp
 
     ./include/angeo/rigid_body.hpp
+    ./include/angeo/custom_constraint_id.hpp
     ./include/angeo/motion_constraint_system.hpp
     ./src/motion_constraint_system.cpp
     ./include/angeo/rigid_body_simulator.hpp

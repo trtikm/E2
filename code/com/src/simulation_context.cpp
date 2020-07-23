@@ -65,6 +65,8 @@ simulation_context::simulation_context(
     // EARLY REQUESTS HANDLING
     , m_rigid_bodies_with_invalidated_shape()
     , m_pending_requests_early()
+    , m_requests_early_insert_custom_constraint()
+    , m_requests_early_insert_instant_constraint()
     // REQUESTS HANDLING
     , m_pending_requests()
     , m_requests_erase_frame()
@@ -72,6 +74,12 @@ simulation_context::simulation_context(
     , m_requst_enable_colliding()
     , m_requests_erase_collider()
     , m_requests_erase_rigid_body()
+    , m_requests_set_linear_velocity()
+    , m_requests_set_angular_velocity()
+    , m_requests_set_linear_acceleration_from_source()
+    , m_requests_set_angular_acceleration_from_source()
+    , m_requests_del_linear_acceleration_from_source()
+    , m_requests_del_angular_acceleration_from_source()
     // SCENE IMPORT REQUESTS HANDLING
     , m_requests_queue_scene_import()
     , m_cache_of_imported_scenes()
@@ -1179,6 +1187,46 @@ std::vector<object_guid> const&  simulation_context::colliders_of_rigid_body(obj
 }
 
 
+vector3 const&  simulation_context::linear_velocity_of_rigid_body(object_guid const  rigid_body_guid) const
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    return m_rigid_body_simulator_ptr->get_linear_velocity(m_rigid_bodies.at(rigid_body_guid.index).id);
+}
+
+
+vector3 const&  simulation_context::angular_velocity_of_rigid_body(object_guid const  rigid_body_guid) const
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    return m_rigid_body_simulator_ptr->get_angular_velocity(m_rigid_bodies.at(rigid_body_guid.index).id);
+}
+
+
+vector3 const&  simulation_context::linear_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    return m_rigid_body_simulator_ptr->get_linear_acceleration(m_rigid_bodies.at(rigid_body_guid.index).id);
+}
+
+
+vector3 const&  simulation_context::angular_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    return m_rigid_body_simulator_ptr->get_angular_acceleration(m_rigid_bodies.at(rigid_body_guid.index).id);
+}
+
+
+angeo::custom_constraint_id  simulation_context::acquire_fresh_custom_constraint_id_from_physics() const
+{
+    return m_rigid_body_simulator_ptr->gen_fresh_custom_constraint_id();
+}
+
+
+void  simulation_context::release_acquired_custom_constraint_id_back_to_physics(angeo::custom_constraint_id const  ccid) const
+{
+    m_rigid_body_simulator_ptr->release_generated_custom_constraint_id(ccid);
+}
+
+
 object_guid  simulation_context::insert_rigid_body(
         object_guid const  under_folder_guid,
         bool const  is_moveable,
@@ -1259,6 +1307,92 @@ void  simulation_context::request_erase_rigid_body(object_guid const  rigid_body
 }
 
 
+void  simulation_context::request_set_rigid_body_linear_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity) const
+{
+    m_requests_set_linear_velocity.push_back({ rigid_body_guid, velocity });
+    m_pending_requests.push_back(REQUST_SET_LINEAR_VELOCITY);
+}
+
+
+void  simulation_context::request_set_rigid_body_angular_velocity(object_guid const  rigid_body_guid,  vector3 const&  velocity) const
+{
+    m_requests_set_angular_velocity.push_back({ rigid_body_guid, velocity });
+    m_pending_requests.push_back(REQUST_SET_ANGULAR_VELOCITY);
+}
+
+
+void  simulation_context::request_set_rigid_body_linear_acceleration_from_source(
+        object_guid const  rigid_body_guid, object_guid const  source_guid, vector3 const&  acceleration) const
+{
+    m_requests_set_linear_acceleration_from_source.push_back({ rigid_body_guid, source_guid, acceleration });
+    m_pending_requests.push_back(REQUST_SET_LINEAR_ACCEL);
+}
+
+
+void  simulation_context::request_set_rigid_body_angular_acceleration_from_source(
+        object_guid const  rigid_body_guid, object_guid const  source_guid, vector3 const&  acceleration) const
+{
+    m_requests_set_angular_acceleration_from_source.push_back({ rigid_body_guid, source_guid, acceleration });
+    m_pending_requests.push_back(REQUST_SET_ANGULAR_ACCEL);
+}
+
+
+void  simulation_context::request_remove_rigid_body_linear_acceleration_from_source(
+        object_guid const  rigid_body_guid, object_guid const  source_guid) const
+{
+    m_requests_del_linear_acceleration_from_source.push_back({ rigid_body_guid, source_guid });
+    m_pending_requests.push_back(REQUST_DEL_LINEAR_ACCEL);
+}
+
+
+void  simulation_context::request_remove_rigid_body_angular_acceleration_from_source(
+        object_guid const  rigid_body_guid, object_guid const  source_guid) const
+{
+    m_requests_del_angular_acceleration_from_source.push_back({ rigid_body_guid, source_guid });
+    m_pending_requests.push_back(REQUST_DEL_ANGULAR_ACCEL);
+}
+
+
+void  simulation_context::request_early_insertion_of_custom_constraint_to_physics(
+        angeo::custom_constraint_id const  ccid,
+        object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
+        object_guid const  rigid_body_1, vector3 const&  linear_component_1, vector3 const&  angular_component_1,
+        float_32_bit const  bias,
+        float_32_bit const  variable_lower_bound, float_32_bit const  variable_upper_bound,
+        float_32_bit const  initial_value_for_cache_miss
+        ) const
+{
+    m_requests_early_insert_custom_constraint.push_back({
+        ccid,
+        rigid_body_0, linear_component_0, angular_component_0,
+        rigid_body_1, linear_component_1, angular_component_1,
+        bias,
+        variable_lower_bound, variable_upper_bound,
+        initial_value_for_cache_miss
+        });
+    m_pending_requests_early.push_back(REQUST_INSERT_CUSTOM_CONSTRAINT);
+}
+
+
+void  simulation_context::request_early_insertion_of_instant_constraint_to_physics(
+        object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
+        object_guid const  rigid_body_1, vector3 const&  linear_component_1, vector3 const&  angular_component_1,
+        float_32_bit const  bias,
+        float_32_bit const  variable_lower_bound, float_32_bit const  variable_upper_bound,
+        float_32_bit const  initial_value
+        ) const
+{
+    m_requests_early_insert_instant_constraint.push_back({
+        rigid_body_0, linear_component_0, angular_component_0,
+        rigid_body_1, linear_component_1, angular_component_1,
+        bias,
+        variable_lower_bound, variable_upper_bound,
+        initial_value
+        });
+    m_pending_requests_early.push_back(REQUST_INSERT_INSTANT_CONSTRAINT);
+}
+
+
 // Disabled (not const) for modules.
 
 
@@ -1317,6 +1451,92 @@ void  simulation_context::set_rigid_body_inverted_inertia_tensor(object_guid con
     ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
     m_rigid_body_simulator_ptr->set_inverted_inertia_tensor_in_local_space(m_rigid_bodies.at(rigid_body_guid.index).id,
                                                                            inverted_inertia_tensor);
+}
+
+
+void  simulation_context::set_rigid_body_linear_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity)
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    m_rigid_body_simulator_ptr->set_linear_velocity(m_rigid_bodies.at(rigid_body_guid.index).id, velocity);
+}
+
+
+void  simulation_context::set_rigid_body_angular_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity)
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    m_rigid_body_simulator_ptr->set_angular_velocity(m_rigid_bodies.at(rigid_body_guid.index).id, velocity);
+}
+
+
+void  simulation_context::set_rigid_body_linear_acceleration_from_source(
+        object_guid const  rigid_body_guid, object_guid const  source_guid, vector3 const&  accel)
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid) && is_valid_rigid_body_guid(source_guid));
+    m_rigid_body_simulator_ptr->set_linear_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid, accel);
+}
+
+
+void  simulation_context::set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+                                                        vector3 const&  accel)
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid) && is_valid_rigid_body_guid(source_guid));
+    m_rigid_body_simulator_ptr->set_angular_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid, accel);
+}
+
+
+void  simulation_context::remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid)
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid) && is_valid_rigid_body_guid(source_guid));
+    m_rigid_body_simulator_ptr->remove_linear_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid);
+}
+
+
+void  simulation_context::remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid)
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid) && is_valid_rigid_body_guid(source_guid));
+    m_rigid_body_simulator_ptr->remove_angular_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid);
+}
+
+
+void  simulation_context::insert_custom_constraint_to_physics(
+        angeo::custom_constraint_id const  ccid,
+        object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
+        object_guid const  rigid_body_1, vector3 const&  linear_component_1, vector3 const&  angular_component_1,
+        float_32_bit const  bias,
+        float_32_bit const  variable_lower_bound, float_32_bit const  variable_upper_bound,
+        float_32_bit const  initial_value_for_cache_miss
+        )
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_0) && is_valid_rigid_body_guid(rigid_body_1));
+    m_rigid_body_simulator_ptr->insert_custom_constraint(
+            ccid,
+            m_rigid_bodies.at(rigid_body_0.index).id, linear_component_0, angular_component_0,
+            m_rigid_bodies.at(rigid_body_1.index).id, linear_component_1, angular_component_1,
+            bias,
+            [variable_lower_bound](std::vector<float_32_bit> const&) { return variable_lower_bound; },
+            [variable_upper_bound](std::vector<float_32_bit> const&) { return variable_upper_bound; },
+            initial_value_for_cache_miss
+            );
+}
+
+
+void  simulation_context::insert_instant_constraint_to_physics(
+        object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
+        object_guid const  rigid_body_1, vector3 const&  linear_component_1, vector3 const&  angular_component_1,
+        float_32_bit const  bias,
+        float_32_bit const  variable_lower_bound, float_32_bit const  variable_upper_bound,
+        float_32_bit const  initial_value
+        )
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_0) && is_valid_rigid_body_guid(rigid_body_1));
+    m_rigid_body_simulator_ptr->get_constraint_system().insert_constraint(
+            m_rigid_bodies.at(rigid_body_0.index).id, linear_component_0, angular_component_0,
+            m_rigid_bodies.at(rigid_body_1.index).id, linear_component_1, angular_component_1,
+            bias,
+            [variable_lower_bound](std::vector<float_32_bit> const&) { return variable_lower_bound; },
+            [variable_upper_bound](std::vector<float_32_bit> const&) { return variable_upper_bound; },
+            initial_value
+            );
 }
 
 
@@ -1569,6 +1789,44 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
 
 void  simulation_context::process_pending_early_requests()
 {
+    std::vector<request_data_insertion_of_custom_constraint>::const_iterator  insert_custom_constraint_it =
+        m_requests_early_insert_custom_constraint.begin();
+    std::vector<request_data_insertion_of_instant_constraint>::const_iterator  insert_instant_constraint_it =
+        m_requests_early_insert_instant_constraint.begin();
+
+    for (REQUST_EARLY_KIND  kind : m_pending_requests_early)
+        switch (kind)
+        {
+        case REQUST_INSERT_CUSTOM_CONSTRAINT:
+            insert_custom_constraint_to_physics(
+                insert_custom_constraint_it->ccid,
+                insert_custom_constraint_it->rigid_body_0,
+                insert_custom_constraint_it->linear_component_0, insert_custom_constraint_it->angular_component_0,
+                insert_custom_constraint_it->rigid_body_1,
+                insert_custom_constraint_it->linear_component_1, insert_custom_constraint_it->angular_component_1,
+                insert_custom_constraint_it->bias,
+                insert_custom_constraint_it->variable_lower_bound, insert_custom_constraint_it->variable_upper_bound,
+                insert_custom_constraint_it->initial_value_for_cache_miss
+                );
+            ++insert_custom_constraint_it;
+            break;
+        case REQUST_INSERT_INSTANT_CONSTRAINT:
+            insert_instant_constraint_to_physics(
+                insert_instant_constraint_it->rigid_body_0,
+                insert_instant_constraint_it->linear_component_0, insert_instant_constraint_it->angular_component_0,
+                insert_instant_constraint_it->rigid_body_1,
+                insert_instant_constraint_it->linear_component_1, insert_instant_constraint_it->angular_component_1,
+                insert_instant_constraint_it->bias,
+                insert_instant_constraint_it->variable_lower_bound, insert_instant_constraint_it->variable_upper_bound,
+                insert_instant_constraint_it->initial_value
+                );
+            ++insert_instant_constraint_it;
+            break;
+        default: UNREACHABLE(); break;
+        }
+
+    m_requests_early_insert_custom_constraint.clear();
+    m_requests_early_insert_instant_constraint.clear();
 }
 
 
@@ -1578,7 +1836,17 @@ void  simulation_context::process_pending_requests()
     std::vector<requst_data_enable_collider>::const_iterator  enable_collider_it = m_requst_enable_collider.begin();
     std::vector<requst_data_enable_colliding>::const_iterator  enable_colliding_it = m_requst_enable_colliding.begin();
     std::vector<object_guid>::const_iterator  erase_collider_it = m_requests_erase_collider.begin();
+    std::vector<requst_data_set_velocity>::const_iterator  set_linear_velocity_it = m_requests_set_linear_velocity.begin();
+    std::vector<requst_data_set_velocity>::const_iterator  set_angular_velocity_it = m_requests_set_angular_velocity.begin();
     std::vector<object_guid>::const_iterator  erase_rigid_body_it = m_requests_erase_rigid_body.begin();
+    std::vector<requst_data_set_acceleration_from_source>::const_iterator  set_linear_acceleration_it =
+        m_requests_set_linear_acceleration_from_source.begin();
+    std::vector<requst_data_set_acceleration_from_source>::const_iterator  set_angular_acceleration_it =
+        m_requests_set_angular_acceleration_from_source.begin();
+    std::vector<requst_data_del_acceleration_from_source>::const_iterator  del_linear_acceleration_it =
+        m_requests_del_linear_acceleration_from_source.begin();
+    std::vector<requst_data_del_acceleration_from_source>::const_iterator  del_angular_acceleration_it =
+        m_requests_del_angular_acceleration_from_source.begin();
 
     for (REQUST_KIND  kind : m_pending_requests)
         switch (kind)
@@ -1603,8 +1871,33 @@ void  simulation_context::process_pending_requests()
             erase_rigid_body(*erase_rigid_body_it);
             ++erase_rigid_body_it;
             break;
-        default:
+        case REQUST_SET_LINEAR_VELOCITY:
+            set_rigid_body_linear_velocity(set_linear_velocity_it->rb_guid, set_linear_velocity_it->velocity);
+            ++set_linear_velocity_it;
             break;
+        case REQUST_SET_ANGULAR_VELOCITY:
+            set_rigid_body_angular_velocity(set_angular_velocity_it->rb_guid, set_angular_velocity_it->velocity);
+            ++set_angular_velocity_it;
+            break;
+        case REQUST_SET_LINEAR_ACCEL:
+            set_rigid_body_linear_acceleration_from_source(set_linear_acceleration_it->rb_guid, set_linear_acceleration_it->source_guid,
+                                                           set_linear_acceleration_it->acceleration);
+            ++set_linear_acceleration_it;
+            break;
+        case REQUST_SET_ANGULAR_ACCEL:
+            set_rigid_body_angular_acceleration_from_source(set_angular_acceleration_it->rb_guid, set_angular_acceleration_it->source_guid,
+                                                           set_angular_acceleration_it->acceleration);
+            ++set_angular_acceleration_it;
+            break;
+        case REQUST_DEL_LINEAR_ACCEL:
+            remove_rigid_body_linear_acceleration_from_source(del_linear_acceleration_it->rb_guid, del_linear_acceleration_it->source_guid);
+            ++del_linear_acceleration_it;
+            break;
+        case REQUST_DEL_ANGULAR_ACCEL:
+            remove_rigid_body_angular_acceleration_from_source(del_angular_acceleration_it->rb_guid, del_angular_acceleration_it->source_guid);
+            ++del_angular_acceleration_it;
+            break;
+        default: UNREACHABLE(); break;
         }
 
     m_requests_erase_frame.clear();
@@ -1612,6 +1905,12 @@ void  simulation_context::process_pending_requests()
     m_requst_enable_colliding.clear();
     m_requests_erase_collider.clear();
     m_requests_erase_rigid_body.clear();
+    m_requests_set_linear_velocity.clear();
+    m_requests_set_angular_velocity.clear();
+    m_requests_set_linear_acceleration_from_source.clear();
+    m_requests_set_angular_acceleration_from_source.clear();
+    m_requests_del_linear_acceleration_from_source.clear();
+    m_requests_del_angular_acceleration_from_source.clear();
 }
 
 
