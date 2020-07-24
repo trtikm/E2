@@ -52,6 +52,7 @@ struct simulation_context
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
             std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
             );
+    ~simulation_context();
 
     template<OBJECT_KIND object_kind>
     struct  object_guid_iterator
@@ -141,8 +142,10 @@ struct simulation_context
     void  for_each_child_folder(object_guid const  folder_guid, bool const  recursively, bool const  including_passed_folder,
                                 folder_visitor_type const&  visitor) const;
     object_guid  insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name) const;
-    void  erase_non_root_empty_folder(object_guid const  folder_guid) const;
+    void  request_erase_non_root_empty_folder(object_guid const  folder_guid) const;
+    void  request_erase_non_root_folder(object_guid const  folder_guid) const;
     // Disabled (not const) for modules.
+    void  erase_non_root_empty_folder(object_guid const  folder_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // FRAMES API
@@ -193,6 +196,7 @@ struct simulation_context
     batch_guid_iterator  batches_begin() const;
     batch_guid_iterator  batches_end() const;
     std::vector<object_guid> const&  frames_of_batch(object_guid const  batch_guid) const;
+    void  request_erase_batch(object_guid const  batch_guid) const;
     // Disabled (not const) for modules.
     std::string const&  from_batch_guid(object_guid const  batch_guid);
     gfx::batch  from_batch_guid_to_batch(object_guid const  batch_guid);
@@ -521,9 +525,22 @@ struct simulation_context
 
     // Disabled (not const) for modules.
     void  process_rigid_bodies_with_invalidated_shape();
+    void  clear_rigid_bodies_with_invalidated_shape();
+
     void  process_pending_early_requests();
+    void  clear_pending_early_requests();
+
     void  process_pending_requests();
+    void  clear_pending_requests();
+
     void  process_pending_requests_import_scene();
+    void  clear_pending_requests_import_scene();
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // SCENE CLEAR API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    void  clear(bool const  also_caches = false);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // SCENE IMPORT/EXPORT API
@@ -660,10 +677,10 @@ private:
 
     std::unordered_set<object_guid>  m_rigid_bodies_with_invalidated_shape;
 
-    enum REQUST_EARLY_KIND
+    enum REQUEST_EARLY_KIND
     {
-        REQUST_INSERT_CUSTOM_CONSTRAINT     = 0,
-        REQUST_INSERT_INSTANT_CONSTRAINT    = 1,
+        REQUEST_INSERT_CUSTOM_CONSTRAINT     = 0,
+        REQUEST_INSERT_INSTANT_CONSTRAINT    = 1,
     };
 
     struct request_data_insertion_of_custom_constraint {
@@ -683,7 +700,7 @@ private:
         float_32_bit  initial_value;
     };
 
-    mutable std::vector<REQUST_EARLY_KIND>  m_pending_requests_early;
+    mutable std::vector<REQUEST_EARLY_KIND>  m_pending_requests_early;
     mutable std::vector<request_data_insertion_of_custom_constraint> m_requests_early_insert_custom_constraint;
     mutable std::vector<request_data_insertion_of_instant_constraint> m_requests_early_insert_instant_constraint;
 
@@ -691,39 +708,43 @@ private:
     // REQUESTS HANDLING
     /////////////////////////////////////////////////////////////////////////////////////
 
-    enum REQUST_KIND
+    enum REQUEST_KIND
     {
-        REQUST_ERASE_FRAME                  = 0,
-        REQUST_ENABLE_COLLIDER              = 1,
-        REQUST_ENABLE_COLLIDING             = 2,
-        REQUST_ERASE_COLLIDER               = 3,
-        REQUST_ERASE_RIGID_BODY             = 4,
-        REQUST_SET_LINEAR_VELOCITY          = 5,
-        REQUST_SET_ANGULAR_VELOCITY         = 6,
-        REQUST_SET_LINEAR_ACCEL             = 7,
-        REQUST_SET_ANGULAR_ACCEL            = 8,
-        REQUST_DEL_LINEAR_ACCEL             = 9,
-        REQUST_DEL_ANGULAR_ACCEL            = 10,
+        REQUEST_ERASE_FOLDER                 = 0,
+        REQUEST_ERASE_FRAME                  = 1,
+        REQUEST_ERASE_BATCH                  = 2,
+        REQUEST_ENABLE_COLLIDER              = 3,
+        REQUEST_ENABLE_COLLIDING             = 4,
+        REQUEST_ERASE_COLLIDER               = 5,
+        REQUEST_ERASE_RIGID_BODY             = 6,
+        REQUEST_SET_LINEAR_VELOCITY          = 7,
+        REQUEST_SET_ANGULAR_VELOCITY         = 8,
+        REQUEST_SET_LINEAR_ACCEL             = 9,
+        REQUEST_SET_ANGULAR_ACCEL            = 10,
+        REQUEST_DEL_LINEAR_ACCEL             = 11,
+        REQUEST_DEL_ANGULAR_ACCEL            = 12,
     };
 
-    struct  requst_data_enable_collider { object_guid  collider_guid; bool  state; };
-    struct  requst_data_enable_colliding { object_guid  collider_1; object_guid  collider_2; bool  state; };
-    struct  requst_data_set_velocity { object_guid  rb_guid; vector3  velocity; };
-    struct  requst_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
-    struct  requst_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
+    struct  request_data_enable_collider { object_guid  collider_guid; bool  state; };
+    struct  request_data_enable_colliding { object_guid  collider_1; object_guid  collider_2; bool  state; };
+    struct  request_data_set_velocity { object_guid  rb_guid; vector3  velocity; };
+    struct  request_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
+    struct  request_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
 
-    mutable std::vector<REQUST_KIND>  m_pending_requests;
+    mutable std::vector<REQUEST_KIND>  m_pending_requests;
+    mutable std::vector<object_guid>  m_requests_erase_folder;
     mutable std::vector<object_guid>  m_requests_erase_frame;
-    mutable std::vector<requst_data_enable_collider>  m_requst_enable_collider;
-    mutable std::vector<requst_data_enable_colliding>  m_requst_enable_colliding;
+    mutable std::vector<object_guid>  m_requests_erase_batch;
+    mutable std::vector<request_data_enable_collider>  m_requests_enable_collider;
+    mutable std::vector<request_data_enable_colliding>  m_requests_enable_colliding;
     mutable std::vector<object_guid>  m_requests_erase_collider;
     mutable std::vector<object_guid>  m_requests_erase_rigid_body;
-    mutable std::vector<requst_data_set_velocity>  m_requests_set_linear_velocity;
-    mutable std::vector<requst_data_set_velocity>  m_requests_set_angular_velocity;
-    mutable std::vector<requst_data_set_acceleration_from_source>  m_requests_set_linear_acceleration_from_source;
-    mutable std::vector<requst_data_set_acceleration_from_source>  m_requests_set_angular_acceleration_from_source;
-    mutable std::vector<requst_data_del_acceleration_from_source>  m_requests_del_linear_acceleration_from_source;
-    mutable std::vector<requst_data_del_acceleration_from_source>  m_requests_del_angular_acceleration_from_source;
+    mutable std::vector<request_data_set_velocity>  m_requests_set_linear_velocity;
+    mutable std::vector<request_data_set_velocity>  m_requests_set_angular_velocity;
+    mutable std::vector<request_data_set_acceleration_from_source>  m_requests_set_linear_acceleration_from_source;
+    mutable std::vector<request_data_set_acceleration_from_source>  m_requests_set_angular_acceleration_from_source;
+    mutable std::vector<request_data_del_acceleration_from_source>  m_requests_del_linear_acceleration_from_source;
+    mutable std::vector<request_data_del_acceleration_from_source>  m_requests_del_angular_acceleration_from_source;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // SCENE IMPORT REQUESTS HANDLING
