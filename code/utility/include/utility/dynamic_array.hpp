@@ -15,7 +15,7 @@ struct  dynamic_array
     using  indices_set = std::unordered_set<element_index>;
 
     element_index  insert(element_type const&  value = element_type());
-    void  erase(element_index const  idx) { at(idx) = element_type(); m_free_indices.erase(idx); m_free_indices.insert(idx); }
+    void  erase(element_index const  idx) { at(idx) = element_type(); m_valid_indices.erase(idx); m_free_indices.insert(idx); }
     void  clear() { m_data.clear(); m_valid_indices.clear(); m_free_indices.clear(); }
 
     bool  empty() const { return m_valid_indices.empty(); }
