@@ -55,8 +55,14 @@ struct  simulator : public com::simulator
             simulation_config().num_rounds_to_pause = 1U;
         }
 
-        if (get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
-            get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL )
+        bool const  shift = get_keyboard_props().keys_pressed().count(osi::KEY_LSHIFT()) != 0UL ||
+                            get_keyboard_props().keys_pressed().count(osi::KEY_RSHIFT()) != 0UL;
+        bool const  ctrl = get_keyboard_props().keys_pressed().count(osi::KEY_LCTRL()) != 0UL ||
+                           get_keyboard_props().keys_pressed().count(osi::KEY_RCTRL()) != 0UL;
+        bool const  alt = get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
+                          get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL;
+
+        if (alt && !ctrl)
         {
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_B()) != 0UL)
                 render_config().render_scene_batches = !render_config().render_scene_batches;
@@ -78,6 +84,20 @@ struct  simulator : public com::simulator
                 render_config().render_grid = !render_config().render_grid;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_F()) != 0UL)
                 render_config().render_frames = !render_config().render_frames;
+        }
+        else if (ctrl && !alt)
+        {
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_R()) != 0UL)
+            {
+                clear(shift);
+                if (get_program_options()->has_scene_dir())
+                    context()->request_import_scene_from_directory(
+                            get_program_options()->data_root() + '/' + get_program_options()->scene_dir(),
+                            context()->root_folder(),
+                            false
+                            );
+                simulation_config().paused = true;
+            }
         }
     }
 };
