@@ -72,6 +72,8 @@ void  frames_provider::set_parent(frame_id const  id, frame_id const  parent_id)
         chs.erase(std::find(chs.begin(), chs.end(), id));
     }
     frame.parent = parent_id;
+    if (parent_id != invalid_frame_id())
+        m_frames.at(parent_id).children.push_back(id);
     invalidate(id);
 }
 
