@@ -129,6 +129,8 @@ struct  simulator : public osi::simulator
 
     void  clear_cache_of_collider_batches() { m_collider_batches_cache.clear(); }
 
+    void  clear(bool const  also_caches) { context()->clear(also_caches); if (also_caches) clear_cache_of_collider_batches(); }
+
 private:
 
     struct  render_task_info
