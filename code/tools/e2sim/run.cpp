@@ -36,7 +36,7 @@ struct  simulator : public com::simulator
                     get_program_options()->data_root() + '/' + get_program_options()->scene_dir(),
                     context()->root_folder(),
                     com::invalid_object_guid(),
-                    false
+                    true
                     );
     }
 
@@ -96,7 +96,7 @@ struct  simulator : public com::simulator
                             get_program_options()->data_root() + '/' + get_program_options()->scene_dir(),
                             context()->root_folder(),
                             com::invalid_object_guid(),
-                            false
+                            true
                             );
                 simulation_config().paused = true;
             }
