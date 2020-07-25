@@ -19,12 +19,10 @@ struct  device_simulator
 
     using  index_type = natural_16_bit;
 
-    device_simulator();
-    void  next_round(simulation_context const&  ctx, float_32_bit const  time_step_in_seconds);
+    using  timer_id = index_type;
+    using  sensor_id = index_type;
 
-private:
-
-    enum REQUEST_KIND
+    enum struct REQUEST_KIND : natural_8_bit
     {
         INCREMENT_ENABLE_LEVEL_OF_TIMER     = 0U,
         DECREMENT_ENABLE_LEVEL_OF_TIMER     = 1U,
@@ -38,20 +36,57 @@ private:
     {
         REQUEST_KIND  kind;
         index_type  index;
+
+        bool operator==(request_info_id const&  other) const { return kind == other.kind && index == other.index; }
+        bool operator!=(request_info_id const&  other) const { return !(*this == other); }
     };
 
-    struct  request_info_increment_enable_level_of_timer { index_type  index; };
-    struct  request_info_decrement_enable_level_of_timer { index_type  index; };
-    struct  request_info_reset_timer { index_type  index; };
+    device_simulator();
 
-    struct  request_info_increment_enable_level_of_sensor { index_type  index; };
-    struct  request_info_decrement_enable_level_of_sensor { index_type  index; };
+    timer_id  insert_timer(
+            float_32_bit const  period_in_seconds_,
+            natural_8_bit const target_enable_level_ = 1,
+            natural_8_bit const  current_enable_level_ = 0
+            );
+    void  register_request_info_to_timer(request_info_id const&  rid, timer_id const  tid);
+    void  unregister_request_info_from_timer(request_info_id const&  rid, timer_id const  tid);
+    void  erase_timer(timer_id const  tid);
 
+    sensor_id  insert_sensor(
+            object_guid const  collider_,
+            std::unordered_set<object_guid> const&  triggers_ = {},
+            natural_8_bit const target_enable_level_ = 1,
+            natural_8_bit const  current_enable_level_ = 0
+            );
+    enum struct SENSOR_EVENT_TYPE : natural_8_bit
+    {
+        TOUCHING        = 0U,
+        TOUCH_BEGIN     = 1U,
+        TOUCH_END       = 2U,
+    };
+    void  register_request_info_to_sensor(request_info_id const&  rid, sensor_id const  sid, SENSOR_EVENT_TYPE const  type);
+    void  unregister_request_info_from_sensor(request_info_id const&  rid, sensor_id const  sid, SENSOR_EVENT_TYPE const  type);
+    void  erase_sensor(sensor_id const  sid);
+
+    request_info_id  insert_request_info_increment_enable_level_of_timer(timer_id const  tid);
+    request_info_id  insert_request_info_decrement_enable_level_of_timer(timer_id const  tid);
+    request_info_id  insert_request_info_reset_timer(timer_id const  tid);
+    request_info_id  insert_request_info_increment_enable_level_of_sensor(sensor_id const  sid);
+    request_info_id  insert_request_info_decrement_enable_level_of_sensor(sensor_id const  sid);
+    void  erase_request_info(request_info_id const&  rid);
+
+    void  clear();
+
+    void  next_round(simulation_context const&  ctx, float_32_bit const  time_step_in_seconds);
+
+private:
 
     struct  timer
     {
+        timer() {}
         timer(float_32_bit const  period_in_seconds_,
-              natural_8_bit const target_enable_level_, natural_8_bit const  current_enable_level_);
+              natural_8_bit const target_enable_level_,
+              natural_8_bit const  current_enable_level_);
 
         float_32_bit  time_period;
         float_32_bit  current_time;
@@ -64,17 +99,13 @@ private:
 
     struct  sensor
     {
-        enum TOUCH_KIND
-        {
-            TOUCHING    = 0U,
-            BEGIN       = 1U,
-            END         = 2U,
-        };
-
         using  collider_in_touch = std::unordered_set<object_guid>;
 
-        sensor(object_guid const  collider_, std::unordered_set<object_guid> const&  triggers_,
-               natural_8_bit const target_enable_level_, natural_8_bit const  current_enable_level_);
+        sensor() {}
+        sensor(object_guid const  collider_,
+               std::unordered_set<object_guid> const&  triggers_,
+               natural_8_bit const target_enable_level_,
+               natural_8_bit const  current_enable_level_);
 
         object_guid  collider;
         std::unordered_set<object_guid>  triggers;
@@ -85,7 +116,9 @@ private:
         natural_8_bit  target_enable_level;
         natural_8_bit  current_enable_level;
 
-        std::vector<std::pair<TOUCH_KIND, request_info_id> >  request_infos;
+        std::vector<request_info_id>  request_infos_on_touching;
+        std::vector<request_info_id>  request_infos_on_touch_begin;
+        std::vector<request_info_id>  request_infos_on_touch_end;
     };
 
     void  next_round_of_timers(float_32_bit const  time_step_in_seconds);
@@ -93,8 +126,12 @@ private:
 
     void  next_round_of_timer_request_infos(simulation_context const&  ctx);
     void  next_round_of_sensor_request_infos(simulation_context const&  ctx);
-    void  next_round_of_request_info(object_guid const  self_collider, object_guid const  other_collider,
-                                     request_info_id const&  id, simulation_context const&  ctx);
+    void  next_round_of_request_info(
+            object_guid const  self_collider,
+            object_guid const  other_collider,
+            request_info_id const&  id,
+            simulation_context const&  ctx
+            );
 
     void  process_timer_requests_increment_enable_level();
     void  process_timer_requests_decrement_enable_level();
@@ -109,12 +146,29 @@ private:
     std::unordered_set<index_type>  m_enabled_timers;
     std::unordered_map<object_guid, index_type>  m_enabled_sensors;
 
-    dynamic_array<request_info_increment_enable_level_of_timer, index_type>  m_request_infos_increment_enable_level_of_timer;
-    dynamic_array<request_info_increment_enable_level_of_timer, index_type>  m_request_infos_decrement_enable_level_of_timer;
-    dynamic_array<request_info_reset_timer, index_type>  m_request_infos_reset_timer;
+    struct  request_info_base
+    {
+        std::vector<timer_id>  timers;
+        std::vector<std::pair<sensor_id, SENSOR_EVENT_TYPE> >  sensors;
+    };
 
-    dynamic_array<request_info_increment_enable_level_of_sensor, index_type>  m_request_infos_increment_enable_level_of_sensor;
-    dynamic_array<request_info_increment_enable_level_of_sensor, index_type>  m_request_infos_decrement_enable_level_of_sensor;
+    request_info_base&  request_info_base_of(request_info_id const&  rid);
+
+    template<typename T>
+    struct  request_info : public request_info_base
+    {
+        using data_type = T;
+        request_info() {}
+        request_info(data_type const&  data_) : request_info_base(), data(data_) {}
+        data_type  data;
+    };
+
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_increment_enable_level_of_timer;
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_decrement_enable_level_of_timer;
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_reset_timer;
+
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_increment_enable_level_of_sensor;
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_decrement_enable_level_of_sensor;
 
     std::vector<index_type>  m_timer_requests_increment_enable_level;
     std::vector<index_type>  m_timer_requests_decrement_enable_level;
