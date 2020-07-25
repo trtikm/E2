@@ -66,6 +66,7 @@ batch  create_text(
         xyz.reserve(text.size() * 6UL);        
         uv.reserve(text.size() * 6UL);
 
+        natural_32_bit  column = 0U;
         vector2  cursor{ 0.0f, 0.0f};
         for (natural_8_bit  character : text)
         {
@@ -73,29 +74,35 @@ batch  create_text(
             {
             case ' ':
                 cursor(0) += props.space_size + props.char_separ_dist_x;
+                ++column;
                 continue;
             case '\t':
-                for (natural_32_bit  i = 0U; i != props.tab_size; ++i)
+                for (natural_32_bit  i = 0U, n = props.tab_size - (column % props.tab_size); i != n; ++i)
                 {
                     if (max_text_width > 0.0f && cursor(0) + props.char_width > max_text_width)
                     {
                         cursor(0) = 0.0f;
                         cursor(1) -= props.char_height + props.char_separ_dist_y;
+                        column = 0U;
                     }
                     cursor(0) += props.space_size + props.char_separ_dist_x;
+                    ++column;
                 }
                 continue;
             case '\r':
                 cursor(0) = 0.0f;
+                column = 0U;
                 continue;
             case '\n':
                 cursor(0) = 0.0f;
                 cursor(1) -= props.char_height + props.char_separ_dist_y;
+                column = 0U;
                 continue;
             default:
                 if (character < props.min_ascii_code || character > props.max_ascii_code)
                 {
                     cursor(0) += props.space_size + props.char_separ_dist_x;
+                    ++column;
                     continue;
                 }
                 break;
@@ -105,6 +112,7 @@ batch  create_text(
             {
                 cursor(0) = 0.0f;
                 cursor(1) -= props.char_height + props.char_separ_dist_y;
+                column = 0U;
             }
 
             vector2 const  hi_xy{ cursor(0) + props.char_width, cursor(1) + props.char_height };
@@ -131,6 +139,7 @@ batch  create_text(
             xyz.push_back({ cursor(0),  hi_xy(1), 0.0f }); uv.push_back({ lo_uv(0), hi_uv(1) });
 
             cursor(0) += props.char_width + props.char_separ_dist_x;
+            ++column;
         }
     }
 
