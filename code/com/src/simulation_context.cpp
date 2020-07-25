@@ -529,6 +529,16 @@ void  simulation_context::frame_relocate_relative_to_parent(object_guid const  f
 }
 
 
+void  simulation_context::frame_relocate_relative_to_parent(object_guid const  frame_guid, object_guid const  relocation_frame_guid)
+{
+    ASSUMPTION(is_valid_frame_guid(frame_guid) && is_valid_frame_guid(relocation_frame_guid));
+    return m_frames_provider.relocate_relative_to_parent(
+                m_frames.at(frame_guid.index).id,
+                m_frames.at(relocation_frame_guid.index).id
+                );
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 // BATCHES API
 /////////////////////////////////////////////////////////////////////////////////////
@@ -2016,7 +2026,11 @@ void  simulation_context::process_pending_requests_import_scene()
             if (request.scene.loaded_successfully())
                 try
                 {
-                    import_scene({ &request.scene.hierarchy(), &request.scene.effects() }, request.folder_guid);
+                    import_scene(
+                            { &request.scene.hierarchy(), &request.scene.effects() },
+                            request.folder_guid,
+                            request.relocation_frame_guid
+                            );
                     if (request.store_in_cache)
                         m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
                 }
@@ -2143,28 +2157,39 @@ simulation_context::imported_scene::imported_scene(boost::filesystem::path const
 
 
 void  simulation_context::request_import_scene_from_directory(
-        std::string const&  directory_on_the_disk, object_guid const  under_folder_guid, bool const  cache_imported_scene
+        std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
+        object_guid const  relocation_frame_guid, bool const  cache_imported_scene
         ) const
 {
-    m_requests_queue_scene_import.push_back({ imported_scene(directory_on_the_disk), under_folder_guid, cache_imported_scene });
+    m_requests_queue_scene_import.push_back({
+        imported_scene(directory_on_the_disk), under_folder_guid, relocation_frame_guid, cache_imported_scene
+        });
 }
 
 
 // Disabled (not const) for modules.
 
 
-void  simulation_context::import_scene(import_scene_props const&  props, object_guid const  under_folder_guid)
+void  simulation_context::import_scene(
+        import_scene_props const&  props,
+        object_guid const  under_folder_guid,
+        object_guid const  relocation_frame_guid
+        )
 {
     if (props.hierarchy->count("@pivot") != 0UL)
     {
-        import_gfxtuner_scene(props, under_folder_guid);
+        import_gfxtuner_scene(props, under_folder_guid, relocation_frame_guid);
         return;
     }
     // TODO!
 }
 
 
-void  simulation_context::import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid)
+void  simulation_context::import_gfxtuner_scene(
+        import_scene_props const&  props,
+        object_guid const  under_folder_guid,
+        object_guid const  relocation_frame_guid
+        )
 {
     ASSUMPTION(props.hierarchy->count("@pivot") != 0UL);
 
@@ -2186,31 +2211,36 @@ void  simulation_context::import_gfxtuner_scene(import_scene_props const&  props
 
         object_guid const  folder_guid = insert_folder(under_folder_guid, name);
 
-        import_gfxtuner_scene_node({ &it->second, props.effects }, folder_guid);
+        import_gfxtuner_scene_node({ &it->second, props.effects }, folder_guid, relocation_frame_guid);
     }
 
     process_rigid_bodies_with_invalidated_shape();
 }
 
 
-void  simulation_context::import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid)
+void  simulation_context::import_gfxtuner_scene_node(
+        import_scene_props const&  props,
+        object_guid const  folder_guid,
+        object_guid const  relocation_frame_guid
+        )
 {
-    boost::property_tree::ptree const&  origin_tree = props.hierarchy->find("origin")->second;
-    vector3  origin(
-            origin_tree.get<scalar>("x"),
-            origin_tree.get<scalar>("y"),
-            origin_tree.get<scalar>("z")
-            );
+    object_guid const  frame_guid = insert_frame(folder_guid);
+    if (relocation_frame_guid != invalid_object_guid())
+        frame_relocate_relative_to_parent(frame_guid, relocation_frame_guid);
+    else
+    {
+        boost::property_tree::ptree const&  origin_tree = props.hierarchy->find("origin")->second;
+        vector3 const  origin = vector3(origin_tree.get<scalar>("x"), origin_tree.get<scalar>("y"), origin_tree.get<scalar>("z"));
 
-    boost::property_tree::ptree const&  orientation_tree = props.hierarchy->find("orientation")->second;
-    quaternion  orientation = make_quaternion_xyzw(
-            orientation_tree.get<scalar>("x"),
-            orientation_tree.get<scalar>("y"),
-            orientation_tree.get<scalar>("z"),
-            orientation_tree.get<scalar>("w")
-            );
-
-    frame_relocate(insert_frame(folder_guid), origin, orientation);
+        boost::property_tree::ptree const&  orientation_tree = props.hierarchy->find("orientation")->second;
+        quaternion const  orientation = make_quaternion_xyzw(
+                orientation_tree.get<scalar>("x"),
+                orientation_tree.get<scalar>("y"),
+                orientation_tree.get<scalar>("z"),
+                orientation_tree.get<scalar>("w")
+                );
+        frame_relocate(frame_guid, origin, orientation);
+    }
 
     boost::property_tree::ptree const&  folders = props.hierarchy->find("folders")->second;
 
@@ -2407,7 +2437,11 @@ void  simulation_context::import_gfxtuner_scene_node(import_scene_props const&  
 
     boost::property_tree::ptree const&  children = props.hierarchy->find("children")->second;
     for (auto child_it = children.begin(); child_it != children.end(); ++child_it)
-        import_gfxtuner_scene_node({ &child_it->second, props.effects }, insert_folder(folder_guid, child_it->first));
+        import_gfxtuner_scene_node(
+                { &child_it->second, props.effects },
+                insert_folder(folder_guid, child_it->first),
+                invalid_object_guid()
+                );
 }
 
 

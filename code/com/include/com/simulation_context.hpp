@@ -182,6 +182,7 @@ struct simulation_context
     void  frame_relocate(object_guid const  frame_guid, vector3 const&  new_origin, quaternion const&  new_orientation);
     void  frame_relocate_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
                                             quaternion const&  new_orientation);
+    void  frame_relocate_relative_to_parent(object_guid const  frame_guid, object_guid const  relocation_frame_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // BATCHES API
@@ -553,11 +554,14 @@ struct simulation_context
     };
 
     void  request_import_scene_from_directory(std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
-                                              bool const  cache_imported_scene) const;
+                                              object_guid const  relocation_frame_guid, bool const  cache_imported_scene) const;
     // Disabled (not const) for modules.
-    void  import_scene(import_scene_props const&  props, object_guid const  under_folder_guid);
-    void  import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid);
-    void  import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid);
+    void  import_scene(import_scene_props const&  props, object_guid const  under_folder_guid,
+                       object_guid const  relocation_frame_guid);
+    void  import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid,
+                                object_guid const  relocation_frame_guid);
+    void  import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid,
+                                     object_guid const  relocation_frame_guid);
 
 private:
 
@@ -772,6 +776,7 @@ private:
     {
         imported_scene  scene;
         object_guid  folder_guid;
+        object_guid  relocation_frame_guid;
         bool  store_in_cache;
     };
 
