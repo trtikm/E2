@@ -32,6 +32,7 @@ struct  device_simulator
         DECREMENT_ENABLE_LEVEL_OF_SENSOR    = 4U,
 
         IMPORT_SCENE                        = 5U,
+        ERASE_FOLDER                        = 6U,
     };
 
     struct request_info_id
@@ -84,6 +85,7 @@ struct  device_simulator
             vector3 const&  angular_velocity = vector3_zero(),
             object_guid const  motion_frame_guid = invalid_object_guid()
             );
+    request_info_id  insert_request_info_erase_folder(object_guid const  folder_guid);
     void  erase_request_info(request_info_id const&  rid);
 
     void  clear();
@@ -193,6 +195,7 @@ private:
     dynamic_array<request_info<index_type>, index_type>  m_request_infos_decrement_enable_level_of_sensor;
 
     dynamic_array<request_info<request_info_import_scene>, index_type>  m_request_infos_import_scene;
+    dynamic_array<request_info<object_guid>, index_type>  m_request_infos_erase_folder;
 
     std::vector<index_type>  m_timer_requests_increment_enable_level;
     std::vector<index_type>  m_timer_requests_decrement_enable_level;

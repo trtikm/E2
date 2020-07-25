@@ -64,6 +64,7 @@ device_simulator::device_simulator()
     , m_request_infos_decrement_enable_level_of_sensor()
 
     , m_request_infos_import_scene()
+    , m_request_infos_erase_folder()
 
     , m_timer_requests_increment_enable_level()
     , m_timer_requests_decrement_enable_level()
@@ -232,6 +233,12 @@ device_simulator::request_info_id  device_simulator::insert_request_info_import_
 }
 
 
+device_simulator::request_info_id  device_simulator::insert_request_info_erase_folder(object_guid const  folder_guid)
+{
+    return { REQUEST_KIND::ERASE_FOLDER, m_request_infos_erase_folder.insert(folder_guid) };
+}
+
+
 void  device_simulator::erase_request_info(request_info_id const&  rid)
 {
     request_info_base&  info_base = request_info_base_of(rid);
@@ -260,6 +267,9 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
     case REQUEST_KIND::IMPORT_SCENE:
         m_request_infos_import_scene.erase(rid.index);
         break;
+    case REQUEST_KIND::ERASE_FOLDER:
+        m_request_infos_erase_folder.erase(rid.index);
+        break;
     default: UNREACHABLE(); break;
     }
 }
@@ -281,6 +291,8 @@ device_simulator::request_info_base&  device_simulator::request_info_base_of(req
         return m_request_infos_decrement_enable_level_of_sensor.at(rid.index);
     case REQUEST_KIND::IMPORT_SCENE:
         return m_request_infos_import_scene.at(rid.index);
+    case REQUEST_KIND::ERASE_FOLDER:
+        return m_request_infos_erase_folder.at(rid.index);
     default: UNREACHABLE(); break;
     }
 }
@@ -317,6 +329,9 @@ void  device_simulator::next_round_of_request_info(
                 data.linear_velocity, data.angular_velocity, data.motion_frame_guid
                 );
         } break;
+    case REQUEST_KIND::ERASE_FOLDER:
+        ctx.request_erase_non_root_folder(m_request_infos_erase_folder.at(rid.index).data);
+        break;
     default: UNREACHABLE(); break;
     }
 }
@@ -338,6 +353,7 @@ void  device_simulator::clear()
     m_request_infos_decrement_enable_level_of_sensor.clear();
 
     m_request_infos_import_scene.clear();
+    m_request_infos_erase_folder.clear();
 
     m_timer_requests_increment_enable_level.clear();
     m_timer_requests_decrement_enable_level.clear();
