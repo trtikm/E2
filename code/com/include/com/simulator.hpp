@@ -89,6 +89,9 @@ struct  simulator : public osi::simulator
     void  initialise() override;
     void  terminate() override;
 
+    void  clear_cache_of_collider_batches() { m_collider_batches_cache.clear(); }
+    void  clear(bool const  also_caches);
+
     void  round() override;
 
     virtual void  on_begin_round() {}
@@ -126,10 +129,6 @@ struct  simulator : public osi::simulator
     render_configuration const&  render_config() const { return m_render_config; }
 
     natural_32_bit  FPS() const { return m_FPS; }
-
-    void  clear_cache_of_collider_batches() { m_collider_batches_cache.clear(); }
-
-    void  clear(bool const  also_caches) { context()->clear(also_caches); if (also_caches) clear_cache_of_collider_batches(); }
 
 private:
 

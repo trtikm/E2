@@ -99,27 +99,6 @@ void  simulator::render_configuration::terminate()
 }
 
 
-void  simulator::initialise()
-{
-    osi::simulator::initialise();
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glDisable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    glDepthRangef(0.0f,1.0f);
-}
-
-
-void  simulator::terminate()
-{
-    context()->clear(true);
-    render_config().terminate();
-    osi::simulator::terminate();
-}
-
-
 simulator::simulator(std::string const&  data_root_dir)
     : m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
@@ -151,6 +130,34 @@ simulator::~simulator()
     m_collision_scene_ptr.reset();
 
     m_context.reset();
+}
+
+
+void  simulator::initialise()
+{
+    osi::simulator::initialise();
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glDisable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glDepthRangef(0.0f,1.0f);
+}
+
+
+void  simulator::terminate()
+{
+    context()->clear(true);
+    render_config().terminate();
+    osi::simulator::terminate();
+}
+
+
+void  simulator::clear(bool const  also_caches)
+{
+    context()->clear(also_caches);
+    clear_cache_of_collider_batches();
 }
 
 
