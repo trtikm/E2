@@ -85,6 +85,8 @@ simulation_context::simulation_context(
     // SCENE IMPORT REQUESTS HANDLING
     , m_requests_queue_scene_import()
     , m_cache_of_imported_scenes()
+    , m_cache_of_imported_effect_configs()
+    , m_cache_of_imported_batches()
 {
     m_root_folder = { OBJECT_KIND::FOLDER, m_folders.insert(folder_content_type("ROOT", invalid_object_guid())) };
 }
@@ -92,7 +94,7 @@ simulation_context::simulation_context(
 
 simulation_context::~simulation_context()
 {
-    clear();
+    clear(true);
 }
 
 
@@ -2073,6 +2075,8 @@ void  simulation_context::clear(bool const  also_caches)
     if (also_caches)
     {
         m_cache_of_imported_scenes.clear();
+        m_cache_of_imported_effect_configs.clear();
+        m_cache_of_imported_batches.clear();
     }
 
     folder_content_type const&  fct = folder_content(root_folder());
@@ -2121,30 +2125,7 @@ simulation_context::imported_scene_data::imported_scene_data(async::finalise_loa
         boost::property_tree::ptree  ptree;
         boost::property_tree::read_json(istr, ptree);
         for (auto it = ptree.begin(); it != ptree.end(); ++it)
-        {
-            gfx::effects_config::light_types  light_types;
-            for (auto const& lt_and_tree : it->second.get_child("light_types"))
-                light_types.insert((gfx::LIGHT_TYPE)lt_and_tree.second.get_value<int>());
-            gfx::effects_config::lighting_data_types  lighting_data_types;
-            for (auto const& ldt_and_tree : it->second.get_child("lighting_data_types"))
-                lighting_data_types.insert({
-                    (gfx::LIGHTING_DATA_TYPE)std::atoi(ldt_and_tree.first.c_str()),
-                    (gfx::SHADER_DATA_INPUT_TYPE)ldt_and_tree.second.get_value<int>()
-                });
-            gfx::effects_config::shader_output_types  shader_output_types;
-            for (auto const& sot_and_tree : it->second.get_child("shader_output_types"))
-                shader_output_types.insert((gfx::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
-
-            m_effects[it->first] = gfx::effects_config(
-                    nullptr,
-                    light_types,
-                    lighting_data_types,
-                    (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("lighting_algo_location"),
-                    shader_output_types,
-                    (gfx::FOG_TYPE)it->second.get<int>("fog_type"),
-                    (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("fog_algo_location")
-                    );
-        }
+            m_effects.insert({it->first, it->second});
     }
 }
 
@@ -2304,6 +2285,7 @@ void  simulation_context::import_gfxtuner_scene_node(
             object_guid const  batches_folder_guid = insert_folder(folder_guid, folder_it->first);
             for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
             {
+                object_guid  batch_guid;
                 std::string const  batch_id = record_it->second.get<std::string>("id");
                 if (boost::starts_with(batch_id, gfx::get_sketch_id_prefix()))
                 {
@@ -2319,31 +2301,71 @@ void  simulation_context::import_gfxtuner_scene_node(
                     bool wireframe;
                     if (gfx::parse_box_info_from_id(props, box_half_sizes_along_axes, colour, fog_type, wireframe))
                         if (wireframe)
-                            insert_batch_wireframe_box(batches_folder_guid, record_it->first, box_half_sizes_along_axes, colour);
+                            batch_guid = insert_batch_wireframe_box(batches_folder_guid, record_it->first,
+                                                                    box_half_sizes_along_axes, colour);
                         else
-                            insert_batch_solid_box(batches_folder_guid, record_it->first, box_half_sizes_along_axes, colour);
-                    else if (gfx::parse_capsule_info_from_id(props, capsule_half_distance, capsule_thickness, num_lines, colour, fog_type, wireframe))
+                            batch_guid = insert_batch_solid_box(batches_folder_guid, record_it->first, box_half_sizes_along_axes,
+                                                                colour);
+                    else if (gfx::parse_capsule_info_from_id(props, capsule_half_distance, capsule_thickness, num_lines, colour,
+                                                             fog_type, wireframe))
                         if (wireframe)
-                            insert_batch_wireframe_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
-                                                           capsule_thickness, num_lines, colour);
+                            batch_guid = insert_batch_wireframe_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
+                                                                        capsule_thickness, num_lines, colour);
                         else
-                            insert_batch_solid_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
-                                                       capsule_thickness, num_lines, colour);
+                            batch_guid = insert_batch_solid_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
+                                                                    capsule_thickness, num_lines, colour);
                     else if (gfx::parse_sphere_info_from_id(props, sphere_radius, num_lines, colour, fog_type, wireframe))
                         if (wireframe)
-                            insert_batch_wireframe_sphere(batches_folder_guid, record_it->first, sphere_radius, num_lines, colour);
+                            batch_guid = insert_batch_wireframe_sphere(batches_folder_guid, record_it->first, sphere_radius,
+                                                                       num_lines, colour);
                         else
-                            insert_batch_solid_sphere(batches_folder_guid, record_it->first, sphere_radius, num_lines, colour);
+                            batch_guid = insert_batch_solid_sphere(batches_folder_guid, record_it->first, sphere_radius, num_lines,
+                                                                   colour);
                     else { UNREACHABLE(); }
                 }
                 else
-                    load_batch(
+                {
+                    gfx::effects_config  effects_config; 
+                    {
+                        auto const  it = props.effects->find(record_it->second.get<std::string>("effects"));
+                        INVARIANT(it != props.effects->end());
+                        gfx::effects_config::light_types  light_types;
+                        for (auto const& lt_and_tree : it->second.get_child("light_types"))
+                            light_types.insert((gfx::LIGHT_TYPE)lt_and_tree.second.get_value<int>());
+                        gfx::effects_config::lighting_data_types  lighting_data_types;
+                        for (auto const& ldt_and_tree : it->second.get_child("lighting_data_types"))
+                            lighting_data_types.insert({
+                                (gfx::LIGHTING_DATA_TYPE)std::atoi(ldt_and_tree.first.c_str()),
+                                (gfx::SHADER_DATA_INPUT_TYPE)ldt_and_tree.second.get_value<int>()
+                            });
+                        gfx::effects_config::shader_output_types  shader_output_types;
+                        for (auto const& sot_and_tree : it->second.get_child("shader_output_types"))
+                            shader_output_types.insert((gfx::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
+
+                        effects_config = gfx::effects_config(
+                                nullptr,
+                                light_types,
+                                lighting_data_types,
+                                (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("lighting_algo_location"),
+                                shader_output_types,
+                                (gfx::FOG_TYPE)it->second.get<int>("fog_type"),
+                                (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("fog_algo_location")
+                                );
+
+                        m_cache_of_imported_effect_configs.insert({effects_config.key(), effects_config });
+                    }
+
+                    batch_guid = load_batch(
                             batches_folder_guid,
                             to_string(OBJECT_KIND::BATCH) + record_it->first,
                             record_it->second.get<std::string>("id"),
-                            props.effects->at(record_it->second.get<std::string>("effects")),
+                            effects_config,
                             record_it->second.get<std::string>("skin")
                             );
+                }
+                
+                gfx::batch const  batch = from_batch_guid_to_batch(batch_guid);
+                m_cache_of_imported_batches.insert({batch.key(), batch });
             }
         }
         else if (folder_it->first == "collider")

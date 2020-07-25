@@ -550,7 +550,7 @@ struct simulation_context
     struct  import_scene_props
     {
         boost::property_tree::ptree const*  hierarchy;
-        std::unordered_map<std::string, gfx::effects_config> const* effects;
+        std::unordered_map<std::string, boost::property_tree::ptree> const* effects;
     };
 
     void  request_import_scene_from_directory(std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
@@ -758,10 +758,10 @@ private:
     {
         imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser);
         boost::property_tree::ptree const&  hierarchy() const { return m_hierarchy; }
-        std::unordered_map<std::string, gfx::effects_config> const&  effects() const { return m_effects; }
+        std::unordered_map<std::string, boost::property_tree::ptree> const&  effects() const { return m_effects; }
     private:
         boost::property_tree::ptree  m_hierarchy;
-        std::unordered_map<std::string, gfx::effects_config>  m_effects;
+        std::unordered_map<std::string, boost::property_tree::ptree>  m_effects;
     };
 
     struct  imported_scene : public async::resource_accessor<imported_scene_data>
@@ -769,7 +769,7 @@ private:
         imported_scene() : async::resource_accessor<imported_scene_data>() {}
         imported_scene(boost::filesystem::path const&  path);
         boost::property_tree::ptree const&  hierarchy() const { return resource().hierarchy(); }
-        std::unordered_map<std::string, gfx::effects_config> const&  effects() const { return resource().effects(); }
+        std::unordered_map<std::string, boost::property_tree::ptree> const&  effects() const { return resource().effects(); }
     };
 
     struct  request_props_imported_scene
@@ -780,8 +780,10 @@ private:
         bool  store_in_cache;
     };
 
-    mutable std::vector<request_props_imported_scene> m_requests_queue_scene_import;
-    std::unordered_map<std::string, imported_scene> m_cache_of_imported_scenes;
+    mutable std::vector<request_props_imported_scene>  m_requests_queue_scene_import;
+    std::unordered_map<std::string, imported_scene>  m_cache_of_imported_scenes;
+    std::unordered_map<async::key_type, gfx::effects_config>  m_cache_of_imported_effect_configs;
+    std::unordered_map<async::key_type, gfx::batch>  m_cache_of_imported_batches;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // IMPLEMENTATION DETAILS
