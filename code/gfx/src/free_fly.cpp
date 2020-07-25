@@ -60,7 +60,8 @@ free_fly_action::free_fly_action(
         natural_8_bit const  axis_index,
         natural_8_bit const  mouse_move_axis,
         float_32_bit const  action_value,
-        free_fly_controler::controler_fn  const&  controler
+        free_fly_controler::controler_fn  const&  controler,
+        std::string const&  help_
         )
     : m_do_rotation(do_rotation)
     , m_use_world_axis(use_world_axis)
@@ -68,6 +69,7 @@ free_fly_action::free_fly_action(
     , m_mouse_move_axis(mouse_move_axis)
     , m_action_value(action_value)
     , m_controler(controler)
+    , m_help(help_)
 {
     ASSUMPTION(m_axis_index <= 2U);
     ASSUMPTION(m_mouse_move_axis <= 2U);
@@ -97,7 +99,8 @@ free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, flo
                             keyboard_key_pressed(osi::KEY_RSHIFT()),
                             })
                         )
-                    })
+                    }),
+                "W - forward"
             },
             {
                 false,
@@ -117,7 +120,8 @@ free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, flo
                             keyboard_key_pressed(osi::KEY_RSHIFT()),
                             })
                         )
-                    })
+                    }),
+                "S - backward"
             },
             {
                 false,
@@ -137,7 +141,8 @@ free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, flo
                             keyboard_key_pressed(osi::KEY_RSHIFT()),
                             })
                         )
-                    })
+                    }),
+                "A - left"
             },
             {
                 false,
@@ -157,7 +162,8 @@ free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, flo
                             keyboard_key_pressed(osi::KEY_RSHIFT()),
                             })
                         )
-                    })
+                    }),
+                "D - right"
             },
             {
                 false,
@@ -177,7 +183,8 @@ free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, flo
                             keyboard_key_pressed(osi::KEY_RSHIFT()),
                             })
                         )
-                    })
+                    }),
+                "Q - down"
             },
             {
                 false,
@@ -197,7 +204,8 @@ free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, flo
                             keyboard_key_pressed(osi::KEY_RSHIFT()),
                             })
                         )
-                    })
+                    }),
+                "E - up"
             },
             {
                 true,
@@ -206,6 +214,7 @@ free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, flo
                 0U,
                 -(10.0f * PI()) * (pixel_width_mm / 1000.0f),
                 mouse_button_pressed(osi::MIDDLE_MOUSE_BUTTON()),
+                "MOUSE_MODDLE - rotate"
             },
             {
                 true,
@@ -214,6 +223,7 @@ free_fly_config  default_free_fly_config(float_32_bit const  pixel_width_mm, flo
                 1U,
                 -(10.0f * PI()) * (pixel_height_mm / 1000.0f),
                 mouse_button_pressed(osi::MIDDLE_MOUSE_BUTTON()),
+                ""
             },
         };
 }

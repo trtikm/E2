@@ -8,6 +8,7 @@
 #   include <memory>
 #   include <functional>
 #   include <vector>
+#   include <string>
 #   include <utility>
 
 namespace gfx { namespace free_fly_controler {
@@ -37,7 +38,8 @@ struct  free_fly_action
             natural_8_bit const  axis_index, // 0,1,2 with the meaning x,y,z axis respectively
             natural_8_bit const  mouse_move_axis, // 0,1,2 with the meaning x,y,NO mouse axis respectively
             float_32_bit const  action_value, // the value used in the action, e.g. motion/rotation speed/shift
-            free_fly_controler::controler_fn  const&  controler // determines when to perform the action, e.g. when a key is pressed
+            free_fly_controler::controler_fn  const&  controler, // determines when to perform the action, e.g. when a key is pressed
+            std::string const&  help_ = ""
             );
     bool  do_rotation() const noexcept { return m_do_rotation; }
     bool  use_world_axis() const noexcept { return m_use_world_axis; }
@@ -45,6 +47,7 @@ struct  free_fly_action
     natural_8_bit  mouse_move_axis() const noexcept { return m_mouse_move_axis; }
     float_32_bit  action_value() const noexcept { return m_action_value; }
     free_fly_controler::controler_fn  const&  controler() const noexcept { return m_controler; }
+    std::string const&  help() const { return m_help; }
 
     void  set_action_value(float_32_bit const  value) { m_action_value = value; }
 private:
@@ -54,6 +57,7 @@ private:
     natural_8_bit  m_mouse_move_axis;
     float_32_bit  m_action_value;
     free_fly_controler::controler_fn  m_controler;
+    std::string  m_help;
 };
 
 
