@@ -1235,6 +1235,14 @@ object_guid  simulation_context::frame_of_rigid_body(object_guid const  rigid_bo
     return m_rigid_bodies.at(rigid_body_guid.index).frame;
 }
 
+
+float_32_bit  simulation_context::inverted_mass_of_rigid_body(object_guid const  rigid_body_guid) const
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    return m_rigid_body_simulator_ptr->get_inverted_mass(m_rigid_bodies.at(rigid_body_guid.index).id);
+}
+
+
 vector3 const&  simulation_context::mass_centre_of_rigid_body(object_guid const  rigid_body_guid) const
 {
     ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));

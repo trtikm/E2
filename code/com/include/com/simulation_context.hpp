@@ -356,6 +356,7 @@ struct simulation_context
     rigid_body_guid_iterator  moveable_rigid_bodies_begin() const;
     rigid_body_guid_iterator  moveable_rigid_bodies_end() const;
     object_guid  frame_of_rigid_body(object_guid const  rigid_body_guid) const;
+    float_32_bit  inverted_mass_of_rigid_body(object_guid const  rigid_body_guid) const;
     vector3 const&  mass_centre_of_rigid_body(object_guid const  rigid_body_guid) const;
     quaternion const&  orientation_of_rigid_body(object_guid const  rigid_body_guid) const;
     std::vector<object_guid> const&  colliders_of_rigid_body(object_guid const  rigid_body_guid) const;
