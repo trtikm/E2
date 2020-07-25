@@ -37,6 +37,10 @@ struct  device_simulator
 
         RIGID_BODY_SET_LINEAR_VELOCITY      = 7U,
         RIGID_BODY_SET_ANGULAR_VELOCITY     = 8U,
+
+        UPDATE_RADIAL_FORCE_FIELD           = 9U,
+        UPDATE_LINEAR_FORCE_FIELD           = 10U,
+        LEAVE_FORCE_FIELD                   = 11U,
     };
 
     struct request_info_id
@@ -92,6 +96,17 @@ struct  device_simulator
     request_info_id  insert_request_info_erase_folder(object_guid const  folder_guid);
     request_info_id  insert_request_info_rigid_body_set_linear_velocity(object_guid const  rb_guid, vector3 const&  linear_velocity);
     request_info_id  insert_request_info_rigid_body_set_angular_velocity(object_guid const  rb_guid, vector3 const&  angular_velocity);
+    request_info_id  insert_request_info_update_radial_force_field(
+            float_32_bit const  multiplier = 1.0f,
+            float_32_bit const  exponent = 1.0f,
+            float_32_bit const  min_radius = 0.001f,
+            bool const  use_mass = true
+            );
+    request_info_id  insert_request_info_update_linear_force_field(
+            vector3 const&  acceleration = vector3(0.0f, 0.0f, -9.81f),
+            bool const  use_mass = true
+            );
+    request_info_id  insert_request_info_leave_force_field();
     void  erase_request_info(request_info_id const&  rid);
 
     void  clear();
@@ -165,6 +180,17 @@ private:
     std::unordered_set<index_type>  m_enabled_timers;
     std::unordered_map<object_guid, index_type>  m_enabled_sensors;
 
+    std::vector<index_type>  m_timer_requests_increment_enable_level;
+    std::vector<index_type>  m_timer_requests_decrement_enable_level;
+    std::vector<index_type>  m_timer_requests_reset;
+
+    std::vector<index_type>  m_sensor_requests_increment_enable_level;
+    std::vector<index_type>  m_sensor_requests_decrement_enable_level;
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // REQUEST INFOS
+    /////////////////////////////////////////////////////////////////////////////////////
+
     struct  request_info_base
     {
         std::vector<timer_id>  timers;
@@ -182,6 +208,20 @@ private:
         data_type  data;
     };
 
+    //
+    // Locally handled request infos
+    //
+
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_increment_enable_level_of_timer;
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_decrement_enable_level_of_timer;
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_reset_timer;
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_increment_enable_level_of_sensor;
+    dynamic_array<request_info<index_type>, index_type>  m_request_infos_decrement_enable_level_of_sensor;
+
+    //
+    // All other request infos
+    //
+
     struct  request_info_import_scene
     {
         std::string  import_dir;
@@ -193,24 +233,21 @@ private:
         object_guid  motion_frame_guid;
     };
 
-    dynamic_array<request_info<index_type>, index_type>  m_request_infos_increment_enable_level_of_timer;
-    dynamic_array<request_info<index_type>, index_type>  m_request_infos_decrement_enable_level_of_timer;
-    dynamic_array<request_info<index_type>, index_type>  m_request_infos_reset_timer;
-
-    dynamic_array<request_info<index_type>, index_type>  m_request_infos_increment_enable_level_of_sensor;
-    dynamic_array<request_info<index_type>, index_type>  m_request_infos_decrement_enable_level_of_sensor;
+    struct  request_info_update_radial_force_field
+    {
+        float_32_bit  multiplier;
+        float_32_bit  exponent;
+        float_32_bit  min_radius;
+        bool  use_mass;
+    };
 
     dynamic_array<request_info<request_info_import_scene>, index_type>  m_request_infos_import_scene;
     dynamic_array<request_info<object_guid>, index_type>  m_request_infos_erase_folder;
     dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_set_linear_velocity;
     dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_set_angular_velocity;
-
-    std::vector<index_type>  m_timer_requests_increment_enable_level;
-    std::vector<index_type>  m_timer_requests_decrement_enable_level;
-    std::vector<index_type>  m_timer_requests_reset;
-
-    std::vector<index_type>  m_sensor_requests_increment_enable_level;
-    std::vector<index_type>  m_sensor_requests_decrement_enable_level;
+    dynamic_array<request_info<request_info_update_radial_force_field>, index_type>  m_request_infos_update_radial_force_field;
+    dynamic_array<request_info<std::pair<vector3, bool> >, index_type>  m_request_infos_update_linear_force_field;
+    dynamic_array<request_info_base, index_type>  m_request_infos_leave_force_field;
 };
 
 

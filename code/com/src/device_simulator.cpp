@@ -56,22 +56,29 @@ device_simulator::device_simulator()
     , m_enabled_timers()
     , m_enabled_sensors()
 
-    , m_request_infos_increment_enable_level_of_timer()
-    , m_request_infos_decrement_enable_level_of_timer()
-    , m_request_infos_reset_timer()
-
-    , m_request_infos_increment_enable_level_of_sensor()
-    , m_request_infos_decrement_enable_level_of_sensor()
-
-    , m_request_infos_import_scene()
-    , m_request_infos_erase_folder()
-
     , m_timer_requests_increment_enable_level()
     , m_timer_requests_decrement_enable_level()
     , m_timer_requests_reset()
-
     , m_sensor_requests_increment_enable_level()
     , m_sensor_requests_decrement_enable_level()
+
+    // Locally handled request infos
+
+    , m_request_infos_increment_enable_level_of_timer()
+    , m_request_infos_decrement_enable_level_of_timer()
+    , m_request_infos_reset_timer()
+    , m_request_infos_increment_enable_level_of_sensor()
+    , m_request_infos_decrement_enable_level_of_sensor()
+
+    // All other request infos
+
+    , m_request_infos_import_scene()
+    , m_request_infos_erase_folder()
+    , m_request_infos_rigid_body_set_linear_velocity()
+    , m_request_infos_rigid_body_set_angular_velocity()
+    , m_request_infos_update_radial_force_field()
+    , m_request_infos_update_linear_force_field()
+    , m_request_infos_leave_force_field()
 {}
 
 
@@ -263,6 +270,40 @@ device_simulator::request_info_id  device_simulator::insert_request_info_rigid_b
 }
 
 
+device_simulator::request_info_id  device_simulator::insert_request_info_update_radial_force_field(
+        float_32_bit const  multiplier,
+        float_32_bit const  exponent,
+        float_32_bit const  min_radius,
+        bool const  use_mass
+        )
+{
+    return {
+        REQUEST_KIND::UPDATE_RADIAL_FORCE_FIELD,
+        m_request_infos_update_radial_force_field.insert(request_info_update_radial_force_field{
+                multiplier, exponent, min_radius, use_mass
+                })
+    };
+}
+
+
+device_simulator::request_info_id  device_simulator::insert_request_info_update_linear_force_field(
+        vector3 const&  acceleration,
+        bool const  use_mass
+        )
+{
+    return {
+        REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD,
+        m_request_infos_update_linear_force_field.insert(std::pair<vector3, bool>{acceleration, use_mass})
+    };
+}
+
+
+device_simulator::request_info_id  device_simulator::insert_request_info_leave_force_field()
+{
+    return { REQUEST_KIND::LEAVE_FORCE_FIELD, m_request_infos_leave_force_field.insert({}) };
+}
+
+
 void  device_simulator::erase_request_info(request_info_id const&  rid)
 {
     request_info_base&  info_base = request_info_base_of(rid);
@@ -273,6 +314,8 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
 
     switch (rid.kind)
     {
+    // Locally handled request infos
+
     case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_TIMER:
         m_request_infos_increment_enable_level_of_timer.erase(rid.index);
         break;
@@ -288,6 +331,9 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
         m_request_infos_decrement_enable_level_of_sensor.erase(rid.index);
         break;
+
+    // All other request infos
+
     case REQUEST_KIND::IMPORT_SCENE:
         m_request_infos_import_scene.erase(rid.index);
         break;
@@ -300,6 +346,16 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
     case REQUEST_KIND::RIGID_BODY_SET_ANGULAR_VELOCITY:
         m_request_infos_rigid_body_set_angular_velocity.erase(rid.index);
         break;
+    case REQUEST_KIND::UPDATE_RADIAL_FORCE_FIELD:
+        m_request_infos_update_radial_force_field.erase(rid.index);
+        break;
+    case REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD:
+        m_request_infos_update_linear_force_field.erase(rid.index);
+        break;
+    case REQUEST_KIND::LEAVE_FORCE_FIELD:
+        m_request_infos_leave_force_field.erase(rid.index);
+        break;
+
     default: UNREACHABLE(); break;
     }
 }
@@ -309,6 +365,8 @@ device_simulator::request_info_base&  device_simulator::request_info_base_of(req
 {
     switch (rid.kind)
     {
+    // Locally handled request infos
+
     case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_TIMER:
         return m_request_infos_increment_enable_level_of_timer.at(rid.index);
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_TIMER:
@@ -319,6 +377,9 @@ device_simulator::request_info_base&  device_simulator::request_info_base_of(req
         return m_request_infos_increment_enable_level_of_sensor.at(rid.index);
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
         return m_request_infos_decrement_enable_level_of_sensor.at(rid.index);
+
+    // All other request infos
+
     case REQUEST_KIND::IMPORT_SCENE:
         return m_request_infos_import_scene.at(rid.index);
     case REQUEST_KIND::ERASE_FOLDER:
@@ -327,6 +388,13 @@ device_simulator::request_info_base&  device_simulator::request_info_base_of(req
         return m_request_infos_rigid_body_set_linear_velocity.at(rid.index);
     case REQUEST_KIND::RIGID_BODY_SET_ANGULAR_VELOCITY:
         return m_request_infos_rigid_body_set_angular_velocity.at(rid.index);
+    case REQUEST_KIND::UPDATE_RADIAL_FORCE_FIELD:
+        return m_request_infos_update_radial_force_field.at(rid.index);
+    case REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD:
+        return m_request_infos_update_linear_force_field.at(rid.index);
+    case REQUEST_KIND::LEAVE_FORCE_FIELD:
+        return m_request_infos_leave_force_field.at(rid.index);
+
     default: UNREACHABLE(); break;
     }
 }
@@ -341,6 +409,8 @@ void  device_simulator::next_round_of_request_info(
 {
     switch (rid.kind)
     {
+    // Locally handled request infos
+
     case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_TIMER:
         m_timer_requests_increment_enable_level.push_back(m_request_infos_increment_enable_level_of_timer.at(rid.index).data);
         break;
@@ -356,6 +426,9 @@ void  device_simulator::next_round_of_request_info(
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
         m_sensor_requests_decrement_enable_level.push_back(m_request_infos_decrement_enable_level_of_sensor.at(rid.index).data);
         break;
+
+    // All other request infos
+
     case REQUEST_KIND::IMPORT_SCENE: {
         request_info_import_scene const&  data = m_request_infos_import_scene.at(rid.index).data;
         ctx.request_import_scene_from_directory(
@@ -374,6 +447,57 @@ void  device_simulator::next_round_of_request_info(
         std::pair<object_guid, vector3> const&  data = m_request_infos_rigid_body_set_angular_velocity.at(rid.index).data;
         ctx.request_set_rigid_body_angular_velocity(data.first, data.second);
         } break;
+    case REQUEST_KIND::UPDATE_RADIAL_FORCE_FIELD:
+        {
+            object_guid const  rb_guid = ctx.rigid_body_of_collider(other_collider);
+            if (ctx.is_valid_rigid_body_guid(rb_guid))
+            {
+                vector3  acceleration;
+                {
+                    request_info_update_radial_force_field const&  data = m_request_infos_update_radial_force_field.at(rid.index).data;
+
+                    vector3 const  rb_origin = ctx.frame_coord_system_in_world_space(ctx.frame_of_rigid_body(rb_guid)).origin();
+                    vector3 const  field_origin = ctx.frame_coord_system_in_world_space(ctx.frame_of_collider(self_collider)).origin();
+
+                    vector3  origin_delta = field_origin - rb_origin;
+                    float_32_bit  distance = length(origin_delta);
+                    if (distance < 1e-3f)
+                    {
+                        distance = 1e-3f;
+                        origin_delta = distance * vector3_unit_z();
+                    }
+                    if (distance < data.min_radius)
+                    {
+                        origin_delta *= (data.min_radius / distance);
+                        distance = data.min_radius;
+                    }
+
+                    float_32_bit const  inverted_mass = data.use_mass ? ctx.inverted_mass_of_rigid_body(rb_guid) : 1.0f;
+                    float_32_bit const  magnitude = inverted_mass * data.multiplier * std::powf(distance, data.exponent);
+
+                    acceleration = (magnitude / distance) * origin_delta;
+                }
+                ctx.request_set_rigid_body_linear_acceleration_from_source(rb_guid, self_collider, acceleration);
+            }
+        }
+        break;
+    case REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD:
+        {
+            object_guid const  rb_guid = ctx.rigid_body_of_collider(other_collider);
+            if (ctx.is_valid_rigid_body_guid(rb_guid))
+            {
+                std::pair<vector3, bool> const&  data = m_request_infos_update_linear_force_field.at(rid.index).data;
+                float_32_bit const  inverted_mass = data.second ? ctx.inverted_mass_of_rigid_body(rb_guid) : 1.0f;
+                ctx.request_set_rigid_body_linear_acceleration_from_source(rb_guid, self_collider, inverted_mass * data.first);
+            }
+        }
+        break;
+    case REQUEST_KIND::LEAVE_FORCE_FIELD: {
+        object_guid const  rb_guid = ctx.rigid_body_of_collider(other_collider);
+        if (ctx.is_valid_rigid_body_guid(rb_guid))
+            ctx.request_remove_rigid_body_linear_acceleration_from_source(rb_guid, self_collider);
+        } break;
+
     default: UNREACHABLE(); break;
     }
 }
@@ -387,24 +511,29 @@ void  device_simulator::clear()
     m_enabled_timers.clear();
     m_enabled_sensors.clear();
 
+    m_timer_requests_increment_enable_level.clear();
+    m_timer_requests_decrement_enable_level.clear();
+    m_timer_requests_reset.clear();
+    m_sensor_requests_increment_enable_level.clear();
+    m_sensor_requests_decrement_enable_level.clear();
+
+    // Locally handled request infos
+
     m_request_infos_increment_enable_level_of_timer.clear();
     m_request_infos_decrement_enable_level_of_timer.clear();
     m_request_infos_reset_timer.clear();
-
     m_request_infos_increment_enable_level_of_sensor.clear();
     m_request_infos_decrement_enable_level_of_sensor.clear();
+
+    // All other request infos
 
     m_request_infos_import_scene.clear();
     m_request_infos_erase_folder.clear();
     m_request_infos_rigid_body_set_linear_velocity.clear();
     m_request_infos_rigid_body_set_angular_velocity.clear();
-
-    m_timer_requests_increment_enable_level.clear();
-    m_timer_requests_decrement_enable_level.clear();
-    m_timer_requests_reset.clear();
-
-    m_sensor_requests_increment_enable_level.clear();
-    m_sensor_requests_decrement_enable_level.clear();
+    m_request_infos_update_radial_force_field.clear();
+    m_request_infos_update_linear_force_field.clear();
+    m_request_infos_leave_force_field.clear();
 }
 
 
