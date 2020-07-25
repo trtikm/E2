@@ -2034,17 +2034,17 @@ void  simulation_context::process_pending_requests_import_scene()
                             request.relocation_frame_guid
                             );
                     if (request.store_in_cache)
-                        m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+                        m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
                 }
                 catch (std::exception const&  e)
                 {
                     LOG(error, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
                     // To prevent subsequent attempts to load the scene from disk.
-                    m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+                    m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
                 }
             else
                 // To prevent subsequent attempts to load the scene from disk.
-                m_cache_of_imported_scenes.insert({ request.scene.key().get_unique_id(), request.scene });
+                m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
         }
         else
             ++i;
@@ -2130,11 +2130,10 @@ simulation_context::imported_scene_data::imported_scene_data(async::finalise_loa
 }
 
 
-simulation_context::imported_scene::imported_scene(boost::filesystem::path const&  path)
-    : async::resource_accessor<imported_scene_data>(
-            { "com::simulation_context::imported_scene", boost::filesystem::absolute(path).string() }, 1U, nullptr
-            )
-{}
+async::key_type  simulation_context::imported_scene::key_from_path(boost::filesystem::path const&  path)
+{
+    return { "com::simulation_context::imported_scene", boost::filesystem::absolute(path).string() };
+}
 
 
 void  simulation_context::request_import_scene_from_directory(
@@ -2142,9 +2141,13 @@ void  simulation_context::request_import_scene_from_directory(
         object_guid const  relocation_frame_guid, bool const  cache_imported_scene
         ) const
 {
+    auto const  it = m_cache_of_imported_scenes.find(imported_scene::key_from_path(directory_on_the_disk));
     m_requests_queue_scene_import.push_back({
-        imported_scene(directory_on_the_disk), under_folder_guid, relocation_frame_guid, cache_imported_scene
-        });
+            it == m_cache_of_imported_scenes.end() ? imported_scene(directory_on_the_disk) : it->second,
+            under_folder_guid,
+            relocation_frame_guid,
+            cache_imported_scene
+            });
 }
 
 

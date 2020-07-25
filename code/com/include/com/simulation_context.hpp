@@ -766,10 +766,12 @@ private:
 
     struct  imported_scene : public async::resource_accessor<imported_scene_data>
     {
-        imported_scene() : async::resource_accessor<imported_scene_data>() {}
-        imported_scene(boost::filesystem::path const&  path);
+        using  super = async::resource_accessor<imported_scene_data>;
+        imported_scene() : super() {}
+        imported_scene(boost::filesystem::path const&  path) : super(key_from_path(path), 1U, nullptr) {}
         boost::property_tree::ptree const&  hierarchy() const { return resource().hierarchy(); }
         std::unordered_map<std::string, boost::property_tree::ptree> const&  effects() const { return resource().effects(); }
+        static async::key_type  key_from_path(boost::filesystem::path const&  path);
     };
 
     struct  request_props_imported_scene
@@ -781,7 +783,7 @@ private:
     };
 
     mutable std::vector<request_props_imported_scene>  m_requests_queue_scene_import;
-    std::unordered_map<std::string, imported_scene>  m_cache_of_imported_scenes;
+    std::unordered_map<async::key_type, imported_scene>  m_cache_of_imported_scenes;
     std::unordered_map<async::key_type, gfx::effects_config>  m_cache_of_imported_effect_configs;
     std::unordered_map<async::key_type, gfx::batch>  m_cache_of_imported_batches;
 
