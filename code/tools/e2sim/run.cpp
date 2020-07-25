@@ -102,6 +102,52 @@ struct  simulator : public com::simulator
             }
         }
     }
+
+    void  on_begin_render() override
+    {
+        if (get_keyboard_props().keys_pressed().count(osi::KEY_F1()) != 0UL)
+        {
+            SLOG("\n=== HELP ===\n");
+
+            SLOG("1. Camera - free fly\n\t");
+            for (natural_32_bit  i = 0, n = (natural_32_bit)render_config().free_fly_config.size(); i != n; ++i)
+            {
+                if (i != 0U && (i % 2U) == 0U)
+                    SLOG("\n\t");
+                std::string const&  txt = render_config().free_fly_config.at(i).help();
+                if (!txt.empty())
+                    SLOG(txt << ",\t");
+            }
+            SLOG("\n");
+
+            SLOG(
+                "2. Simulation\n"
+                "\tPAUSE - toggle pause simulation\n"
+                "\tSPACE - single simulation round\n"
+                );
+            SLOG(
+                "3. Render GFX\n"
+                "\tALT+B - batches\n"
+                "\tALT+G - grid\n"
+                "\tALT+F - frames\n"
+                "\tALT+W - wireframe\n"
+            );
+            SLOG(
+                "4. Render colliders\n"
+                "\tALT+R - rigid bodies, ALT+K - collisions\n"
+                "\tALT+S - sensors\n"
+                "\tALT+A - agents\n"
+                "\tALT+L - fields, ALT+Y - ray cast targets\n"
+            );
+            SLOG(
+                "5. Scene\n"
+                "\tCTRL - fast reload (keep cached gfx)\n"
+                "\tCTRL+SHIFT - full reload (clear caches)\n"
+            );
+
+            SLOG("\n");
+        }
+    }
 };
 
 
