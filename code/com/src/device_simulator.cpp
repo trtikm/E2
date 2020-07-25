@@ -239,6 +239,30 @@ device_simulator::request_info_id  device_simulator::insert_request_info_erase_f
 }
 
 
+device_simulator::request_info_id  device_simulator::insert_request_info_rigid_body_set_linear_velocity(
+        object_guid const  rb_guid,
+        vector3 const&  linear_velocity
+        )
+{
+    return {
+        REQUEST_KIND::RIGID_BODY_SET_LINEAR_VELOCITY,
+        m_request_infos_rigid_body_set_linear_velocity.insert(std::pair<object_guid, vector3>{rb_guid, linear_velocity })
+    };
+}
+
+
+device_simulator::request_info_id  device_simulator::insert_request_info_rigid_body_set_angular_velocity(
+        object_guid const  rb_guid,
+        vector3 const&  angular_velocity
+        )
+{
+    return {
+        REQUEST_KIND::RIGID_BODY_SET_ANGULAR_VELOCITY,
+        m_request_infos_rigid_body_set_angular_velocity.insert(std::pair<object_guid, vector3>{rb_guid, angular_velocity })
+    };
+}
+
+
 void  device_simulator::erase_request_info(request_info_id const&  rid)
 {
     request_info_base&  info_base = request_info_base_of(rid);
@@ -270,6 +294,12 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
     case REQUEST_KIND::ERASE_FOLDER:
         m_request_infos_erase_folder.erase(rid.index);
         break;
+    case REQUEST_KIND::RIGID_BODY_SET_LINEAR_VELOCITY:
+        m_request_infos_rigid_body_set_linear_velocity.erase(rid.index);
+        break;
+    case REQUEST_KIND::RIGID_BODY_SET_ANGULAR_VELOCITY:
+        m_request_infos_rigid_body_set_angular_velocity.erase(rid.index);
+        break;
     default: UNREACHABLE(); break;
     }
 }
@@ -293,6 +323,10 @@ device_simulator::request_info_base&  device_simulator::request_info_base_of(req
         return m_request_infos_import_scene.at(rid.index);
     case REQUEST_KIND::ERASE_FOLDER:
         return m_request_infos_erase_folder.at(rid.index);
+    case REQUEST_KIND::RIGID_BODY_SET_LINEAR_VELOCITY:
+        return m_request_infos_rigid_body_set_linear_velocity.at(rid.index);
+    case REQUEST_KIND::RIGID_BODY_SET_ANGULAR_VELOCITY:
+        return m_request_infos_rigid_body_set_angular_velocity.at(rid.index);
     default: UNREACHABLE(); break;
     }
 }
@@ -332,6 +366,14 @@ void  device_simulator::next_round_of_request_info(
     case REQUEST_KIND::ERASE_FOLDER:
         ctx.request_erase_non_root_folder(m_request_infos_erase_folder.at(rid.index).data);
         break;
+    case REQUEST_KIND::RIGID_BODY_SET_LINEAR_VELOCITY: {
+        std::pair<object_guid, vector3> const&  data = m_request_infos_rigid_body_set_linear_velocity.at(rid.index).data;
+        ctx.request_set_rigid_body_linear_velocity(data.first, data.second);
+        } break;
+    case REQUEST_KIND::RIGID_BODY_SET_ANGULAR_VELOCITY: {
+        std::pair<object_guid, vector3> const&  data = m_request_infos_rigid_body_set_angular_velocity.at(rid.index).data;
+        ctx.request_set_rigid_body_angular_velocity(data.first, data.second);
+        } break;
     default: UNREACHABLE(); break;
     }
 }
@@ -354,6 +396,8 @@ void  device_simulator::clear()
 
     m_request_infos_import_scene.clear();
     m_request_infos_erase_folder.clear();
+    m_request_infos_rigid_body_set_linear_velocity.clear();
+    m_request_infos_rigid_body_set_angular_velocity.clear();
 
     m_timer_requests_increment_enable_level.clear();
     m_timer_requests_decrement_enable_level.clear();

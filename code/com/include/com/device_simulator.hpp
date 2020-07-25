@@ -7,6 +7,7 @@
 #   include <vector>
 #   include <unordered_map>
 #   include <unordered_set>
+#   include <utility>
 
 namespace com { struct  simulation_context; }
 
@@ -33,6 +34,9 @@ struct  device_simulator
 
         IMPORT_SCENE                        = 5U,
         ERASE_FOLDER                        = 6U,
+
+        RIGID_BODY_SET_LINEAR_VELOCITY      = 7U,
+        RIGID_BODY_SET_ANGULAR_VELOCITY     = 8U,
     };
 
     struct request_info_id
@@ -86,6 +90,8 @@ struct  device_simulator
             object_guid const  motion_frame_guid = invalid_object_guid()
             );
     request_info_id  insert_request_info_erase_folder(object_guid const  folder_guid);
+    request_info_id  insert_request_info_rigid_body_set_linear_velocity(object_guid const  rb_guid, vector3 const&  linear_velocity);
+    request_info_id  insert_request_info_rigid_body_set_angular_velocity(object_guid const  rb_guid, vector3 const&  angular_velocity);
     void  erase_request_info(request_info_id const&  rid);
 
     void  clear();
@@ -196,6 +202,8 @@ private:
 
     dynamic_array<request_info<request_info_import_scene>, index_type>  m_request_infos_import_scene;
     dynamic_array<request_info<object_guid>, index_type>  m_request_infos_erase_folder;
+    dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_set_linear_velocity;
+    dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_set_angular_velocity;
 
     std::vector<index_type>  m_timer_requests_increment_enable_level;
     std::vector<index_type>  m_timer_requests_decrement_enable_level;
