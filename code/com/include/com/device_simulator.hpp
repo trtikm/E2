@@ -31,7 +31,7 @@ struct  device_simulator
         INCREMENT_ENABLE_LEVEL_OF_SEBSOR    = 3U,
         DECREMENT_ENABLE_LEVEL_OF_SENSOR    = 4U,
 
-        BEGIN_OF_LIFE                       = 5U,
+        IMPORT_SCENE                        = 5U,
     };
 
     struct request_info_id
@@ -75,7 +75,7 @@ struct  device_simulator
     request_info_id  insert_request_info_reset_timer(timer_id const  tid);
     request_info_id  insert_request_info_increment_enable_level_of_sensor(sensor_id const  sid);
     request_info_id  insert_request_info_decrement_enable_level_of_sensor(sensor_id const  sid);
-    request_info_id  insert_request_info_begin_of_life(
+    request_info_id  insert_request_info_import_scene(
             std::string const&  import_dir,
             object_guid const  under_folder_guid,
             object_guid const  relocation_frame_guid = invalid_object_guid(),
@@ -174,7 +174,7 @@ private:
         data_type  data;
     };
 
-    struct  request_info_begin_of_life
+    struct  request_info_import_scene
     {
         std::string  import_dir;
         object_guid  under_folder_guid;
@@ -192,7 +192,7 @@ private:
     dynamic_array<request_info<index_type>, index_type>  m_request_infos_increment_enable_level_of_sensor;
     dynamic_array<request_info<index_type>, index_type>  m_request_infos_decrement_enable_level_of_sensor;
 
-    dynamic_array<request_info<request_info_begin_of_life>, index_type>  m_request_infos_begin_of_life;
+    dynamic_array<request_info<request_info_import_scene>, index_type>  m_request_infos_import_scene;
 
     std::vector<index_type>  m_timer_requests_increment_enable_level;
     std::vector<index_type>  m_timer_requests_decrement_enable_level;

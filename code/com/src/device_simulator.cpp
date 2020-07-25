@@ -63,7 +63,7 @@ device_simulator::device_simulator()
     , m_request_infos_increment_enable_level_of_sensor()
     , m_request_infos_decrement_enable_level_of_sensor()
 
-    , m_request_infos_begin_of_life()
+    , m_request_infos_import_scene()
 
     , m_timer_requests_increment_enable_level()
     , m_timer_requests_decrement_enable_level()
@@ -212,7 +212,7 @@ device_simulator::request_info_id  device_simulator::insert_request_info_decreme
 }
 
 
-device_simulator::request_info_id  device_simulator::insert_request_info_begin_of_life(
+device_simulator::request_info_id  device_simulator::insert_request_info_import_scene(
         std::string const&  import_dir,
         object_guid const  under_folder_guid,
         object_guid const  relocation_frame_guid,
@@ -223,8 +223,8 @@ device_simulator::request_info_id  device_simulator::insert_request_info_begin_o
         )
 {
     return {
-        REQUEST_KIND::BEGIN_OF_LIFE,
-        m_request_infos_begin_of_life.insert(request_info_begin_of_life{
+        REQUEST_KIND::IMPORT_SCENE,
+        m_request_infos_import_scene.insert(request_info_import_scene{
             import_dir, under_folder_guid, relocation_frame_guid, cache_imported_scene,
             linear_velocity, angular_velocity, motion_frame_guid
             })
@@ -257,8 +257,8 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
         m_request_infos_decrement_enable_level_of_sensor.erase(rid.index);
         break;
-    case REQUEST_KIND::BEGIN_OF_LIFE:
-        m_request_infos_begin_of_life.erase(rid.index);
+    case REQUEST_KIND::IMPORT_SCENE:
+        m_request_infos_import_scene.erase(rid.index);
         break;
     default: UNREACHABLE(); break;
     }
@@ -279,8 +279,8 @@ device_simulator::request_info_base&  device_simulator::request_info_base_of(req
         return m_request_infos_increment_enable_level_of_sensor.at(rid.index);
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
         return m_request_infos_decrement_enable_level_of_sensor.at(rid.index);
-    case REQUEST_KIND::BEGIN_OF_LIFE:
-        return m_request_infos_begin_of_life.at(rid.index);
+    case REQUEST_KIND::IMPORT_SCENE:
+        return m_request_infos_import_scene.at(rid.index);
     default: UNREACHABLE(); break;
     }
 }
@@ -310,8 +310,8 @@ void  device_simulator::next_round_of_request_info(
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
         m_sensor_requests_decrement_enable_level.push_back(m_request_infos_decrement_enable_level_of_sensor.at(rid.index).data);
         break;
-    case REQUEST_KIND::BEGIN_OF_LIFE: {
-        request_info_begin_of_life const&  data = m_request_infos_begin_of_life.at(rid.index).data;
+    case REQUEST_KIND::IMPORT_SCENE: {
+        request_info_import_scene const&  data = m_request_infos_import_scene.at(rid.index).data;
         ctx.request_import_scene_from_directory(
                 data.import_dir, data.under_folder_guid, data.relocation_frame_guid, data.cache_imported_scene,
                 data.linear_velocity, data.angular_velocity, data.motion_frame_guid
@@ -337,7 +337,7 @@ void  device_simulator::clear()
     m_request_infos_increment_enable_level_of_sensor.clear();
     m_request_infos_decrement_enable_level_of_sensor.clear();
 
-    m_request_infos_begin_of_life.clear();
+    m_request_infos_import_scene.clear();
 
     m_timer_requests_increment_enable_level.clear();
     m_timer_requests_decrement_enable_level.clear();
