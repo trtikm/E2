@@ -40,6 +40,7 @@ struct  frames_provider
     void  relocate(frame_id const  id, angeo::coordinate_system const& new_coord_system);
     void  relocate(frame_id const  id, vector3 const&  new_origin, quaternion const&  new_orientation);
     void  relocate_relative_to_parent(frame_id const  id, vector3 const&  new_origin, quaternion const&  new_orientation);
+    void  relocate_relative_to_parent(frame_id const  id, frame_id const  relocation_id);
 
 private:
 

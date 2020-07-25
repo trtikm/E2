@@ -239,6 +239,33 @@ void  frames_provider::relocate_relative_to_parent(frame_id const  id, vector3 c
 }
 
 
+void  frames_provider::relocate_relative_to_parent(frame_id const  id, frame_id const  relocation_id)
+{
+    vector3  relocated_origin;
+    quaternion  relocated_orientation;
+    {
+        matrix44  from_base_matrix;
+        matrix33  R;
+        {
+            if (parent(id) == invalid_frame_id())
+                from_base_matrix = world_matrix(relocation_id);
+            else
+            {
+                vector3  u;
+                decompose_matrix44(world_matrix(parent(id)), u, R);
+                matrix44  to_parent_space_matrix;
+                compose_to_base_matrix(u, R, to_parent_space_matrix);
+                from_base_matrix = to_parent_space_matrix * world_matrix(relocation_id);
+            }
+        }
+        decompose_matrix44(from_base_matrix, relocated_origin, R);
+        relocated_orientation = rotation_matrix_to_quaternion(R);
+    }
+
+    relocate(id, relocated_origin, relocated_orientation);
+}
+
+
 void  frames_provider::invalidate(frame_id const  id) const
 {
     frame_of_reference const&  frame = m_frames.at(id);
