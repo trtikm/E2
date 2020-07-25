@@ -91,8 +91,11 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
 
 void  simulator::render_configuration::terminate()
 {
+    effects_config.release();
+    font_props.release();
     batch_grid.release();
     batch_frame.release();
+    draw_state.release();
 }
 
 
@@ -111,6 +114,7 @@ void  simulator::initialise()
 
 void  simulator::terminate()
 {
+    context()->clear(true);
     render_config().terminate();
     osi::simulator::terminate();
 }
