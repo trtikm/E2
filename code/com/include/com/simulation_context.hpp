@@ -553,13 +553,27 @@ struct simulation_context
         std::unordered_map<std::string, boost::property_tree::ptree> const* effects;
     };
 
-    void  request_import_scene_from_directory(std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
-                                              object_guid const  relocation_frame_guid, bool const  cache_imported_scene) const;
+    void  request_import_scene_from_directory(
+            std::string const&  directory_on_the_disk,
+            object_guid const  under_folder_guid,
+            object_guid const  relocation_frame_guid = invalid_object_guid(),
+            bool const  cache_imported_scene = true,
+            vector3 const&  linear_velocity = vector3_zero(),
+            vector3 const&  angular_velocity = vector3_zero(),
+            object_guid const  motion_frame_guid = invalid_object_guid()
+            ) const;
     // Disabled (not const) for modules.
-    void  import_scene(import_scene_props const&  props, object_guid const  under_folder_guid,
-                       object_guid const  relocation_frame_guid);
+    void  import_scene(
+            import_scene_props const&  props,
+            object_guid const  under_folder_guid,
+            object_guid const  relocation_frame_guid,
+            vector3 const&  linear_velocity,
+            vector3 const&  angular_velocity,
+            object_guid const  motion_frame_guid
+            );
     void  import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid,
-                                object_guid const  relocation_frame_guid);
+                                object_guid const  relocation_frame_guid, vector3 const&  linear_velocity,
+                                vector3 const&  angular_velocity, object_guid const  motion_frame_guid);
     void  import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid,
                                      object_guid const  relocation_frame_guid);
 
@@ -780,6 +794,9 @@ private:
         object_guid  folder_guid;
         object_guid  relocation_frame_guid;
         bool  store_in_cache;
+        vector3  linear_velocity;
+        vector3  angular_velocity;
+        object_guid  motion_frame_guid;
     };
 
     mutable std::vector<request_props_imported_scene>  m_requests_queue_scene_import;

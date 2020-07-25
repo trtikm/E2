@@ -2,7 +2,7 @@
 #   define COM_DEVICE_SIMULATOR_HPP_INCLUDED
 
 #   include <com/object_guid.hpp>
-#   include <utility/basic_numeric_types.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <utility/dynamic_array.hpp>
 #   include <vector>
 #   include <unordered_map>
@@ -78,8 +78,11 @@ struct  device_simulator
     request_info_id  insert_request_info_begin_of_life(
             std::string const&  import_dir,
             object_guid const  under_folder_guid,
-            object_guid const  relocation_frame_guid,
-            bool const  cache_imported_scene
+            object_guid const  relocation_frame_guid = invalid_object_guid(),
+            bool const  cache_imported_scene = true,
+            vector3 const&  linear_velocity = vector3_zero(),
+            vector3 const&  angular_velocity = vector3_zero(),
+            object_guid const  motion_frame_guid = invalid_object_guid()
             );
     void  erase_request_info(request_info_id const&  rid);
 
@@ -177,6 +180,9 @@ private:
         object_guid  under_folder_guid;
         object_guid  relocation_frame_guid;
         bool  cache_imported_scene;
+        vector3  linear_velocity;
+        vector3  angular_velocity;
+        object_guid  motion_frame_guid;
     };
 
     dynamic_array<request_info<index_type>, index_type>  m_request_infos_increment_enable_level_of_timer;

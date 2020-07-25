@@ -2031,7 +2031,10 @@ void  simulation_context::process_pending_requests_import_scene()
                     import_scene(
                             { &request.scene.hierarchy(), &request.scene.effects() },
                             request.folder_guid,
-                            request.relocation_frame_guid
+                            request.relocation_frame_guid,
+                            request.linear_velocity,
+                            request.angular_velocity,
+                            request.motion_frame_guid
                             );
                     if (request.store_in_cache)
                         m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
@@ -2137,8 +2140,13 @@ async::key_type  simulation_context::imported_scene::key_from_path(boost::filesy
 
 
 void  simulation_context::request_import_scene_from_directory(
-        std::string const&  directory_on_the_disk, object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid, bool const  cache_imported_scene
+        std::string const&  directory_on_the_disk,
+        object_guid const  under_folder_guid,
+        object_guid const  relocation_frame_guid,
+        bool const  cache_imported_scene,
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity,
+        object_guid const  motion_frame_guid
         ) const
 {
     auto const  it = m_cache_of_imported_scenes.find(imported_scene::key_from_path(directory_on_the_disk));
@@ -2146,7 +2154,10 @@ void  simulation_context::request_import_scene_from_directory(
             it == m_cache_of_imported_scenes.end() ? imported_scene(directory_on_the_disk) : it->second,
             under_folder_guid,
             relocation_frame_guid,
-            cache_imported_scene
+            cache_imported_scene,
+            linear_velocity,
+            angular_velocity,
+            motion_frame_guid
             });
 }
 
@@ -2157,12 +2168,16 @@ void  simulation_context::request_import_scene_from_directory(
 void  simulation_context::import_scene(
         import_scene_props const&  props,
         object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid
+        object_guid const  relocation_frame_guid,
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity,
+        object_guid const  motion_frame_guid
         )
 {
     if (props.hierarchy->count("@pivot") != 0UL)
     {
-        import_gfxtuner_scene(props, under_folder_guid, relocation_frame_guid);
+        import_gfxtuner_scene(props, under_folder_guid, relocation_frame_guid,
+                              linear_velocity, angular_velocity, motion_frame_guid);
         return;
     }
     // TODO!
@@ -2172,7 +2187,10 @@ void  simulation_context::import_scene(
 void  simulation_context::import_gfxtuner_scene(
         import_scene_props const&  props,
         object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid
+        object_guid const  relocation_frame_guid,
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity,
+        object_guid const  motion_frame_guid
         )
 {
     ASSUMPTION(props.hierarchy->count("@pivot") != 0UL);
@@ -2196,6 +2214,37 @@ void  simulation_context::import_gfxtuner_scene(
         object_guid const  folder_guid = insert_folder(under_folder_guid, name);
 
         import_gfxtuner_scene_node({ &it->second, props.effects }, folder_guid, relocation_frame_guid);
+
+        std::vector<object_guid>  rigid_body_guids;
+        for_each_child_folder(folder_guid, true, true,
+            [this, &rigid_body_guids](object_guid const  folder_guid, folder_content_type const&  fct) -> bool {
+                auto  it = fct.content.find(to_string(OBJECT_KIND::RIGID_BODY));
+                if (it != fct.content.end())
+                {
+                    rigid_body_guids.push_back(it->second);
+                    return false;
+                }
+                return true;
+            });
+        if (!rigid_body_guids.empty())
+        {
+            vector3  lin_vel, ang_vel;
+            if (motion_frame_guid == invalid_object_guid())
+            {
+                lin_vel = linear_velocity;
+                ang_vel = angular_velocity;
+            }
+            else
+            {
+                lin_vel = transform_vector(linear_velocity, frame_world_matrix(motion_frame_guid));
+                ang_vel = transform_vector(angular_velocity, frame_world_matrix(motion_frame_guid));
+            }
+            for (object_guid rb_guid : rigid_body_guids)
+            {
+                set_rigid_body_linear_velocity(rb_guid, lin_vel);
+                set_rigid_body_angular_velocity(rb_guid, ang_vel);
+            }
+        }
     }
 
     process_rigid_bodies_with_invalidated_shape();

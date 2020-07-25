@@ -216,13 +216,17 @@ device_simulator::request_info_id  device_simulator::insert_request_info_begin_o
         std::string const&  import_dir,
         object_guid const  under_folder_guid,
         object_guid const  relocation_frame_guid,
-        bool const  cache_imported_scene
+        bool const  cache_imported_scene,
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity,
+        object_guid const  motion_frame_guid
         )
 {
     return {
         REQUEST_KIND::BEGIN_OF_LIFE,
         m_request_infos_begin_of_life.insert(request_info_begin_of_life{
-            import_dir, under_folder_guid, relocation_frame_guid, cache_imported_scene
+            import_dir, under_folder_guid, relocation_frame_guid, cache_imported_scene,
+            linear_velocity, angular_velocity, motion_frame_guid
             })
     };
 }
@@ -309,7 +313,8 @@ void  device_simulator::next_round_of_request_info(
     case REQUEST_KIND::BEGIN_OF_LIFE: {
         request_info_begin_of_life const&  data = m_request_infos_begin_of_life.at(rid.index).data;
         ctx.request_import_scene_from_directory(
-                data.import_dir, data.under_folder_guid, data.relocation_frame_guid, data.cache_imported_scene
+                data.import_dir, data.under_folder_guid, data.relocation_frame_guid, data.cache_imported_scene,
+                data.linear_velocity, data.angular_velocity, data.motion_frame_guid
                 );
         } break;
     default: UNREACHABLE(); break;
