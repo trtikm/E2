@@ -312,6 +312,8 @@ struct  font_mono_props
     float_32_bit  char_separ_dist_x;
     float_32_bit  char_separ_dist_y;
 
+    void release() { __batch_template__.release(); }
+
     // Next follow PRIVATE DATA; DEFAULT-INITIALISE AND DO NOT MODIFY!
     mutable batch  __batch_template__;  // Used to prevent re-creating those components of batch which are common for all batchech returned
                                         // from the function 'create_text'. This is especially important for reusing the font texture
