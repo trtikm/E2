@@ -465,14 +465,31 @@ struct simulation_context
     // TIMER & SENSOR REQUEST INFOS API
     /////////////////////////////////////////////////////////////////////////////////////
 
+    enum struct DEVICE_EVENT_TYPE : natural_8_bit
+    {
+        // Sensor events
+        TOUCHING        = 0U,
+        TOUCH_BEGIN     = 1U,
+        TOUCH_END       = 2U,
+        // Timer event
+        TIME_OUT        = 3U,
+    };
+
+    struct  device_request_info_id
+    {
+        object_guid const  owner_guid;  // Either timer or sensor guid.
+        DEVICE_EVENT_TYPE  event_type;  // TIME_OUT for timer, any other for sensor.
+    };
+
     // Disabled (not const) for modules.
-    void  insert_request_info_increment_enable_level_of_timer(object_guid const  owner_guid, object_guid const  timer_guid);
-    void  insert_request_info_decrement_enable_level_of_timer(object_guid const  owner_guid, object_guid const  timer_guid);
-    void  insert_request_info_reset_timer(object_guid const  owner_guid, object_guid const  timer_guid);
-    void  insert_request_info_increment_enable_level_of_sensor(object_guid const  owner_guid, object_guid const  sensor_guid);
-    void  insert_request_info_decrement_enable_level_of_sensor(object_guid const  owner_guid, object_guid const  sensor_guid);
+    void  register_request_info(device_request_info_id const&  drid, com::device_simulator::request_info_id  rid);
+    void  insert_request_info_increment_enable_level_of_timer(device_request_info_id const&  drid, object_guid const  timer_guid);
+    void  insert_request_info_decrement_enable_level_of_timer(device_request_info_id const&  drid, object_guid const  timer_guid);
+    void  insert_request_info_reset_timer(device_request_info_id const&  drid, object_guid const  timer_guid);
+    void  insert_request_info_increment_enable_level_of_sensor(device_request_info_id const&  drid, object_guid const  sensor_guid);
+    void  insert_request_info_decrement_enable_level_of_sensor(device_request_info_id const&  drid, object_guid const  sensor_guid);
     void  insert_request_info_import_scene(
-            object_guid const  owner_guid,
+            device_request_info_id const&  drid,
             std::string const&  import_dir,
             object_guid const  under_folder_guid,
             object_guid const  relocation_frame_guid = invalid_object_guid(),
@@ -481,24 +498,24 @@ struct simulation_context
             vector3 const&  angular_velocity = vector3_zero(),
             object_guid const  motion_frame_guid = invalid_object_guid()
             );
-    void  insert_request_info_erase_folder(object_guid const  owner_guid, object_guid const  folder_guid);
-    void  insert_request_info_rigid_body_set_linear_velocity(object_guid const  owner_guid, object_guid const  rb_guid,
+    void  insert_request_info_erase_folder(device_request_info_id const&  drid, object_guid const  folder_guid);
+    void  insert_request_info_rigid_body_set_linear_velocity(device_request_info_id const&  drid, object_guid const  rb_guid,
                                                              vector3 const&  linear_velocity);
-    void  insert_request_info_rigid_body_set_angular_velocity(object_guid const  owner_guid, object_guid const  rb_guid,
+    void  insert_request_info_rigid_body_set_angular_velocity(device_request_info_id const&  drid, object_guid const  rb_guid,
                                                               vector3 const&  angular_velocity);
     void  insert_request_info_update_radial_force_field(
-            object_guid const  sensor_guid,
+            device_request_info_id const&  drid,
             float_32_bit const  multiplier = 1.0f,
             float_32_bit const  exponent = 1.0f,
             float_32_bit const  min_radius = 0.001f,
             bool const  use_mass = true
             );
     void  insert_request_info_update_linear_force_field(
-            object_guid const  sensor_guid,
+            device_request_info_id const&  drid,
             vector3 const&  acceleration = vector3(0.0f, 0.0f, -9.81f),
             bool const  use_mass = true
             );
-    void  insert_request_info_leave_force_field(object_guid const  sensor_guid);
+    void  insert_request_info_leave_force_field(device_request_info_id const&  drid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // AGENTS API

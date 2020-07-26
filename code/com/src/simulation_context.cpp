@@ -1714,7 +1714,7 @@ void  simulation_context::erase_timer(object_guid const  timer_guid)
 
 
 /////////////////////////////////////////////////////////////////////////////////////
-// sensorS API
+// SENSORS API
 /////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -1815,103 +1815,157 @@ void  simulation_context::erase_sensor(object_guid const  sensor_guid)
 // Disabled (not const) for modules.
 
 
-void  simulation_context::insert_request_info_increment_enable_level_of_timer(
-        object_guid const  owner_guid, object_guid const  timer_guid)
+void  simulation_context::register_request_info(device_request_info_id const&  drid, com::device_simulator::request_info_id  rid)
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_timer_guid(timer_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(
+        (is_valid_timer_guid(drid.owner_guid) || is_valid_sensor_guid(drid.owner_guid)) &&
+        m_device_simulator_ptr->is_valid_request_info_id(rid)
+        );
+    switch (drid.owner_guid.kind)
+    {
+    case OBJECT_KIND::TIMER:
+        ASSUMPTION(drid.event_type == DEVICE_EVENT_TYPE::TIME_OUT);
+        m_device_simulator_ptr->register_request_info_to_timer(rid, m_timers.at(drid.owner_guid.index).id);
+        break;
+    case OBJECT_KIND::SENSOR:
+        switch(drid.event_type)
+        {
+        case DEVICE_EVENT_TYPE::TOUCHING:
+            m_device_simulator_ptr->register_request_info_to_sensor(
+                    rid, m_sensors.at(drid.owner_guid.index).id, com::device_simulator::SENSOR_EVENT_TYPE::TOUCHING
+                    );
+            break;
+        case DEVICE_EVENT_TYPE::TOUCH_BEGIN:
+            m_device_simulator_ptr->register_request_info_to_sensor(
+                    rid, m_sensors.at(drid.owner_guid.index).id, com::device_simulator::SENSOR_EVENT_TYPE::TOUCH_BEGIN
+                    );
+            break;
+        case DEVICE_EVENT_TYPE::TOUCH_END:
+            m_device_simulator_ptr->register_request_info_to_sensor(
+                    rid, m_sensors.at(drid.owner_guid.index).id, com::device_simulator::SENSOR_EVENT_TYPE::TOUCH_END
+                    );
+            break;
+        default: UNREACHABLE(); break;
+        }
+        break;
+    default: UNREACHABLE(); break;
+    }
+}
+
+
+void  simulation_context::insert_request_info_increment_enable_level_of_timer(
+        device_request_info_id const&  drid, object_guid const  timer_guid)
+{
+    ASSUMPTION(is_valid_timer_guid(timer_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_increment_enable_level_of_timer(
+            m_timers.at(timer_guid.index).id
+            ));
 }
 
 
 void  simulation_context::insert_request_info_decrement_enable_level_of_timer(
-        object_guid const  owner_guid, object_guid const  timer_guid)
+        device_request_info_id const&  drid, object_guid const  timer_guid)
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_timer_guid(timer_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_timer_guid(timer_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_decrement_enable_level_of_timer(
+            m_timers.at(timer_guid.index).id
+            ));
 }
 
 
-void  simulation_context::insert_request_info_reset_timer(object_guid const  owner_guid, object_guid const  timer_guid)
+void  simulation_context::insert_request_info_reset_timer(device_request_info_id const&  drid, object_guid const  timer_guid)
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_timer_guid(timer_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_timer_guid(timer_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_reset_timer(
+            m_timers.at(timer_guid.index).id
+            ));
 }
 
 
 void  simulation_context::insert_request_info_increment_enable_level_of_sensor(
-        object_guid const  owner_guid, object_guid const  sensor_guid)
+        device_request_info_id const&  drid, object_guid const  sensor_guid)
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_sensor_guid(sensor_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_increment_enable_level_of_sensor(
+            m_sensors.at(sensor_guid.index).id
+            ));
 }
 
 
 void  simulation_context::insert_request_info_decrement_enable_level_of_sensor(
-        object_guid const  owner_guid, object_guid const  sensor_guid)
+        device_request_info_id const&  drid, object_guid const  sensor_guid)
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_sensor_guid(sensor_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_decrement_enable_level_of_sensor(
+            m_sensors.at(sensor_guid.index).id
+            ));
 }
 
 
 void  simulation_context::insert_request_info_import_scene(
-        object_guid const  owner_guid, std::string const&  import_dir, object_guid const  under_folder_guid,
+        device_request_info_id const&  drid, std::string const&  import_dir, object_guid const  under_folder_guid,
         object_guid const  relocation_frame_guid, bool const  cache_imported_scene,
         vector3 const&  linear_velocity, vector3 const&  angular_velocity,
         object_guid const  motion_frame_guid
         )
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_folder_guid(under_folder_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_folder_guid(under_folder_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_import_scene(
+            import_dir, under_folder_guid, relocation_frame_guid, cache_imported_scene,
+            linear_velocity, angular_velocity, motion_frame_guid
+            ));
 }
 
 
-void  simulation_context::insert_request_info_erase_folder(object_guid const  owner_guid, object_guid const  folder_guid)
+void  simulation_context::insert_request_info_erase_folder(device_request_info_id const&  drid, object_guid const  folder_guid)
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_folder_guid(folder_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_folder_guid(folder_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_erase_folder(folder_guid));
 }
 
 
 void  simulation_context::insert_request_info_rigid_body_set_linear_velocity(
-        object_guid const  owner_guid, object_guid const  rb_guid, vector3 const&  linear_velocity)
+        device_request_info_id const&  drid, object_guid const  rb_guid, vector3 const&  linear_velocity)
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_rigid_body_guid(rb_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_rigid_body_guid(rb_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_rigid_body_set_linear_velocity(
+            rb_guid, linear_velocity
+            ));
 }
 
 
 void  simulation_context::insert_request_info_rigid_body_set_angular_velocity(
-        object_guid const  owner_guid, object_guid const  rb_guid, vector3 const&  angular_velocity)
+        device_request_info_id const&  drid, object_guid const  rb_guid, vector3 const&  angular_velocity)
 {
-    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_rigid_body_guid(rb_guid));
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_rigid_body_guid(rb_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_rigid_body_set_angular_velocity(
+            rb_guid, angular_velocity
+            ));
 }
 
 
 void  simulation_context::insert_request_info_update_radial_force_field(
-        object_guid const  sensor_guid, float_32_bit const  multiplier, float_32_bit const  exponent,
+        device_request_info_id const&  drid, float_32_bit const  multiplier, float_32_bit const  exponent,
         float_32_bit const  min_radius, bool const  use_mass
         )
 {
-    ASSUMPTION(is_valid_sensor_guid(sensor_guid) && multiplier > 0.0f && exponent >= 1.0f && min_radius >= 0.001f);
-    NOT_IMPLEMENTED_YET();
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_update_radial_force_field(
+            multiplier, exponent, min_radius, use_mass
+            ));
 }
 
 
 void  simulation_context::insert_request_info_update_linear_force_field(
-        object_guid const  sensor_guid, vector3 const&  acceleration, bool const  use_mass
+        device_request_info_id const&  drid, vector3 const&  acceleration, bool const  use_mass
         )
 {
-    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
-    NOT_IMPLEMENTED_YET();
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_update_linear_force_field(acceleration, use_mass));
 }
 
 
-void  simulation_context::insert_request_info_leave_force_field(object_guid const  sensor_guid)
+void  simulation_context::insert_request_info_leave_force_field(device_request_info_id const&  drid)
 {
-    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
-    NOT_IMPLEMENTED_YET();
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_leave_force_field());
 }
 
 
