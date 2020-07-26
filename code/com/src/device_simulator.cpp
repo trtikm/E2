@@ -329,6 +329,7 @@ device_simulator::request_info_id  device_simulator::insert_request_info_update_
         bool const  use_mass
         )
 {
+    ASSUMPTION(multiplier > 0.0f && exponent >= 1.0f && min_radius >= 0.001f);
     return {
         REQUEST_KIND::UPDATE_RADIAL_FORCE_FIELD,
         m_request_infos_update_radial_force_field.insert(request_info_update_radial_force_field{
