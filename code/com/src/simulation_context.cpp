@@ -45,7 +45,8 @@ simulation_context::simulation_context(
     , m_batches()
     , m_colliders()
     , m_rigid_bodies()
-    , m_devices()
+    , m_timers()
+    , m_sensors()
     , m_agents()
     , m_frames_provider()
     , m_collision_scene_ptr(collision_scene_ptr_)
@@ -56,7 +57,8 @@ simulation_context::simulation_context(
     , m_batches_to_guids()
     , m_coids_to_guids()
     , m_rbids_to_guids()
-    , m_deids_to_guids()
+    , m_tmids_to_guids()
+    , m_seids_to_guids()
     , m_agids_to_guids()
     , m_moveable_colliders()
     , m_moveable_rigid_bodies()
@@ -159,7 +161,8 @@ object_guid  simulation_context::folder_of(object_guid const  guid) const
     case OBJECT_KIND::BATCH: return folder_of_batch(guid);
     case OBJECT_KIND::COLLIDER: return folder_of_collider(guid);
     case OBJECT_KIND::RIGID_BODY: return folder_of_rigid_body(guid);
-    case OBJECT_KIND::DEVICE: return folder_of_device(guid);
+    case OBJECT_KIND::TIMER: return folder_of_timer(guid);
+    case OBJECT_KIND::SENSOR: return folder_of_sensor(guid);
     case OBJECT_KIND::AGENT: return folder_of_agent(guid);
     case OBJECT_KIND::NONE: return invalid_object_guid();
     default: UNREACHABLE(); break;
@@ -177,7 +180,8 @@ std::string const&  simulation_context::name_of(object_guid const  guid) const
     case OBJECT_KIND::BATCH: return name_of_batch(guid);
     case OBJECT_KIND::COLLIDER: return name_of_collider(guid);
     case OBJECT_KIND::RIGID_BODY: return name_of_rigid_body(guid);
-    case OBJECT_KIND::DEVICE: return name_of_device(guid);
+    case OBJECT_KIND::TIMER: return name_of_timer(guid);
+    case OBJECT_KIND::SENSOR: return name_of_sensor(guid);
     case OBJECT_KIND::AGENT: return name_of_agent(guid);
     case OBJECT_KIND::NONE: return empty;
     default: UNREACHABLE(); break;
@@ -265,7 +269,10 @@ void  simulation_context::request_erase_non_root_folder(object_guid const  folde
         case OBJECT_KIND::RIGID_BODY:
             request_erase_rigid_body(name_and_guid.second);
             break;
-        case OBJECT_KIND::DEVICE:
+        case OBJECT_KIND::TIMER:
+            NOT_IMPLEMENTED_YET();
+            break;
+        case OBJECT_KIND::SENSOR:
             NOT_IMPLEMENTED_YET();
             break;
         case OBJECT_KIND::AGENT:
@@ -1085,7 +1092,7 @@ object_guid  simulation_context::insert_collider(
                     owner_guid = rigid_body_guid;
                 return owner_guid == rigid_body_guid;
             }
-            it = fct.content.find(to_string(OBJECT_KIND::DEVICE));
+            it = fct.content.find(to_string(OBJECT_KIND::SENSOR));
             if (it != fct.content.end())
             {
                 owner_guid = it->second;
@@ -1117,15 +1124,15 @@ object_guid  simulation_context::insert_collider(
 
     m_folders.at(under_folder_guid.index).content.insert({ name, collider_guid });
 
-    if (owner_guid != invalid_object_guid())
-        switch (owner_guid.kind)
-        {
-        case OBJECT_KIND::RIGID_BODY: break;
-        // TODO:
-        //case OBJECT_KIND::DEVICE: m_devices.at(owner_guid.index).colliders.push_back(collider_guid); break;
-        //case OBJECT_KIND::AGENT: m_agents.at(owner_guid.index).colliders.push_back(collider_guid); break;
-        default: UNREACHABLE(); break;
-        }
+if (owner_guid != invalid_object_guid())
+    switch (owner_guid.kind)
+    {
+    case OBJECT_KIND::RIGID_BODY: break;
+    case OBJECT_KIND::SENSOR: m_sensors.at(owner_guid.index).collider = collider_guid; break;
+    // TODO:
+    //case OBJECT_KIND::AGENT: m_agents.at(owner_guid.index).colliders.push_back(collider_guid); break;
+    default: UNREACHABLE(); break;
+    }
 
     if (rigid_body_guid != invalid_object_guid())
         m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(collider_guid);
@@ -1148,6 +1155,15 @@ void  simulation_context::erase_collider(object_guid const  collider_guid)
         );
 
     auto const&  elem = m_colliders.at(collider_guid.index);
+    if (elem.owner != invalid_object_guid())
+        switch (elem.owner.kind)
+        {
+        case OBJECT_KIND::RIGID_BODY: break;
+        case OBJECT_KIND::SENSOR: m_sensors.at(elem.owner.index).collider = invalid_object_guid(); break;
+        // TODO:
+        //case OBJECT_KIND::AGENT: m_agents.at(owner_guid.index).colliders.push_back(collider_guid); break;
+        default: UNREACHABLE(); break;
+        }
     if (is_valid_rigid_body_guid(elem.rigid_body))
     {
         auto&  rb_colliders = m_rigid_bodies.at(elem.rigid_body.index).colliders;
@@ -1618,45 +1634,284 @@ void  simulation_context::insert_instant_constraint_to_physics(
 
 
 /////////////////////////////////////////////////////////////////////////////////////
-// DEVICES API
+// TIMERS API
 /////////////////////////////////////////////////////////////////////////////////////
 
 
-bool  simulation_context::is_valid_device_guid(object_guid const  device_guid) const
+bool  simulation_context::is_valid_timer_guid(object_guid const  timer_guid) const
 {
-    return device_guid.kind == OBJECT_KIND::DEVICE && m_devices.valid(device_guid.index);
+    return timer_guid.kind == OBJECT_KIND::TIMER && m_timers.valid(timer_guid.index);
 }
 
 
-object_guid  simulation_context::folder_of_device(object_guid const  device_guid) const
+object_guid  simulation_context::folder_of_timer(object_guid const  timer_guid) const
 {
-    ASSUMPTION(is_valid_device_guid(device_guid));
-    return { OBJECT_KIND::FOLDER, m_devices.at(device_guid.index).folder_index };
+    ASSUMPTION(is_valid_timer_guid(timer_guid));
+    return { OBJECT_KIND::FOLDER, m_timers.at(timer_guid.index).folder_index };
 }
 
 
-std::string const&  simulation_context::name_of_device(object_guid const  device_guid) const
+std::string const&  simulation_context::name_of_timer(object_guid const  timer_guid) const
 {
-    ASSUMPTION(is_valid_device_guid(device_guid));
-    return m_devices.at(device_guid.index).element_name;
+    ASSUMPTION(is_valid_timer_guid(timer_guid));
+    return m_timers.at(timer_guid.index).element_name;
 }
 
 
-object_guid  simulation_context::to_device_guid(com::device_simulator::device_id const  deid) const
+object_guid  simulation_context::to_timer_guid(com::device_simulator::timer_id const  tid) const
 {
-    return m_deids_to_guids.at(deid);
+    return m_tmids_to_guids.at(tid);
 }
 
 
-simulation_context::device_guid_iterator  simulation_context::devices_begin() const
+simulation_context::timer_guid_iterator  simulation_context::timers_begin() const
 {
-    return device_guid_iterator(m_devices.valid_indices().begin());
+    return timer_guid_iterator(m_timers.valid_indices().begin());
 }
 
 
-simulation_context::device_guid_iterator  simulation_context::devices_end() const
+simulation_context::timer_guid_iterator  simulation_context::timers_end() const
 {
-    return device_guid_iterator(m_devices.valid_indices().end());
+    return timer_guid_iterator(m_timers.valid_indices().end());
+}
+
+
+// Disabled (not const) for modules.
+
+
+object_guid  simulation_context::insert_timer(
+        object_guid const  under_folder_guid, std::string const&  name, float_32_bit const  period_in_seconds_,
+        natural_8_bit const target_enable_level_, natural_8_bit const  current_enable_level_)
+{
+    ASSUMPTION(folder_content(under_folder_guid).content.count(name) == 0UL);
+    com::device_simulator::timer_id const  tid = m_device_simulator_ptr->insert_timer(
+            period_in_seconds_, target_enable_level_, current_enable_level_
+            );
+    object_guid const  timer_guid = {
+            OBJECT_KIND::TIMER,
+            m_timers.insert({ tid, under_folder_guid.index, name })
+            };
+    m_tmids_to_guids.insert({ tid, timer_guid });
+    m_folders.at(under_folder_guid.index).content.insert({ name, timer_guid });
+    return timer_guid;
+}
+
+
+void  simulation_context::erase_timer(object_guid const  timer_guid)
+{
+    ASSUMPTION(is_valid_timer_guid(timer_guid));
+    auto const&  elem = m_timers.at(timer_guid.index);
+    {
+        auto const&  infos = m_device_simulator_ptr->request_infos_of_timer(elem.id);
+        while (!infos.empty())
+            m_device_simulator_ptr->erase_request_info(infos.back());
+    }
+    m_device_simulator_ptr->erase_timer(elem.id);
+    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_tmids_to_guids.erase(elem.id);
+    m_timers.erase(timer_guid.index);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+// sensorS API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+bool  simulation_context::is_valid_sensor_guid(object_guid const  sensor_guid) const
+{
+    return sensor_guid.kind == OBJECT_KIND::SENSOR && m_sensors.valid(sensor_guid.index);
+}
+
+
+object_guid  simulation_context::folder_of_sensor(object_guid const  sensor_guid) const
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    return { OBJECT_KIND::FOLDER, m_sensors.at(sensor_guid.index).folder_index };
+}
+
+
+std::string const&  simulation_context::name_of_sensor(object_guid const  sensor_guid) const
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    return m_sensors.at(sensor_guid.index).element_name;
+}
+
+
+object_guid  simulation_context::to_sensor_guid(com::device_simulator::sensor_id const  sid) const
+{
+    return m_seids_to_guids.at(sid);
+}
+
+
+simulation_context::sensor_guid_iterator  simulation_context::sensors_begin() const
+{
+    return sensor_guid_iterator(m_sensors.valid_indices().begin());
+}
+
+
+simulation_context::sensor_guid_iterator  simulation_context::sensors_end() const
+{
+    return sensor_guid_iterator(m_sensors.valid_indices().end());
+}
+
+
+// Disabled (not const) for modules.
+
+
+object_guid  simulation_context::insert_sensor(
+        object_guid const  under_folder_guid, std::string const&  name, object_guid const  collider_,
+        std::unordered_set<object_guid> const&  triggers_, natural_8_bit const target_enable_level_,
+        natural_8_bit const  current_enable_level_)
+{
+    ASSUMPTION((
+        folder_content(under_folder_guid).content.count(name) == 0UL &&
+        is_valid_collider_guid(collider_) &&
+        [this, &triggers_]() -> bool {
+            for (object_guid  collider_guid : triggers_)
+                if (!is_valid_collider_guid(collider_guid))
+                    return false;
+            return true;
+            }()
+        ));
+    com::device_simulator::sensor_id const  sid = m_device_simulator_ptr->insert_sensor(
+            collider_, triggers_, target_enable_level_, current_enable_level_
+            );
+    object_guid const  sensor_guid = {
+            OBJECT_KIND::SENSOR,
+            m_sensors.insert({ sid, under_folder_guid.index, name, collider_ })
+            };
+    m_seids_to_guids.insert({ sid, sensor_guid });
+    m_folders.at(under_folder_guid.index).content.insert({ name, sensor_guid });
+    return sensor_guid;
+}
+
+
+void  simulation_context::erase_sensor(object_guid const  sensor_guid)
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    auto const&  elem = m_sensors.at(sensor_guid.index);
+    if (is_valid_collider_guid(elem.collider))
+        m_colliders.at(elem.collider.index).owner = invalid_object_guid();
+    auto const  remove_request_infos = [this](std::vector<com::device_simulator::request_info_id> const&  request_infos) {
+        while (!request_infos.empty())
+            m_device_simulator_ptr->erase_request_info(request_infos.back());
+    };
+    remove_request_infos(m_device_simulator_ptr->request_infos_touching_of_sensor(elem.id));
+    remove_request_infos(m_device_simulator_ptr->request_infos_touch_begin_of_sensor(elem.id));
+    remove_request_infos(m_device_simulator_ptr->request_infos_touch_end_of_sensor(elem.id));
+    m_device_simulator_ptr->erase_sensor(elem.id);
+    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_seids_to_guids.erase(elem.id);
+    m_sensors.erase(sensor_guid.index);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+// TIMER & SENSOR REQUEST INFOS API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+// Disabled (not const) for modules.
+
+
+void  simulation_context::insert_request_info_increment_enable_level_of_timer(
+        object_guid const  owner_guid, object_guid const  timer_guid)
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_timer_guid(timer_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_decrement_enable_level_of_timer(
+        object_guid const  owner_guid, object_guid const  timer_guid)
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_timer_guid(timer_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_reset_timer(object_guid const  owner_guid, object_guid const  timer_guid)
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_timer_guid(timer_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_increment_enable_level_of_sensor(
+        object_guid const  owner_guid, object_guid const  sensor_guid)
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_sensor_guid(sensor_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_decrement_enable_level_of_sensor(
+        object_guid const  owner_guid, object_guid const  sensor_guid)
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_sensor_guid(sensor_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_import_scene(
+        object_guid const  owner_guid, std::string const&  import_dir, object_guid const  under_folder_guid,
+        object_guid const  relocation_frame_guid, bool const  cache_imported_scene,
+        vector3 const&  linear_velocity, vector3 const&  angular_velocity,
+        object_guid const  motion_frame_guid
+        )
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_folder_guid(under_folder_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_erase_folder(object_guid const  owner_guid, object_guid const  folder_guid)
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_folder_guid(folder_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_rigid_body_set_linear_velocity(
+        object_guid const  owner_guid, object_guid const  rb_guid, vector3 const&  linear_velocity)
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_rigid_body_guid(rb_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_rigid_body_set_angular_velocity(
+        object_guid const  owner_guid, object_guid const  rb_guid, vector3 const&  angular_velocity)
+{
+    ASSUMPTION((is_valid_timer_guid(owner_guid) || is_valid_sensor_guid(owner_guid)) && is_valid_rigid_body_guid(rb_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_update_radial_force_field(
+        object_guid const  sensor_guid, float_32_bit const  multiplier, float_32_bit const  exponent,
+        float_32_bit const  min_radius, bool const  use_mass
+        )
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid) && multiplier > 0.0f && exponent >= 1.0f && min_radius >= 0.001f);
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_update_linear_force_field(
+        object_guid const  sensor_guid, vector3 const&  acceleration, bool const  use_mass
+        )
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::insert_request_info_leave_force_field(object_guid const  sensor_guid)
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    NOT_IMPLEMENTED_YET();
 }
 
 

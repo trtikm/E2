@@ -23,7 +23,8 @@ std::string  to_string(OBJECT_KIND const  okind)
     case OBJECT_KIND::BATCH: return "BATCH";
     case OBJECT_KIND::COLLIDER: return "COLLIDER";
     case OBJECT_KIND::RIGID_BODY: return "RIGID_BODY";
-    case OBJECT_KIND::DEVICE: return "DEVICE";
+    case OBJECT_KIND::TIMER: return "TIMER";
+    case OBJECT_KIND::SENSOR: return "SENSOR";
     case OBJECT_KIND::AGENT: return "AGENT";
     case OBJECT_KIND::NONE: return "NONE";
     default:
@@ -40,7 +41,8 @@ OBJECT_KIND  read_object_kind_from_string(std::string const&  name)
         {"BATCH", OBJECT_KIND::BATCH},
         {"COLLIDER", OBJECT_KIND::COLLIDER},
         {"RIGID_BODY", OBJECT_KIND::RIGID_BODY},
-        {"DEVICE", OBJECT_KIND::DEVICE},
+        {"TIMER", OBJECT_KIND::TIMER},
+        {"SENSOR", OBJECT_KIND::SENSOR},
         {"AGENT", OBJECT_KIND::AGENT},
         {"NONE", OBJECT_KIND::NONE}
     };

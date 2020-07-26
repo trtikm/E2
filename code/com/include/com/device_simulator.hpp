@@ -16,8 +16,6 @@ namespace com {
 
 struct  device_simulator
 {
-    using  device_id = natural_16_bit;
-
     using  index_type = natural_16_bit;
 
     using  timer_id = index_type;
@@ -59,8 +57,10 @@ struct  device_simulator
             natural_8_bit const target_enable_level_ = 1,
             natural_8_bit const  current_enable_level_ = 0
             );
+    bool  is_valid_timer_id(timer_id const  tid) const;
     void  register_request_info_to_timer(request_info_id const&  rid, timer_id const  tid);
     void  unregister_request_info_from_timer(request_info_id const&  rid, timer_id const  tid);
+    std::vector<request_info_id> const&  request_infos_of_timer(timer_id const  tid) const;
     void  erase_timer(timer_id const  tid);
 
     sensor_id  insert_sensor(
@@ -69,6 +69,7 @@ struct  device_simulator
             natural_8_bit const target_enable_level_ = 1,
             natural_8_bit const  current_enable_level_ = 0
             );
+    bool  is_valid_sensor_id(sensor_id const  sid) const;
     enum struct SENSOR_EVENT_TYPE : natural_8_bit
     {
         TOUCHING        = 0U,
@@ -77,6 +78,9 @@ struct  device_simulator
     };
     void  register_request_info_to_sensor(request_info_id const&  rid, sensor_id const  sid, SENSOR_EVENT_TYPE const  type);
     void  unregister_request_info_from_sensor(request_info_id const&  rid, sensor_id const  sid, SENSOR_EVENT_TYPE const  type);
+    std::vector<request_info_id> const&  request_infos_touching_of_sensor(sensor_id const  sid) const;
+    std::vector<request_info_id> const&  request_infos_touch_begin_of_sensor(sensor_id const  sid) const;
+    std::vector<request_info_id> const&  request_infos_touch_end_of_sensor(sensor_id const  sid) const;
     void  erase_sensor(sensor_id const  sid);
 
     request_info_id  insert_request_info_increment_enable_level_of_timer(timer_id const  tid);
@@ -107,6 +111,7 @@ struct  device_simulator
             bool const  use_mass = true
             );
     request_info_id  insert_request_info_leave_force_field();
+    bool  is_valid_request_info_id(request_info_id const&  rid) const;
     void  erase_request_info(request_info_id const&  rid);
 
     void  clear();

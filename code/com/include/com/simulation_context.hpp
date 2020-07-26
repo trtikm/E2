@@ -32,9 +32,6 @@ namespace angeo {
 namespace ai {
     struct simulator;
 }
-namespace com {
-    struct devices_manager;
-}
 
 namespace com {
 
@@ -430,18 +427,78 @@ struct simulation_context
             );
 
     /////////////////////////////////////////////////////////////////////////////////////
-    // DEVICES API
+    // TIMERS API
     /////////////////////////////////////////////////////////////////////////////////////
 
-    using  device_guid_iterator = object_guid_iterator<OBJECT_KIND::DEVICE>;
+    using  timer_guid_iterator = object_guid_iterator<OBJECT_KIND::TIMER>;
 
-    bool  is_valid_device_guid(object_guid const  device_guid) const;
-    object_guid  folder_of_device(object_guid const  device_guid) const;
-    std::string const&  name_of_device(object_guid const  device_guid) const;
-    object_guid  to_device_guid(com::device_simulator::device_id const  deid) const;
-    device_guid_iterator  devices_begin() const;
-    device_guid_iterator  devices_end() const;
-    void  request_enable_sensor(object_guid const  device_guid, object_guid const  collider_guid, bool const  state) const;
+    bool  is_valid_timer_guid(object_guid const  timer_guid) const;
+    object_guid  folder_of_timer(object_guid const  timer_guid) const;
+    std::string const&  name_of_timer(object_guid const  timer_guid) const;
+    object_guid  to_timer_guid(com::device_simulator::timer_id const  tid) const;
+    timer_guid_iterator  timers_begin() const;
+    timer_guid_iterator  timers_end() const;
+    // Disabled (not const) for modules.
+    object_guid  insert_timer(object_guid const  under_folder_guid, std::string const&  name, float_32_bit const  period_in_seconds_,
+                              natural_8_bit const target_enable_level_ = 1, natural_8_bit const  current_enable_level_ = 0);
+    void  erase_timer(object_guid const  timer_guid);
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // SENSORS API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    using  sensor_guid_iterator = object_guid_iterator<OBJECT_KIND::SENSOR>;
+
+    bool  is_valid_sensor_guid(object_guid const  sensor_guid) const;
+    object_guid  folder_of_sensor(object_guid const  sensor_guid) const;
+    std::string const&  name_of_sensor(object_guid const  sensor_guid) const;
+    object_guid  to_sensor_guid(com::device_simulator::sensor_id const  sid) const;
+    sensor_guid_iterator  sensors_begin() const;
+    sensor_guid_iterator  sensors_end() const;
+    // Disabled (not const) for modules.
+    object_guid  insert_sensor(object_guid const  under_folder_guid, std::string const&  name, object_guid const  collider_,
+                               std::unordered_set<object_guid> const&  triggers_ = {},
+                               natural_8_bit const target_enable_level_ = 1, natural_8_bit const  current_enable_level_ = 0);
+    void  erase_sensor(object_guid const  sensor_guid);
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // TIMER & SENSOR REQUEST INFOS API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    // Disabled (not const) for modules.
+    void  insert_request_info_increment_enable_level_of_timer(object_guid const  owner_guid, object_guid const  timer_guid);
+    void  insert_request_info_decrement_enable_level_of_timer(object_guid const  owner_guid, object_guid const  timer_guid);
+    void  insert_request_info_reset_timer(object_guid const  owner_guid, object_guid const  timer_guid);
+    void  insert_request_info_increment_enable_level_of_sensor(object_guid const  owner_guid, object_guid const  sensor_guid);
+    void  insert_request_info_decrement_enable_level_of_sensor(object_guid const  owner_guid, object_guid const  sensor_guid);
+    void  insert_request_info_import_scene(
+            object_guid const  owner_guid,
+            std::string const&  import_dir,
+            object_guid const  under_folder_guid,
+            object_guid const  relocation_frame_guid = invalid_object_guid(),
+            bool const  cache_imported_scene = true,
+            vector3 const&  linear_velocity = vector3_zero(),
+            vector3 const&  angular_velocity = vector3_zero(),
+            object_guid const  motion_frame_guid = invalid_object_guid()
+            );
+    void  insert_request_info_erase_folder(object_guid const  owner_guid, object_guid const  folder_guid);
+    void  insert_request_info_rigid_body_set_linear_velocity(object_guid const  owner_guid, object_guid const  rb_guid,
+                                                             vector3 const&  linear_velocity);
+    void  insert_request_info_rigid_body_set_angular_velocity(object_guid const  owner_guid, object_guid const  rb_guid,
+                                                              vector3 const&  angular_velocity);
+    void  insert_request_info_update_radial_force_field(
+            object_guid const  sensor_guid,
+            float_32_bit const  multiplier = 1.0f,
+            float_32_bit const  exponent = 1.0f,
+            float_32_bit const  min_radius = 0.001f,
+            bool const  use_mass = true
+            );
+    void  insert_request_info_update_linear_force_field(
+            object_guid const  sensor_guid,
+            vector3 const&  acceleration = vector3(0.0f, 0.0f, -9.81f),
+            bool const  use_mass = true
+            );
+    void  insert_request_info_leave_force_field(object_guid const  sensor_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // AGENTS API
@@ -455,6 +512,7 @@ struct simulation_context
     object_guid  to_agent_guid(ai::object_id const  agid) const;
     agent_guid_iterator  agents_begin() const;
     agent_guid_iterator  agents_end() const;
+    // Disabled (not const) for modules.
 
     /////////////////////////////////////////////////////////////////////////////////////
     // COLLISION CONTACTS API
@@ -654,10 +712,25 @@ private:
             , colliders()
         {}
         object_guid  frame;
-        std::vector<object_guid>  colliders; // Only those whose owner is this rigid body.
+        std::vector<object_guid>  colliders;
     };
 
-    using  folder_element_device = folder_element<com::device_simulator::device_id>;
+    using  folder_element_timer = folder_element<com::device_simulator::timer_id>;
+
+    struct  folder_element_sensor : public folder_element<com::device_simulator::sensor_id>
+    {
+        folder_element_sensor()
+            : base_type()
+            , collider(invalid_object_guid())
+        {}
+        folder_element_sensor(module_specific_id const  id_, index_type const  folder_index_, std::string const&  name_,
+                object_guid const  collider_
+                )
+            : base_type(id_, folder_index_, name_)
+            , collider(collider_)
+        {}
+        object_guid  collider;
+    };
 
     // TODO: folder_element_* below are NOT properly implemented, i.e. they have been ignored so far.
     using  folder_element_agent = folder_element<ai::object_id>;
@@ -668,7 +741,8 @@ private:
     dynamic_array<folder_element_batch, index_type>  m_batches;
     dynamic_array<folder_element_collider, index_type>  m_colliders;
     dynamic_array<folder_element_rigid_body, index_type>  m_rigid_bodies;
-    dynamic_array<folder_element_device, index_type>  m_devices;
+    dynamic_array<folder_element_timer, index_type>  m_timers;
+    dynamic_array<folder_element_sensor, index_type>  m_sensors;
     dynamic_array<folder_element_agent, index_type>  m_agents;
 
     frames_provider  m_frames_provider;
@@ -681,7 +755,8 @@ private:
     std::unordered_map<std::string, object_guid>  m_batches_to_guids;
     std::unordered_map<angeo::collision_object_id, object_guid>  m_coids_to_guids;
     std::unordered_map<angeo::rigid_body_id, object_guid>  m_rbids_to_guids;
-    std::unordered_map<com::device_simulator::device_id, object_guid>  m_deids_to_guids;
+    std::unordered_map<com::device_simulator::timer_id, object_guid>  m_tmids_to_guids;
+    std::unordered_map<com::device_simulator::sensor_id, object_guid>  m_seids_to_guids;
     std::unordered_map<ai::object_id, object_guid>  m_agids_to_guids;
 
     std::unordered_set<index_type>  m_moveable_colliders;

@@ -16,9 +16,10 @@ enum struct  OBJECT_KIND : natural_8_bit
     BATCH           = 2U,
     COLLIDER        = 3U,
     RIGID_BODY      = 4U,
-    DEVICE          = 5U,
-    AGENT           = 6U,
-    NONE            = 7U,
+    TIMER           = 5U,
+    SENSOR          = 6U,
+    AGENT           = 7U,
+    NONE            = 8U,
 };
 
 

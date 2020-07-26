@@ -92,9 +92,17 @@ device_simulator::timer_id  device_simulator::insert_timer(
 }
 
 
+bool  device_simulator::is_valid_timer_id(timer_id const  tid) const
+{
+    return m_timers.valid(tid);
+}
+
+
 void  device_simulator::register_request_info_to_timer(request_info_id const&  rid, timer_id const  tid)
 {
     ASSUMPTION(
+        is_valid_request_info_id(rid) &&
+        is_valid_timer_id(tid) &&
         [](std::vector<request_info_id> const&  infos, request_info_id const&  rid) {
             return std::find(infos.begin(), infos.end(), rid) == infos.end();
         }(m_timers.at(tid).request_infos, rid)
@@ -106,6 +114,7 @@ void  device_simulator::register_request_info_to_timer(request_info_id const&  r
 
 void  device_simulator::unregister_request_info_from_timer(request_info_id const&  rid, timer_id const  tid)
 {
+    ASSUMPTION(is_valid_request_info_id(rid) && is_valid_timer_id(tid));
     auto&  infos = m_timers.at(tid).request_infos;
     infos.erase(std::find(infos.begin(), infos.end(), rid));
 
@@ -114,8 +123,16 @@ void  device_simulator::unregister_request_info_from_timer(request_info_id const
 }
 
 
+std::vector<device_simulator::request_info_id> const&  device_simulator::request_infos_of_timer(timer_id const  tid) const
+{
+    ASSUMPTION(is_valid_timer_id(tid));
+    return m_timers.at(tid).request_infos;
+}
+
+
 void  device_simulator::erase_timer(timer_id const  tid)
 {
+    ASSUMPTION(is_valid_timer_id(tid));
     timer&  t = m_timers.at(tid);
     while (!t.request_infos.empty())
         unregister_request_info_from_timer(t.request_infos.back(), tid);
@@ -134,12 +151,19 @@ device_simulator::sensor_id  device_simulator::insert_sensor(
 }
 
 
+bool  device_simulator::is_valid_sensor_id(sensor_id const  sid) const
+{
+    return m_sensors.valid(sid);
+}
+
+
 void  device_simulator::register_request_info_to_sensor(
         request_info_id const&  rid,
         sensor_id const  sid,
         SENSOR_EVENT_TYPE const  type
         )
 {
+    ASSUMPTION(is_valid_request_info_id(rid) && is_valid_sensor_id(sid));
     std::vector<request_info_id>*  infos;
     switch (type)
     {
@@ -160,6 +184,7 @@ void  device_simulator::unregister_request_info_from_sensor(
         SENSOR_EVENT_TYPE const  type
         )
 {
+    ASSUMPTION(is_valid_request_info_id(rid) && is_valid_sensor_id(sid));
     std::vector<request_info_id>*  infos;
     switch (type)
     {
@@ -177,8 +202,30 @@ void  device_simulator::unregister_request_info_from_sensor(
 }
 
 
+std::vector<device_simulator::request_info_id> const&  device_simulator::request_infos_touching_of_sensor(sensor_id const  sid) const
+{
+    ASSUMPTION(is_valid_sensor_id(sid));
+    return m_sensors.at(sid).request_infos_on_touching;
+}
+
+
+std::vector<device_simulator::request_info_id> const&  device_simulator::request_infos_touch_begin_of_sensor(sensor_id const  sid) const
+{
+    ASSUMPTION(is_valid_sensor_id(sid));
+    return m_sensors.at(sid).request_infos_on_touch_begin;
+}
+
+
+std::vector<device_simulator::request_info_id> const&  device_simulator::request_infos_touch_end_of_sensor(sensor_id const  sid) const
+{
+    ASSUMPTION(is_valid_sensor_id(sid));
+    return m_sensors.at(sid).request_infos_on_touch_end;
+}
+
+
 void  device_simulator::erase_sensor(sensor_id const  sid)
 {
+    ASSUMPTION(is_valid_sensor_id(sid));
     sensor&  s = m_sensors.at(sid);
     while (!s.request_infos_on_touching.empty())
         unregister_request_info_from_sensor(s.request_infos_on_touching.back(), sid, SENSOR_EVENT_TYPE::TOUCHING);
@@ -192,30 +239,35 @@ void  device_simulator::erase_sensor(sensor_id const  sid)
 
 device_simulator::request_info_id  device_simulator::insert_request_info_increment_enable_level_of_timer(timer_id const  tid)
 {
+    ASSUMPTION(is_valid_timer_id(tid));
     return { REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_TIMER, m_request_infos_increment_enable_level_of_timer.insert(tid) };
 }
 
 
 device_simulator::request_info_id  device_simulator::insert_request_info_decrement_enable_level_of_timer(timer_id const  tid)
 {
+    ASSUMPTION(is_valid_timer_id(tid));
     return { REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_TIMER, m_request_infos_decrement_enable_level_of_timer.insert(tid) };
 }
 
 
 device_simulator::request_info_id  device_simulator::insert_request_info_reset_timer(timer_id const  tid)
 {
+    ASSUMPTION(is_valid_timer_id(tid));
     return { REQUEST_KIND::RESET_TIMER, m_request_infos_reset_timer.insert(tid) };
 }
 
 
 device_simulator::request_info_id  device_simulator::insert_request_info_increment_enable_level_of_sensor(sensor_id const  sid)
 {
+    ASSUMPTION(is_valid_sensor_id(sid));
     return { REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SEBSOR, m_request_infos_increment_enable_level_of_sensor.insert(sid) };
 }
 
 
 device_simulator::request_info_id  device_simulator::insert_request_info_decrement_enable_level_of_sensor(sensor_id const  sid)
 {
+    ASSUMPTION(is_valid_sensor_id(sid));
     return { REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR, m_request_infos_decrement_enable_level_of_sensor.insert(sid) };
 }
 
@@ -304,6 +356,45 @@ device_simulator::request_info_id  device_simulator::insert_request_info_leave_f
 }
 
 
+bool  device_simulator::is_valid_request_info_id(request_info_id const&  rid) const
+{
+    switch (rid.kind)
+    {
+    // Locally handled request infos
+
+    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_TIMER:
+        return m_request_infos_increment_enable_level_of_timer.valid(rid.index);
+    case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_TIMER:
+        return m_request_infos_decrement_enable_level_of_timer.valid(rid.index);
+    case REQUEST_KIND::RESET_TIMER:
+        return m_request_infos_reset_timer.valid(rid.index);
+    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SEBSOR:
+        return m_request_infos_increment_enable_level_of_sensor.valid(rid.index);
+    case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
+        return m_request_infos_decrement_enable_level_of_sensor.valid(rid.index);
+
+    // All other request infos
+
+    case REQUEST_KIND::IMPORT_SCENE:
+        return m_request_infos_import_scene.valid(rid.index);
+    case REQUEST_KIND::ERASE_FOLDER:
+        return m_request_infos_erase_folder.valid(rid.index);
+    case REQUEST_KIND::RIGID_BODY_SET_LINEAR_VELOCITY:
+        return m_request_infos_rigid_body_set_linear_velocity.valid(rid.index);
+    case REQUEST_KIND::RIGID_BODY_SET_ANGULAR_VELOCITY:
+        return m_request_infos_rigid_body_set_angular_velocity.valid(rid.index);
+    case REQUEST_KIND::UPDATE_RADIAL_FORCE_FIELD:
+        return m_request_infos_update_radial_force_field.valid(rid.index);
+    case REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD:
+        return m_request_infos_update_linear_force_field.valid(rid.index);
+    case REQUEST_KIND::LEAVE_FORCE_FIELD:
+        return m_request_infos_leave_force_field.valid(rid.index);
+
+    default: UNREACHABLE(); break;
+    }
+}
+
+
 void  device_simulator::erase_request_info(request_info_id const&  rid)
 {
     request_info_base&  info_base = request_info_base_of(rid);
@@ -363,6 +454,8 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
 
 device_simulator::request_info_base&  device_simulator::request_info_base_of(request_info_id const&  rid)
 {
+    ASSUMPTION(is_valid_request_info_id(rid));
+
     switch (rid.kind)
     {
     // Locally handled request infos
