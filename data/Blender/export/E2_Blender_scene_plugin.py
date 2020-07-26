@@ -16,12 +16,13 @@ class E2ObjectProps(bpy.types.PropertyGroup):
         ("FOLDER", "FOLDER", "A folder.", 1),
         ("BATCH", "BATCH", "A render batch.", 2),
         ("COLLIDER", "COLLIDER", "A collider.", 3),
-        # === Object kinds below are embedded to a folder ===
-        #("RIGID_BODY", "Rigid body", "A rigid body.", 4),
-        #("SENSOR", "Sensor", "A sensor.", 5),
-        #("ACTIVATOR", "Activator", "An activator.", 6),
-        #("DEVICE", "Device", "A device.", 7),
-        #("AGENT", "Agent", "An agent.", 8),
+        # === Object kinds below are embedded to a FOLDER ===
+        #("FRAME", "FRAME", "A frame.", 4),
+        #("RIGID_BODY", "RIGID_BODY", "A rigid body.", 5),
+        #("TIMER", "TIMER", "An timer.", 6),
+        #("AGENT", "AGENT", "An agent.", 7),
+        # === Object kinds below are embedded to a COLLIDER ===
+        #("SENSOR", "Sensor", "A sensor.", 8),
     ]
     object_kind: bpy.props.EnumProperty(
             name="Object kind",
@@ -49,6 +50,11 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     folder_defines_rigid_body: bpy.props.BoolProperty(
             name="Add 'rigid body' to the folder.",
             description="Whether to add a rigid body record into the folder or not",
+            default=False
+            )
+    folder_defines_timer: bpy.props.BoolProperty(
+            name="Add 'timer' to the folder.",
+            description="Whether to add a timer record into the folder or not",
             default=False
             )
     
@@ -104,20 +110,21 @@ class E2ObjectProps(bpy.types.PropertyGroup):
 
     COLLIDER_COLLISION_CLASS=[
         # Python ident, UI name, description, UID
-        ("COMMON_SCENE_OBJECT", "COMMON_SCENE_OBJECT", "A common scene collider.", 1),
-        ("INFINITE_MASS_OBJECT", "INFINITE_MASS_OBJECT", "An infinite mass object, like ground.", 2),
-        ("AGENT_MOTION_OBJECT", "AGENT_MOTION_OBJECT", "An agent motion object, like roller.", 3),
-        ("SIGHT_TARGET", "SIGHT_TARGET", "A sight target.", 4),
-        ("RAY_CAST_SIGHT", "RAY_CAST_SIGHT", "A ray cast target", 5),
-        ("SENSOR_GENERAL", "SENSOR_GENERAL", "A sensor colliding with activators and object colliders.", 6),
-        ("SENSOR_SPECIAL", "SENSOR_SPECIAL", "A sensor colliding only with activators.", 7),
-        ("ACTIVATOR", "ACTIVATOR", "An actoivator collider.", 8),
+        ("STATIC_OBJECT", "STATIC_OBJECT", "A static (not moveable) scene collider.", 1),
+        ("COMMON_MOVEABLE_OBJECT", "COMMON_MOVEABLE_OBJECT", "A common moveable scene collider.", 2),
+        ("HEAVY_MOVEABLE_OBJECT", "HEAVY_MOVEABLE_OBJECT", "An object so heavy that no force may affect its motion.", 3),
+        ("AGENT_MOTION_OBJECT", "AGENT_MOTION_OBJECT", "An agent motion object, like roller.", 4),
+        ("FIELD_AREA", "FIELD_AREA", "A collider representing the area where the field is acting.", 5),
+        ("SENSOR_DEDICATED", "SENSOR_DEDICATED", "A sensor colliding with same kind of sensors and heavy objects.", 6),
+        ("SENSOR_WIDE_RANGE", "SENSOR_WIDE_RANGE", "A sensor colliding also with common objects.", 7),
+        ("SENSOR_NARROW_RANGE", "SENSOR_NARROW_RANGE", "A sensor colliding only with wide or narrow sensors.", 8),
+        ("RAY_CAST_TARGET", "RAY_CAST_TARGET", "An obejct colliding only with ray casts.", 9),
     ]
     collider_collision_class: bpy.props.EnumProperty(
             name="Collision class",
             description="A collision class of the collider.",
             items=COLLIDER_COLLISION_CLASS,
-            default="COMMON_SCENE_OBJECT"
+            default="COMMON_MOVEABLE_OBJECT"
             )
     
     COLLIDER_MATERIAL_TYPE=[
@@ -142,6 +149,12 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             description="A collision material of the collider.",
             items=COLLIDER_MATERIAL_TYPE,
             default="CONCRETE"
+            )
+
+    collider_defines_sensor: bpy.props.BoolProperty(
+            name="Attach 'sensor' to this collider.",
+            description="Whether to attach a sensor record to this collider or not",
+            default=False
             )
 
     #====================================================
@@ -197,6 +210,54 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             step=0.001
             )
 
+    #====================================================
+    # TIMER PROPS
+
+    timer_period_in_seconds: bpy.props.FloatProperty(
+            name="Period",
+            description="Period of the timer in seconds.",
+            default=1.0,
+            min=0.001,
+            max=10000.0,
+            step=0.001
+            )
+    timer_target_enable_level: bpy.props.IntProperty(
+            name="Enable level",
+            description=("A value at which the timer becomes enabled"),
+            default=1,
+            min=1,
+            max=100,
+            step=1
+            )
+    timer_current_enable_level: bpy.props.IntProperty(
+            name="Current level",
+            description=("An initial value the enable level of the timer"),
+            default=0,
+            min=0,
+            max=100,
+            step=1
+            )
+
+    #====================================================
+    # SENSOR PROPS
+
+    sensor_target_enable_level: bpy.props.IntProperty(
+            name="Enable level",
+            description=("A value at which the sensor becomes enabled"),
+            default=1,
+            min=1,
+            max=100,
+            step=1
+            )
+    sensor_current_enable_level: bpy.props.IntProperty(
+            name="Current level",
+            description=("An initial value the enable level of the sensor"),
+            default=0,
+            min=0,
+            max=100,
+            step=1
+            )
+
 
 class E2ObjectPropertiesPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_e2_object_props_panel"
@@ -237,6 +298,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(object_props, "folder_defines_rigid_body")
         if object_props.folder_defines_rigid_body is True:
             self.draw_rigid_body(layout.box(), object, object_props)
+
+        row = layout.row()
+        row.prop(object_props, "folder_defines_timer")
+        if object_props.folder_defines_timer is True:
+            self.draw_timer(layout.box(), object, object_props)
 
     def draw_frame(self, layout, object, object_props):
         row = layout.row()
@@ -302,11 +368,17 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row.prop(object, "dimensions")
 
         row = layout.row()
+        print("\n\n" + object.name + str(object_props.collider_collision_class))
         row.prop(object_props, "collider_collision_class")
 
         row = layout.row()
         row.prop(object_props, "collider_material_type")
     
+        row = layout.row()
+        row.prop(object_props, "collider_defines_sensor")
+        if object_props.collider_defines_sensor is True:
+            self.draw_sensor(layout.box(), object, object_props)
+
     def draw_rigid_body(self, layout, object, object_props):
         self.warn_no_frame_found(object, layout)
         self.warn_rigid_body_in_parent_folder(object.parent, layout)
@@ -326,6 +398,22 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             
             row = layout.row()
             row.prop(object_props, "rigid_body_external_angular_acceleration")
+
+    def draw_timer(self, layout, object, object_props):
+        row = layout.row()
+        row.prop(object_props, "timer_period_in_seconds")
+        row = layout.row()
+        row.prop(object_props, "timer_target_enable_level")
+        row = layout.row()
+        row.prop(object_props, "timer_current_enable_level")
+        
+    def draw_sensor(self, layout, object, object_props):
+        row = layout.row()
+        row.prop(object_props, "sensor_target_enable_level")
+        row = layout.row()
+        row.prop(object_props, "sensor_current_enable_level")
+        
+    # == warnings ======================================================================
 
     def warn_root_object_is_not_folder(self, object, layout):        
         if object.parent is None and object.e2_custom_props.object_kind != "FOLDER":
@@ -479,6 +567,10 @@ class E2SceneExportOperator(bpy.types.Operator):
                 result["content"][child_name] = self.export_batch(child)
             elif child.e2_custom_props.object_kind == "COLLIDER":
                 result["content"][child_name] = self.export_collider(child)
+                if child.e2_custom_props.collider_defines_sensor is True:
+                    result["content"]["SENSOR." + child_name] = self.export_sensor(child, child_name)
+        if folder.e2_custom_props.folder_defines_timer is True:
+            result["content"]["TIMER"] = self.export_timer(folder)
         return self.clean_result(result)
 
     def export_frame(self, object):
@@ -599,6 +691,26 @@ class E2SceneExportOperator(bpy.types.Operator):
                 }
         return result
     
+    def export_timer(self, object):
+        object_props = object.e2_custom_props
+        result = {
+            "object_kind": "TIMER",
+            "period_in_seconds": str(object_props.timer_period_in_seconds),
+            "target_enable_level": str(object_props.timer_target_enable_level),
+            "current_enable_level": str(object_props.timer_current_enable_level)
+        }
+        return result
+    
+    def export_sensor(self, object, name):
+        object_props = object.e2_custom_props
+        result = {
+            "object_kind": "SENSOR",
+            "collider": name,
+            "target_enable_level": str(object_props.sensor_target_enable_level),
+            "current_enable_level": str(object_props.sensor_current_enable_level),
+        }
+        return result
+
     def clean_result(self, result):
         for key in ["content", "folders", "imports"]:
             if key in result and len(result[key]) == 0:
