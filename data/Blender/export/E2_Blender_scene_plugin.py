@@ -50,6 +50,7 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
 class E2_UL_RequestInfosList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            layout.label(text="", translate=False, icon="DOT")
             layout.prop(item, "kind", text="", emboss=False, icon_value=icon)
             layout.prop(item, "event", text="", emboss=False, icon_value=icon)
         elif self.layout_type in {'GRID'}:
@@ -58,13 +59,60 @@ class E2_UL_RequestInfosList(bpy.types.UIList):
 
 
 class E2_UL_RequestInfosListInsert(bpy.types.Operator):
-    """Insert item to the list of request infos."""
+    """Insert a new request info to the list."""
     
     bl_idname = "e2_ul_request_infos_list.insert"
     bl_label = "Insert"
 
     def execute(self, context):
-        context.object.e2_custom_props.request_info_items.add()
+        object_props = context.object.e2_custom_props
+        object_props.request_info_items.add()
+        object_props.request_info_index = len(object_props.request_info_items) - 1
+        return{'FINISHED'}
+
+
+class E2_UL_RequestInfosListErase(bpy.types.Operator):
+    """Erase the selected request info from the list."""
+    
+    bl_idname = "e2_ul_request_infos_list.erase"
+    bl_label = "Erase"
+
+    def execute(self, context):
+        object_props = context.object.e2_custom_props
+        if len(object_props.request_info_items) > 0:
+            object_props.request_info_items.remove(object_props.request_info_index)
+            object_props.request_info_index = max(0, min(object_props.request_info_index,
+                                                         len(object_props.request_info_items) - 1))
+        return{'FINISHED'}
+
+
+class E2_UL_RequestInfosListUp(bpy.types.Operator):
+    """Moves the selected request info up in the list."""
+    
+    bl_idname = "e2_ul_request_infos_list.up"
+    bl_label = "Up"
+
+    def execute(self, context):
+        object_props = context.object.e2_custom_props
+        if len(object_props.request_info_items) > 0 and object_props.request_info_index > 0:
+            object_props.request_info_items.move(object_props.request_info_index, object_props.request_info_index - 1)
+            object_props.request_info_index = max(0, min(object_props.request_info_index - 1,
+                                                         len(object_props.request_info_items) - 1))
+        return{'FINISHED'}
+
+
+class E2_UL_RequestInfosListDown(bpy.types.Operator):
+    """Moves the selected request info down in the list."""
+    
+    bl_idname = "e2_ul_request_infos_list.down"
+    bl_label = "Down"
+
+    def execute(self, context):
+        object_props = context.object.e2_custom_props
+        if len(object_props.request_info_items) > 0 and object_props.request_info_index < len(object_props.request_info_items) - 1:
+            object_props.request_info_items.move(object_props.request_info_index, object_props.request_info_index + 1)
+            object_props.request_info_index = max(0, min(object_props.request_info_index + 1,
+                                                         len(object_props.request_info_items) - 1))
         return{'FINISHED'}
 
 
@@ -486,6 +534,10 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.template_list("E2_UL_RequestInfosList", "RequestInfos", object_props, "request_info_items", object_props, "request_info_index")
         row = layout.row()
         row.operator("e2_ul_request_infos_list.insert", text="Insert")        
+        row.operator("e2_ul_request_infos_list.up", text="Up")        
+        row = layout.row()
+        row.operator("e2_ul_request_infos_list.erase", text="Erase")        
+        row.operator("e2_ul_request_infos_list.down", text="Down")        
 
     # == warnings ======================================================================
 
@@ -855,6 +907,9 @@ def register():
     bpy.utils.register_class(E2_UL_RequestInfoListItem)
     bpy.utils.register_class(E2_UL_RequestInfosList)
     bpy.utils.register_class(E2_UL_RequestInfosListInsert)
+    bpy.utils.register_class(E2_UL_RequestInfosListErase)
+    bpy.utils.register_class(E2_UL_RequestInfosListUp)
+    bpy.utils.register_class(E2_UL_RequestInfosListDown)
     bpy.utils.register_class(E2ObjectProps)
     bpy.utils.register_class(E2ObjectPropertiesPanel)
     bpy.utils.register_class(E2SceneExportOperator)
@@ -901,6 +956,9 @@ def unregister():
     bpy.utils.unregister_class(E2SceneExportOperator)
     bpy.utils.unregister_class(E2ObjectPropertiesPanel)
     bpy.utils.unregister_class(E2ObjectProps)
+    bpy.utils.unregister_class(E2_UL_RequestInfosListDown)
+    bpy.utils.unregister_class(E2_UL_RequestInfosListUp)
+    bpy.utils.unregister_class(E2_UL_RequestInfosListErase)
     bpy.utils.unregister_class(E2_UL_RequestInfosListInsert)
     bpy.utils.unregister_class(E2_UL_RequestInfosList)
     bpy.utils.unregister_class(E2_UL_RequestInfoListItem)
