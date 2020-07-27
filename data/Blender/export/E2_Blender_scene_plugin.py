@@ -11,6 +11,10 @@ import json
 
 
 class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
+
+    def list_of_name_of_scene_objects(self, context):
+        return [(obj.name, obj.name, "", i) for i, obj in enumerate(context.collection.all_objects)]
+
     REQUEST_INFO_KIND=[
         # Python ident, UI name, description, UID
         ("INCREMENT_ENABLE_LEVEL_OF_TIMER", "INCREMENT_ENABLE_LEVEL_OF_TIMER", "Increment enable level of timer.", 1),
@@ -46,6 +50,12 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             default="TOUCH_BEGIN"
             )
 
+    folder_of_timer: bpy.props.EnumProperty(
+            name="Timer's folder",
+            description="Defines a folder the timer is defined in.",
+            items=list_of_name_of_scene_objects
+            )
+
 
 class E2_UL_RequestInfosList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
@@ -55,7 +65,7 @@ class E2_UL_RequestInfosList(bpy.types.UIList):
             layout.prop(item, "event", text="", emboss=False, icon_value=icon)
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
-            layout.label(text="", icon_value=icon)
+            layout.label(text="", translate=False, icon="DOT")
 
 
 class E2_UL_RequestInfosListInsert(bpy.types.Operator):
@@ -480,7 +490,6 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row.prop(object, "dimensions")
 
         row = layout.row()
-        print("\n\n" + object.name + str(object_props.collider_collision_class))
         row.prop(object_props, "collider_collision_class")
 
         row = layout.row()
@@ -533,11 +542,78 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.template_list("E2_UL_RequestInfosList", "RequestInfos", object_props, "request_info_items", object_props, "request_info_index")
         row = layout.row()
-        row.operator("e2_ul_request_infos_list.insert", text="Insert")        
-        row.operator("e2_ul_request_infos_list.up", text="Up")        
+        row.operator("e2_ul_request_infos_list.insert", text="Insert")
+        row.operator("e2_ul_request_infos_list.up", text="Up")
         row = layout.row()
-        row.operator("e2_ul_request_infos_list.erase", text="Erase")        
+        row.operator("e2_ul_request_infos_list.erase", text="Erase")
         row.operator("e2_ul_request_infos_list.down", text="Down")        
+        if len(object_props.request_info_items) > 0:
+            request_info = object_props.request_info_items[object_props.request_info_index]
+            if request_info.kind == "INCREMENT_ENABLE_LEVEL_OF_TIMER":
+                self.draw_request_info_increment_enable_level_of_timer(layout.box(), request_info)
+            elif request_info.kind == "DECREMENT_ENABLE_LEVEL_OF_TIMER":
+                self.draw_request_info_decrement_enable_level_of_timer(layout.box(), request_info)
+            elif request_info.kind == "RESET_TIMER":
+                self.draw_request_info_reset_timer(layout, request_info)
+            elif request_info.kind == "INCREMENT_ENABLE_LEVEL_OF_SENSOR":
+                self.draw_request_info_increment_enable_level_of_sensor(layout, request_info)
+            elif request_info.kind == "DECREMENT_ENABLE_LEVEL_OF_SENSOR":
+                self.draw_request_info_decrement_enable_level_of_sensor(layout, request_info)
+            elif request_info.kind == "IMPORT_SCENE":
+                self.draw_request_info_import_scene(layout, request_info)
+            elif request_info.kind == "ERASE_FOLDER":
+                self.draw_request_info_erase_folder(layout, request_info)
+            elif request_info.kind == "SET_LINEAR_VELOCITY":
+                self.draw_request_info_set_linear_velocity(layout, request_info)
+            elif request_info.kind == "SET_ANGULAR_VELOCITY":
+                self.draw_request_info_set_angular_velocity(layout, request_info)
+            elif request_info.kind == "UPDATE_RADIAL_FORCE_FIELD":
+                self.draw_request_info_update_radial_force_field(layout, request_info)
+            elif request_info.kind == "UPDATE_LINEAR_FORCE_FIELD":
+                self.draw_request_info_update_linear_force_field(layout, request_info)
+            elif request_info.kind == "LEAVE_FORCE_FIELD":
+                self.draw_request_info_leave_force_field(layout, request_info)
+            else:
+                raise Exception("ERROR: Unknown request info kind.")
+
+    def draw_request_info_increment_enable_level_of_timer(self, layout, request_info):
+        row = layout.row()
+        row.prop(request_info, "folder_of_timer")
+
+    def draw_request_info_decrement_enable_level_of_timer(self, layout, request_info):
+        row = layout.row()
+        row.prop(request_info, "folder_of_timer")
+
+    def draw_request_info_reset_timer(self, layout, request_info):
+        row = layout.row()
+        row.prop(request_info, "folder_of_timer")
+
+    def draw_request_info_increment_enable_level_of_sensor(self, layout, request_info):
+        pass
+
+    def draw_request_info_decrement_enable_level_of_sensor(self, layout, request_info):
+        pass
+
+    def draw_request_info_import_scene(self, layout, request_info):
+        pass
+
+    def draw_request_info_erase_folder(self, layout, request_info):
+        pass
+
+    def draw_request_info_set_linear_velocity(self, layout, request_info):
+        pass
+
+    def draw_request_info_set_angular_velocity(self, layout, request_info):
+        pass
+
+    def draw_request_info_update_radial_force_field(self, layout, request_info):
+        pass
+
+    def draw_request_info_update_linear_force_field(self, layout, request_info):
+        pass
+
+    def draw_request_info_leave_force_field(self, layout, request_info):
+        pass
 
     # == warnings ======================================================================
 
