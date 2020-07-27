@@ -10,6 +10,64 @@ import json
 ######################################################
 
 
+class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
+    REQUEST_INFO_KIND=[
+        # Python ident, UI name, description, UID
+        ("INCREMENT_ENABLE_LEVEL_OF_TIMER", "INCREMENT_ENABLE_LEVEL_OF_TIMER", "Increment enable level of timer.", 1),
+        ("DECREMENT_ENABLE_LEVEL_OF_TIMER", "DECREMENT_ENABLE_LEVEL_OF_TIMER", "Decrement enable level of timer.", 2),
+        ("RESET_TIMER", "RESET_TIMER", "Reset timer's current time back to zero.", 3),
+        ("INCREMENT_ENABLE_LEVEL_OF_SENSOR", "INCREMENT_ENABLE_LEVEL_OF_SENSOR", "Increment enable level of sensor.", 4),
+        ("DECREMENT_ENABLE_LEVEL_OF_SENSOR", "DECREMENT_ENABLE_LEVEL_OF_SENSOR", "Decrement enable level of sensor.", 5),
+        ("IMPORT_SCENE", "IMPORT_SCENE", "Import scene.", 6),
+        ("ERASE_FOLDER", "ERASE_FOLDER", "Erase folder.", 7),
+        ("SET_LINEAR_VELOCITY", "SET_LINEAR_VELOCITY", "Set linear velocity of a rigid body.", 8),
+        ("SET_ANGULAR_VELOCITY", "SET_ANGULAR_VELOCITY", "Set angular velocity of a rigid body.", 9),
+        ("UPDATE_RADIAL_FORCE_FIELD", "UPDATE_RADIAL_FORCE_FIELD", "Update accel of radial force field acting of a rigid body.", 10),
+        ("UPDATE_LINEAR_FORCE_FIELD", "UPDATE_LINEAR_FORCE_FIELD", "Update accel of linear force field acting of a rigid body.", 11),
+        ("LEAVE_FORCE_FIELD", "LEAVE_FORCE_FIELD", "Leave force field.", 12),
+    ]
+    kind: bpy.props.EnumProperty(
+            name="Kind",
+            description="Defines what kind of requst info this is.",
+            items=REQUEST_INFO_KIND,
+            default="INCREMENT_ENABLE_LEVEL_OF_SENSOR"
+            )
+            
+    EVENT_TYPE=[
+        ("TOUCHING", "TOUCHING", "Touching events of a sensor.", 1),
+        ("TOUCH_BEGIN", "TOUCH_BEGIN", "Touch begin events of a sensor.", 2),
+        ("TOUCH_END", "TOUCH_END", "Touch end events of a sensor.", 3),
+        ("TIME_OUT", "TIME_OUT", "Time out of a timer.", 4),
+    ]
+    event: bpy.props.EnumProperty(
+            name="Event",
+            description="Defines what kind of event the request info corresponds to.",
+            items=EVENT_TYPE,
+            default="TOUCH_BEGIN"
+            )
+
+
+class E2_UL_RequestInfosList(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            layout.prop(item, "kind", text="", emboss=False, icon_value=icon)
+            layout.prop(item, "event", text="", emboss=False, icon_value=icon)
+        elif self.layout_type in {'GRID'}:
+            layout.alignment = 'CENTER'
+            layout.label(text="", icon_value=icon)
+
+
+class E2_UL_RequestInfosListInsert(bpy.types.Operator):
+    """Insert item to the list of request infos."""
+    
+    bl_idname = "e2_ul_request_infos_list.insert"
+    bl_label = "Insert"
+
+    def execute(self, context):
+        context.object.e2_custom_props.request_info_items.add()
+        return{'FINISHED'}
+
+
 class E2ObjectProps(bpy.types.PropertyGroup):
     OBJECT_KIND=[
         # Python ident, UI name, description, UID
@@ -258,6 +316,12 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             step=1
             )
 
+    #====================================================
+    # REQUEST INFO PROPS
+
+    request_info_items: bpy.props.CollectionProperty(type = E2_UL_RequestInfoListItem)
+    request_info_index: bpy.props.IntProperty(name = "Index for E2_UL_RequestInfoListItem", default = 0)
+
 
 class E2ObjectPropertiesPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_e2_object_props_panel"
@@ -406,13 +470,23 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(object_props, "timer_target_enable_level")
         row = layout.row()
         row.prop(object_props, "timer_current_enable_level")
+        self.draw_request_infos(layout, object, object_props, "TIMER")
         
     def draw_sensor(self, layout, object, object_props):
         row = layout.row()
         row.prop(object_props, "sensor_target_enable_level")
         row = layout.row()
         row.prop(object_props, "sensor_current_enable_level")
-        
+        self.draw_request_infos(layout, object, object_props, "SENSOR")
+
+    def draw_request_infos(self, layout, object, object_props, kind):
+        row = layout.row()
+        row.label(text="Request infos:")
+        row = layout.row()
+        row.template_list("E2_UL_RequestInfosList", "RequestInfos", object_props, "request_info_items", object_props, "request_info_index")
+        row = layout.row()
+        row.operator("e2_ul_request_infos_list.insert", text="Insert")        
+
     # == warnings ======================================================================
 
     def warn_root_object_is_not_folder(self, object, layout):        
@@ -778,6 +852,9 @@ class E2SceneIOPanel(bpy.types.Panel):
 
 
 def register():
+    bpy.utils.register_class(E2_UL_RequestInfoListItem)
+    bpy.utils.register_class(E2_UL_RequestInfosList)
+    bpy.utils.register_class(E2_UL_RequestInfosListInsert)
     bpy.utils.register_class(E2ObjectProps)
     bpy.utils.register_class(E2ObjectPropertiesPanel)
     bpy.utils.register_class(E2SceneExportOperator)
@@ -824,6 +901,9 @@ def unregister():
     bpy.utils.unregister_class(E2SceneExportOperator)
     bpy.utils.unregister_class(E2ObjectPropertiesPanel)
     bpy.utils.unregister_class(E2ObjectProps)
+    bpy.utils.unregister_class(E2_UL_RequestInfosListInsert)
+    bpy.utils.unregister_class(E2_UL_RequestInfosList)
+    bpy.utils.unregister_class(E2_UL_RequestInfoListItem)
 
 
 if __name__ == "__main__":
