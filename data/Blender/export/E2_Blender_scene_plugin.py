@@ -56,7 +56,7 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             items=list_of_name_of_scene_objects
             )
 
-    folder_of_sensor: bpy.props.EnumProperty(
+    collider_of_sensor: bpy.props.EnumProperty(
             name="Sensor's folder",
             description="A folder of the considered sensor.",
             items=list_of_name_of_scene_objects
@@ -503,6 +503,12 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     request_info_index: bpy.props.IntProperty(name = "Index for E2_UL_RequestInfoListItem", default = 0)
 
 
+def e2_custom_props_of(object_name):
+    if object_name not in bpy.context.collection.all_objects:
+        return None
+    return bpy.context.collection.all_objects[object_name].e2_custom_props
+
+
 class E2ObjectPropertiesPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_e2_object_props_panel"
     bl_label = "E2 object props"
@@ -515,6 +521,8 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         object = context.object
         object_props = object.e2_custom_props
 
+        self.warn_not_under_root_folder(object, layout)
+
         row = layout.row()
         row.prop(object_props, "object_kind")
         if object_props.object_kind == "FOLDER":
@@ -525,6 +533,8 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             self.draw_collider(layout, object, object_props)
 
     def draw_folder(self, layout, object, object_props):
+        self.warn_root_folder_has_non_folder_content(object, object_props, layout)
+        self.warn_root_folder_is_relocated(object, layout)
         self.warn_root_object_is_not_folder(object, layout)
         self.warn_parent_is_not_folder(object, layout)
         self.warn_folder_is_scaled(object, layout)
@@ -659,6 +669,8 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         self.draw_request_infos(layout, object, object_props, "SENSOR")
 
     def draw_request_infos(self, layout, object, object_props, kind):
+        self.warn_request_info_wrong_event_type(object_props, kind, layout)
+            
         row = layout.row()
         row.label(text="Request infos:")
         row = layout.row()
@@ -672,53 +684,61 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if len(object_props.request_info_items) > 0:
             request_info = object_props.request_info_items[object_props.request_info_index]
             if request_info.kind == "INCREMENT_ENABLE_LEVEL_OF_TIMER":
-                self.draw_request_info_increment_enable_level_of_timer(layout.box(), request_info)
+                self.draw_request_info_increment_enable_level_of_timer(layout.box(), object_props, request_info)
             elif request_info.kind == "DECREMENT_ENABLE_LEVEL_OF_TIMER":
-                self.draw_request_info_decrement_enable_level_of_timer(layout.box(), request_info)
+                self.draw_request_info_decrement_enable_level_of_timer(layout.box(), object_props, request_info)
             elif request_info.kind == "RESET_TIMER":
-                self.draw_request_info_reset_timer(layout, request_info)
+                self.draw_request_info_reset_timer(layout, object_props, request_info)
             elif request_info.kind == "INCREMENT_ENABLE_LEVEL_OF_SENSOR":
-                self.draw_request_info_increment_enable_level_of_sensor(layout, request_info)
+                self.draw_request_info_increment_enable_level_of_sensor(layout, object_props, request_info)
             elif request_info.kind == "DECREMENT_ENABLE_LEVEL_OF_SENSOR":
-                self.draw_request_info_decrement_enable_level_of_sensor(layout, request_info)
+                self.draw_request_info_decrement_enable_level_of_sensor(layout, object_props, request_info)
             elif request_info.kind == "IMPORT_SCENE":
-                self.draw_request_info_import_scene(layout, request_info)
+                self.draw_request_info_import_scene(layout, object_props, request_info)
             elif request_info.kind == "ERASE_FOLDER":
-                self.draw_request_info_erase_folder(layout, request_info)
+                self.draw_request_info_erase_folder(layout, object, object_props, request_info)
             elif request_info.kind == "SET_LINEAR_VELOCITY":
-                self.draw_request_info_set_linear_velocity(layout, request_info)
+                self.draw_request_info_set_linear_velocity(layout, object_props, request_info)
             elif request_info.kind == "SET_ANGULAR_VELOCITY":
-                self.draw_request_info_set_angular_velocity(layout, request_info)
+                self.draw_request_info_set_angular_velocity(layout, object_props, request_info)
             elif request_info.kind == "UPDATE_RADIAL_FORCE_FIELD":
-                self.draw_request_info_update_radial_force_field(layout, request_info)
+                self.draw_request_info_update_radial_force_field(layout, object, object_props, request_info)
             elif request_info.kind == "UPDATE_LINEAR_FORCE_FIELD":
-                self.draw_request_info_update_linear_force_field(layout, request_info)
+                self.draw_request_info_update_linear_force_field(layout, object, object_props, request_info)
             elif request_info.kind == "LEAVE_FORCE_FIELD":
-                pass    # This request info does not have any data.
+                self.warn_object_is_not_collider_with_sensor(object.name, layout, "This object")
             else:
                 raise Exception("ERROR: Unknown request info kind.")
 
-    def draw_request_info_increment_enable_level_of_timer(self, layout, request_info):
+    def draw_request_info_increment_enable_level_of_timer(self, layout, object_props, request_info):
+        self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
-    def draw_request_info_decrement_enable_level_of_timer(self, layout, request_info):
+    def draw_request_info_decrement_enable_level_of_timer(self, layout, object_props, request_info):
+        self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
-    def draw_request_info_reset_timer(self, layout, request_info):
+    def draw_request_info_reset_timer(self, layout, object_props, request_info):
+        self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
-    def draw_request_info_increment_enable_level_of_sensor(self, layout, request_info):
+    def draw_request_info_increment_enable_level_of_sensor(self, layout, object_props, request_info):
+        self.warn_object_is_not_collider_with_sensor(request_info.collider_of_sensor, layout, "Sensor's folder")
         row = layout.row()
-        row.prop(request_info, "folder_of_sensor")
+        row.prop(request_info, "collider_of_sensor")
 
-    def draw_request_info_decrement_enable_level_of_sensor(self, layout, request_info):
+    def draw_request_info_decrement_enable_level_of_sensor(self, layout, object_props, request_info):
+        self.warn_object_is_not_collider_with_sensor(request_info.collider_of_sensor, layout, "Sensor's folder")
         row = layout.row()
-        row.prop(request_info, "folder_of_sensor")
+        row.prop(request_info, "collider_of_sensor")
 
-    def draw_request_info_import_scene(self, layout, request_info):
+    def draw_request_info_import_scene(self, layout, object_props, request_info):
+        self.warn_object_is_not_folder(request_info.import_under_folder, layout, "Under folder")
+        self.warn_object_is_not_folder_with_frame(request_info.import_relocation_frame_folder, layout, "Relocation frame", True)
+        self.warn_object_is_not_folder_with_frame(request_info.import_motion_frame, layout, "Motion frame", True)
         row = layout.row()
         row.prop(request_info, "import_dir")
         row = layout.row()
@@ -734,23 +754,27 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(request_info, "angular_velocity")
 
-    def draw_request_info_erase_folder(self, layout, request_info):
+    def draw_request_info_erase_folder(self, layout, object, object_props, request_info):
+        self.warn_object_is_not_folder(request_info.erase_folder, layout, "Folder to erase")
         row = layout.row()
         row.prop(request_info, "erase_folder")
 
-    def draw_request_info_set_linear_velocity(self, layout, request_info):
+    def draw_request_info_set_linear_velocity(self, layout, object_props, request_info):
+        self.warn_folder_does_not_have_rigid_body(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_rigid_body")
         row = layout.row()
         row.prop(request_info, "linear_velocity")
 
-    def draw_request_info_set_angular_velocity(self, layout, request_info):
+    def draw_request_info_set_angular_velocity(self, layout, object_props, request_info):
+        self.warn_folder_does_not_have_rigid_body(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_rigid_body")
         row = layout.row()
         row.prop(request_info, "angular_velocity")
 
-    def draw_request_info_update_radial_force_field(self, layout, request_info):
+    def draw_request_info_update_radial_force_field(self, layout, object, object_props, request_info):
+        self.warn_object_is_not_collider_with_sensor(object.name, layout, "This object")
         row = layout.row()
         row.prop(request_info, "radial_force_field_multiplier")
         row = layout.row()
@@ -760,7 +784,8 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(request_info, "use_mass")
 
-    def draw_request_info_update_linear_force_field(self, layout, request_info):
+    def draw_request_info_update_linear_force_field(self, layout, object, object_props, request_info):
+        self.warn_object_is_not_collider_with_sensor(object.name, layout, "This object")
         row = layout.row()
         row.prop(request_info, "linear_force_field_acceleration")
         row = layout.row()
@@ -768,30 +793,62 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
 
     # == warnings ======================================================================
 
+    def warn_not_under_root_folder(self, object, layout):
+        while object.parent is not None:
+            object = object.parent
+        if  object.name != "E2_ROOT":
+            row = layout.row()
+            row.label(text="!!! WARNING: The object is not in the sub-tree the 'E2_ROOT' folder !!!")
+
+    def warn_root_folder_has_non_folder_content(self, object, object_props, layout):
+        if  object.name == "E2_ROOT":
+            if object_props.folder_defines_frame is True:
+                row = layout.row()
+                row.label(text="!!! WARNING: The 'E2_ROOT' folder defines a frame !!!")
+            if object_props.folder_defines_rigid_body is True:
+                row = layout.row()
+                row.label(text="!!! WARNING: The 'E2_ROOT' folder defines a rigid body !!!")
+            if object_props.folder_defines_timer is True:
+                row = layout.row()
+                row.label(text="!!! WARNING: The 'E2_ROOT' folder defines a timer !!!")        
+
+    def warn_root_folder_is_relocated(self, object, layout):
+        if  object.name == "E2_ROOT":
+            self.warn_origin_moved(object, layout, 'E2_ROOT')
+            self.warn_object_rotated(object, layout, 'E2_ROOT')
+            self.warn_folder_is_scaled(object, layout)
+
     def warn_root_object_is_not_folder(self, object, layout):        
         if object.parent is None and object.e2_custom_props.object_kind != "FOLDER":
             row = layout.row()
-            row.label(text="!!! ERROR: An object without a parent can only be a folder !!!")
+            row.label(text="!!! WARNING: An object without a parent can only be a folder !!!")
 
     def warn_parent_is_not_folder(self, object, layout):        
         if object.parent is not None and object.parent.e2_custom_props.object_kind != "FOLDER":
             row = layout.row()
-            row.label(text="!!! ERROR: The direct parent object is not a folder !!!")
+            row.label(text="!!! WARNING: The direct parent object is not a folder !!!")
+
+    def warn_origin_moved(self, object, layout, property_name=None):
+        if any(abs(object.location[i]) > 0.0001 for i in range(3)):
+            property_name = object.e2_custom_props.object_kind if property_name is None else property_name
+            row = layout.row()
+            row.label(text="!!! WARNING: The " + property_name + " is moved from the origin !!!")
+
+    def warn_object_rotated(self, object, layout, property_name=None):
+        if any(abs(object.rotation_euler[i]) > 0.0001 for i in range(3)):
+            property_name = object.e2_custom_props.object_kind if property_name is None else property_name
+            row = layout.row()
+            row.label(text="!!! WARNING: The " + property_name + " is moved from the origin !!!")
 
     def warn_folder_is_scaled(self, folder, layout):
         if any(abs(folder.scale[i] - 1.0) > 0.0001 for i in range(3)):
             row = layout.row()
-            row.label(text="!!! ERROR: The folder is scaled !!!")
+            row.label(text="!!! WARNING: The folder is scaled !!!")
 
     def warn_has_children(self, object, layout):
         if len(object.children) > 0:
             row = layout.row()
-            row.label(text="!!! ERROR: The " + object.e2_custom_props.object_kind + " has a child object !!!")
-
-    def warn_origin_moved(self, object, layout):
-        if any(abs(object.location[i]) > 0.0001 for i in range(3)):
-            row = layout.row()
-            row.label(text="!!! WARNING: The " + object.e2_custom_props.object_kind + " is moved from the origin !!!")
+            row.label(text="!!! WARNING: The " + object.e2_custom_props.object_kind + " has a child object !!!")
 
     def warn_no_frame_found(self, folder, layout):
         has_frame = False
@@ -802,7 +859,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             folder = folder.parent
         if has_frame is False:
             row = layout.row()
-            row.label(text="!!! ERROR: Neither this nor any parent folder defines a frame !!!")
+            row.label(text="!!! WARNING: Neither this nor any parent folder defines a frame !!!")
 
     def warn_frame_already_has_collider(self, folder, layout):
         collider_count = 0
@@ -821,7 +878,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         while folder != None:
             if folder.e2_custom_props.folder_defines_rigid_body is True:
                 row = layout.row()
-                row.label(text="!!! ERROR: Some parent folder already defines a rigid body !!!")
+                row.label(text="!!! WARNING: Some parent folder already defines a rigid body !!!")
                 break
             folder = folder.parent
             
@@ -838,6 +895,46 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             if any(abs(sizes[i+1] - sizes[0]) > 0.0001 for i in range(2)):
                 row = layout.row()
                 row.label(text="!!! WARNING: The sphere is not scaled uniformly along all axes !!!")
+
+    def warn_request_info_wrong_event_type(self, object_props, kind, layout):
+        for i, info in enumerate(object_props.request_info_items):
+            if kind == "TIMER" and info.event != "TIME_OUT":
+                row = layout.row()
+                row.label(text="!!! WARNING: In info #" + str(i) + ": Wrong event type for the timer !!!")
+            elif kind == "SENSOR" and info.event == "TIME_OUT":
+                row = layout.row()
+                row.label(text="!!! WARNING: In info #" + str(i) + ": Wrong event type for the sensor !!!")
+
+    def warn_object_is_not_folder(self, object_name, layout, property_name):
+        object_props = e2_custom_props_of(object_name)
+        if object_props.object_kind != "FOLDER":
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not a folder !!!")
+
+    def warn_object_is_not_folder_with_frame(self, object_name, layout, property_name, allow_root):
+        object_props = e2_custom_props_of(object_name)
+        if object_props.object_kind != "FOLDER" or object_props.folder_defines_frame is False:
+            if allow_root is False or object_name != "E2_ROOT":
+                row = layout.row()
+                row.label(text="!!! WARNING: " + property_name + " is not a folder with a frame !!!")
+
+    def warn_object_is_not_folder_with_timer(self, object_name, layout, property_name):
+        object_props = e2_custom_props_of(object_name)
+        if object_props.object_kind != "FOLDER" or object_props.folder_defines_timer is False:
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not a folder with a timer !!!")
+
+    def warn_object_is_not_collider_with_sensor(self, object_name, layout, property_name):
+        object_props = e2_custom_props_of(object_name)
+        if object_props.object_kind != "COLLIDER" or object_props.collider_defines_sensor is False:
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not a collider with a sensor !!!")
+
+    def warn_folder_does_not_have_rigid_body(self, object_name, layout, property_name):
+        object_props = e2_custom_props_of(object_name)
+        if object_props.object_kind != "FOLDER" or object_props.folder_defines_rigid_body is False:
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not a folder with a rigid_body !!!")
 
 
 ######################################################
