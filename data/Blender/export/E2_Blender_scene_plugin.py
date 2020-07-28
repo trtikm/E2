@@ -10,10 +10,11 @@ import json
 ######################################################
 
 
-class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
+def list_of_name_of_scene_objects(self, context):
+    return [(obj.name, obj.name, "", i) for i, obj in enumerate(context.collection.all_objects)]
 
-    def list_of_name_of_scene_objects(self, context):
-        return [(obj.name, obj.name, "", i) for i, obj in enumerate(context.collection.all_objects)]
+
+class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
 
     REQUEST_INFO_KIND=[
         # Python ident, UI name, description, UID
@@ -736,6 +737,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(request_info, "collider_of_sensor")
 
     def draw_request_info_import_scene(self, layout, object_props, request_info):
+        self.warn_not_valid_import_dir(request_info.import_dir, layout, "Import dir")
         self.warn_object_is_not_folder(request_info.import_under_folder, layout, "Under folder")
         self.warn_object_is_not_folder_with_frame(request_info.import_relocation_frame_folder, layout, "Relocation frame", True)
         self.warn_object_is_not_folder_with_frame(request_info.import_motion_frame, layout, "Motion frame", True)
@@ -935,6 +937,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if object_props.object_kind != "FOLDER" or object_props.folder_defines_rigid_body is False:
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a folder with a rigid_body !!!")
+
+    def warn_not_valid_import_dir(self, path, layout, property_name):
+        if not os.path.isdir(path) or not os.path.isfile(os.path.join(path, "hierarchy.json")):
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not valid scene directory !!!")
 
 
 ######################################################
@@ -1202,7 +1209,10 @@ class E2SceneIOPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+        self.draw_export(scene, context, layout.box())
+        self.draw_import(scene, context, layout.box())
         
+    def draw_export(self, scene, context, layout):
         row = layout.row()
         row.prop(scene, "e2_scene_export_dir")
 
@@ -1212,6 +1222,10 @@ class E2SceneIOPanel(bpy.types.Panel):
         row = layout.row()
         row.operator("scene.e2_export")
 
+    def draw_import(self, scene, context, layout):
+        self.warn_object_is_not_folder(scene.e2_scene_import_under_folder, layout, "Import under")
+        self.warn_not_valid_import_dir(scene.e2_scene_import_dir, layout, "Import dir")
+
         row = layout.row()
         row.prop(scene, "e2_scene_import_dir")
 
@@ -1220,6 +1234,19 @@ class E2SceneIOPanel(bpy.types.Panel):
 
         row = layout.row()
         row.operator("scene.e2_import")
+
+    # == warnings ======================================================================
+
+    def warn_object_is_not_folder(self, object_name, layout, property_name):
+        object_props = e2_custom_props_of(object_name)
+        if object_props.object_kind != "FOLDER":
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not a folder !!!")
+
+    def warn_not_valid_import_dir(self, path, layout, property_name):
+        if not os.path.isdir(path) or not os.path.isfile(os.path.join(path, "hierarchy.json")):
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not valid scene directory !!!")
 
 
 ######################################################
@@ -1260,14 +1287,12 @@ def register():
             maxlen=1000,
             subtype='DIR_PATH'
             )
-    bpy.types.Scene.e2_scene_import_under_folder = bpy.props.StringProperty(
+    bpy.types.Scene.e2_scene_import_under_folder = bpy.props.EnumProperty(
             name="Import uder",
-            description=("A scene in the current scene under which to import\n"+
-                         "the scene. Empty string means the root folder"),
-            default="",
-            maxlen=1000,
-            subtype='NONE'
+            description="A folder in the current scene under which to import the scene",
+            items=list_of_name_of_scene_objects
             )
+
 
 def unregister():
     del bpy.types.Scene.e2_scene_import_under_folder
