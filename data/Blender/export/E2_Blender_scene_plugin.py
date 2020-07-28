@@ -52,8 +52,130 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
 
     folder_of_timer: bpy.props.EnumProperty(
             name="Timer's folder",
-            description="Defines a folder the timer is defined in.",
+            description="A folder of the considered timer.",
             items=list_of_name_of_scene_objects
+            )
+
+    folder_of_sensor: bpy.props.EnumProperty(
+            name="Sensor's folder",
+            description="A folder of the considered sensor.",
+            items=list_of_name_of_scene_objects
+            )
+
+    import_dir: bpy.props.StringProperty(
+            name="Import dir",
+            description="A directory from which a scene will be imported",
+            default=".",
+            maxlen=1000,
+            subtype='DIR_PATH'
+            )
+
+    import_under_folder: bpy.props.EnumProperty(
+            name="Under folder",
+            description="A folder under which to import the scene.",
+            items=list_of_name_of_scene_objects
+            )
+
+    import_relocation_frame_folder: bpy.props.EnumProperty(
+            name="Relocation frame's folder",
+            description="A folder containing a relocation frame for the imported scene.\n"
+                        "A frame whose world space location will also be the location of\n"+
+                        "imported root frames.",
+            items=list_of_name_of_scene_objects
+            )
+
+    cache_imported_scene: bpy.props.BoolProperty(
+            name="Cache imported scene.",
+            description="Whether to cache the imported scene or not",
+            default=True
+            )
+
+    import_motion_frame: bpy.props.EnumProperty(
+            name="Motion frame's folder",
+            description="A folder containing a motion frame for the imported scene.\n"+
+                        "It is a local frame of the linear and angular velocity.",
+            items=list_of_name_of_scene_objects
+            )
+
+    linear_velocity: bpy.props.FloatVectorProperty(
+            name="Linear velocity",
+            description="A linear velocity for the rigid body",
+            size=3,
+            default=(0.0, 0.0, 0.0),
+            unit='VELOCITY',
+            subtype='VELOCITY',
+            min=0.0,
+            max=100.0,
+            step=0.001
+            )
+    angular_velocity: bpy.props.FloatVectorProperty(
+            name="Angular velocity",
+            description="An angular velocity for the rigid body",
+            size=3,
+            default=(0.0, 0.0, 0.0),
+            unit='VELOCITY',
+            subtype='VELOCITY',
+            min=0.0,
+            max=100.0,
+            step=0.001
+            )
+
+    erase_folder: bpy.props.EnumProperty(
+            name="Folder",
+            description="A folder to be erased with all its content.",
+            items=list_of_name_of_scene_objects
+            )
+
+    folder_of_rigid_body: bpy.props.EnumProperty(
+            name="Rigid body's folder",
+            description="A folder of the considered rigid body.",
+            items=list_of_name_of_scene_objects
+            )
+
+    radial_force_field_multiplier: bpy.props.FloatProperty(
+            name="Multiplier",
+            description="The multiplier of the distance from the origin.",
+            default=1.0,
+            min=0.001,
+            max=10000.0,
+            step=0.001
+            )
+
+    radial_force_field_exponent: bpy.props.FloatProperty(
+            name="Exponent",
+            description="The exponent of the distance from the origin.",
+            default=1.0,
+            min=1.0,
+            max=10000.0,
+            step=0.001
+            )
+
+    radial_force_field_min_radius: bpy.props.FloatProperty(
+            name="Minimal radius",
+            description="The minimal radius in which the field is still acting.",
+            default=0.001,
+            min=0.001,
+            max=10000.0,
+            step=0.001
+            )
+
+    use_mass: bpy.props.BoolProperty(
+            name="Use mass?",
+            description="Whether to use mass of the rigid body or not in the\n"+
+                        "computation of the acceleration acting on that body.",
+            default=True
+            )
+
+    linear_force_field_acceleration: bpy.props.FloatVectorProperty(
+            name="Acceleration",
+            description="A linear acceleration acting in the linear field",
+            size=3,
+            default=(0.0, 0.0, -9.81),
+            unit='ACCELERATION',
+            subtype='ACCELERATION',
+            min=-100.0,
+            max=100.0,
+            step=0.001
             )
 
 
@@ -572,7 +694,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             elif request_info.kind == "UPDATE_LINEAR_FORCE_FIELD":
                 self.draw_request_info_update_linear_force_field(layout, request_info)
             elif request_info.kind == "LEAVE_FORCE_FIELD":
-                self.draw_request_info_leave_force_field(layout, request_info)
+                pass    # This request info does not have any data.
             else:
                 raise Exception("ERROR: Unknown request info kind.")
 
@@ -589,31 +711,60 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(request_info, "folder_of_timer")
 
     def draw_request_info_increment_enable_level_of_sensor(self, layout, request_info):
-        pass
+        row = layout.row()
+        row.prop(request_info, "folder_of_sensor")
 
     def draw_request_info_decrement_enable_level_of_sensor(self, layout, request_info):
-        pass
+        row = layout.row()
+        row.prop(request_info, "folder_of_sensor")
 
     def draw_request_info_import_scene(self, layout, request_info):
-        pass
+        row = layout.row()
+        row.prop(request_info, "import_dir")
+        row = layout.row()
+        row.prop(request_info, "import_under_folder")
+        row = layout.row()
+        row.prop(request_info, "import_relocation_frame_folder")
+        row = layout.row()
+        row.prop(request_info, "cache_imported_scene")
+        row = layout.row()
+        row.prop(request_info, "import_motion_frame")
+        row = layout.row()
+        row.prop(request_info, "linear_velocity")
+        row = layout.row()
+        row.prop(request_info, "angular_velocity")
 
     def draw_request_info_erase_folder(self, layout, request_info):
-        pass
+        row = layout.row()
+        row.prop(request_info, "erase_folder")
 
     def draw_request_info_set_linear_velocity(self, layout, request_info):
-        pass
+        row = layout.row()
+        row.prop(request_info, "folder_of_rigid_body")
+        row = layout.row()
+        row.prop(request_info, "linear_velocity")
 
     def draw_request_info_set_angular_velocity(self, layout, request_info):
-        pass
+        row = layout.row()
+        row.prop(request_info, "folder_of_rigid_body")
+        row = layout.row()
+        row.prop(request_info, "angular_velocity")
 
     def draw_request_info_update_radial_force_field(self, layout, request_info):
-        pass
+        row = layout.row()
+        row.prop(request_info, "radial_force_field_multiplier")
+        row = layout.row()
+        row.prop(request_info, "radial_force_field_exponent")
+        row = layout.row()
+        row.prop(request_info, "radial_force_field_min_radius")
+        row = layout.row()
+        row.prop(request_info, "use_mass")
 
     def draw_request_info_update_linear_force_field(self, layout, request_info):
-        pass
-
-    def draw_request_info_leave_force_field(self, layout, request_info):
-        pass
+        row = layout.row()
+        row.prop(request_info, "linear_force_field_acceleration")
+        row = layout.row()
+        row.prop(request_info, "use_mass")
 
     # == warnings ======================================================================
 
