@@ -53,6 +53,8 @@ struct  mass_and_inertia_tensor_builder
             float_32_bit const  density_multiplier = 1.0f
             );
 
+    bool  empty() const { return m_boxes.empty() && m_capsules.empty() && m_spheres.empty(); }
+
     /// All three parameters are outputs. The inertia tensor is computed in coodrinate system
     /// with center at the returned 'center_of_mass' and axis vectors 'vector3_unit_x/y/z'.
     void  run(float_32_bit&  inverted_mass, matrix33&  inverted_inertia_tensor, vector3&  center_of_mass);
