@@ -2111,9 +2111,9 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
         {
             switch (collision_class_of(collider_guid))
             {
-            case angeo::COLLISION_CLASS::STATIC_OBJECT:
+            //case angeo::COLLISION_CLASS::STATIC_OBJECT:
             case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
-            case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+            //case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
             case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
                 break;
             default: continue;
@@ -2151,6 +2151,10 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
                 break;
             }
         }
+
+        if (builder.empty())
+            continue;
+
         float_32_bit  mass_inverted;
         matrix33  inertia_tensor_inverted;
         vector3  center_of_mass_in_world_space;
@@ -2596,20 +2600,11 @@ void  simulation_context::import_gfxtuner_scene_node(
 
     bool  has_static_collider = false;
     for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
-        if (folder_it->first == "collider" && !folder_it->second.begin()->second.get<bool>("is_dynamic"))
+        if (folder_it->first == "collider" && !folder_it->second.begin()->second.get<bool>("is_dynamic")
+            && angeo::read_collison_class_from_string(folder_it->second.begin()->second.get<std::string>("collision_class"))
+                    == angeo::COLLISION_CLASS::STATIC_OBJECT)
         {
-            switch(angeo::read_collison_class_from_string(folder_it->second.begin()->second.get<std::string>("collision_class")))
-            {
-            case angeo::COLLISION_CLASS::STATIC_OBJECT:
-            case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
-            case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
-            case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
-                break;
-            default: continue;
-            }
-
             has_static_collider = true;
-
             break;
         }
     if (has_static_collider)
