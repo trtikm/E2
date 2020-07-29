@@ -964,6 +964,54 @@ def remove_numeric_suffix(name):
     return name
 
 
+class E2SceneProps(bpy.types.PropertyGroup):
+
+    #====================================================
+    # Export
+    
+    export_dir: bpy.props.StringProperty(
+            name="Export dir",
+            description="A directory under which the scene will be exported",
+            default=".",
+            maxlen=1000,
+            subtype='DIR_PATH'
+            )
+    export_make_paths_relative_to_data_root: bpy.props.BoolProperty(
+            name="Make exported paths relative to the data root?",
+            description="Whether to make exported paths relative to the data root or not",
+            default=True
+            )
+    export_data_root_dir: bpy.props.StringProperty(
+            name="Data root dir",
+            description="The root directory of all data and scenes of the E2 simulator",
+            default=".",
+            maxlen=1000,
+            subtype='DIR_PATH'
+            )
+    export_remove_name_numeric_suffixes_whenever_possible: bpy.props.BoolProperty(
+            name="Try not to export numeric suffixes of names?",
+            description=("During export try to ignore numeric suffixes\n"+
+                         "of names, like '.001',  whenever possible."),
+            default=True
+            )
+
+    #====================================================
+    # Import
+    
+    import_dir: bpy.props.StringProperty(
+            name="Import dir",
+            description="A directory from which a scene will be imported",
+            default=".",
+            maxlen=1000,
+            subtype='DIR_PATH'
+            )
+    import_under_folder: bpy.props.EnumProperty(
+            name="Import uder",
+            description="A folder in the current scene under which to import the scene",
+            items=list_of_name_of_scene_objects
+            )
+
+
 class E2SceneExportOperator(bpy.types.Operator):
     """ E2 scene exporter: Exports the scene under the export dir """
     bl_idname = "scene.e2_export"
@@ -971,10 +1019,11 @@ class E2SceneExportOperator(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
     
     def execute(self, context):
+        scene_props = context.scene.e2_custom_props
         try:
-            print("E2 Scene exporter: Exporting scene using to dir: " + context.scene.e2_scene_export_dir)
-            self.export_scene(context.scene.objects, str(context.scene.e2_scene_export_dir),
-                              context.scene.e2_scene_remove_name_numeric_suffixes_whenever_possible)
+            print("E2 Scene exporter: Exporting scene using to dir: " + scene_props.export_dir)
+            self.export_scene(context.scene.objects, str(scene_props.export_dir),
+                              scene_props.export_remove_name_numeric_suffixes_whenever_possible)
             print("E2 Scene exporter: Finished successfully.")
         except Exception as e:
             print("E2 Scene exporter: Export has FAILED. Details:\n" + str(e))
@@ -984,9 +1033,10 @@ class E2SceneExportOperator(bpy.types.Operator):
         if not os.path.isdir(output_dir):
             raise Exception("The export directory '" + output_dir + "' does not exist.")
         root_folders = []
-        for object in objects:
-            if object.parent is None and object.e2_custom_props.object_kind == "FOLDER":
-                root_folders.append(object)
+        if "E2_ROOT" in objects and objects["E2_ROOT"].e2_custom_props.object_kind == "FOLDER":
+            for object in objects:
+                if object.parent is objects["E2_ROOT"] and object.e2_custom_props.object_kind == "FOLDER":
+                    root_folders.append(object)
         result = { "folders":{}, "imports": {} }
         for folder in root_folders:
             if remove_suffixes is True:
@@ -1182,17 +1232,15 @@ class E2SceneImportOperator(bpy.types.Operator):
     bl_label = "Import scene"
     bl_options = {'REGISTER', 'UNDO'}
 
-    def import_scene(self, objects, root_folder, input_dir):
+    def import_scene(self, objects, import_dir, under_folder):
         pass
 
     def execute(self, context):
+        scene_props = context.scene.e2_custom_props
         try:
-            print("E2 Scene importer: Importing scene under '" + 
-                  context.scene.e2_scene_import_under_folder +
-                  "' from dir: " + context.scene.e2_scene_import_dir)
-            self.import_scene(context.scene.objects,
-                              str(context.scene.e2_scene_import_under_folder),
-                              str(context.scene.e2_scene_export_dir))
+            print("E2 Scene importer: Importing scene under '" + scene_props.import_under_folder +
+                  "' from dir: " + scene_props.import_dir)
+            self.import_scene(context.scene.objects, str(scene_props.import_dir), str(scene_props.import_under_folder))
             print("E2 Scene importer: Finished successfully.")
         except Exception as e:
             print("E2 Scene importer: Import has FAILED. Details:\n" + str(e))
@@ -1209,28 +1257,39 @@ class E2SceneIOPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        self.draw_export(scene, context, layout.box())
-        self.draw_import(scene, context, layout.box())
+        scene_props = scene.e2_custom_props
+        self.draw_export(context, scene_props, layout.box())
+        self.draw_import(context, scene_props, layout.box())
         
-    def draw_export(self, scene, context, layout):
-        row = layout.row()
-        row.prop(scene, "e2_scene_export_dir")
+    def draw_export(self, context, scene_props, layout):
+        self.warn_not_valid_dir(scene_props.export_dir, layout, "Export dir")
+        if scene_props.export_make_paths_relative_to_data_root is True:
+            self.warn_not_valid_dir(scene_props.export_data_root_dir, layout, "Data root dir")
 
         row = layout.row()
-        row.prop(scene, "e2_scene_remove_name_numeric_suffixes_whenever_possible")
+        row.prop(scene_props, "export_dir")
+
+        box = layout.box()
+        row = box.row()
+        row.prop(scene_props, "export_make_paths_relative_to_data_root")
+        row = box.row()
+        row.prop(scene_props, "export_data_root_dir")
+
+        row = layout.row()
+        row.prop(scene_props, "export_remove_name_numeric_suffixes_whenever_possible")
 
         row = layout.row()
         row.operator("scene.e2_export")
 
-    def draw_import(self, scene, context, layout):
-        self.warn_object_is_not_folder(scene.e2_scene_import_under_folder, layout, "Import under")
-        self.warn_not_valid_import_dir(scene.e2_scene_import_dir, layout, "Import dir")
+    def draw_import(self, context, scene_props, layout):
+        self.warn_object_is_not_folder(scene_props.import_under_folder, layout, "Import under")
+        self.warn_not_valid_import_dir(scene_props.import_dir, layout, "Import dir")
 
         row = layout.row()
-        row.prop(scene, "e2_scene_import_dir")
+        row.prop(scene_props, "import_dir")
 
         row = layout.row()
-        row.prop(scene, "e2_scene_import_under_folder")
+        row.prop(scene_props, "import_under_folder")
 
         row = layout.row()
         row.operator("scene.e2_import")
@@ -1243,12 +1302,17 @@ class E2SceneIOPanel(bpy.types.Panel):
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a folder !!!")
 
+    def warn_not_valid_dir(self, path, layout, property_name):
+        if not os.path.isdir(path):
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not valid directory !!!")
+            
     def warn_not_valid_import_dir(self, path, layout, property_name):
         if not os.path.isdir(path) or not os.path.isfile(os.path.join(path, "hierarchy.json")):
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not valid scene directory !!!")
-
-
+            
+            
 ######################################################
 # REGISTRATION AND UNREGISTRATION TO AND FROM BLENDER
 ######################################################
@@ -1263,46 +1327,21 @@ def register():
     bpy.utils.register_class(E2_UL_RequestInfosListDown)
     bpy.utils.register_class(E2ObjectProps)
     bpy.utils.register_class(E2ObjectPropertiesPanel)
+    bpy.utils.register_class(E2SceneProps)
     bpy.utils.register_class(E2SceneExportOperator)
     bpy.utils.register_class(E2SceneImportOperator)
     bpy.utils.register_class(E2SceneIOPanel)
     bpy.types.Object.e2_custom_props = bpy.props.PointerProperty(type=E2ObjectProps)
-    bpy.types.Scene.e2_scene_remove_name_numeric_suffixes_whenever_possible = bpy.props.BoolProperty(
-            name="Try not to export numeric suffixes of names?",
-            description=("During export try to ignore numeric suffixes\n"+
-                         "of names, like '.001',  whenever possible."),
-            default=True
-            )
-    bpy.types.Scene.e2_scene_export_dir = bpy.props.StringProperty(
-            name="Export dir",
-            description="A directory under which the scene will be exported",
-            default=".",
-            maxlen=1000,
-            subtype='DIR_PATH'
-            )
-    bpy.types.Scene.e2_scene_import_dir = bpy.props.StringProperty(
-            name="Import dir",
-            description="A directory from which a scene will be imported",
-            default=".",
-            maxlen=1000,
-            subtype='DIR_PATH'
-            )
-    bpy.types.Scene.e2_scene_import_under_folder = bpy.props.EnumProperty(
-            name="Import uder",
-            description="A folder in the current scene under which to import the scene",
-            items=list_of_name_of_scene_objects
-            )
+    bpy.types.Scene.e2_custom_props =  bpy.props.PointerProperty(type=E2SceneProps)
 
 
 def unregister():
-    del bpy.types.Scene.e2_scene_import_under_folder
-    del bpy.types.Scene.e2_scene_import_dir
-    del bpy.types.Scene.e2_scene_export_dir
-    del bpy.types.Scene.e2_scene_remove_name_numeric_suffixes_whenever_possible
+    del bpy.types.Scene.e2_custom_props
     del bpy.types.Object.e2_custom_props
     bpy.utils.unregister_class(E2SceneIOPanel)
     bpy.utils.unregister_class(E2SceneImportOperator)
     bpy.utils.unregister_class(E2SceneExportOperator)
+    bpy.utils.unregister_class(E2SceneProps)
     bpy.utils.unregister_class(E2ObjectPropertiesPanel)
     bpy.utils.unregister_class(E2ObjectProps)
     bpy.utils.unregister_class(E2_UL_RequestInfosListDown)
