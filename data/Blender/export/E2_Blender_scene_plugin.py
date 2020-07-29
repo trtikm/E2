@@ -6,12 +6,42 @@ import json
 
 
 ######################################################
-# PROPERTIES OF SCENE OBJECTS
+# UTILITIES
 ######################################################
+
+
+def normalise_disk_path(path, data_root_dir=None):
+    path = os.path.abspath(str(path)).replace("\\", "/")
+    if data_root_dir is not None:
+        data_root_dir = os.path.abspath(str(data_root_dir)).replace("\\", "/")
+        path = os.path.relpath(path, data_root_dir).replace("\\", "/")
+    return path
+
+
+def num2str(num, precision=6):
+    return format(num, "." + str(precision) + "f") if isinstance(num, float) else str(num)
+
+
+def remove_numeric_suffix(name):
+    idx = name.rfind(".")
+    if idx >= 0 and idx + 1 < len(name) and all(c.isdigit() for c in name[idx+1:]):
+        return name[:idx]
+    return name
 
 
 def list_of_name_of_scene_objects(self, context):
     return [(obj.name, obj.name, "", i) for i, obj in enumerate(context.collection.all_objects)]
+
+
+def e2_custom_props_of(object_name):
+    if object_name not in bpy.context.collection.all_objects:
+        return None
+    return bpy.context.collection.all_objects[object_name].e2_custom_props
+
+
+######################################################
+# PROPERTIES OF SCENE OBJECTS
+######################################################
 
 
 class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
@@ -276,10 +306,10 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     folder_imported_from_dir: bpy.props.StringProperty(
             name="Imported from",
             description=("A directory from which the folder and all its conted\n"+
-                         "were imported from. Empty string means not imported"),
+                         "were imported from. Empty path means not imported"),
             default="",
             maxlen=1000,
-            subtype='NONE'
+            subtype='DIR_PATH'
             )
     folder_defines_frame: bpy.props.BoolProperty(
             name="Add 'frame' to the folder.",
@@ -388,6 +418,14 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             description="A collision material of the collider.",
             items=COLLIDER_MATERIAL_TYPE,
             default="CONCRETE"
+            )
+
+    collider_triangle_mesh_dir: bpy.props.StringProperty(
+            name="Mesh dir",
+            description="A directory containing files defining a triangle mesh",
+            default=".",
+            maxlen=1000,
+            subtype='DIR_PATH'
             )
 
     collider_defines_sensor: bpy.props.BoolProperty(
@@ -504,12 +542,6 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     request_info_index: bpy.props.IntProperty(name = "Index for E2_UL_RequestInfoListItem", default = 0)
 
 
-def e2_custom_props_of(object_name):
-    if object_name not in bpy.context.collection.all_objects:
-        return None
-    return bpy.context.collection.all_objects[object_name].e2_custom_props
-
-
 class E2ObjectPropertiesPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_e2_object_props_panel"
     bl_label = "E2 object props"
@@ -523,6 +555,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         object_props = object.e2_custom_props
 
         self.warn_not_under_root_folder(object, layout)
+        self.warn_object_name_is_reserved(object.name, layout)
 
         row = layout.row()
         row.prop(object_props, "object_kind")
@@ -538,11 +571,12 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         self.warn_root_folder_is_relocated(object, layout)
         self.warn_root_object_is_not_folder(object, layout)
         self.warn_parent_is_not_folder(object, layout)
-        self.warn_folder_is_scaled(object, layout)
+        self.warn_object_is_scaled(object, layout, "folder")
 
+        row = layout.row()
+        row.prop(object_props, "folder_imported_from_dir")
         if len(object_props.folder_imported_from_dir) > 0:
-            row = layout.row()
-            row.label(text="Imported from: " + str(object_props.folder_imported_from_dir))
+            return
 
         row = layout.row()
         row.prop(object_props, "folder_defines_frame")
@@ -612,15 +646,21 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         self.warn_no_frame_found(object.parent, layout)
         #self.warn_frame_already_has_collider(object.parent, layout)
         self.warn_wrong_shape_geometry(object, object_props.collider_kind, layout)
+        if object_props.collider_kind == "TRIANGLE_MESH":
+            self.warn_object_is_scaled(object, layout, "Triangle mesh")
+            self.warn_not_valid_triangle_mesh_dir(object_props.collider_triangle_mesh_dir, layout, "Mesh dir")
 
         row = layout.row()
         row.prop(object_props, "collider_kind")
 
         row = layout.row()
-        if object.type == 'EMPTY':
-            row.prop(object, "scale")
+        if object_props.collider_kind == "TRIANGLE_MESH":
+            row.prop(object_props, "collider_triangle_mesh_dir")
         else:
-            row.prop(object, "dimensions")
+            if object.type == 'EMPTY':
+                row.prop(object, "scale")
+            else:
+                row.prop(object, "dimensions")
 
         row = layout.row()
         row.prop(object_props, "collider_collision_class")
@@ -818,7 +858,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if  object.name == "E2_ROOT":
             self.warn_origin_moved(object, layout, 'E2_ROOT')
             self.warn_object_rotated(object, layout, 'E2_ROOT')
-            self.warn_folder_is_scaled(object, layout)
+            self.warn_object_is_scaled(object, layout, "folder")
 
     def warn_root_object_is_not_folder(self, object, layout):        
         if object.parent is None and object.e2_custom_props.object_kind != "FOLDER":
@@ -842,8 +882,9 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row = layout.row()
             row.label(text="!!! WARNING: The " + property_name + " is moved from the origin !!!")
 
-    def warn_folder_is_scaled(self, folder, layout):
-        if any(abs(folder.scale[i] - 1.0) > 0.0001 for i in range(3)):
+    def warn_object_is_scaled(self, object, layout, property_name=None):
+        if any(abs(object.scale[i] - 1.0) > 0.0001 for i in range(3)):
+            property_name = object.e2_custom_props.object_kind if property_name is None else property_name
             row = layout.row()
             row.label(text="!!! WARNING: The folder is scaled !!!")
 
@@ -943,25 +984,24 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not valid scene directory !!!")
 
+    def warn_not_valid_triangle_mesh_dir(self, path, layout, property_name):
+        if not os.path.isdir(path) or any(not os.path.isfile(os.path.join(path, x + ".txt")) for x in ["vertices", "indices"]):
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not valid triangle mesh directory !!!")
+
+    def warn_object_name_is_reserved(self, name, layout):
+        reserved_names = ["FOLDER", "FRAME", "RIGID_BODY", "TIMER"]
+        if name in reserved_names or remove_numeric_suffix(name) in reserved_names:
+            row = layout.row()
+            row.label(text="!!! WARNING: The object's name '" + name + "' is reserved !!!")
+        elif name.startswith("SENSOR."):
+            row = layout.row()
+            row.label(text="!!! WARNING: The prefix 'SENSOR.' in object's name is reserved !!!")
+
 
 ######################################################
 # SCENE IMPORT AND EXPORT
 ######################################################
-
-
-def normalise_disk_path(path):
-    return str(path).replace("\\", "/")
-
-
-def num2str(num, precision=6):
-    return format(num, "." + str(precision) + "f") if isinstance(num, float) else str(num)
-
-
-def remove_numeric_suffix(name):
-    idx = name.rfind(".")
-    if idx >= 0 and idx + 1 < len(name) and all(c.isdigit() for c in name[idx+1:]):
-        return name[:idx]
-    return name
 
 
 class E2SceneProps(bpy.types.PropertyGroup):
@@ -1022,14 +1062,18 @@ class E2SceneExportOperator(bpy.types.Operator):
         scene_props = context.scene.e2_custom_props
         try:
             print("E2 Scene exporter: Exporting scene using to dir: " + scene_props.export_dir)
-            self.export_scene(context.scene.objects, str(scene_props.export_dir),
-                              scene_props.export_remove_name_numeric_suffixes_whenever_possible)
+            self.export_scene(
+                context.scene.objects,
+                str(scene_props.export_dir),
+                scene_props.export_remove_name_numeric_suffixes_whenever_possible,
+                scene_props.export_data_root_dir if scene_props.export_make_paths_relative_to_data_root is True else None
+                )
             print("E2 Scene exporter: Finished successfully.")
         except Exception as e:
             print("E2 Scene exporter: Export has FAILED. Details:\n" + str(e))
         return{'FINISHED'}
 
-    def export_scene(self, objects, output_dir, remove_suffixes):
+    def export_scene(self, objects, output_dir, remove_suffixes, data_root_dir):
         if not os.path.isdir(output_dir):
             raise Exception("The export directory '" + output_dir + "' does not exist.")
         root_folders = []
@@ -1045,15 +1089,15 @@ class E2SceneExportOperator(bpy.types.Operator):
             else:
                 folder_name = folder.name
             if len(folder.e2_custom_props.folder_imported_from_dir) > 0:
-                result["imports"][folder_name] = normalise_disk_path(folder.e2_custom_props.folder_imported_from_dir)
+                result["imports"][folder_name] = self.export_import(folder, data_root_dir)
             else:
-                result["folders"][folder_name] = self.export_folder(folder, remove_suffixes)
+                result["folders"][folder_name] = self.export_folder(folder, remove_suffixes, data_root_dir)
         result = self.clean_result(result)    
         #print(json.dumps(result, indent=4, sort_keys=True))
         with open(os.path.join(output_dir, "hierarchy.json"), "w") as f:
             json.dump(result, f, indent=4, sort_keys=True)
 
-    def export_folder(self, folder, remove_suffixes):
+    def export_folder(self, folder, remove_suffixes, data_root_dir):
         result = { "content":{}, "folders":{}, "imports": {} }
         if folder.e2_custom_props.folder_defines_frame is True:
             result["content"]["FRAME"] = self.export_frame(folder)
@@ -1065,20 +1109,24 @@ class E2SceneExportOperator(bpy.types.Operator):
                 child_name = fixed_name if fixed_name not in [n.name for n in folder.children] else child.name
             else:
                 child_name = child.name
-            if child.e2_custom_props.object_kind == "FOLDER":
-                if len(child.e2_custom_props.folder_imported_from_dir) > 0:
-                    result["imports"][child_name] = normalise_disk_path(child.e2_custom_props.folder_imported_from_dir)
+            child_props = child.e2_custom_props
+            if child_props.object_kind == "FOLDER":
+                if len(child_props.folder_imported_from_dir) > 0:
+                    result["imports"][child_name] = self.export_import(child, data_root_dir)
                 else:
-                    result["folders"][child_name] = self.export_folder(child, remove_suffixes)
-            elif child.e2_custom_props.object_kind == "BATCH":
-                result["content"][child_name] = self.export_batch(child)
-            elif child.e2_custom_props.object_kind == "COLLIDER":
-                result["content"][child_name] = self.export_collider(child)
-                if child.e2_custom_props.collider_defines_sensor is True:
-                    result["content"]["SENSOR." + child_name] = self.export_sensor(child, child_name)
+                    result["folders"][child_name] = self.export_folder(child, remove_suffixes, data_root_dir)
+            elif child_props.object_kind == "BATCH":
+                result["content"][child_name] = self.export_batch(child, data_root_dir)
+            elif child_props.object_kind == "COLLIDER":
+                result["content"][child_name] = self.export_collider(child, data_root_dir)
+                if child_props.collider_defines_sensor is True:
+                    result["content"]["SENSOR." + child_name] = self.export_sensor(child, child_name, data_root_dir)
         if folder.e2_custom_props.folder_defines_timer is True:
-            result["content"]["TIMER"] = self.export_timer(folder)
+            result["content"]["TIMER"] = self.export_timer(folder, data_root_dir)
         return self.clean_result(result)
+
+    def export_import(self, folder, data_root_dir):
+        return normalise_disk_path(folder.e2_custom_props.folder_imported_from_dir, data_root_dir)
 
     def export_frame(self, object):
         result = {
@@ -1097,13 +1145,13 @@ class E2SceneExportOperator(bpy.types.Operator):
         }
         return result
 
-    def export_batch(self, object):
+    def export_batch(self, object, data_root_dir):
         result = {
             "object_kind": object.e2_custom_props.object_kind,
             "batch_kind": object.e2_custom_props.batch_kind
         }
         if object.e2_custom_props.batch_kind == "REGULAR_GFX_BATCH":
-            result["path"] = self.normalise_disk_path(object.e2_custom_props.batch_reguar_disk_path)
+            result["path"] = normalise_disk_path(object.e2_custom_props.batch_reguar_disk_path, data_root_dir)
         else:
             sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
             if object.e2_custom_props.batch_kind == "GENERIC_BOX":
@@ -1137,13 +1185,13 @@ class E2SceneExportOperator(bpy.types.Operator):
                 result["colour"] = { "r": "0.75", "g": "0.75", "b": "1.0", "a": "1.0" }
         return result
 
-    def export_collider(self, object):
+    def export_collider(self, object, data_root_dir):
         result = {
             "object_kind": object.e2_custom_props.object_kind,
             "collider_kind": object.e2_custom_props.collider_kind
         }
         if object.e2_custom_props.collider_kind == "TRIANGLE_MESH":
-            pass
+            result["path"] = normalise_disk_path(object.e2_custom_props.collider_triangle_mesh_dir, data_root_dir)
         else:
             sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
             if object.e2_custom_props.collider_kind == "BOX":
@@ -1198,24 +1246,77 @@ class E2SceneExportOperator(bpy.types.Operator):
                 }
         return result
     
-    def export_timer(self, object):
+    def export_timer(self, object, data_root_dir):
         object_props = object.e2_custom_props
         result = {
             "object_kind": "TIMER",
-            "period_in_seconds": str(object_props.timer_period_in_seconds),
-            "target_enable_level": str(object_props.timer_target_enable_level),
-            "current_enable_level": str(object_props.timer_current_enable_level)
+            "period_in_seconds": num2str(object_props.timer_period_in_seconds),
+            "target_enable_level": num2str(object_props.timer_target_enable_level),
+            "current_enable_level": num2str(object_props.timer_current_enable_level),
+            "request_infos": self.export_request_infos(object_props.request_info_items, data_root_dir)
         }
         return result
     
-    def export_sensor(self, object, name):
+    def export_sensor(self, object, name, data_root_dir):
         object_props = object.e2_custom_props
         result = {
             "object_kind": "SENSOR",
             "collider": name,
-            "target_enable_level": str(object_props.sensor_target_enable_level),
-            "current_enable_level": str(object_props.sensor_current_enable_level),
+            "target_enable_level": num2str(object_props.sensor_target_enable_level),
+            "current_enable_level": num2str(object_props.sensor_current_enable_level),
+            "request_infos": self.export_request_infos(object_props.request_info_items, data_root_dir)
         }
+        return result
+
+    def export_request_infos(self, infos, data_root_dir):
+        result = []
+        for info in infos:
+            record = { "kind": info.kind, "event": info.event }
+    
+            # folder_of_timer
+            # collider_of_sensor
+            # import_dir
+            # import_under_folder
+            # import_relocation_frame_folder
+            # cache_imported_scene
+            # import_motion_frame
+            # linear_velocity
+            # angular_velocity
+            # erase_folder
+            # folder_of_rigid_body
+            # radial_force_field_multiplier
+            # radial_force_field_exponent
+            # radial_force_field_min_radius
+            # use_mass
+            # linear_force_field_acceleration
+    
+            if info.kind == "INCREMENT_ENABLE_LEVEL_OF_TIMER":
+                pass
+            elif info.kind == "DECREMENT_ENABLE_LEVEL_OF_TIMER":
+                pass
+            elif info.kind == "RESET_TIMER":
+                pass
+            elif info.kind == "INCREMENT_ENABLE_LEVEL_OF_SENSOR":
+                pass
+            elif info.kind == "DECREMENT_ENABLE_LEVEL_OF_SENSOR":
+                pass
+            elif info.kind == "IMPORT_SCENE":
+                pass
+            elif info.kind == "ERASE_FOLDER":
+                pass
+            elif info.kind == "SET_LINEAR_VELOCITY":
+                pass
+            elif info.kind == "SET_ANGULAR_VELOCITY":
+                pass
+            elif info.kind == "UPDATE_RADIAL_FORCE_FIELD":
+                pass
+            elif info.kind == "UPDATE_LINEAR_FORCE_FIELD":
+                pass
+            elif info.kind == "LEAVE_FORCE_FIELD":
+                pass
+            else:
+                raise Exception("Unknown kind of request info")
+            result.append(record)
         return result
 
     def clean_result(self, result):
