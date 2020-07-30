@@ -33,10 +33,55 @@ def list_of_name_of_scene_objects(self, context):
     return [(obj.name, obj.name, "", i) for i, obj in enumerate(context.collection.all_objects)]
 
 
+def get_scene_object_of_name(object_name):
+    return bpy.context.collection.all_objects[object_name]
+
+
 def e2_custom_props_of(object_name):
-    if object_name not in bpy.context.collection.all_objects:
-        return None
-    return bpy.context.collection.all_objects[object_name].e2_custom_props
+    return get_scene_object_of_name(object_name).e2_custom_props
+
+
+def is_root_folder(object):
+    return object is not None and object.parent is None and object.name == "E2_ROOT"
+
+
+def absolute_scene_path(object_name):
+    path = []
+    object = get_scene_object_of_name(object_name)
+    while object is not None and object.name != "E2_ROOT":
+        path.append(object.name)
+        object = object.parent
+    path.reverse()
+    return "/".join(path)
+
+
+def split_path(path):
+    return [x for x in path.split("/") if len(x) > 0]
+
+
+def relative_scene_path_from_absolute_paths(target_abs_path, start_abs_path, record_name=None, embedded_in_folder=False):
+    target = split_path(target_abs_path)
+    start = split_path(start_abs_path)
+    idx = min(len(target), len(start))
+    for i in range(idx):
+        if target[i] != start[i]:
+            idx = i
+            break
+    rel_path = [".." for _ in range(len(start[idx:]))] + target[idx:]
+    if embedded_in_folder is True:
+        rel_path = [".."] + rel_path
+    if record_name is not None:
+        rel_path += split_path(record_name)
+    return "/".join(rel_path) if len(rel_path) > 0 else "."
+
+
+def relative_scene_path(target_object_name, start_object_name, record_name=None, consider_folder_embedding=True):
+    return relative_scene_path_from_absolute_paths(
+                absolute_scene_path(target_object_name),
+                absolute_scene_path(start_object_name),
+                record_name,
+                e2_custom_props_of(start_object_name).object_kind == "FOLDER" if consider_folder_embedding else False
+                )
 
 
 ######################################################
@@ -88,8 +133,8 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             )
 
     collider_of_sensor: bpy.props.EnumProperty(
-            name="Sensor's folder",
-            description="A folder of the considered sensor.",
+            name="Sensor's collider",
+            description="A collider of the considered sensor.",
             items=list_of_name_of_scene_objects
             )
 
@@ -556,6 +601,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
 
         self.warn_not_under_root_folder(object, layout)
         self.warn_object_name_is_reserved(object.name, layout)
+        self.warn_object_name_contains_reserved_character(object.name, layout)
 
         row = layout.row()
         row.prop(object_props, "object_kind")
@@ -753,34 +799,42 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
 
     def draw_request_info_increment_enable_level_of_timer(self, layout, object_props, request_info):
         self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
     def draw_request_info_decrement_enable_level_of_timer(self, layout, object_props, request_info):
         self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
     def draw_request_info_reset_timer(self, layout, object_props, request_info):
         self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
     def draw_request_info_increment_enable_level_of_sensor(self, layout, object_props, request_info):
-        self.warn_object_is_not_collider_with_sensor(request_info.collider_of_sensor, layout, "Sensor's folder")
+        self.warn_object_is_not_collider_with_sensor(request_info.collider_of_sensor, layout, "Sensor's collider")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.collider_of_sensor, layout, "Sensor's collider")
         row = layout.row()
         row.prop(request_info, "collider_of_sensor")
 
     def draw_request_info_decrement_enable_level_of_sensor(self, layout, object_props, request_info):
         self.warn_object_is_not_collider_with_sensor(request_info.collider_of_sensor, layout, "Sensor's folder")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.collider_of_sensor, layout, "Sensor's collider")
         row = layout.row()
         row.prop(request_info, "collider_of_sensor")
 
     def draw_request_info_import_scene(self, layout, object_props, request_info):
         self.warn_not_valid_import_dir(request_info.import_dir, layout, "Import dir")
         self.warn_object_is_not_folder(request_info.import_under_folder, layout, "Under folder")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.import_under_folder, layout, "Under folder")
         self.warn_object_is_not_folder_with_frame(request_info.import_relocation_frame_folder, layout, "Relocation frame", True)
+        self.warn_object_of_name_is_not_under_root_folder(request_info.import_relocation_frame_folder, layout, "Relocation frame")
         self.warn_object_is_not_folder_with_frame(request_info.import_motion_frame, layout, "Motion frame", True)
+        self.warn_object_of_name_is_not_under_root_folder(request_info.import_motion_frame, layout, "Motion frame")
         row = layout.row()
         row.prop(request_info, "import_dir")
         row = layout.row()
@@ -798,11 +852,14 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
 
     def draw_request_info_erase_folder(self, layout, object, object_props, request_info):
         self.warn_object_is_not_folder(request_info.erase_folder, layout, "Folder to erase")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.erase_folder, layout, "Folder to erase")
+        self.warn_is_root_folder(request_info.erase_folder, layout, "Folder to erase")
         row = layout.row()
         row.prop(request_info, "erase_folder")
 
     def draw_request_info_set_linear_velocity(self, layout, object_props, request_info):
         self.warn_folder_does_not_have_rigid_body(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_rigid_body")
         row = layout.row()
@@ -810,6 +867,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
 
     def draw_request_info_set_angular_velocity(self, layout, object_props, request_info):
         self.warn_folder_does_not_have_rigid_body(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_rigid_body")
         row = layout.row()
@@ -835,12 +893,16 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
 
     # == warnings ======================================================================
 
-    def warn_not_under_root_folder(self, object, layout):
+    def warn_not_under_root_folder(self, object, layout, property_name=None):
         while object.parent is not None:
             object = object.parent
         if  object.name != "E2_ROOT":
+            property_name = "object" if property_name is None else property_name
             row = layout.row()
-            row.label(text="!!! WARNING: The object is not in the sub-tree the 'E2_ROOT' folder !!!")
+            row.label(text="!!! WARNING: The " + property_name + " is not in the sub-tree the 'E2_ROOT' folder !!!")
+
+    def warn_object_of_name_is_not_under_root_folder(self, object_name, layout, property_name):
+        return self.warn_not_under_root_folder(get_scene_object_of_name(object_name), layout, property_name)
 
     def warn_root_folder_has_non_folder_content(self, object, object_props, layout):
         if  object.name == "E2_ROOT":
@@ -989,6 +1051,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not valid triangle mesh directory !!!")
 
+    def warn_is_root_folder(self, name, layout, property_name):
+        if is_root_folder(get_scene_object_of_name(name)):
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is the E2_ROOT folder !!!")
+
     def warn_object_name_is_reserved(self, name, layout):
         reserved_names = ["FOLDER", "FRAME", "RIGID_BODY", "TIMER"]
         if name in reserved_names or remove_numeric_suffix(name) in reserved_names:
@@ -997,6 +1064,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         elif name.startswith("SENSOR."):
             row = layout.row()
             row.label(text="!!! WARNING: The prefix 'SENSOR.' in object's name is reserved !!!")
+
+    def warn_object_name_contains_reserved_character(self, name, layout):
+        if '/' in name or "\\" in name:
+            row = layout.row()
+            row.label(text="!!! WARNING: The object's name contains '/' or '\\' !!!")
 
 
 ######################################################
@@ -1089,7 +1161,8 @@ class E2SceneExportOperator(bpy.types.Operator):
             else:
                 folder_name = folder.name
             if len(folder.e2_custom_props.folder_imported_from_dir) > 0:
-                result["imports"][folder_name] = self.export_import(folder, data_root_dir)
+                result["imports"][folder_name] = normalise_disk_path(folder.e2_custom_props.folder_imported_from_dir,
+                                                                     data_root_dir)
             else:
                 result["folders"][folder_name] = self.export_folder(folder, remove_suffixes, data_root_dir)
         result = self.clean_result(result)    
@@ -1112,7 +1185,8 @@ class E2SceneExportOperator(bpy.types.Operator):
             child_props = child.e2_custom_props
             if child_props.object_kind == "FOLDER":
                 if len(child_props.folder_imported_from_dir) > 0:
-                    result["imports"][child_name] = self.export_import(child, data_root_dir)
+                    result["imports"][child_name] = normalise_disk_path(child.e2_custom_props.folder_imported_from_dir,
+                                                                        data_root_dir)
                 else:
                     result["folders"][child_name] = self.export_folder(child, remove_suffixes, data_root_dir)
             elif child_props.object_kind == "BATCH":
@@ -1125,23 +1199,20 @@ class E2SceneExportOperator(bpy.types.Operator):
             result["content"]["TIMER"] = self.export_timer(folder, data_root_dir)
         return self.clean_result(result)
 
-    def export_import(self, folder, data_root_dir):
-        return normalise_disk_path(folder.e2_custom_props.folder_imported_from_dir, data_root_dir)
+    def export_vector(self, v):
+        return { "x": num2str(v.x), "y": num2str(v.y), "z": num2str(v.z) }
+
+    def export_quaternion(self, q):
+        return { "x": num2str(q.x), "y": num2str(q.y), "z": num2str(q.z), "w": num2str(q.w) }
+    
+    def export_colour(self, c):
+        return { "r": num2str(c[0]), "g": num2str(c[1]), "b": num2str(c[2]), "a": num2str(c[3]) }
 
     def export_frame(self, object):
         result = {
             "object_kind": "FRAME",
-            "origin": {
-                "x": num2str(object.location.x),
-                "y": num2str(object.location.y),
-                "z": num2str(object.location.z)
-            },
-            "orientation": {
-                "x": num2str(object.rotation_quaternion.x),
-                "y": num2str(object.rotation_quaternion.y),
-                "z": num2str(object.rotation_quaternion.z),
-                "w": num2str(object.rotation_quaternion.w)
-            }
+            "origin": self.export_vector(object.location),
+            "orientation": self.export_quaternion(object.rotation_quaternion)
         }
         return result
 
@@ -1155,11 +1226,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         else:
             sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
             if object.e2_custom_props.batch_kind == "GENERIC_BOX":
-                result["half_sizes_along_axes"] = {
-                    "x": num2str(sizes.x),
-                    "y": num2str(sizes.y),
-                    "z": num2str(sizes.z)
-                }
+                result["half_sizes_along_axes"] = self.export_vector(sizes)
             elif object.e2_custom_props.batch_kind == "GENERIC_CAPSULE":
                 thickness = max(0.001, min(sizes.x, sizes.y))
                 result["thickness_from_central_line"] = num2str(thickness)
@@ -1175,12 +1242,7 @@ class E2SceneExportOperator(bpy.types.Operator):
                     )
             try:
                 material = object.data.materials[0].diffuse_color
-                result["colour"] = {
-                    "r": num2str(material[0]),
-                    "g": num2str(material[1]),
-                    "b": num2str(material[2]),
-                    "a": num2str(material[3])
-                }
+                result["colour"] = self.export_colour(material)
             except Exception as e:
                 result["colour"] = { "r": "0.75", "g": "0.75", "b": "1.0", "a": "1.0" }
         return result
@@ -1195,11 +1257,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         else:
             sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
             if object.e2_custom_props.collider_kind == "BOX":
-                result["half_sizes_along_axes"] = {
-                    "x": num2str(sizes.x),
-                    "y": num2str(sizes.y),
-                    "z": num2str(sizes.z)
-                }
+                result["half_sizes_along_axes"] = self.export_vector(sizes)
             elif object.e2_custom_props.collider_kind == "CAPSULE":
                 thickness = max(0.001, min(sizes.x, sizes.y))
                 result["thickness_from_central_line"] = num2str(thickness)
@@ -1224,26 +1282,10 @@ class E2SceneExportOperator(bpy.types.Operator):
             "is_moveable": str(object_props.rigid_body_is_moveable),
         }
         if object_props.rigid_body_is_moveable is True:
-            result["linear_velocity"] = {
-                "x": num2str(object_props.rigid_body_linear_velocity[0]),
-                "y": num2str(object_props.rigid_body_linear_velocity[1]),
-                "z": num2str(object_props.rigid_body_linear_velocity[2])
-                }
-            result["angular_velocity"] = {
-                "x": num2str(object_props.rigid_body_angular_velocity[0]),
-                "y": num2str(object_props.rigid_body_angular_velocity[1]),
-                "z": num2str(object_props.rigid_body_angular_velocity[2])
-                }
-            result["external_linear_acceleration"] = {
-                "x": num2str(object_props.rigid_body_external_linear_acceleration[0]),
-                "y": num2str(object_props.rigid_body_external_linear_acceleration[1]),
-                "z": num2str(object_props.rigid_body_external_linear_acceleration[2])
-                }
-            result["external_angular_acceleration"] = {
-                "x": num2str(object_props.rigid_body_external_angular_acceleration[0]),
-                "y": num2str(object_props.rigid_body_external_angular_acceleration[1]),
-                "z": num2str(object_props.rigid_body_external_angular_acceleration[2])
-                }
+            result["linear_velocity"] = self.export_vector(object_props.rigid_body_linear_velocity),
+            result["angular_velocity"] = self.export_vector(object_props.rigid_body_angular_velocity),
+            result["external_linear_acceleration"] = self.export_vector(object_props.rigid_body_external_linear_acceleration),
+            result["external_angular_acceleration"] = self.export_vector(object_props.rigid_body_external_angular_acceleration)
         return result
     
     def export_timer(self, object, data_root_dir):
@@ -1253,7 +1295,7 @@ class E2SceneExportOperator(bpy.types.Operator):
             "period_in_seconds": num2str(object_props.timer_period_in_seconds),
             "target_enable_level": num2str(object_props.timer_target_enable_level),
             "current_enable_level": num2str(object_props.timer_current_enable_level),
-            "request_infos": self.export_request_infos(object_props.request_info_items, data_root_dir)
+            "request_infos": self.export_request_infos(object_props.request_info_items, object.name, data_root_dir)
         }
         return result
     
@@ -1264,59 +1306,111 @@ class E2SceneExportOperator(bpy.types.Operator):
             "collider": name,
             "target_enable_level": num2str(object_props.sensor_target_enable_level),
             "current_enable_level": num2str(object_props.sensor_current_enable_level),
-            "request_infos": self.export_request_infos(object_props.request_info_items, data_root_dir)
+            "request_infos": self.export_request_infos(object_props.request_info_items, object.name, data_root_dir)
         }
         return result
 
-    def export_request_infos(self, infos, data_root_dir):
+    def export_request_infos(self, infos, name, data_root_dir):
         result = []
         for info in infos:
-            record = { "kind": info.kind, "event": info.event }
-    
-            # folder_of_timer
-            # collider_of_sensor
-            # import_dir
-            # import_under_folder
-            # import_relocation_frame_folder
-            # cache_imported_scene
-            # import_motion_frame
-            # linear_velocity
-            # angular_velocity
-            # erase_folder
-            # folder_of_rigid_body
-            # radial_force_field_multiplier
-            # radial_force_field_exponent
-            # radial_force_field_min_radius
-            # use_mass
-            # linear_force_field_acceleration
-    
             if info.kind == "INCREMENT_ENABLE_LEVEL_OF_TIMER":
-                pass
+                record = self.export_request_info_increment_enable_level_of_timer(info, name)
             elif info.kind == "DECREMENT_ENABLE_LEVEL_OF_TIMER":
-                pass
+                record = self.export_request_info_decrement_enable_level_of_timer(info, name)
             elif info.kind == "RESET_TIMER":
-                pass
+                record = self.export_request_info_reset_timer(info, name)
             elif info.kind == "INCREMENT_ENABLE_LEVEL_OF_SENSOR":
-                pass
+                record = self.export_request_info_increment_enable_level_of_sensor(info, name)
             elif info.kind == "DECREMENT_ENABLE_LEVEL_OF_SENSOR":
-                pass
+                record = self.export_request_info_decrement_enable_level_of_sensor(info, name)
             elif info.kind == "IMPORT_SCENE":
-                pass
+                record = self.export_request_info_import_scene(info, name, data_root_dir)
             elif info.kind == "ERASE_FOLDER":
-                pass
+                record = self.export_request_info_erase_folder(info, name)
             elif info.kind == "SET_LINEAR_VELOCITY":
-                pass
+                record = self.export_request_info_set_linear_velocity(info, name)
             elif info.kind == "SET_ANGULAR_VELOCITY":
-                pass
+                record = self.export_request_info_set_angular_velocity(info, name)
             elif info.kind == "UPDATE_RADIAL_FORCE_FIELD":
-                pass
+                record = self.export_request_info_update_radial_force_field(info)
             elif info.kind == "UPDATE_LINEAR_FORCE_FIELD":
-                pass
+                record = self.export_request_info_update_linear_force_field(info)
             elif info.kind == "LEAVE_FORCE_FIELD":
-                pass
+                record = {}
             else:
-                raise Exception("Unknown kind of request info")
+                raise Exception("ERROR: Unknown request info kind.")            
+            record["kind"] = info.kind
+            record["event"] = info.event
             result.append(record)
+        return result
+
+    def export_request_info_increment_enable_level_of_timer(self, info, name):
+        result = { "timer": relative_scene_path(info.folder_of_timer, name, "TIMER") }
+        return result
+
+    def export_request_info_decrement_enable_level_of_timer(self, info, name):
+        result = { "timer": relative_scene_path(info.folder_of_timer, name, "TIMER") }
+        return result
+
+    def export_request_info_reset_timer(self, info, name):
+        result = { "timer": relative_scene_path(info.folder_of_timer, name, "TIMER") }
+        return result
+
+    def export_request_info_increment_enable_level_of_sensor(self, info, name):
+        result = { "sensor": relative_scene_path(info.collider_of_sensor, name, "SENSOR." + info.collider_of_sensor) }
+        return result
+
+    def export_request_info_decrement_enable_level_of_sensor(self, info, name):
+        result = { "sensor": relative_scene_path(info.collider_of_sensor, name, "SENSOR." + info.collider_of_sensor) }
+        return result
+
+    def export_request_info_import_scene(self, info, name, data_root_dir):
+        result = {
+            "import_dir": normalise_disk_path(info.import_dir, data_root_dir),
+            "cache_imported_scene": "true" if info.cache_imported_scene is True else "false",
+            "linear_velocity": self.export_vector(info.linear_velocity),
+            "angular_velocity": self.export_vector(info.angular_velocity)
+        }
+        if not is_root_folder(get_scene_object_of_name(info.import_under_folder)):
+            result["under_folder"] = relative_scene_path(info.import_under_folder, name)
+        if not is_root_folder(get_scene_object_of_name(info.import_relocation_frame_folder)):
+            result["relocation_frame"] = relative_scene_path(info.import_relocation_frame_folder, name, "FRAME")
+        if not is_root_folder(get_scene_object_of_name(info.import_motion_frame)):
+            result["motion_frame"] = relative_scene_path(info.import_motion_frame, name, "FRAME")
+        return result
+
+    def export_request_info_erase_folder(self, info, name):
+        result = { "erase_folder": relative_scene_path(info.erase_folder, name) }
+        return result
+
+    def export_request_info_set_linear_velocity(self, info, name):
+        result = {
+            "rigid_body": relative_scene_path(info.folder_of_rigid_body, name, "RIGID_BODY"),
+            "linear_velocity": self.export_vector(info.linear_velocity)
+        }
+        return result
+
+    def export_request_info_set_angular_velocity(self, info, name):
+        result = {
+            "rigid_body": relative_scene_path(info.folder_of_rigid_body, name, "RIGID_BODY"),
+            "angular_velocity": self.export_vector(info.angular_velocity)
+        }
+        return result
+
+    def export_request_info_update_radial_force_field(self, info):
+        result = {
+            "multiplier": num2str(info.radial_force_field_multiplier),
+            "exponent": num2str(info.radial_force_field_exponent),
+            "min_radius": num2str(info.radial_force_field_min_radius),
+            "use_mass": "true" if info.use_mass is True else "false"
+        }
+        return result
+
+    def export_request_info_update_linear_force_field(self, info):
+        result = {
+            "acceleration": self.export_vector(info.linear_force_field_acceleration),
+            "use_mass": "true" if info.use_mass is True else "false"
+        }
         return result
 
     def clean_result(self, result):
