@@ -1212,7 +1212,7 @@ class E2SceneExportOperator(bpy.types.Operator):
                     max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
                     )
             elif object.e2_custom_props.batch_kind == "GENERIC_SPHERE":
-                result["radius"] = max(0.001, min(sizes))
+                result["radius"] = num2str(max(0.001, min(sizes)))
                 result["num_lines_per_quarter_of_circle"] = num2str(
                     max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
                     )
@@ -1243,7 +1243,7 @@ class E2SceneExportOperator(bpy.types.Operator):
                     max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
                     )
             elif object.e2_custom_props.collider_kind == "SPHERE":
-                result["radius"] = max(0.001, min(sizes))
+                result["radius"] = num2str(max(0.001, min(sizes)))
                 result["num_lines_per_quarter_of_circle"] = num2str(
                     max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
                     )
