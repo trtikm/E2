@@ -2092,6 +2092,49 @@ std::string  simulation_context::to_relative_path(object_guid const  guid, objec
 
 
 /////////////////////////////////////////////////////////////////////////////////////
+// SCENE IMPORT/EXPORT API
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+void  simulation_context::request_import_scene_from_directory(
+        std::string const&  directory_on_the_disk,
+        object_guid const  under_folder_guid,
+        object_guid const  relocation_frame_guid,
+        bool const  cache_imported_scene,
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity,
+        object_guid const  motion_frame_guid
+        ) const
+{
+    auto const  it = m_cache_of_imported_scenes.find(detail::imported_scene::key_from_path(directory_on_the_disk));
+    m_requests_queue_scene_import.push_back({
+            it == m_cache_of_imported_scenes.end() ? detail::imported_scene(directory_on_the_disk) : it->second,
+            under_folder_guid,
+            relocation_frame_guid,
+            cache_imported_scene,
+            linear_velocity,
+            angular_velocity,
+            motion_frame_guid
+            });
+}
+
+
+// Disabled (not const) for modules.
+
+
+void  simulation_context::insert_imported_batch_to_cache(gfx::batch const  batch)
+{
+    m_cache_of_imported_batches.insert({batch.key(), batch });
+}
+
+
+void  simulation_context::insert_imported_effects_config_to_cache(gfx::effects_config const  effects_config)
+{
+    m_cache_of_imported_effect_configs.insert({effects_config.key(), effects_config });
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
 // REQUESTS PROCESSING API
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -2349,8 +2392,9 @@ void  simulation_context::process_pending_requests_import_scene()
             if (request.scene.loaded_successfully())
                 try
                 {
-                    import_scene(
-                            { &request.scene.hierarchy(), &request.scene.effects() },
+                    detail::import_scene(
+                            *this,
+                            request.scene,
                             request.folder_guid,
                             request.relocation_frame_guid,
                             request.linear_velocity,
@@ -2409,425 +2453,6 @@ void  simulation_context::clear(bool const  also_caches)
     INVARIANT(fct.content.empty());
 
     process_pending_requests();
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-// SCENE IMPORT/EXPORT API
-/////////////////////////////////////////////////////////////////////////////////////
-
-
-simulation_context::imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : m_hierarchy()
-    , m_effects()
-{
-    boost::filesystem::path const  scene_dir = finaliser->get_key().get_unique_id();
-
-    {
-        boost::filesystem::path  pathname = scene_dir / "hierarchy.json";
-
-        if (!boost::filesystem::is_regular_file(pathname))
-            throw std::runtime_error(msgstream() << "Cannot access scene file '" << pathname << "'.");
-
-        std::ifstream  istr(pathname.string(), std::ios_base::binary);
-        if (!istr.good())
-            throw std::runtime_error(msgstream() << "Cannot open the scene file '" << pathname << "'.");
-
-        boost::property_tree::read_json(istr, m_hierarchy);
-    }
-
-    {
-        boost::filesystem::path  pathname = scene_dir / "effects.json";
-
-        if (!boost::filesystem::is_regular_file(pathname))
-            throw std::runtime_error(msgstream() << "Cannot access effects file '" << pathname << "'.");
-
-        std::ifstream  istr(pathname.string(), std::ios_base::binary);
-        if (!istr.good())
-            throw std::runtime_error(msgstream() << "Cannot open the effects file '" << pathname << "'.");
-
-        boost::property_tree::ptree  ptree;
-        boost::property_tree::read_json(istr, ptree);
-        for (auto it = ptree.begin(); it != ptree.end(); ++it)
-            m_effects.insert({it->first, it->second});
-    }
-}
-
-
-async::key_type  simulation_context::imported_scene::key_from_path(boost::filesystem::path const&  path)
-{
-    return { "com::simulation_context::imported_scene", boost::filesystem::absolute(path).string() };
-}
-
-
-void  simulation_context::request_import_scene_from_directory(
-        std::string const&  directory_on_the_disk,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        bool const  cache_imported_scene,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
-        ) const
-{
-    auto const  it = m_cache_of_imported_scenes.find(imported_scene::key_from_path(directory_on_the_disk));
-    m_requests_queue_scene_import.push_back({
-            it == m_cache_of_imported_scenes.end() ? imported_scene(directory_on_the_disk) : it->second,
-            under_folder_guid,
-            relocation_frame_guid,
-            cache_imported_scene,
-            linear_velocity,
-            angular_velocity,
-            motion_frame_guid
-            });
-}
-
-
-// Disabled (not const) for modules.
-
-
-void  simulation_context::import_scene(
-        import_scene_props const&  props,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
-        )
-{
-    if (props.hierarchy->count("@pivot") != 0UL)
-    {
-        import_gfxtuner_scene(props, under_folder_guid, relocation_frame_guid,
-                              linear_velocity, angular_velocity, motion_frame_guid);
-        return;
-    }
-    // TODO!
-}
-
-
-void  simulation_context::import_gfxtuner_scene(
-        import_scene_props const&  props,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
-        )
-{
-    ASSUMPTION(props.hierarchy->count("@pivot") != 0UL);
-
-    for (auto  it = props.hierarchy->begin(); it != props.hierarchy->end(); ++it)
-    {
-        if (it->first.empty() || it->first.front() == '@')
-            continue;
-
-        folder_content_type const&  fct = folder_content(under_folder_guid);
-
-        std::string  name = it->first;
-        if (fct.child_folders.count(name) != 0)
-        {
-            natural_32_bit  counter = 0U;
-            for ( ; fct.child_folders.count(name + '.' + std::to_string(counter)) != 0U; ++counter)
-                ;
-            name = name + '.' + std::to_string(counter);
-        }
-
-        object_guid const  folder_guid = insert_folder(under_folder_guid, name);
-
-        import_gfxtuner_scene_node({ &it->second, props.effects }, folder_guid, relocation_frame_guid);
-
-        std::vector<object_guid>  rigid_body_guids;
-        for_each_child_folder(folder_guid, true, true,
-            [this, &rigid_body_guids](object_guid const  folder_guid, folder_content_type const&  fct) -> bool {
-                auto  it = fct.content.find(to_string(OBJECT_KIND::RIGID_BODY));
-                if (it != fct.content.end())
-                {
-                    rigid_body_guids.push_back(it->second);
-                    return false;
-                }
-                return true;
-            });
-        if (!rigid_body_guids.empty())
-        {
-            vector3  lin_vel, ang_vel;
-            if (motion_frame_guid == invalid_object_guid())
-            {
-                lin_vel = linear_velocity;
-                ang_vel = angular_velocity;
-            }
-            else
-            {
-                lin_vel = transform_vector(linear_velocity, frame_world_matrix(motion_frame_guid));
-                ang_vel = transform_vector(angular_velocity, frame_world_matrix(motion_frame_guid));
-            }
-            for (object_guid rb_guid : rigid_body_guids)
-            {
-                set_rigid_body_linear_velocity(rb_guid, lin_vel);
-                set_rigid_body_angular_velocity(rb_guid, ang_vel);
-            }
-        }
-    }
-
-    process_rigid_bodies_with_invalidated_shape();
-}
-
-
-void  simulation_context::import_gfxtuner_scene_node(
-        import_scene_props const&  props,
-        object_guid const  folder_guid,
-        object_guid const  relocation_frame_guid
-        )
-{
-    object_guid const  frame_guid = insert_frame(folder_guid);
-    if (relocation_frame_guid != invalid_object_guid())
-        frame_relocate_relative_to_parent(frame_guid, relocation_frame_guid);
-    else
-    {
-        boost::property_tree::ptree const&  origin_tree = props.hierarchy->find("origin")->second;
-        vector3 const  origin = vector3(origin_tree.get<scalar>("x"), origin_tree.get<scalar>("y"), origin_tree.get<scalar>("z"));
-
-        boost::property_tree::ptree const&  orientation_tree = props.hierarchy->find("orientation")->second;
-        quaternion const  orientation = make_quaternion_xyzw(
-                orientation_tree.get<scalar>("x"),
-                orientation_tree.get<scalar>("y"),
-                orientation_tree.get<scalar>("z"),
-                orientation_tree.get<scalar>("w")
-                );
-        frame_relocate(frame_guid, origin, orientation);
-    }
-
-    boost::property_tree::ptree const&  folders = props.hierarchy->find("folders")->second;
-
-    bool  has_static_collider = false;
-    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
-        if (folder_it->first == "collider" && !folder_it->second.begin()->second.get<bool>("is_dynamic")
-            && angeo::read_collison_class_from_string(folder_it->second.begin()->second.get<std::string>("collision_class"))
-                    == angeo::COLLISION_CLASS::STATIC_OBJECT)
-        {
-            has_static_collider = true;
-            break;
-        }
-    if (has_static_collider)
-    {
-        object_guid  rigid_body_guid = invalid_object_guid();
-        for_each_parent_folder(folder_guid, true,
-            [this, &rigid_body_guid](object_guid const  folder_guid, folder_content_type const&  fct) -> bool {
-                auto  it = fct.content.find(to_string(OBJECT_KIND::RIGID_BODY));
-                if (it == fct.content.end())
-                    return true;
-                rigid_body_guid = it->second;
-                return false;
-            });
-        if (rigid_body_guid != invalid_object_guid())
-            m_moveable_rigid_bodies.erase(rigid_body_guid.index);
-    }
-
-    auto rb_it = folders.find("rigid_body");
-    if (rb_it != folders.not_found())
-    {
-        boost::property_tree::ptree const&  data = rb_it->second.begin()->second;
-
-        auto const  load_vector = [&data](std::string const&  key) -> vector3 {
-            boost::property_tree::path const  key_path(key, '/');
-            return vector3(data.get<float_32_bit>(key_path / "x", 0.0f),
-                            data.get<float_32_bit>(key_path / "y", 0.0f),
-                            data.get<float_32_bit>(key_path / "z", 0.0f));
-        };
-
-        insert_rigid_body(
-                folder_guid,
-                !has_static_collider,
-                load_vector("linear_velocity"),
-                load_vector("angular_velocity"),
-                load_vector("external_linear_acceleration"),
-                load_vector("external_angular_acceleration")
-                );
-    }
-    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
-        if (folder_it->first == "batches")
-        {
-            object_guid const  batches_folder_guid = insert_folder(folder_guid, folder_it->first);
-            for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
-            {
-                object_guid  batch_guid;
-                std::string const  batch_id = record_it->second.get<std::string>("id");
-                if (boost::starts_with(batch_id, gfx::get_sketch_id_prefix()))
-                {
-                    boost::property_tree::ptree  props;
-                    gfx::read_sketch_info_from_id(batch_id, props);
-                    vector3  box_half_sizes_along_axes;
-                    float_32_bit  capsule_half_distance;
-                    float_32_bit  capsule_thickness;
-                    float_32_bit  sphere_radius;
-                    natural_8_bit  num_lines;
-                    vector4  colour;
-                    gfx::FOG_TYPE  fog_type;
-                    bool wireframe;
-                    if (gfx::parse_box_info_from_id(props, box_half_sizes_along_axes, colour, fog_type, wireframe))
-                        if (wireframe)
-                            batch_guid = insert_batch_wireframe_box(batches_folder_guid, record_it->first,
-                                                                    box_half_sizes_along_axes, colour);
-                        else
-                            batch_guid = insert_batch_solid_box(batches_folder_guid, record_it->first, box_half_sizes_along_axes,
-                                                                colour);
-                    else if (gfx::parse_capsule_info_from_id(props, capsule_half_distance, capsule_thickness, num_lines, colour,
-                                                             fog_type, wireframe))
-                        if (wireframe)
-                            batch_guid = insert_batch_wireframe_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
-                                                                        capsule_thickness, num_lines, colour);
-                        else
-                            batch_guid = insert_batch_solid_capsule(batches_folder_guid, record_it->first, capsule_half_distance,
-                                                                    capsule_thickness, num_lines, colour);
-                    else if (gfx::parse_sphere_info_from_id(props, sphere_radius, num_lines, colour, fog_type, wireframe))
-                        if (wireframe)
-                            batch_guid = insert_batch_wireframe_sphere(batches_folder_guid, record_it->first, sphere_radius,
-                                                                       num_lines, colour);
-                        else
-                            batch_guid = insert_batch_solid_sphere(batches_folder_guid, record_it->first, sphere_radius, num_lines,
-                                                                   colour);
-                    else { UNREACHABLE(); }
-                }
-                else
-                {
-                    gfx::effects_config  effects_config; 
-                    {
-                        auto const  it = props.effects->find(record_it->second.get<std::string>("effects"));
-                        INVARIANT(it != props.effects->end());
-                        gfx::effects_config::light_types  light_types;
-                        for (auto const& lt_and_tree : it->second.get_child("light_types"))
-                            light_types.insert((gfx::LIGHT_TYPE)lt_and_tree.second.get_value<int>());
-                        gfx::effects_config::lighting_data_types  lighting_data_types;
-                        for (auto const& ldt_and_tree : it->second.get_child("lighting_data_types"))
-                            lighting_data_types.insert({
-                                (gfx::LIGHTING_DATA_TYPE)std::atoi(ldt_and_tree.first.c_str()),
-                                (gfx::SHADER_DATA_INPUT_TYPE)ldt_and_tree.second.get_value<int>()
-                            });
-                        gfx::effects_config::shader_output_types  shader_output_types;
-                        for (auto const& sot_and_tree : it->second.get_child("shader_output_types"))
-                            shader_output_types.insert((gfx::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
-
-                        effects_config = gfx::effects_config(
-                                nullptr,
-                                light_types,
-                                lighting_data_types,
-                                (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("lighting_algo_location"),
-                                shader_output_types,
-                                (gfx::FOG_TYPE)it->second.get<int>("fog_type"),
-                                (gfx::SHADER_PROGRAM_TYPE)it->second.get<int>("fog_algo_location")
-                                );
-
-                        m_cache_of_imported_effect_configs.insert({effects_config.key(), effects_config });
-                    }
-
-                    batch_guid = load_batch(
-                            batches_folder_guid,
-                            to_string(OBJECT_KIND::BATCH) + record_it->first,
-                            record_it->second.get<std::string>("id"),
-                            effects_config,
-                            record_it->second.get<std::string>("skin")
-                            );
-                }
-                
-                gfx::batch const  batch = from_batch_guid_to_batch(batch_guid);
-                m_cache_of_imported_batches.insert({batch.key(), batch });
-            }
-        }
-        else if (folder_it->first == "collider")
-        {
-            boost::property_tree::ptree const&  data = folder_it->second.begin()->second;
-            angeo::COLLISION_SHAPE_TYPE const  shape_type = angeo::as_collision_shape_type(data.get<std::string>("shape_type"));
-            if (shape_type == angeo::COLLISION_SHAPE_TYPE::BOX)
-                insert_collider_box(
-                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".box",
-                        vector3(data.get<float_32_bit>("half_size_along_x"),
-                                data.get<float_32_bit>("half_size_along_y"),
-                                data.get<float_32_bit>("half_size_along_z")),
-                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
-                        );
-            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
-                insert_collider_capsule(
-                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".capsule",
-                        data.get<float_32_bit>("half_distance_between_end_points"),
-                        data.get<float_32_bit>("thickness_from_central_line"),
-                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
-                        );
-            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
-                insert_collider_sphere(
-                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".sphere",
-                        data.get<float_32_bit>("radius"),
-                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
-                        );
-            else if (shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
-            {
-                boost::filesystem::path const  buffers_dir = data.get<std::string>("buffers_directory");
-                gfx::buffer  vertex_buffer(buffers_dir / "vertices.txt", std::numeric_limits<async::load_priority_type>::max());
-                gfx::buffer  index_buffer(buffers_dir / "indices.txt", std::numeric_limits<async::load_priority_type>::max());
-                if (!vertex_buffer.wait_till_load_is_finished())
-                    throw std::runtime_error("Load of file 'vertices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
-                if (!index_buffer.wait_till_load_is_finished())
-                    throw std::runtime_error("Load of file 'indices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
-
-                struct  collider_triangle_mesh_vertex_getter
-                {
-                    collider_triangle_mesh_vertex_getter(gfx::buffer const  vertex_buffer_, gfx::buffer const  index_buffer_)
-                        : vertex_buffer(vertex_buffer_)
-                        , index_buffer(index_buffer_)
-                    {
-                        ASSUMPTION(vertex_buffer.loaded_successfully() && index_buffer.loaded_successfully());
-                        ASSUMPTION(
-                            vertex_buffer.num_bytes_per_component() == sizeof(float_32_bit) &&
-                            vertex_buffer.num_components_per_primitive() == 3U &&
-                            vertex_buffer.has_integral_components() == false
-                            );
-                        ASSUMPTION(
-                            index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
-                            index_buffer.num_components_per_primitive() == 3U &&
-                            index_buffer.has_integral_components() == true
-                            );
-                    }
-
-                    vector3  operator()(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
-                    {
-                        return vector3(((float_32_bit const*)vertex_buffer.data().data()) + 3U * read_index_buffer(triangle_index, vertex_index));
-                    }
-
-                    natural_32_bit  read_index_buffer(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
-                    {
-                        return *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index);
-                    }
-
-                    gfx::buffer  get_vertex_buffer() const { return vertex_buffer; }
-                    gfx::buffer  get_index_buffer() const { return index_buffer; }
-
-                private:
-                    gfx::buffer  vertex_buffer;
-                    gfx::buffer  index_buffer;
-                };
-
-                insert_collider_triangle_mesh(
-                        folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".triangle.",
-                        index_buffer.num_primitives(),
-                        collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
-                        angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
-                        );
-            }
-            else
-            {
-                NOT_IMPLEMENTED_YET();
-            }
-        }
-
-    boost::property_tree::ptree const&  children = props.hierarchy->find("children")->second;
-    for (auto child_it = children.begin(); child_it != children.end(); ++child_it)
-        import_gfxtuner_scene_node(
-                { &child_it->second, props.effects },
-                insert_folder(folder_guid, child_it->first),
-                invalid_object_guid()
-                );
 }
 
 

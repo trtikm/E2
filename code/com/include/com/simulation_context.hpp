@@ -4,6 +4,7 @@
 #   include <com/object_guid.hpp>
 #   include <com/frame_of_reference.hpp>
 #   include <com/device_simulator.hpp>
+#   include <com/detail/import_scene.hpp>
 #   include <gfx/batch.hpp>
 #   include <gfx/batch_generators.hpp>
 #   include <angeo/collision_object_id.hpp>
@@ -26,22 +27,22 @@
 #   include <memory>
 
 namespace angeo {
-    struct collision_scene;
+    struct  collision_scene;
     struct  rigid_body_simulator;
 }
 namespace ai {
-    struct simulator;
+    struct  simulator;
 }
 
 namespace com {
 
 
-struct simulation_context;
+struct  simulation_context;
 using  simulation_context_ptr = std::shared_ptr<simulation_context>;
 using  simulation_context_const_ptr = std::shared_ptr<simulation_context const>;
 
 
-struct simulation_context
+struct  simulation_context
 {
     static simulation_context_ptr  create(
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
@@ -597,6 +598,23 @@ struct simulation_context
     std::string  to_relative_path(object_guid const  guid, object_guid const  relative_base_guid) const;
 
     /////////////////////////////////////////////////////////////////////////////////////
+    // SCENE IMPORT/EXPORT API
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    void  request_import_scene_from_directory(
+            std::string const&  directory_on_the_disk,
+            object_guid const  under_folder_guid,
+            object_guid const  relocation_frame_guid = invalid_object_guid(),
+            bool const  cache_imported_scene = true,
+            vector3 const&  linear_velocity = vector3_zero(),
+            vector3 const&  angular_velocity = vector3_zero(),
+            object_guid const  motion_frame_guid = invalid_object_guid()
+            ) const;
+    // Disabled (not const) for modules.
+    void  insert_imported_batch_to_cache(gfx::batch const  batch);
+    void  insert_imported_effects_config_to_cache(gfx::effects_config const  effects_config);
+
+    /////////////////////////////////////////////////////////////////////////////////////
     // REQUESTS PROCESSING API
     /////////////////////////////////////////////////////////////////////////////////////
 
@@ -618,40 +636,6 @@ struct simulation_context
     /////////////////////////////////////////////////////////////////////////////////////
 
     void  clear(bool const  also_caches = false);
-
-    /////////////////////////////////////////////////////////////////////////////////////
-    // SCENE IMPORT/EXPORT API
-    /////////////////////////////////////////////////////////////////////////////////////
-
-    struct  import_scene_props
-    {
-        boost::property_tree::ptree const*  hierarchy;
-        std::unordered_map<std::string, boost::property_tree::ptree> const* effects;
-    };
-
-    void  request_import_scene_from_directory(
-            std::string const&  directory_on_the_disk,
-            object_guid const  under_folder_guid,
-            object_guid const  relocation_frame_guid = invalid_object_guid(),
-            bool const  cache_imported_scene = true,
-            vector3 const&  linear_velocity = vector3_zero(),
-            vector3 const&  angular_velocity = vector3_zero(),
-            object_guid const  motion_frame_guid = invalid_object_guid()
-            ) const;
-    // Disabled (not const) for modules.
-    void  import_scene(
-            import_scene_props const&  props,
-            object_guid const  under_folder_guid,
-            object_guid const  relocation_frame_guid,
-            vector3 const&  linear_velocity,
-            vector3 const&  angular_velocity,
-            object_guid const  motion_frame_guid
-            );
-    void  import_gfxtuner_scene(import_scene_props const&  props, object_guid const  under_folder_guid,
-                                object_guid const  relocation_frame_guid, vector3 const&  linear_velocity,
-                                vector3 const&  angular_velocity, object_guid const  motion_frame_guid);
-    void  import_gfxtuner_scene_node(import_scene_props const&  props, object_guid const  folder_guid,
-                                     object_guid const  relocation_frame_guid);
 
 private:
 
@@ -861,29 +845,9 @@ private:
     // SCENE IMPORT REQUESTS HANDLING
     /////////////////////////////////////////////////////////////////////////////////////
 
-    struct  imported_scene_data
-    {
-        imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser);
-        boost::property_tree::ptree const&  hierarchy() const { return m_hierarchy; }
-        std::unordered_map<std::string, boost::property_tree::ptree> const&  effects() const { return m_effects; }
-    private:
-        boost::property_tree::ptree  m_hierarchy;
-        std::unordered_map<std::string, boost::property_tree::ptree>  m_effects;
-    };
-
-    struct  imported_scene : public async::resource_accessor<imported_scene_data>
-    {
-        using  super = async::resource_accessor<imported_scene_data>;
-        imported_scene() : super() {}
-        imported_scene(boost::filesystem::path const&  path) : super(key_from_path(path), 1U, nullptr) {}
-        boost::property_tree::ptree const&  hierarchy() const { return resource().hierarchy(); }
-        std::unordered_map<std::string, boost::property_tree::ptree> const&  effects() const { return resource().effects(); }
-        static async::key_type  key_from_path(boost::filesystem::path const&  path);
-    };
-
     struct  request_props_imported_scene
     {
-        imported_scene  scene;
+        detail::imported_scene  scene;
         object_guid  folder_guid;
         object_guid  relocation_frame_guid;
         bool  store_in_cache;
@@ -893,7 +857,7 @@ private:
     };
 
     mutable std::vector<request_props_imported_scene>  m_requests_queue_scene_import;
-    std::unordered_map<async::key_type, imported_scene>  m_cache_of_imported_scenes;
+    std::unordered_map<async::key_type, detail::imported_scene>  m_cache_of_imported_scenes;
     std::unordered_map<async::key_type, gfx::effects_config>  m_cache_of_imported_effect_configs;
     std::unordered_map<async::key_type, gfx::batch>  m_cache_of_imported_batches;
 
