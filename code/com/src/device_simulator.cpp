@@ -88,13 +88,23 @@ device_simulator::timer_id  device_simulator::insert_timer(
         natural_8_bit const  current_enable_level_
         )
 {
-    return m_timers.insert({period_in_seconds_, target_enable_level_, current_enable_level_});
+    timer_id const  tid = m_timers.insert({period_in_seconds_, target_enable_level_, current_enable_level_});
+    if (target_enable_level_ <= current_enable_level_)
+        m_enabled_timers.insert(tid);
+    return tid;
 }
 
 
 bool  device_simulator::is_valid_timer_id(timer_id const  tid) const
 {
     return m_timers.valid(tid);
+}
+
+
+bool  device_simulator::is_timer_enabled(timer_id const  tid) const
+{
+    ASSUMPTION(is_valid_timer_id(tid));
+    return m_enabled_timers.count(tid) != 0UL;
 }
 
 
@@ -133,6 +143,7 @@ std::vector<device_simulator::request_info_id> const&  device_simulator::request
 void  device_simulator::erase_timer(timer_id const  tid)
 {
     ASSUMPTION(is_valid_timer_id(tid));
+    m_enabled_timers.erase(tid);
     timer&  t = m_timers.at(tid);
     while (!t.request_infos.empty())
         unregister_request_info_from_timer(t.request_infos.back(), tid);
@@ -147,13 +158,24 @@ device_simulator::sensor_id  device_simulator::insert_sensor(
         natural_8_bit const  current_enable_level_
         )
 {
-    return m_sensors.insert({collider_, triggers_, target_enable_level_, current_enable_level_});
+    sensor_id const  sid = m_sensors.insert({collider_, triggers_, target_enable_level_, current_enable_level_});
+    if (target_enable_level_ <= current_enable_level_)
+        m_enabled_sensors.insert({ collider_, sid });
+    return sid;
 }
 
 
 bool  device_simulator::is_valid_sensor_id(sensor_id const  sid) const
 {
     return m_sensors.valid(sid);
+}
+
+
+bool  device_simulator::is_sensor_enabled(sensor_id const  sid) const
+{
+    ASSUMPTION(is_valid_sensor_id(sid));
+    auto const  it = m_enabled_sensors.find(m_sensors.at(sid).collider);
+    return it != m_enabled_sensors.end() && it->second == sid;
 }
 
 
@@ -227,6 +249,7 @@ void  device_simulator::erase_sensor(sensor_id const  sid)
 {
     ASSUMPTION(is_valid_sensor_id(sid));
     sensor&  s = m_sensors.at(sid);
+    m_enabled_sensors.erase(s.collider);
     while (!s.request_infos_on_touching.empty())
         unregister_request_info_from_sensor(s.request_infos_on_touching.back(), sid, SENSOR_EVENT_TYPE::TOUCHING);
     while (!s.request_infos_on_touch_begin.empty())

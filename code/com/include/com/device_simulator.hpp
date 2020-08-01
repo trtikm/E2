@@ -58,6 +58,7 @@ struct  device_simulator
             natural_8_bit const  current_enable_level_ = 0
             );
     bool  is_valid_timer_id(timer_id const  tid) const;
+    bool  is_timer_enabled(timer_id const  tid) const;
     void  register_request_info_to_timer(request_info_id const&  rid, timer_id const  tid);
     void  unregister_request_info_from_timer(request_info_id const&  rid, timer_id const  tid);
     std::vector<request_info_id> const&  request_infos_of_timer(timer_id const  tid) const;
@@ -70,6 +71,7 @@ struct  device_simulator
             natural_8_bit const  current_enable_level_ = 0
             );
     bool  is_valid_sensor_id(sensor_id const  sid) const;
+    bool  is_sensor_enabled(sensor_id const  sid) const;
     enum struct SENSOR_EVENT_TYPE : natural_8_bit
     {
         TOUCHING        = 0U,
