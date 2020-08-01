@@ -109,11 +109,12 @@ simulator::simulator(std::string const&  data_root_dir)
             m_collision_scene_ptr,
             m_rigid_body_simulator_ptr,
             m_device_simulator_ptr,
-            m_ai_simulator_ptr
+            m_ai_simulator_ptr,
+            data_root_dir
             ))
 
     , m_simulation_config()
-    , m_render_config(get_window_props(), data_root_dir)
+    , m_render_config(get_window_props(), m_context->get_data_root_dir())
 
     , m_FPS_num_rounds(0U)
     , m_FPS_time(0.0f)

@@ -48,7 +48,8 @@ struct  simulation_context
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-            std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
+            std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
+            std::string const&  data_root_dir_
             );
     ~simulation_context();
 
@@ -601,8 +602,17 @@ struct  simulation_context
     // SCENE IMPORT/EXPORT API
     /////////////////////////////////////////////////////////////////////////////////////
 
+    std::string const&  get_data_root_dir() const;
+    std::string  get_animation_root_dir() const;
+    std::string  get_batch_root_dir() const;
+    std::string  get_font_root_dir() const;
+    std::string  get_icon_root_dir() const;
+    std::string  get_import_root_dir() const;
+    std::string  get_mesh_root_dir() const;
+    std::string  get_scene_root_dir() const;
+    std::string  get_texture_root_dir() const;
     void  request_import_scene_from_directory(
-            std::string const&  directory_on_the_disk,
+            std::string const&  directory_absolute_disk_path,
             object_guid const  under_folder_guid,
             object_guid const  relocation_frame_guid = invalid_object_guid(),
             bool const  cache_imported_scene = true,
@@ -766,6 +776,8 @@ private:
     dynamic_array<collision_contact, natural_32_bit>  m_collision_contacts;
     std::unordered_map<object_guid, std::vector<natural_32_bit> >  m_from_colliders_to_contacts;
 
+    std::string  m_data_root_dir;
+
     /////////////////////////////////////////////////////////////////////////////////////
     // EARLY REQUESTS HANDLING
     /////////////////////////////////////////////////////////////////////////////////////
@@ -869,7 +881,8 @@ private:
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-            std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
+            std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
+            std::string const&  data_root_dir_
             );
 
     simulation_context(simulation_context const&) = delete;

@@ -1,0 +1,19 @@
+font_texture            textures\\fonts\\Liberation_Mono.txt
+
+min_ascii_code          33
+max_ascii_code          126
+
+max_chars_in_row        14
+min_u                   0.027
+min_v                   0.036
+char_uv_width           0.0352
+char_uv_height          0.1194
+char_separ_u            0.0352
+char_separ_v            0.0134
+
+space_size              0.0025
+tab_size                4
+char_width              0.0025
+char_height             0.004
+char_separ_dist_x       0.0
+char_separ_dist_y       0.0

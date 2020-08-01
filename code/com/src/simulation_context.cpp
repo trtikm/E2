@@ -3,6 +3,7 @@
 #include <angeo/rigid_body_simulator.hpp>
 #include <angeo/mass_and_inertia_tensor.hpp>
 #include <utility/async_resource_load.hpp>
+#include <utility/canonical_path.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -20,7 +21,8 @@ simulation_context_ptr  simulation_context::create(
         std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
         std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
         std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-        std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
+        std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
+        std::string const&  data_root_dir_
         )
 {
     ASSUMPTION(collision_scene_ptr_ != nullptr && rigid_body_simulator_ptr_ != nullptr && ai_simulator_ptr_ == nullptr);
@@ -28,7 +30,8 @@ simulation_context_ptr  simulation_context::create(
                 collision_scene_ptr_,
                 rigid_body_simulator_ptr_,
                 device_simulator_ptr_,
-                ai_simulator_ptr_
+                ai_simulator_ptr_,
+                data_root_dir_
                 ));
 }
 
@@ -37,7 +40,8 @@ simulation_context::simulation_context(
         std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
         std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
         std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-        std::shared_ptr<ai::simulator> const  ai_simulator_ptr_
+        std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
+        std::string const&  data_root_dir_
         )
     : m_root_folder()
     , m_folders()
@@ -64,6 +68,7 @@ simulation_context::simulation_context(
     , m_moveable_rigid_bodies()
     , m_collision_contacts()
     , m_from_colliders_to_contacts()
+    , m_data_root_dir(canonical_path(data_root_dir_.empty() ? "." : data_root_dir_).string())
     // EARLY REQUESTS HANDLING
     , m_rigid_bodies_with_invalidated_shape()
     , m_pending_requests_early()
@@ -90,7 +95,13 @@ simulation_context::simulation_context(
     , m_cache_of_imported_effect_configs()
     , m_cache_of_imported_batches()
 {
+    ASSUMPTION(!m_data_root_dir.empty());
+
     m_root_folder = { OBJECT_KIND::FOLDER, m_folders.insert(folder_content_type("ROOT", invalid_object_guid())) };
+
+    std::replace(m_data_root_dir.begin(), m_data_root_dir.end(), '\\', '/');
+    if (*m_data_root_dir.rbegin() != '/')
+        m_data_root_dir.push_back('/');
 }
 
 
@@ -2096,8 +2107,62 @@ std::string  simulation_context::to_relative_path(object_guid const  guid, objec
 /////////////////////////////////////////////////////////////////////////////////////
 
 
+std::string const&  simulation_context::get_data_root_dir() const
+{
+    return m_data_root_dir;
+}
+
+
+std::string  simulation_context::get_animation_root_dir() const
+{
+    return get_data_root_dir() + "animation/";
+}
+
+
+std::string  simulation_context::get_batch_root_dir() const
+{
+    return get_data_root_dir() + "batch/";
+}
+
+
+std::string  simulation_context::get_font_root_dir() const
+{
+    return get_data_root_dir() + "font/";
+}
+
+
+std::string  simulation_context::get_icon_root_dir() const
+{
+    return get_data_root_dir() + "icon/";
+}
+
+
+std::string  simulation_context::get_import_root_dir() const
+{
+    return get_data_root_dir() + "import/";
+}
+
+
+std::string  simulation_context::get_mesh_root_dir() const
+{
+    return get_data_root_dir() + "meshe/";
+}
+
+
+std::string  simulation_context::get_scene_root_dir() const
+{
+    return get_data_root_dir() + "scene/";
+}
+
+
+std::string  simulation_context::get_texture_root_dir() const
+{
+    return get_data_root_dir() + "texture/";
+}
+
+
 void  simulation_context::request_import_scene_from_directory(
-        std::string const&  directory_on_the_disk,
+        std::string const&  directory_absolute_disk_path,
         object_guid const  under_folder_guid,
         object_guid const  relocation_frame_guid,
         bool const  cache_imported_scene,
@@ -2106,9 +2171,9 @@ void  simulation_context::request_import_scene_from_directory(
         object_guid const  motion_frame_guid
         ) const
 {
-    auto const  it = m_cache_of_imported_scenes.find(detail::imported_scene::key_from_path(directory_on_the_disk));
+    auto const  it = m_cache_of_imported_scenes.find(detail::imported_scene::key_from_path(directory_absolute_disk_path));
     m_requests_queue_scene_import.push_back({
-            it == m_cache_of_imported_scenes.end() ? detail::imported_scene(directory_on_the_disk) : it->second,
+            it == m_cache_of_imported_scenes.end() ? detail::imported_scene(directory_absolute_disk_path) : it->second,
             under_folder_guid,
             relocation_frame_guid,
             cache_imported_scene,

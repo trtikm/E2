@@ -50,26 +50,26 @@ struct  batch_available_resources_data  final
     struct  skeletal_info
     {
         skeletal_info(
-                std::string const&  skeleton_name_, // Name of the skeleton the files below correspond to.
+                std::string const&  animation_dir_, // Name of the skeleton the files below correspond to.
                 std::string const&  alignment_,     // Full path-name of the spatial alignment file.
                 std::string const&  indices_,       // Full path-name of the indices of matrices file.
                 std::string const&  weights_        // Full path-name of the weights of matrices file.
                 )
-            : m_skeleton_name(skeleton_name_)
+            : m_animation_dir(animation_dir_)
             , m_alignment(alignment_)
             , m_indices(indices_)
             , m_weights(weights_)
         {
-            ASSUMPTION(!m_skeleton_name.empty());
+            ASSUMPTION(!m_animation_dir.empty());
         }
 
-        std::string const&  skeleton_name() const { return m_skeleton_name; }
+        std::string const&  animation_dir() const { return m_animation_dir; }
         std::string const&  alignment() const { return m_alignment; }
         std::string const&  indices() const { return m_indices; }
         std::string const&  weights() const { return  m_weights; }
 
     private:
-        std::string  m_skeleton_name;
+        std::string  m_animation_dir;
         std::string  m_alignment;
         std::string  m_indices;
         std::string  m_weights;

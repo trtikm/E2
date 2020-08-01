@@ -251,11 +251,6 @@ message("Qt5Widgets libraries was found in directory: " ${Qt5Widgets_LIBRARY_DIR
 # Add project specific code
 add_subdirectory(./code)
 
-install(
-    DIRECTORY
-    ./data/shared
-    DESTINATION
-    ./data
-    )
+install(DIRECTORY ./data DESTINATION . PATTERN Blender EXCLUDE)
 
 message("Generating build files ...")

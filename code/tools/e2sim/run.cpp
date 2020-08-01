@@ -20,7 +20,7 @@ struct  simulator : public com::simulator
 
         set_window_title(get_program_name());
         gfx::image_rgba_8888  img;
-        gfx::load_png_image(get_program_options()->data_root() + "/shared/gfx/icons/E2_icon.png", img);
+        gfx::load_png_image(context()->get_icon_root_dir() + "E2_icon.png", img);
         set_window_icon((natural_8_bit)img.width, (natural_8_bit)img.height, img.data);
         set_window_pos(get_window_props().window_frame_size_left(), get_window_props().window_frame_size_top());
         set_window_size(1024U, 768U);
@@ -33,7 +33,7 @@ struct  simulator : public com::simulator
 
         if (get_program_options()->has_scene_dir())
             context()->request_import_scene_from_directory(
-                    get_program_options()->data_root() + '/' + get_program_options()->scene_dir(),
+                    context()->get_scene_root_dir() + get_program_options()->scene_dir(),
                     context()->root_folder(),
                     com::invalid_object_guid(),
                     true
@@ -93,7 +93,7 @@ struct  simulator : public com::simulator
                 clear(shift);
                 if (get_program_options()->has_scene_dir())
                     context()->request_import_scene_from_directory(
-                            get_program_options()->data_root() + '/' + get_program_options()->scene_dir(),
+                            context()->get_scene_root_dir() + get_program_options()->scene_dir(),
                             context()->root_folder(),
                             com::invalid_object_guid(),
                             true

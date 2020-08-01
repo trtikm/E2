@@ -340,7 +340,7 @@ static void  import_reques_info(
     else if (kind == "ctx.insert_SCENE")
         ctx.insert_request_info_import_scene(
                 { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },
-                hierarchy.get<std::string>("import_dir"),
+                ctx.get_data_root_dir() + hierarchy.get<std::string>("import_dir"),
                 hierarchy.count("under_folder") == 0UL ?
                         ctx.root_folder() :
                         ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("under_folder")),

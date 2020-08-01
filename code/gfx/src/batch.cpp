@@ -336,9 +336,7 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
                     :
                     modelspace(
                         boost::filesystem::path(get_available_resources().data_root_dir())
-                        / "animations"
-                        / "skeletal"
-                        / get_available_resources().skeletal()->skeleton_name()
+                        / get_available_resources().skeletal()->animation_dir()
                         / "pose.txt",
                         10U,
                         finaliser)
