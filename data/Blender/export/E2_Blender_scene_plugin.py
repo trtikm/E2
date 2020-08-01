@@ -22,6 +22,10 @@ def num2str(num, precision=6):
     return format(num, "." + str(precision) + "f") if isinstance(num, float) else str(num)
 
 
+def bool2str(state, precision=6):
+    return "true" if state is True else "false"
+
+
 def list_of_name_of_scene_objects(self, context):
     return [(obj.name, obj.name, "", i) for i, obj in enumerate(context.collection.all_objects)]
 
@@ -1251,12 +1255,12 @@ class E2SceneExportOperator(bpy.types.Operator):
         object_props = object.e2_custom_props
         result = {
             "object_kind": "RIGID_BODY",
-            "is_moveable": str(object_props.rigid_body_is_moveable),
+            "is_moveable": bool2str(object_props.rigid_body_is_moveable),
         }
         if object_props.rigid_body_is_moveable is True:
-            result["linear_velocity"] = self.export_vector(object_props.rigid_body_linear_velocity),
-            result["angular_velocity"] = self.export_vector(object_props.rigid_body_angular_velocity),
-            result["external_linear_acceleration"] = self.export_vector(object_props.rigid_body_external_linear_acceleration),
+            result["linear_velocity"] = self.export_vector(object_props.rigid_body_linear_velocity)
+            result["angular_velocity"] = self.export_vector(object_props.rigid_body_angular_velocity)
+            result["external_linear_acceleration"] = self.export_vector(object_props.rigid_body_external_linear_acceleration)
             result["external_angular_acceleration"] = self.export_vector(object_props.rigid_body_external_angular_acceleration)
         return result
     
@@ -1339,7 +1343,7 @@ class E2SceneExportOperator(bpy.types.Operator):
     def export_request_info_import_scene(self, info, name, data_root_dir):
         result = {
             "import_dir": normalise_disk_path(info.import_dir, data_root_dir),
-            "cache_imported_scene": "true" if info.cache_imported_scene is True else "false",
+            "cache_imported_scene": bool2str(info.cache_imported_scene),
             "linear_velocity": self.export_vector(info.linear_velocity),
             "angular_velocity": self.export_vector(info.angular_velocity)
         }
@@ -1374,14 +1378,14 @@ class E2SceneExportOperator(bpy.types.Operator):
             "multiplier": num2str(info.radial_force_field_multiplier),
             "exponent": num2str(info.radial_force_field_exponent),
             "min_radius": num2str(info.radial_force_field_min_radius),
-            "use_mass": "true" if info.use_mass is True else "false"
+            "use_mass": bool2str(info.use_mass)
         }
         return result
 
     def export_request_info_update_linear_force_field(self, info):
         result = {
             "acceleration": self.export_vector(info.linear_force_field_acceleration),
-            "use_mass": "true" if info.use_mass is True else "false"
+            "use_mass": bool2str(info.use_mass)
         }
         return result
 
