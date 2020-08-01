@@ -133,6 +133,7 @@ struct  simulation_context
     bool  is_folder_empty(object_guid const  folder_guid) const;
     folder_content_type const&  folder_content(object_guid const  folder_guid) const;
     object_guid  folder_of(object_guid const  guid) const;
+    std::string const&  name_of_folder(object_guid const  guid) const;
     std::string const&  name_of(object_guid const  guid) const;
     folder_guid_iterator  folders_begin() const;
     folder_guid_iterator  folders_end() const;
@@ -435,11 +436,13 @@ struct  simulation_context
     using  timer_guid_iterator = object_guid_iterator<OBJECT_KIND::TIMER>;
 
     bool  is_valid_timer_guid(object_guid const  timer_guid) const;
+    bool  is_timer_enabled(object_guid const  timer_guid) const;
     object_guid  folder_of_timer(object_guid const  timer_guid) const;
     std::string const&  name_of_timer(object_guid const  timer_guid) const;
     object_guid  to_timer_guid(com::device_simulator::timer_id const  tid) const;
     timer_guid_iterator  timers_begin() const;
     timer_guid_iterator  timers_end() const;
+    void  request_erase_timer(object_guid const  timer_guid) const;
     // Disabled (not const) for modules.
     object_guid  insert_timer(object_guid const  under_folder_guid, std::string const&  name, float_32_bit const  period_in_seconds_,
                               natural_8_bit const target_enable_level_ = 1, natural_8_bit const  current_enable_level_ = 0);
@@ -452,11 +455,13 @@ struct  simulation_context
     using  sensor_guid_iterator = object_guid_iterator<OBJECT_KIND::SENSOR>;
 
     bool  is_valid_sensor_guid(object_guid const  sensor_guid) const;
+    bool  is_sensor_enabled(object_guid const  sensor_guid) const;
     object_guid  folder_of_sensor(object_guid const  sensor_guid) const;
     std::string const&  name_of_sensor(object_guid const  sensor_guid) const;
     object_guid  to_sensor_guid(com::device_simulator::sensor_id const  sid) const;
     sensor_guid_iterator  sensors_begin() const;
     sensor_guid_iterator  sensors_end() const;
+    void  request_erase_sensor(object_guid const  sensor_guid) const;
     // Disabled (not const) for modules.
     object_guid  insert_sensor(object_guid const  under_folder_guid, std::string const&  name, object_guid const  collider_,
                                std::unordered_set<object_guid> const&  triggers_ = {},
@@ -593,6 +598,8 @@ struct  simulation_context
     // ACCESS PATH API
     /////////////////////////////////////////////////////////////////////////////////////
 
+    bool  is_absolute_path(std::string const&  path) const;
+    bool  is_path_to_folder(std::string const&  path) const;
     object_guid  from_absolute_path(std::string const&  path) const;
     std::string  to_absolute_path(object_guid const  guid) const;
     object_guid  from_relative_path(object_guid const  base_guid, std::string const&  relative_path) const;
@@ -830,6 +837,8 @@ private:
         REQUEST_SET_ANGULAR_ACCEL            = 10,
         REQUEST_DEL_LINEAR_ACCEL             = 11,
         REQUEST_DEL_ANGULAR_ACCEL            = 12,
+        REQUEST_ERASE_TIMER                  = 13,
+        REQUEST_ERASE_SENSOR                 = 14,
     };
 
     struct  request_data_enable_collider { object_guid  collider_guid; bool  state; };
@@ -852,6 +861,8 @@ private:
     mutable std::vector<request_data_set_acceleration_from_source>  m_requests_set_angular_acceleration_from_source;
     mutable std::vector<request_data_del_acceleration_from_source>  m_requests_del_linear_acceleration_from_source;
     mutable std::vector<request_data_del_acceleration_from_source>  m_requests_del_angular_acceleration_from_source;
+    mutable std::vector<object_guid>  m_requests_erase_timer;
+    mutable std::vector<object_guid>  m_requests_erase_sensor;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // SCENE IMPORT REQUESTS HANDLING

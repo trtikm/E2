@@ -13,6 +13,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <algorithm>
+#include <sstream>
 
 namespace com {
 
@@ -89,6 +90,8 @@ simulation_context::simulation_context(
     , m_requests_set_angular_acceleration_from_source()
     , m_requests_del_linear_acceleration_from_source()
     , m_requests_del_angular_acceleration_from_source()
+    , m_requests_erase_timer()
+    , m_requests_erase_sensor()
     // SCENE IMPORT REQUESTS HANDLING
     , m_requests_queue_scene_import()
     , m_cache_of_imported_scenes()
@@ -181,12 +184,18 @@ object_guid  simulation_context::folder_of(object_guid const  guid) const
 }
 
 
+std::string const&  simulation_context::name_of_folder(object_guid const  guid) const
+{
+    return folder_content(guid).folder_name;
+}
+
+
 std::string const&  simulation_context::name_of(object_guid const  guid) const
 {
     static std::string  empty;
     switch (guid.kind)
     {
-    case OBJECT_KIND::FOLDER: return guid == invalid_object_guid() ? empty : folder_content(guid).folder_name;
+    case OBJECT_KIND::FOLDER: return name_of_folder(guid);
     case OBJECT_KIND::FRAME: return name_of_frame(guid);
     case OBJECT_KIND::BATCH: return name_of_batch(guid);
     case OBJECT_KIND::COLLIDER: return name_of_collider(guid);
@@ -281,10 +290,10 @@ void  simulation_context::request_erase_non_root_folder(object_guid const  folde
             request_erase_rigid_body(name_and_guid.second);
             break;
         case OBJECT_KIND::TIMER:
-            NOT_IMPLEMENTED_YET();
+            request_erase_timer(name_and_guid.second);
             break;
         case OBJECT_KIND::SENSOR:
-            NOT_IMPLEMENTED_YET();
+            request_erase_sensor(name_and_guid.second);
             break;
         case OBJECT_KIND::AGENT:
             NOT_IMPLEMENTED_YET();
@@ -1575,7 +1584,7 @@ void  simulation_context::set_rigid_body_angular_velocity(object_guid const  rig
 void  simulation_context::set_rigid_body_linear_acceleration_from_source(
         object_guid const  rigid_body_guid, object_guid const  source_guid, vector3 const&  accel)
 {
-    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid) && is_valid_rigid_body_guid(source_guid));
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
     m_rigid_body_simulator_ptr->set_linear_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid, accel);
 }
 
@@ -1583,21 +1592,21 @@ void  simulation_context::set_rigid_body_linear_acceleration_from_source(
 void  simulation_context::set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
                                                         vector3 const&  accel)
 {
-    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid) && is_valid_rigid_body_guid(source_guid));
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
     m_rigid_body_simulator_ptr->set_angular_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid, accel);
 }
 
 
 void  simulation_context::remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid)
 {
-    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid) && is_valid_rigid_body_guid(source_guid));
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
     m_rigid_body_simulator_ptr->remove_linear_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid);
 }
 
 
 void  simulation_context::remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid)
 {
-    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid) && is_valid_rigid_body_guid(source_guid));
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
     m_rigid_body_simulator_ptr->remove_angular_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid);
 }
 
@@ -1655,6 +1664,13 @@ bool  simulation_context::is_valid_timer_guid(object_guid const  timer_guid) con
 }
 
 
+bool  simulation_context::is_timer_enabled(object_guid const  timer_guid) const
+{
+    ASSUMPTION(is_valid_timer_guid(timer_guid));
+    return m_device_simulator_ptr->is_timer_enabled(m_timers.at(timer_guid.index).id);
+}
+
+
 object_guid  simulation_context::folder_of_timer(object_guid const  timer_guid) const
 {
     ASSUMPTION(is_valid_timer_guid(timer_guid));
@@ -1684,6 +1700,13 @@ simulation_context::timer_guid_iterator  simulation_context::timers_begin() cons
 simulation_context::timer_guid_iterator  simulation_context::timers_end() const
 {
     return timer_guid_iterator(m_timers.valid_indices().end());
+}
+
+
+void  simulation_context::request_erase_timer(object_guid const  timer_guid) const
+{
+    m_requests_erase_timer.push_back(timer_guid);
+    m_pending_requests.push_back(REQUEST_ERASE_TIMER);
 }
 
 
@@ -1735,6 +1758,13 @@ bool  simulation_context::is_valid_sensor_guid(object_guid const  sensor_guid) c
 }
 
 
+bool  simulation_context::is_sensor_enabled(object_guid const  sensor_guid) const
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    return m_device_simulator_ptr->is_sensor_enabled(m_sensors.at(sensor_guid.index).id);
+}
+
+
 object_guid  simulation_context::folder_of_sensor(object_guid const  sensor_guid) const
 {
     ASSUMPTION(is_valid_sensor_guid(sensor_guid));
@@ -1767,6 +1797,13 @@ simulation_context::sensor_guid_iterator  simulation_context::sensors_end() cons
 }
 
 
+void  simulation_context::request_erase_sensor(object_guid const  sensor_guid) const
+{
+    m_requests_erase_sensor.push_back(sensor_guid);
+    m_pending_requests.push_back(REQUEST_ERASE_SENSOR);
+}
+
+
 // Disabled (not const) for modules.
 
 
@@ -1792,6 +1829,7 @@ object_guid  simulation_context::insert_sensor(
             OBJECT_KIND::SENSOR,
             m_sensors.insert({ sid, under_folder_guid.index, name, collider_ })
             };
+    m_colliders.at(collider_.index).owner = sensor_guid;
     m_seids_to_guids.insert({ sid, sensor_guid });
     m_folders.at(under_folder_guid.index).content.insert({ name, sensor_guid });
     return sensor_guid;
@@ -2074,31 +2112,106 @@ void  simulation_context::clear_collision_contacts()
 /////////////////////////////////////////////////////////////////////////////////////
 
 
+bool  simulation_context::is_absolute_path(std::string const&  path) const
+{
+    ASSUMPTION(!path.empty());
+    return path.front() == '/';
+}
+
+
+bool  simulation_context::is_path_to_folder(std::string const&  path) const
+{
+    ASSUMPTION(!path.empty());
+    return path.back() == '/';
+}
+
+
 object_guid  simulation_context::from_absolute_path(std::string const&  path) const
 {
-    NOT_IMPLEMENTED_YET();
-    return invalid_object_guid();
+    ASSUMPTION(is_absolute_path(path));
+
+    std::vector<std::string>  names;
+    boost::split(names, path, [](std::string::value_type c) -> bool { return c == '/'; });
+    object_guid  guid = root_folder();
+    INVARIANT(!names.empty());
+    bool const  is_folder_path = is_path_to_folder(path);
+    for (natural_32_bit  i = 0U, n = (natural_32_bit)names.size() - 1U; i <= n; ++i)
+    {
+        std::string const&  name = names.at(i);
+        if (name.empty())
+            continue;
+
+        folder_content_type const&  fct = folder_content(guid);
+        folder_content_type::names_to_guids_map const&  guids_map = (i == n && !is_folder_path) ? fct.content : fct.child_folders;
+
+        auto  it = guids_map.find(name);
+        ASSUMPTION(it != guids_map.end());
+        guid = it->second;
+    }
+    return guid;
 }
 
 
 std::string  simulation_context::to_absolute_path(object_guid const  guid) const
 {
-    NOT_IMPLEMENTED_YET();
-    return "";
+    ASSUMPTION(guid != invalid_object_guid());
+
+    std::vector<std::string>  names;
+    for (object_guid  obj_guid = guid; obj_guid != root_folder(); obj_guid = folder_of(obj_guid))
+        names.push_back(name_of(obj_guid));
+    std::stringstream  sstr;
+    for (auto it = names.rbegin(); it != names.rend(); ++it)
+        sstr << "/" << *it;
+    if (guid.kind == OBJECT_KIND::FOLDER)
+        sstr << '/';
+    std::string const  path = sstr.str();
+
+    INVARIANT(is_absolute_path(path) && (guid.kind == OBJECT_KIND::FOLDER) == is_path_to_folder(path));
+
+    return path;
 }
 
 
 object_guid  simulation_context::from_relative_path(object_guid const  base_guid, std::string const&  relative_path) const
 {
-    NOT_IMPLEMENTED_YET();
-    return invalid_object_guid();
+    ASSUMPTION(!is_absolute_path(relative_path));
+    return from_absolute_path(to_absolute_path(base_guid) + "/" + relative_path);
 }
 
 
 std::string  simulation_context::to_relative_path(object_guid const  guid, object_guid const  relative_base_guid) const
 {
-    NOT_IMPLEMENTED_YET();
-    return "";
+    ASSUMPTION(guid != invalid_object_guid() && relative_base_guid != invalid_object_guid());
+
+    std::vector<std::string>  guid_names;
+    for (object_guid  obj_guid = guid; obj_guid != root_folder(); obj_guid = folder_of(obj_guid))
+        guid_names.push_back(name_of(obj_guid));
+    std::reverse(guid_names.begin(), guid_names.end());
+
+    std::vector<std::string>  base_names;
+    for (object_guid  obj_guid = relative_base_guid; obj_guid != root_folder(); obj_guid = folder_of(obj_guid))
+        base_names.push_back(name_of(obj_guid));
+    std::reverse(base_names.begin(), base_names.end());
+
+    auto  guid_it = guid_names.begin();
+    auto  base_it = base_names.begin();
+    for ( ; guid_it != guid_names.end() && base_it != base_names.end() && *guid_it == *base_it; ++guid_it, ++base_it)
+        ;
+
+    std::stringstream  sstr;
+    for ( ; base_it != base_names.end(); ++base_it)
+        sstr << "../";
+    for ( ; guid_it != guid_names.end(); ++guid_it)
+        sstr << *guid_it << '/';
+    std::string  path = sstr.str();
+    if (path.empty())
+        path.push_back('.');
+    if (guid.kind != OBJECT_KIND::FOLDER && path.back() == '/')
+        path.pop_back();
+
+    INVARIANT(!is_absolute_path(path) && (guid.kind == OBJECT_KIND::FOLDER) == is_path_to_folder(path));
+
+    return path;
 }
 
 
@@ -2361,6 +2474,8 @@ void  simulation_context::process_pending_requests()
         m_requests_del_linear_acceleration_from_source.begin();
     std::vector<request_data_del_acceleration_from_source>::const_iterator  del_angular_acceleration_it =
         m_requests_del_angular_acceleration_from_source.begin();
+    std::vector<object_guid>::const_iterator  erase_timer_it = m_requests_erase_timer.begin();
+    std::vector<object_guid>::const_iterator  erase_sensor_it = m_requests_erase_sensor.begin();
 
     for (REQUEST_KIND  kind : m_pending_requests)
         switch (kind)
@@ -2419,6 +2534,14 @@ void  simulation_context::process_pending_requests()
             remove_rigid_body_angular_acceleration_from_source(del_angular_acceleration_it->rb_guid, del_angular_acceleration_it->source_guid);
             ++del_angular_acceleration_it;
             break;
+        case REQUEST_ERASE_TIMER:
+            erase_timer(*erase_timer_it);
+            ++erase_timer_it;
+            break;
+        case REQUEST_ERASE_SENSOR:
+            erase_sensor(*erase_sensor_it);
+            ++erase_sensor_it;
+            break;
         default: UNREACHABLE(); break;
         }
 
@@ -2442,6 +2565,8 @@ void  simulation_context::clear_pending_requests()
     m_requests_set_angular_acceleration_from_source.clear();
     m_requests_del_linear_acceleration_from_source.clear();
     m_requests_del_angular_acceleration_from_source.clear();
+    m_requests_erase_timer.clear();
+    m_requests_erase_sensor.clear();
 }
 
 

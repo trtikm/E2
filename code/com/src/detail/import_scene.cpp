@@ -33,18 +33,17 @@ imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr con
 
     {
         boost::filesystem::path  pathname = scene_dir / "effects.json";
+        if (boost::filesystem::is_regular_file(pathname))
+        {
+            std::ifstream  istr(pathname.string(), std::ios_base::binary);
+            if (!istr.good())
+                throw std::runtime_error(msgstream() << "Cannot open the effects file '" << pathname << "'.");
 
-        if (!boost::filesystem::is_regular_file(pathname))
-            throw std::runtime_error(msgstream() << "Cannot access effects file '" << pathname << "'.");
-
-        std::ifstream  istr(pathname.string(), std::ios_base::binary);
-        if (!istr.good())
-            throw std::runtime_error(msgstream() << "Cannot open the effects file '" << pathname << "'.");
-
-        boost::property_tree::ptree  ptree;
-        boost::property_tree::read_json(istr, ptree);
-        for (auto it = ptree.begin(); it != ptree.end(); ++it)
-            m_effects.insert({it->first, it->second});
+            boost::property_tree::ptree  ptree;
+            boost::property_tree::read_json(istr, ptree);
+            for (auto it = ptree.begin(); it != ptree.end(); ++it)
+                m_effects.insert({it->first, it->second});
+        }
     }
 }
 
@@ -80,6 +79,15 @@ gfx::effects_config  import_effects_config(boost::property_tree::ptree const&  p
             (gfx::SHADER_PROGRAM_TYPE)ptree.get<int>("fog_algo_location")
             );
 }
+
+
+struct  owner_guid_and_prperty_tree
+{
+    object_guid  owner_guid;
+    boost::property_tree::ptree const*  hierarchy;
+};
+
+using  request_infos_queue = std::vector<owner_guid_and_prperty_tree>;
 
 
 static vector3  import_vector3(boost::property_tree::ptree const&  hierarchy)
@@ -286,13 +294,14 @@ static void  import_rigid_body(
         )
 {
     ASSUMPTION(name == "RIGID_BODY");
+    bool const  is_moveable = hierarchy.get<bool>("is_moveable");
     ctx.insert_rigid_body(
             folder_guid,
-            hierarchy.get<bool>("is_moveable"),
-            import_vector3(hierarchy.get_child("linear_velocity")),
-            import_vector3(hierarchy.get_child("angular_velocity")),
-            import_vector3(hierarchy.get_child("external_linear_acceleration")),
-            import_vector3(hierarchy.get_child("external_angular_acceleration"))
+            is_moveable,
+            is_moveable ? import_vector3(hierarchy.get_child("linear_velocity")) : vector3_zero(),
+            is_moveable ? import_vector3(hierarchy.get_child("angular_velocity")) : vector3_zero(),
+            is_moveable ? import_vector3(hierarchy.get_child("external_linear_acceleration")) : vector3_zero(),
+            is_moveable ? import_vector3(hierarchy.get_child("external_angular_acceleration")) : vector3_zero()
             );
 }
 
@@ -396,6 +405,7 @@ static void  import_reques_info(
 
 static void  import_timer(
         simulation_context&  ctx,
+        request_infos_queue&  request_infos,
         boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
         std::string const&  name
@@ -408,30 +418,35 @@ static void  import_timer(
             hierarchy.get<natural_32_bit>("target_enable_level"),
             hierarchy.get<natural_32_bit>("current_enable_level")
             );
-    boost::property_tree::ptree const&  request_infos = hierarchy.find("request_infos")->second;
-    for (auto request_infos_it = request_infos.begin(); request_infos_it != request_infos.end(); ++request_infos_it)
-        import_reques_info(ctx, request_infos_it->second, timer_guid);
+    boost::property_tree::ptree const&  infos = hierarchy.find("request_infos")->second;
+    for (auto  infos_it = infos.begin(); infos_it != infos.end(); ++infos_it)
+        request_infos.push_back({ timer_guid, &infos_it->second });
 }
 
 
 static void  import_sensor(
         simulation_context&  ctx,
+        request_infos_queue&  request_infos,
         boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
         std::string const&  name
         )
 {
+    object_guid const  collider_guid = ctx.from_relative_path(folder_guid, hierarchy.get<std::string>("collider"));
+    ASSUMPTION(ctx.is_valid_collider_guid(collider_guid));
+
     object_guid const  sensor_guid = ctx.insert_sensor(
             folder_guid,
             name,
-            ctx.from_relative_path(folder_guid, hierarchy.get<std::string>("collider")),
+            collider_guid,
             {},
             hierarchy.get<natural_32_bit>("target_enable_level"),
             hierarchy.get<natural_32_bit>("current_enable_level")
             );
-    boost::property_tree::ptree const&  request_infos = hierarchy.find("request_infos")->second;
-    for (auto request_infos_it = request_infos.begin(); request_infos_it != request_infos.end(); ++request_infos_it)
-        import_reques_info(ctx, request_infos_it->second, sensor_guid);
+    ctx.request_enable_collider(collider_guid, ctx.is_sensor_enabled(sensor_guid));
+    boost::property_tree::ptree const&  infos = hierarchy.find("request_infos")->second;
+    for (auto  infos_it = infos.begin(); infos_it != infos.end(); ++infos_it)
+        request_infos.push_back({ sensor_guid, &infos_it->second });
 }
 
 
@@ -448,43 +463,64 @@ static void  import_agent(
 
 static void  import_under_folder(
         simulation_context&  ctx,
+        request_infos_queue&  request_infos,
         object_guid const  folder_guid,
         boost::property_tree::ptree const&  hierarchy,
         std::unordered_map<std::string, boost::property_tree::ptree> const&  effects,
         object_guid const  relocation_frame_guid
         )
 {
-    boost::property_tree::ptree const&  content = hierarchy.find("content")->second;
-    for (auto content_it = content.begin(); content_it != content.end(); ++content_it)
+    auto const  content = hierarchy.find("content");
+    if (content != hierarchy.not_found())
     {
-        std::string const  onject_kind = content_it->second.get<std::string>("object_kind");
-        if (onject_kind == "FRAME")
+        std::unordered_map<OBJECT_KIND, std::vector<boost::property_tree::ptree::const_iterator> >  load_tasks;
+        for (auto content_it = content->second.begin(); content_it != content->second.end(); ++content_it)
+        {
+            std::string const  onject_kind = content_it->second.get<std::string>("object_kind");
+            if (onject_kind == "FRAME")
+                load_tasks[OBJECT_KIND::FRAME].push_back(content_it);
+            else if (onject_kind == "BATCH")
+                load_tasks[OBJECT_KIND::BATCH].push_back(content_it);
+            else if (onject_kind == "COLLIDER")
+                load_tasks[OBJECT_KIND::COLLIDER].push_back(content_it);
+            else if (onject_kind == "RIGID_BODY")
+                load_tasks[OBJECT_KIND::RIGID_BODY].push_back(content_it);
+            else if (onject_kind == "TIMER")
+                load_tasks[OBJECT_KIND::TIMER].push_back(content_it);
+            else if (onject_kind == "SENSOR")
+                load_tasks[OBJECT_KIND::SENSOR].push_back(content_it);
+            else if (onject_kind == "AGENT")
+                load_tasks[OBJECT_KIND::AGENT].push_back(content_it);
+            else
+            { UNREACHABLE(); }
+        }
+        for (auto  content_it : load_tasks[OBJECT_KIND::FRAME])
             import_frame(ctx, content_it->second, folder_guid, relocation_frame_guid);
-        else if (onject_kind == "BATCH")
+        for (auto  content_it : load_tasks[OBJECT_KIND::BATCH])
             import_batch(ctx, content_it->second, folder_guid, content_it->first, effects);
-        else if (onject_kind == "COLLIDER")
-            import_collider(ctx, content_it->second, folder_guid, content_it->first);
-        else if (onject_kind == "RIGID_BODY")
+        for (auto  content_it : load_tasks[OBJECT_KIND::RIGID_BODY])
             import_rigid_body(ctx, content_it->second, folder_guid, content_it->first);
-        else if (onject_kind == "TIMER")
-            import_timer(ctx, content_it->second, folder_guid, content_it->first);
-        else if (onject_kind == "SENSOR")
-            import_sensor(ctx, content_it->second, folder_guid, content_it->first);
-        else if (onject_kind == "AGENT")
+        for (auto  content_it : load_tasks[OBJECT_KIND::COLLIDER])
+            import_collider(ctx, content_it->second, folder_guid, content_it->first);
+        for (auto  content_it : load_tasks[OBJECT_KIND::TIMER])
+            import_timer(ctx, request_infos, content_it->second, folder_guid, content_it->first);
+        for (auto  content_it : load_tasks[OBJECT_KIND::SENSOR])
+            import_sensor(ctx, request_infos, content_it->second, folder_guid, content_it->first);
+        for (auto  content_it : load_tasks[OBJECT_KIND::AGENT])
             import_agent(ctx, content_it->second, folder_guid, content_it->first);
-        else
-        { UNREACHABLE(); }
     }
 
-    boost::property_tree::ptree const&  folders = hierarchy.find("folders")->second;
-    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
-        import_under_folder(
-                ctx,
-                ctx.insert_folder(folder_guid, folder_it->first),
-                folder_it->second,
-                effects,
-                invalid_object_guid()
-                );
+    auto const  folders = hierarchy.find("folders");
+    if (folders != hierarchy.not_found())
+        for (auto folder_it = folders->second.begin(); folder_it != folders->second.end(); ++folder_it)
+            import_under_folder(
+                    ctx,
+                    request_infos,
+                    ctx.insert_folder(folder_guid, folder_it->first),
+                    folder_it->second,
+                    effects,
+                    invalid_object_guid()
+                    );
 }
 
 
@@ -571,14 +607,18 @@ void  import_scene(
         return;
     }
 
-    boost::property_tree::ptree const&  folders = scene.hierarchy().find("folders")->second;
-    for (auto  it = folders.begin(); it != folders.end(); ++it)
-    {
-        object_guid const  folder_guid =
-                ctx.insert_folder(under_folder_guid, generate_unique_folder_name_from(ctx, under_folder_guid, it->first));
-        import_under_folder(ctx, folder_guid, it->second, scene.effects(), relocation_frame_guid);
-        apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, linear_velocity, angular_velocity, motion_frame_guid);
-    }
+    request_infos_queue  request_infos;
+    auto const  folders = scene.hierarchy().find("folders");
+    if (folders != scene.hierarchy().not_found())
+        for (auto it = folders->second.begin(); it != folders->second.end(); ++it)
+        {
+            object_guid const  folder_guid =
+                    ctx.insert_folder(under_folder_guid, generate_unique_folder_name_from(ctx, under_folder_guid, it->first));
+            import_under_folder(ctx, request_infos, folder_guid, it->second, scene.effects(), relocation_frame_guid);
+            apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, linear_velocity, angular_velocity, motion_frame_guid);
+        }
+    for (auto request_infos_it = request_infos.begin(); request_infos_it != request_infos.end(); ++request_infos_it)
+        import_reques_info(ctx, *request_infos_it->hierarchy, request_infos_it->owner_guid);
 
     ctx.process_rigid_bodies_with_invalidated_shape();
 }
