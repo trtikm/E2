@@ -65,6 +65,8 @@ def relative_scene_path_from_absolute_paths(target_abs_path, start_abs_path, rec
         rel_path = [".."] + rel_path
     if record_name is not None:
         rel_path += split_path(record_name)
+    else:
+        rel_path.append("") # to make the resulting path to end with '/'
     return "/".join(rel_path) if len(rel_path) > 0 else "."
 
 
@@ -1239,16 +1241,10 @@ class E2SceneExportOperator(bpy.types.Operator):
                 result["thickness_from_central_line"] = num2str(thickness)
                 distance = max(0.002, sizes.z - thickness)
                 result["half_distance_between_end_points"] = num2str(distance)
-                result["num_lines_per_quarter_of_circle"] = num2str(
-                    max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
-                    )
             elif object.e2_custom_props.collider_kind == "SPHERE":
                 result["radius"] = num2str(max(0.001, min(sizes)))
-                result["num_lines_per_quarter_of_circle"] = num2str(
-                    max(1, object.e2_custom_props.batch_generic_num_lines_per_quarter_of_circle)
-                    )
-            result["collision_material"] = str(object.e2_custom_props.collider_collision_class)
-            result["collision_class"] = str(object.e2_custom_props.collider_material_type)
+            result["collision_material"] = str(object.e2_custom_props.collider_material_type)
+            result["collision_class"] = str(object.e2_custom_props.collider_collision_class)
         return result
 
     def export_rigid_body(self, object):
