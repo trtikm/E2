@@ -14,6 +14,16 @@ namespace com { namespace detail {
 
 extern gfx::effects_config  import_effects_config(boost::property_tree::ptree const&  ptree);
 
+extern void  apply_initial_velocities_to_imported_rigid_bodies(
+        simulation_context&  ctx,
+        object_guid const  folder_guid,
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity,
+        object_guid const  motion_frame_guid
+        );
+
+extern std::string  generate_unique_folder_name_from(simulation_context const&  ctx, object_guid const  folder_guid, std::string  name);
+
 
 struct  import_scene_props
 {
@@ -272,51 +282,10 @@ void  import_gfxtuner_scene(
         if (it->first.empty() || it->first.front() == '@')
             continue;
 
-        simulation_context::folder_content_type const&  fct = ctx.folder_content(under_folder_guid);
-
-        std::string  name = it->first;
-        if (fct.child_folders.count(name) != 0)
-        {
-            natural_32_bit  counter = 0U;
-            for ( ; fct.child_folders.count(name + '.' + std::to_string(counter)) != 0U; ++counter)
-                ;
-            name = name + '.' + std::to_string(counter);
-        }
-
-        object_guid const  folder_guid = ctx.insert_folder(under_folder_guid, name);
-
+        object_guid const  folder_guid =
+                ctx.insert_folder(under_folder_guid, generate_unique_folder_name_from(ctx, under_folder_guid, it->first));
         import_gfxtuner_scene_node(ctx, { &it->second, &scene.effects() }, folder_guid, relocation_frame_guid);
-
-        std::vector<object_guid>  rigid_body_guids;
-        ctx.for_each_child_folder(folder_guid, true, true,
-            [&rigid_body_guids](object_guid const  folder_guid, simulation_context::folder_content_type const&  fct) -> bool {
-                auto  it = fct.content.find(to_string(OBJECT_KIND::RIGID_BODY));
-                if (it != fct.content.end())
-                {
-                    rigid_body_guids.push_back(it->second);
-                    return false;
-                }
-                return true;
-            });
-        if (!rigid_body_guids.empty())
-        {
-            vector3  lin_vel, ang_vel;
-            if (motion_frame_guid == invalid_object_guid())
-            {
-                lin_vel = linear_velocity;
-                ang_vel = angular_velocity;
-            }
-            else
-            {
-                lin_vel = transform_vector(linear_velocity, ctx.frame_world_matrix(motion_frame_guid));
-                ang_vel = transform_vector(angular_velocity, ctx.frame_world_matrix(motion_frame_guid));
-            }
-            for (object_guid rb_guid : rigid_body_guids)
-            {
-                ctx.set_rigid_body_linear_velocity(rb_guid, lin_vel);
-                ctx.set_rigid_body_angular_velocity(rb_guid, ang_vel);
-            }
-        }
+        apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, linear_velocity, angular_velocity, motion_frame_guid);
     }
 
     ctx.process_rigid_bodies_with_invalidated_shape();
