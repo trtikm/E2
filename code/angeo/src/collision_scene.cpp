@@ -545,6 +545,16 @@ void  collision_scene::erase_object(collision_object_id const  coid)
         m_does_proximity_dynamic_need_rebalancing = true;
     }
 
+    {
+        std::vector<std::unordered_set<collision_object_id_pair>::iterator>  to_remove;
+        for (auto  it = m_disabled_colliding.begin(); it != m_disabled_colliding.end(); ++it)
+            if (coid == it->first || coid == it->second)
+                to_remove.push_back(it);
+        for (auto  it : to_remove)
+            m_disabled_colliding.erase(it);
+    }
+    m_disabled_colliders.erase(coid);
+
     m_invalid_object_ids.at(as_number(get_shape_type(coid))).push_back(get_instance_index(coid));
 
     switch (get_shape_type(coid))
