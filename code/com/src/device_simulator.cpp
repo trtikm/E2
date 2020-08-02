@@ -773,7 +773,10 @@ void  device_simulator::process_timer_requests_decrement_enable_level()
     {
         timer&  t = m_timers.at(idx);
         if (t.current_enable_level == t.target_enable_level)
+        {
             m_enabled_timers.erase(idx);
+            t.is_signalling = false;
+        }
         if (t.current_enable_level > 0U)
             --t.current_enable_level;
     }
@@ -819,6 +822,10 @@ void  device_simulator::process_sensor_requests_decrement_enable_level(simulatio
         if (s.current_enable_level == s.target_enable_level)
         {
             m_enabled_sensors.erase(s.collider);
+            s.old_touching.clear();
+            s.touching.clear();
+            s.touch_begin.clear();
+            s.touch_end.clear();
             ctx.request_enable_collider(s.collider, false);
         }
         if (s.current_enable_level > 0U)
