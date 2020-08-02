@@ -71,6 +71,7 @@ struct  simulator : public osi::simulator
         vector4  colour_of_agent_collider;
         vector4  colour_of_ray_cast_collider;
         vector4  colour_of_collision_contact;
+        float_32_bit  disabled_collider_colour_multiplier;
         bool  include_normals_to_batches_of_trinagle_mesh_colliders;
         bool  include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders;
         // Current round config - changes from round to round. So, your changes affect only the current round.
@@ -150,7 +151,7 @@ private:
     void  render_colliders();
     void  render_text();
 
-    gfx::batch  create_batch_for_collider(object_guid const  collider_guid);
+    gfx::batch  create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled);
 
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
@@ -167,7 +168,8 @@ private:
     natural_32_bit  m_FPS;
 
     std::pair<std::string, gfx::batch>  m_text_cache;
-    std::unordered_map<object_guid, gfx::batch>  m_collider_batches_cache;
+    using  cached_collider_batch_state = std::array<gfx::batch, 2U>;
+    std::unordered_map<object_guid, cached_collider_batch_state>  m_collider_batches_cache;
 };
 
 

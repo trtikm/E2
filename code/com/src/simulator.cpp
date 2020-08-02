@@ -62,6 +62,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , colour_of_agent_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_ray_cast_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_collision_contact{ 1.0f, 0.5f, 0.5f, 1.0f }
+    , disabled_collider_colour_multiplier(0.5f)
     , include_normals_to_batches_of_trinagle_mesh_colliders(true)
     , include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders(false)
     // Current round config
@@ -121,6 +122,7 @@ simulator::simulator(std::string const&  data_root_dir)
     , m_FPS(0U)
 
     , m_text_cache()
+    , m_collider_batches_cache()
 {}
 
 
@@ -595,7 +597,7 @@ void  simulator::render_frames()
 
 void  simulator::render_colliders()
 {
-    std::unordered_map<object_guid, gfx::batch>  collider_batches_cache;
+    std::unordered_map<object_guid, cached_collider_batch_state>  collider_batches_cache;
 
     simulation_context&  ctx = *context();
     render_configuration&  cfg = render_config();
@@ -606,7 +608,7 @@ void  simulator::render_colliders()
     {
         object_guid const  collider_guid = *collider_it;
 
-        std::unordered_map<object_guid, gfx::batch>::iterator  batch_it;
+        std::unordered_map<object_guid, cached_collider_batch_state>::iterator  batch_it;
         {
             batch_it = m_collider_batches_cache.find(collider_guid);
             batch_it = (batch_it != m_collider_batches_cache.end()) ? collider_batches_cache.insert(*batch_it).first :
@@ -644,13 +646,15 @@ void  simulator::render_colliders()
 
         gfx::batch  batch;
         {
-            if (batch_it == collider_batches_cache.end())
+            bool const  is_enabled = ctx.is_collider_enabled(collider_guid);
+            natural_32_bit const  batch_index = is_enabled ? 0U : 1U;
+            if (batch_it == collider_batches_cache.end() || batch_it->second.at(batch_index).empty())
             {
-                batch = create_batch_for_collider(collider_guid);
-                collider_batches_cache.insert({ collider_guid, batch} );
+                batch = create_batch_for_collider(collider_guid, is_enabled);
+                collider_batches_cache[collider_guid].at(batch_index) = batch;
             }
             else
-                batch = batch_it->second;
+                batch = batch_it->second.at(batch_index);
         }
 
         std::string const  batch_id = batch.uid();
@@ -710,7 +714,7 @@ void  simulator::render_text()
 }
 
 
-gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_guid)
+gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled)
 {
     simulation_context&  ctx = *context();
     render_configuration&  cfg = render_config();
@@ -739,6 +743,9 @@ gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_gui
         break;
     default: UNREACHABLE(); break;
     }
+
+    if (!is_enabled)
+        colour = expand34(cfg.disabled_collider_colour_multiplier * contract43(colour), 1.0f);
 
     switch (ctx.collider_shape_type(collider_guid))
     {
