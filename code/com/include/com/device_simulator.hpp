@@ -27,7 +27,7 @@ struct  device_simulator
         DECREMENT_ENABLE_LEVEL_OF_TIMER     = 1U,
         RESET_TIMER                         = 2U,
 
-        INCREMENT_ENABLE_LEVEL_OF_SEBSOR    = 3U,
+        INCREMENT_ENABLE_LEVEL_OF_SENSOR    = 3U,
         DECREMENT_ENABLE_LEVEL_OF_SENSOR    = 4U,
 
         IMPORT_SCENE                        = 5U,

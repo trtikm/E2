@@ -284,7 +284,7 @@ device_simulator::request_info_id  device_simulator::insert_request_info_reset_t
 device_simulator::request_info_id  device_simulator::insert_request_info_increment_enable_level_of_sensor(sensor_id const  sid)
 {
     ASSUMPTION(is_valid_sensor_id(sid));
-    return { REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SEBSOR, m_request_infos_increment_enable_level_of_sensor.insert(sid) };
+    return { REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SENSOR, m_request_infos_increment_enable_level_of_sensor.insert(sid) };
 }
 
 
@@ -392,7 +392,7 @@ bool  device_simulator::is_valid_request_info_id(request_info_id const&  rid) co
         return m_request_infos_decrement_enable_level_of_timer.valid(rid.index);
     case REQUEST_KIND::RESET_TIMER:
         return m_request_infos_reset_timer.valid(rid.index);
-    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SEBSOR:
+    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SENSOR:
         return m_request_infos_increment_enable_level_of_sensor.valid(rid.index);
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
         return m_request_infos_decrement_enable_level_of_sensor.valid(rid.index);
@@ -440,7 +440,7 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
     case REQUEST_KIND::RESET_TIMER:
         m_request_infos_reset_timer.erase(rid.index);
         break;
-    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SEBSOR:
+    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SENSOR:
         m_request_infos_increment_enable_level_of_sensor.erase(rid.index);
         break;
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
@@ -490,7 +490,7 @@ device_simulator::request_info_base&  device_simulator::request_info_base_of(req
         return m_request_infos_decrement_enable_level_of_timer.at(rid.index);
     case REQUEST_KIND::RESET_TIMER:
         return m_request_infos_reset_timer.at(rid.index);
-    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SEBSOR:
+    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SENSOR:
         return m_request_infos_increment_enable_level_of_sensor.at(rid.index);
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
         return m_request_infos_decrement_enable_level_of_sensor.at(rid.index);
@@ -537,7 +537,7 @@ void  device_simulator::next_round_of_request_info(
     case REQUEST_KIND::RESET_TIMER:
         m_timer_requests_reset.push_back(m_request_infos_reset_timer.at(rid.index).data);
         break;
-    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SEBSOR:
+    case REQUEST_KIND::INCREMENT_ENABLE_LEVEL_OF_SENSOR:
         m_sensor_requests_increment_enable_level.push_back(m_request_infos_increment_enable_level_of_sensor.at(rid.index).data);
         break;
     case REQUEST_KIND::DECREMENT_ENABLE_LEVEL_OF_SENSOR:
@@ -763,6 +763,7 @@ void  device_simulator::process_timer_requests_increment_enable_level()
                 m_enabled_timers.insert(idx);
         }
     }
+    m_timer_requests_increment_enable_level.clear();
 }
 
 
@@ -776,6 +777,7 @@ void  device_simulator::process_timer_requests_decrement_enable_level()
         if (t.current_enable_level > 0U)
             --t.current_enable_level;
     }
+    m_timer_requests_decrement_enable_level.clear();
 }
 
 
@@ -786,6 +788,7 @@ void  device_simulator::process_timer_requests_reset()
         timer&  t = m_timers.at(idx);
         t.current_time = 0.0f;
     }
+    m_timer_requests_reset.clear();
 }
 
 
@@ -804,6 +807,7 @@ void  device_simulator::process_sensor_requests_increment_enable_level(simulatio
             }
         }
     }
+    m_sensor_requests_increment_enable_level.clear();
 }
 
 
@@ -820,6 +824,7 @@ void  device_simulator::process_sensor_requests_decrement_enable_level(simulatio
         if (s.current_enable_level > 0U)
             --s.current_enable_level;
     }
+    m_sensor_requests_decrement_enable_level.clear();
 }
 
 
