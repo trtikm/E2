@@ -56,7 +56,7 @@ def split_path(path):
     return [x for x in path.split("/") if len(x) > 0]
 
 
-def relative_scene_path_from_absolute_paths(target_abs_path, start_abs_path, record_name=None, embedded_in_folder=False):
+def relative_scene_path_from_absolute_paths(target_abs_path, start_abs_path):
     target = split_path(target_abs_path)
     start = split_path(start_abs_path)
     idx = min(len(target), len(start))
@@ -65,31 +65,36 @@ def relative_scene_path_from_absolute_paths(target_abs_path, start_abs_path, rec
             idx = i
             break
     rel_path = [".." for _ in range(len(start[idx:]))] + target[idx:]
-
-    if embedded_in_folder is True:
-        rel_path = [".."] + rel_path
-    if record_name is not None:
-        if len(rel_path) > 0:
-            for x in split_path(record_name):
-                if x == "..":
-                    rel_path.pop()
-                elif len(x) > 0:
-                    rel_path.append(x)
-    else:
-        rel_path.append("") # to make the resulting path to end with '/'
-
     result = "/".join(rel_path) if len(rel_path) > 0 else "."
     return result
 
 
-def relative_scene_path(target_object_name, start_object_name, record_name=None, consider_folder_embedding=True):
-    should_remove_target = record_name is not None and e2_custom_props_of(target_object_name).object_kind != "FOLDER"
-    return relative_scene_path_from_absolute_paths(
-                absolute_scene_path(target_object_name),
-                absolute_scene_path(start_object_name),
-                ("../" if should_remove_target is True else "") + record_name,
-                e2_custom_props_of(start_object_name).object_kind == "FOLDER" if consider_folder_embedding else False
-                )
+def relative_scene_path_to_folder(target_object_name, start_object_name):
+    rel_path = relative_scene_path_from_absolute_paths(
+                    absolute_scene_path(target_object_name),
+                    absolute_scene_path(start_object_name)
+                    )
+    return rel_path + '/'
+    
+
+def relative_scene_path_to_content(target_object_name, start_object_name, record_name=None):
+    rel_path = relative_scene_path_from_absolute_paths(
+                    absolute_scene_path(target_object_name),
+                    absolute_scene_path(start_object_name)
+                    )
+    if record_name is not None:
+        rel_path += '/' + record_name
+    return rel_path
+
+
+def relative_scene_path_to_embedded_content(target_object_name, start_object_name, record_name):
+    rel_path = relative_scene_path_from_absolute_paths(
+                    absolute_scene_path(target_object_name),
+                    absolute_scene_path(start_object_name)
+                    )
+    if rel_path != '.':
+        rel_path = "/".join(split_path(rel_path)[:-1]) + '/' + record_name
+    return rel_path
 
 
 ######################################################
@@ -588,6 +593,17 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             step=1
             )
 
+    sensor_use_exclusive_trigger_collider: bpy.props.BoolProperty(
+            name="Trigger sensor only by a concrete collider?",
+            description="Whether to trigger sensor only by a concrete collider or not",
+            default=False
+            )
+    sensor_trigger_collider: bpy.props.EnumProperty(
+            name="Trigger collider",
+            description="A concrete and only collider which will trigger the sensor.",
+            items=list_of_name_of_scene_objects
+            )
+
     #====================================================
     # REQUEST INFO PROPS
 
@@ -699,6 +715,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         self.warn_origin_moved(object, layout)
         self.warn_no_frame_found(object.parent, layout)
         #self.warn_frame_already_has_collider(object.parent, layout)
+        self.warn_incomatible_collsion_class_with_rigid_body_moveable_flag(object, layout)
         self.warn_wrong_shape_geometry(object, object_props.collider_kind, layout)
         if object_props.collider_kind == "TRIANGLE_MESH":
             self.warn_object_is_scaled(object, layout, "Triangle mesh")
@@ -761,6 +778,13 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(object_props, "sensor_target_enable_level")
         row = layout.row()
         row.prop(object_props, "sensor_current_enable_level")
+        box = layout.box()
+        row = box.row()
+        row.prop(object_props, "sensor_use_exclusive_trigger_collider")
+        if object_props.sensor_use_exclusive_trigger_collider is True:
+            self.warn_object_is_not_collider(object_props.sensor_trigger_collider, box, "Trigger collider")
+            row = box.row()
+            row.prop(object_props, "sensor_trigger_collider")
         self.draw_request_infos(layout, object, object_props, "SENSOR")
 
     def draw_request_infos(self, layout, object, object_props, kind):
@@ -995,6 +1019,25 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 break
             folder = folder.parent
             
+    def warn_incomatible_collsion_class_with_rigid_body_moveable_flag(self, collider, layout):
+        object = collider
+        while object != None:
+            if object.e2_custom_props.folder_defines_rigid_body is True:
+                collider.e2_custom_props.collider_collision_class
+                print_warn = False
+                if object.e2_custom_props.rigid_body_is_moveable:
+                    if collider.e2_custom_props.collider_collision_class == "STATIC_OBJECT":
+                        print_warn = True
+                elif collider.e2_custom_props.collider_collision_class in [
+                        "COMMON_MOVEABLE_OBJECT", "HEAVY_MOVEABLE_OBJECT", "AGENT_MOTION_OBJECT"
+                        ]:
+                    print_warn = True
+                if print_warn is True:
+                    row = layout.row()
+                    row.label(text="!!! WARNING: Incompatible collision class with rigid body's moveable flag !!!")
+                break
+            object = object.parent
+            
     def warn_wrong_shape_geometry(self, object, kind, layout):
         sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
         if "CAPSULE" in kind:
@@ -1036,6 +1079,12 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if object_props.object_kind != "FOLDER" or object_props.folder_defines_timer is False:
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a folder with a timer !!!")
+
+    def warn_object_is_not_collider(self, object_name, layout, property_name):
+        object_props = e2_custom_props_of(object_name)
+        if object_props.object_kind != "COLLIDER":
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not a collider !!!")
 
     def warn_object_is_not_collider_with_sensor(self, object_name, layout, property_name):
         object_props = e2_custom_props_of(object_name)
@@ -1293,6 +1342,8 @@ class E2SceneExportOperator(bpy.types.Operator):
             "current_enable_level": num2str(object_props.sensor_current_enable_level),
             "request_infos": self.export_request_infos(object_props.request_info_items, object.name, data_root_dir)
         }
+        if object_props.sensor_use_exclusive_trigger_collider is True:
+            result["trigger_collider"] = relative_scene_path_to_content(object_props.sensor_trigger_collider, object.name)
         return result
 
     def export_request_infos(self, infos, name, data_root_dir):
@@ -1330,23 +1381,23 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
 
     def export_request_info_increment_enable_level_of_timer(self, info, name):
-        result = { "timer": relative_scene_path(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content(info.folder_of_timer, name, "TIMER") }
         return result
 
     def export_request_info_decrement_enable_level_of_timer(self, info, name):
-        result = { "timer": relative_scene_path(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content(info.folder_of_timer, name, "TIMER") }
         return result
 
     def export_request_info_reset_timer(self, info, name):
-        result = { "timer": relative_scene_path(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content(info.folder_of_timer, name, "TIMER") }
         return result
 
     def export_request_info_increment_enable_level_of_sensor(self, info, name):
-        result = { "sensor": relative_scene_path(info.collider_of_sensor, name, "SENSOR." + info.collider_of_sensor) }
+        result = { "sensor": relative_scene_path_to_embedded_content(info.collider_of_sensor, name, "SENSOR." + info.collider_of_sensor) }
         return result
 
     def export_request_info_decrement_enable_level_of_sensor(self, info, name):
-        result = { "sensor": relative_scene_path(info.collider_of_sensor, name, "SENSOR." + info.collider_of_sensor) }
+        result = { "sensor": relative_scene_path_to_embedded_content(info.collider_of_sensor, name, "SENSOR." + info.collider_of_sensor) }
         return result
 
     def export_request_info_import_scene(self, info, name, data_root_dir):
@@ -1357,27 +1408,27 @@ class E2SceneExportOperator(bpy.types.Operator):
             "angular_velocity": self.export_vector(info.angular_velocity)
         }
         if not is_root_folder(get_scene_object_of_name(info.import_under_folder)):
-            result["under_folder"] = relative_scene_path(info.import_under_folder, name)
+            result["under_folder"] = relative_scene_path_to_folder(info.import_under_folder, name)
         if not is_root_folder(get_scene_object_of_name(info.import_relocation_frame_folder)):
-            result["relocation_frame"] = relative_scene_path(info.import_relocation_frame_folder, name, "FRAME")
+            result["relocation_frame"] = relative_scene_path_to_content(info.import_relocation_frame_folder, name, "FRAME")
         if not is_root_folder(get_scene_object_of_name(info.import_motion_frame)):
-            result["motion_frame"] = relative_scene_path(info.import_motion_frame, name, "FRAME")
+            result["motion_frame"] = relative_scene_path_to_content(info.import_motion_frame, name, "FRAME")
         return result
 
     def export_request_info_erase_folder(self, info, name):
-        result = { "erase_folder": relative_scene_path(info.erase_folder, name) }
+        result = { "erase_folder": relative_scene_path_to_folder(info.erase_folder, name) }
         return result
 
     def export_request_info_set_linear_velocity(self, info, name):
         result = {
-            "rigid_body": relative_scene_path(info.folder_of_rigid_body, name, "RIGID_BODY"),
+            "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body, name, "RIGID_BODY"),
             "linear_velocity": self.export_vector(info.linear_velocity)
         }
         return result
 
     def export_request_info_set_angular_velocity(self, info, name):
         result = {
-            "rigid_body": relative_scene_path(info.folder_of_rigid_body, name, "RIGID_BODY"),
+            "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body, name, "RIGID_BODY"),
             "angular_velocity": self.export_vector(info.angular_velocity)
         }
         return result
