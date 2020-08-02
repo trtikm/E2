@@ -1065,7 +1065,11 @@ void  simulation_context::request_erase_collider(object_guid const  collider_gui
 
 void  simulation_context::enable_collider(object_guid const  collider_guid, bool const  state)
 {
-    ASSUMPTION(is_valid_collider_guid(collider_guid));
+    ASSUMPTION(
+        is_valid_collider_guid(collider_guid) &&
+        (!is_valid_sensor_guid(m_colliders.at(collider_guid.index).owner) ||
+            is_sensor_enabled(m_colliders.at(collider_guid.index).owner) == state)
+        );
     for (angeo::collision_object_id  coid : m_colliders.at(collider_guid.index).id)
         m_collision_scene_ptr->enable_collider(coid, state);
 }
