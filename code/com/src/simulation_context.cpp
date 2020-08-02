@@ -166,11 +166,18 @@ simulation_context::folder_content_type const&  simulation_context::folder_conte
 }
 
 
+object_guid  simulation_context::folder_of_folder(object_guid const  folder_guid) const
+{
+    ASSUMPTION(is_valid_folder_guid(folder_guid));
+    return folder_content(folder_guid).parent_folder;
+}
+
+
 object_guid  simulation_context::folder_of(object_guid const  guid) const
 {
     switch (guid.kind)
     {
-    case OBJECT_KIND::FOLDER: return guid == invalid_object_guid() ? invalid_object_guid() : folder_content(guid).parent_folder;
+    case OBJECT_KIND::FOLDER: return folder_of_folder(guid);
     case OBJECT_KIND::FRAME: return folder_of_frame(guid);
     case OBJECT_KIND::BATCH: return folder_of_batch(guid);
     case OBJECT_KIND::COLLIDER: return folder_of_collider(guid);
@@ -2132,15 +2139,27 @@ object_guid  simulation_context::from_absolute_path(std::string const&  path) co
 
     std::vector<std::string>  names;
     boost::split(names, path, [](std::string::value_type c) -> bool { return c == '/'; });
+    std::vector<std::string>  tmp_names;
+    tmp_names.swap(names);
+    for (std::string const&  name : tmp_names)
+    {
+        if (name.empty() || name == ".")
+            continue;
+        if (name == "..")
+        {
+            ASSUMPTION(!names.empty());
+            names.pop_back();
+            continue;
+        }
+        names.push_back(name);
+    }
+
     object_guid  guid = root_folder();
     INVARIANT(!names.empty());
     bool const  is_folder_path = is_path_to_folder(path);
     for (natural_32_bit  i = 0U, n = (natural_32_bit)names.size() - 1U; i <= n; ++i)
     {
         std::string const&  name = names.at(i);
-        if (name.empty())
-            continue;
-
         folder_content_type const&  fct = folder_content(guid);
         folder_content_type::names_to_guids_map const&  guids_map = (i == n && !is_folder_path) ? fct.content : fct.child_folders;
 
@@ -2626,6 +2645,7 @@ void  simulation_context::clear(bool const  also_caches)
     clear_pending_early_requests();
     clear_pending_requests();
     clear_pending_requests_import_scene();
+    clear_rigid_bodies_with_invalidated_shape();
 
     m_collision_contacts.clear();
     m_from_colliders_to_contacts.clear();

@@ -132,7 +132,8 @@ struct  simulation_context
     object_guid  root_folder() const;
     bool  is_folder_empty(object_guid const  folder_guid) const;
     folder_content_type const&  folder_content(object_guid const  folder_guid) const;
-    object_guid  folder_of(object_guid const  guid) const;
+    object_guid  folder_of_folder(object_guid const  guid) const;
+    object_guid  folder_of(object_guid const  folder_guid) const;
     std::string const&  name_of_folder(object_guid const  guid) const;
     std::string const&  name_of(object_guid const  guid) const;
     folder_guid_iterator  folders_begin() const;
