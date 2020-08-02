@@ -65,20 +65,29 @@ def relative_scene_path_from_absolute_paths(target_abs_path, start_abs_path, rec
             idx = i
             break
     rel_path = [".." for _ in range(len(start[idx:]))] + target[idx:]
+
     if embedded_in_folder is True:
         rel_path = [".."] + rel_path
     if record_name is not None:
-        rel_path += split_path(record_name)
+        if len(rel_path) > 0:
+            for x in split_path(record_name):
+                if x == "..":
+                    rel_path.pop()
+                elif len(x) > 0:
+                    rel_path.append(x)
     else:
         rel_path.append("") # to make the resulting path to end with '/'
-    return "/".join(rel_path) if len(rel_path) > 0 else "."
+
+    result = "/".join(rel_path) if len(rel_path) > 0 else "."
+    return result
 
 
 def relative_scene_path(target_object_name, start_object_name, record_name=None, consider_folder_embedding=True):
+    should_remove_target = record_name is not None and e2_custom_props_of(target_object_name).object_kind != "FOLDER"
     return relative_scene_path_from_absolute_paths(
                 absolute_scene_path(target_object_name),
                 absolute_scene_path(start_object_name),
-                record_name,
+                ("../" if should_remove_target is True else "") + record_name,
                 e2_custom_props_of(start_object_name).object_kind == "FOLDER" if consider_folder_embedding else False
                 )
 
@@ -179,7 +188,7 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             default=(0.0, 0.0, 0.0),
             unit='VELOCITY',
             subtype='VELOCITY',
-            min=0.0,
+            min=-100.0,
             max=100.0,
             step=0.001
             )
@@ -190,7 +199,7 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             default=(0.0, 0.0, 0.0),
             unit='VELOCITY',
             subtype='VELOCITY',
-            min=0.0,
+            min=-100.0,
             max=100.0,
             step=0.001
             )
@@ -493,7 +502,7 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             default=(0.0, 0.0, 0.0),
             unit='VELOCITY',
             subtype='VELOCITY',
-            min=0.0,
+            min=-100.0,
             max=100.0,
             step=0.001
             )
@@ -504,7 +513,7 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             default=(0.0, 0.0, 0.0),
             unit='VELOCITY',
             subtype='VELOCITY',
-            min=0.0,
+            min=-100.0,
             max=100.0,
             step=0.001
             )
@@ -515,7 +524,7 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             default=(0.0, 0.0, 0.0),
             unit='ACCELERATION',
             subtype='ACCELERATION',
-            min=0.0,
+            min=-100.0,
             max=100.0,
             step=0.001
             )
@@ -526,7 +535,7 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             default=(0.0, 0.0, 0.0),
             unit='ACCELERATION',
             subtype='ACCELERATION',
-            min=0.0,
+            min=-100.0,
             max=100.0,
             step=0.001
             )
