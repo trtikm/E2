@@ -81,13 +81,17 @@ gfx::effects_config  import_effects_config(boost::property_tree::ptree const&  p
 }
 
 
-struct  owner_guid_and_prperty_tree
+struct  delayed_import_tasks
 {
-    object_guid  owner_guid;
-    boost::property_tree::ptree const*  hierarchy;
-};
+    struct  guid_and_ptree
+    {
+        object_guid  guid;
+        boost::property_tree::ptree const*  ptree;
+    };
 
-using  request_infos_queue = std::vector<owner_guid_and_prperty_tree>;
+    std::vector<guid_and_ptree>  request_infos;
+    std::vector<guid_and_ptree>  sensor_triggers;
+};
 
 
 static vector3  import_vector3(boost::property_tree::ptree const&  hierarchy)
@@ -405,7 +409,7 @@ static void  import_reques_info(
 
 static void  import_timer(
         simulation_context&  ctx,
-        request_infos_queue&  request_infos,
+        delayed_import_tasks&  delayed_tasks,
         boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
         std::string const&  name
@@ -420,13 +424,13 @@ static void  import_timer(
             );
     boost::property_tree::ptree const&  infos = hierarchy.find("request_infos")->second;
     for (auto  infos_it = infos.begin(); infos_it != infos.end(); ++infos_it)
-        request_infos.push_back({ timer_guid, &infos_it->second });
+        delayed_tasks.request_infos.push_back({ timer_guid, &infos_it->second });
 }
 
 
 static void  import_sensor(
         simulation_context&  ctx,
-        request_infos_queue&  request_infos,
+        delayed_import_tasks&  delayed_tasks,
         boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
         std::string const&  name
@@ -444,9 +448,12 @@ static void  import_sensor(
             hierarchy.get<natural_32_bit>("current_enable_level")
             );
     ctx.request_enable_collider(collider_guid, ctx.is_sensor_enabled(sensor_guid));
+
+    delayed_tasks.sensor_triggers.push_back({ sensor_guid, &hierarchy });
+
     boost::property_tree::ptree const&  infos = hierarchy.find("request_infos")->second;
     for (auto  infos_it = infos.begin(); infos_it != infos.end(); ++infos_it)
-        request_infos.push_back({ sensor_guid, &infos_it->second });
+        delayed_tasks.request_infos.push_back({ sensor_guid, &infos_it->second });
 }
 
 
@@ -463,7 +470,7 @@ static void  import_agent(
 
 static void  import_under_folder(
         simulation_context&  ctx,
-        request_infos_queue&  request_infos,
+        delayed_import_tasks&  delayed_tasks,
         object_guid const  folder_guid,
         boost::property_tree::ptree const&  hierarchy,
         std::unordered_map<std::string, boost::property_tree::ptree> const&  effects,
@@ -503,9 +510,9 @@ static void  import_under_folder(
         for (auto  content_it : load_tasks[OBJECT_KIND::COLLIDER])
             import_collider(ctx, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::TIMER])
-            import_timer(ctx, request_infos, content_it->second, folder_guid, content_it->first);
+            import_timer(ctx, delayed_tasks, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::SENSOR])
-            import_sensor(ctx, request_infos, content_it->second, folder_guid, content_it->first);
+            import_sensor(ctx, delayed_tasks, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::AGENT])
             import_agent(ctx, content_it->second, folder_guid, content_it->first);
     }
@@ -515,7 +522,7 @@ static void  import_under_folder(
         for (auto folder_it = folders->second.begin(); folder_it != folders->second.end(); ++folder_it)
             import_under_folder(
                     ctx,
-                    request_infos,
+                    delayed_tasks,
                     ctx.insert_folder(folder_guid, folder_it->first),
                     folder_it->second,
                     effects,
@@ -607,18 +614,27 @@ void  import_scene(
         return;
     }
 
-    request_infos_queue  request_infos;
+    delayed_import_tasks  delayed_tasks;
     auto const  folders = scene.hierarchy().find("folders");
     if (folders != scene.hierarchy().not_found())
         for (auto it = folders->second.begin(); it != folders->second.end(); ++it)
         {
             object_guid const  folder_guid =
                     ctx.insert_folder(under_folder_guid, generate_unique_folder_name_from(ctx, under_folder_guid, it->first));
-            import_under_folder(ctx, request_infos, folder_guid, it->second, scene.effects(), relocation_frame_guid);
+            import_under_folder(ctx, delayed_tasks, folder_guid, it->second, scene.effects(), relocation_frame_guid);
             apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, linear_velocity, angular_velocity, motion_frame_guid);
         }
-    for (auto request_infos_it = request_infos.begin(); request_infos_it != request_infos.end(); ++request_infos_it)
-        import_reques_info(ctx, *request_infos_it->hierarchy, request_infos_it->owner_guid);
+    for (auto request_infos_it = delayed_tasks.request_infos.begin(); request_infos_it != delayed_tasks.request_infos.end(); ++request_infos_it)
+        import_reques_info(ctx, *request_infos_it->ptree, request_infos_it->guid);
+    for (auto trigger_it = delayed_tasks.sensor_triggers.begin(); trigger_it != delayed_tasks.sensor_triggers.end(); ++trigger_it)
+    {
+        auto const  it = trigger_it->ptree->find("trigger_collider");
+        if (it != trigger_it->ptree->not_found())
+            ctx.insert_trigger_collider_to_sensor(
+                    trigger_it->guid,
+                    ctx.from_relative_path(trigger_it->guid, it->second.get_value<std::string>())
+                    );
+    }
 
     ctx.process_rigid_bodies_with_invalidated_shape();
 }

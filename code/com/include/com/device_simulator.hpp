@@ -70,6 +70,8 @@ struct  device_simulator
             natural_8_bit const target_enable_level_ = 1,
             natural_8_bit const  current_enable_level_ = 0
             );
+    void  insert_trigger_collider_to_sensor(sensor_id const  sid, object_guid const  collider_guid);
+    void  erase_trigger_collider_from_sensor(sensor_id const  sid, object_guid const  collider_guid);
     bool  is_valid_sensor_id(sensor_id const  sid) const;
     bool  is_sensor_enabled(sensor_id const  sid) const;
     enum struct SENSOR_EVENT_TYPE : natural_8_bit

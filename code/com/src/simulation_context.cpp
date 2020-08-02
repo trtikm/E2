@@ -1867,6 +1867,20 @@ void  simulation_context::erase_sensor(object_guid const  sensor_guid)
 }
 
 
+void  simulation_context::insert_trigger_collider_to_sensor(object_guid const  sensor_guid, object_guid const  collider_guid)
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid) && is_valid_collider_guid(collider_guid));
+    m_device_simulator_ptr->insert_trigger_collider_to_sensor(m_sensors.at(sensor_guid.index).id, collider_guid);
+}
+
+
+void  simulation_context::erase_trigger_collider_to_sensor(object_guid const  sensor_guid, object_guid const  collider_guid)
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid) && is_valid_collider_guid(collider_guid));
+    m_device_simulator_ptr->erase_trigger_collider_from_sensor(m_sensors.at(sensor_guid.index).id, collider_guid);
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 // TIMER & SENSOR REQUEST INFOS API
 /////////////////////////////////////////////////////////////////////////////////////

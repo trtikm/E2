@@ -468,6 +468,8 @@ struct  simulation_context
                                std::unordered_set<object_guid> const&  triggers_ = {},
                                natural_8_bit const target_enable_level_ = 1, natural_8_bit const  current_enable_level_ = 0);
     void  erase_sensor(object_guid const  sensor_guid);
+    void  insert_trigger_collider_to_sensor(object_guid const  sensor_guid, object_guid const  collider_guid);
+    void  erase_trigger_collider_to_sensor(object_guid const  sensor_guid, object_guid const  collider_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // TIMER & SENSOR REQUEST INFOS API

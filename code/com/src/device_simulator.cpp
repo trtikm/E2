@@ -165,6 +165,20 @@ device_simulator::sensor_id  device_simulator::insert_sensor(
 }
 
 
+void  device_simulator::insert_trigger_collider_to_sensor(sensor_id const  sid, object_guid const  collider_guid)
+{
+    ASSUMPTION(is_valid_sensor_id(sid));
+    m_sensors.at(sid).triggers.insert(collider_guid);    
+}
+
+
+void  device_simulator::erase_trigger_collider_from_sensor(sensor_id const  sid, object_guid const  collider_guid)
+{
+    ASSUMPTION(is_valid_sensor_id(sid));
+    m_sensors.at(sid).triggers.erase(collider_guid);    
+}
+
+
 bool  device_simulator::is_valid_sensor_id(sensor_id const  sid) const
 {
     return m_sensors.valid(sid);
