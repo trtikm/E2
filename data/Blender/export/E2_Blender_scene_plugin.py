@@ -202,6 +202,12 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             items=list_of_name_of_scene_objects
             )
 
+    import_add_motion_frame_velocity: bpy.props.BoolProperty(
+            name="Add motion frame velocity",
+            description="Add velocity of the motion frame to imported rigid bodies",
+            default=True
+            )
+
     apply_linear_velocity: bpy.props.BoolProperty(
             name="Apply linear velocity",
             description="Apply linear velocity to imported rigid bodies",
@@ -841,7 +847,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             elif request_info.kind == "DECREMENT_ENABLE_LEVEL_OF_SENSOR":
                 self.draw_request_info_decrement_enable_level_of_sensor(layout, object_props, request_info)
             elif request_info.kind == "IMPORT_SCENE":
-                self.draw_request_info_import_scene(layout, object_props, request_info)
+                self.draw_request_info_import_scene(layout, object, object_props, request_info)
             elif request_info.kind == "ERASE_FOLDER":
                 self.draw_request_info_erase_folder(layout, object, object_props, request_info)
             elif request_info.kind == "SET_LINEAR_VELOCITY":
@@ -887,7 +893,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(request_info, "collider_of_sensor")
 
-    def draw_request_info_import_scene(self, layout, object_props, request_info):
+    def draw_request_info_import_scene(self, layout, object, object_props, request_info):
         self.warn_not_valid_import_dir(request_info.import_dir, layout, "Import dir")
         self.warn_object_is_not_folder(request_info.import_under_folder, layout, "Under folder")
         self.warn_object_of_name_is_not_under_root_folder(request_info.import_under_folder, layout, "Under folder")
@@ -921,8 +927,13 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row.prop(request_info, "angular_velocity")
 
         if request_info.apply_linear_velocity is True or request_info.apply_angular_velocity is True:
-            row = layout.row()
+            box = layout.box()
+            row = box.row()
             row.prop(request_info, "import_motion_frame")
+            if request_info.import_add_motion_frame_velocity is True:
+                self.warn_not_under_rigid_body(object, box, "Motion frame's folder")
+            row = box.row()
+            row.prop(request_info, "import_add_motion_frame_velocity")
 
     def draw_request_info_erase_folder(self, layout, object, object_props, request_info):
         self.warn_object_is_not_folder(request_info.erase_folder, layout, "Folder to erase")
@@ -1140,6 +1151,14 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a folder with a rigid_body !!!")
 
+    def warn_not_under_rigid_body(self, folder, layout, property_name):
+        while folder != None:
+            if folder.e2_custom_props.folder_defines_rigid_body is True:
+                return
+            folder = folder.parent
+        row = layout.row()
+        row.label(text="!!! WARNING: " + property_name + " is not under a rigid body !!!")
+    
     def warn_not_valid_import_dir(self, path, layout, property_name):
         if not os.path.isdir(path) or not os.path.isfile(os.path.join(path, "hierarchy.json")):
             row = layout.row()
@@ -1462,6 +1481,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         if info.apply_linear_velocity is True or info.apply_angular_velocity is True:
             if not is_root_folder(get_scene_object_of_name(info.import_motion_frame)):
                 result["motion_frame"] = relative_scene_path_to_content_from_embedded(info.import_motion_frame, name, "FRAME")
+                result["add_motion_frame_velocity"] = bool2str(info.import_add_motion_frame_velocity)
         return result
 
     def export_request_info_erase_folder(self, info, name):
