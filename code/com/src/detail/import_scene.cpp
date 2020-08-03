@@ -371,6 +371,9 @@ static void  import_reques_info(
         props.motion_frame_guid = hierarchy.count("motion_frame") == 0UL ?
                 invalid_object_guid() :
                 ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("motion_frame"));
+        if (props.apply_linear_velocity && props.motion_frame_guid != invalid_object_guid() &&
+                hierarchy.count("add_motion_frame_velocity") != 0U)
+            props.add_motion_frame_velocity = hierarchy.get<bool>("add_motion_frame_velocity");
         ctx.insert_request_info_import_scene({ owner_guid, to_device_event(hierarchy.get<std::string>("event")) }, props);
     }
     else if (kind == "ERASE_FOLDER")
@@ -570,7 +573,28 @@ void  apply_initial_velocities_to_imported_rigid_bodies(
         else
         {
             if (props.apply_linear_velocity)
+            {
                 lin_vel = transform_vector(props.linear_velocity, ctx.frame_world_matrix(props.motion_frame_guid));
+                if (props.add_motion_frame_velocity)
+                {
+                    object_guid  rb_guid = invalid_object_guid();
+                    ctx.for_each_parent_folder(ctx.folder_of_frame(props.motion_frame_guid), true,
+                            [&rb_guid](object_guid, simulation_context::folder_content_type const&  fct) {
+                                auto const  it = fct.content.find(to_string(OBJECT_KIND::RIGID_BODY));
+                                if (it != fct.content.end())
+                                {
+                                    rb_guid = it->second;
+                                    return false;
+                                }
+                                return true;
+                        });
+                    if (ctx.is_valid_rigid_body_guid(rb_guid))
+                        lin_vel += ctx.compute_velocity_of_point_of_rigid_body(
+                                        rb_guid,
+                                        ctx.frame_coord_system_in_world_space(props.motion_frame_guid).origin()
+                                        );
+                }
+            }
             if (props.apply_angular_velocity)
                 ang_vel = transform_vector(props.angular_velocity, ctx.frame_world_matrix(props.motion_frame_guid));
         }
