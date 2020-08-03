@@ -92,6 +92,17 @@ def relative_scene_path_to_content(target_object_name, start_object_name, record
     return rel_path
 
 
+def relative_scene_path_to_content_from_embedded(target_object_name, start_object_name, record_name=None):
+    rel_path = relative_scene_path_to_content(target_object_name, start_object_name, record_name)
+    if rel_path.startswith("./"):
+        rel_path = '.' + rel_path
+    else:
+        rel_path = "../" + rel_path
+    if record_name is not None and rel_path == "../" + record_name:
+        return "."
+    return rel_path
+
+
 def relative_scene_path_to_embedded_content(target_object_name, start_object_name, record_name):
     rel_path = relative_scene_path_from_absolute_paths(
                     absolute_scene_path(target_object_name),
@@ -1280,11 +1291,14 @@ class E2SceneExportOperator(bpy.types.Operator):
         return { "r": num2str(c[0]), "g": num2str(c[1]), "b": num2str(c[2]), "a": num2str(c[3]) }
 
     def export_frame(self, object):
+        old_rotation_mode = object.rotation_mode
+        object.rotation_mode = "QUATERNION"
         result = {
             "object_kind": "FRAME",
             "origin": self.export_vector(object.location),
             "orientation": self.export_quaternion(object.rotation_quaternion)
         }
+        object.rotation_mode = old_rotation_mode
         return result
 
     def export_batch(self, object, data_root_dir):
@@ -1412,15 +1426,15 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
 
     def export_request_info_increment_enable_level_of_timer(self, info, name):
-        result = { "timer": relative_scene_path_to_content(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer, name, "TIMER") }
         return result
 
     def export_request_info_decrement_enable_level_of_timer(self, info, name):
-        result = { "timer": relative_scene_path_to_content(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer, name, "TIMER") }
         return result
 
     def export_request_info_reset_timer(self, info, name):
-        result = { "timer": relative_scene_path_to_content(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer, name, "TIMER") }
         return result
 
     def export_request_info_increment_enable_level_of_sensor(self, info, name):
@@ -1433,20 +1447,21 @@ class E2SceneExportOperator(bpy.types.Operator):
 
     def export_request_info_import_scene(self, info, name, data_root_dir):
         result = {
-            "import_dir": normalise_disk_path(info.import_dir, data_root_dir),
+            "import_dir": normalise_disk_path(info.import_dir, data_root_dir + "/import"),
             "cache_imported_scene": bool2str(info.cache_imported_scene)
         }
         if not is_root_folder(get_scene_object_of_name(info.import_under_folder)):
             result["under_folder"] = relative_scene_path_to_folder(info.import_under_folder, name)
         if not is_root_folder(get_scene_object_of_name(info.import_relocation_frame_folder)):
-            result["relocation_frame"] = relative_scene_path_to_content(info.import_relocation_frame_folder, name, "FRAME")
+            result["relocation_frame"] = relative_scene_path_to_content_from_embedded(
+                                                info.import_relocation_frame_folder, name, "FRAME")
         if info.apply_linear_velocity is True:
             result["linear_velocity"] = self.export_vector(info.linear_velocity)
         if info.apply_angular_velocity is True:
             result["angular_velocity"] = self.export_vector(info.angular_velocity)
         if info.apply_linear_velocity is True or info.apply_angular_velocity is True:
             if not is_root_folder(get_scene_object_of_name(info.import_motion_frame)):
-                result["motion_frame"] = relative_scene_path_to_content(info.import_motion_frame, name, "FRAME")
+                result["motion_frame"] = relative_scene_path_to_content_from_embedded(info.import_motion_frame, name, "FRAME")
         return result
 
     def export_request_info_erase_folder(self, info, name):
