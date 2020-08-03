@@ -77,6 +77,11 @@ def relative_scene_path_to_folder(target_object_name, start_object_name):
     return rel_path + '/'
     
 
+def relative_scene_path_to_folder_from_embedded(target_object_name, start_object_name):
+    rel_path = relative_scene_path_to_folder(target_object_name, start_object_name)
+    return "../" + ("" if rel_path == "./" else rel_path)
+
+
 def relative_scene_path_to_content(target_object_name, start_object_name, record_name=None):
     rel_path = relative_scene_path_from_absolute_paths(
                     absolute_scene_path(target_object_name),
@@ -1445,7 +1450,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
 
     def export_request_info_erase_folder(self, info, name):
-        result = { "erase_folder": relative_scene_path_to_folder(info.erase_folder, name) }
+        result = { "erase_folder": relative_scene_path_to_folder_from_embedded(info.erase_folder, name) }
         return result
 
     def export_request_info_set_linear_velocity(self, info, name):
