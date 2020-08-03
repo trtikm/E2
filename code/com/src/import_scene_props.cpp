@@ -18,6 +18,7 @@ import_scene_props::import_scene_props(std::string const&  import_dir_, object_g
     , linear_velocity(vector3_zero())
     , angular_velocity(vector3_zero())
     , motion_frame_guid(invalid_object_guid())
+    , add_motion_frame_velocity(false)
 {}
 
 

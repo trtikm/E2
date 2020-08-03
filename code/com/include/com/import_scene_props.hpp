@@ -21,6 +21,7 @@ struct  import_scene_props
     vector3  linear_velocity;   // Must be valid only if apply_linear_velocity is true
     vector3  angular_velocity;  // Must be valid only if apply_angular_velocity is true
     object_guid  motion_frame_guid; // can be invalid_object_guid(), even if any apply_*_velocity is true
+    bool  add_motion_frame_velocity;
 };
 
 
