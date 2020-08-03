@@ -350,7 +350,7 @@ static void  import_reques_info(
                 { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },
                 ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("sensor"))
                 );
-    else if (kind == "ctx.insert_SCENE")
+    else if (kind == "IMPORT_SCENE")
     {
         import_scene_props  props(
                 ctx.get_import_root_dir() + hierarchy.get<std::string>("import_dir"),
