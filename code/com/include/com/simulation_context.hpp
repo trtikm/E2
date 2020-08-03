@@ -4,6 +4,7 @@
 #   include <com/object_guid.hpp>
 #   include <com/frame_of_reference.hpp>
 #   include <com/device_simulator.hpp>
+#   include <com/import_scene_props.hpp>
 #   include <com/detail/import_scene.hpp>
 #   include <gfx/batch.hpp>
 #   include <gfx/batch_generators.hpp>
@@ -498,16 +499,7 @@ struct  simulation_context
     void  insert_request_info_reset_timer(device_request_info_id const&  drid, object_guid const  timer_guid);
     void  insert_request_info_increment_enable_level_of_sensor(device_request_info_id const&  drid, object_guid const  sensor_guid);
     void  insert_request_info_decrement_enable_level_of_sensor(device_request_info_id const&  drid, object_guid const  sensor_guid);
-    void  insert_request_info_import_scene(
-            device_request_info_id const&  drid,
-            std::string const&  import_dir,
-            object_guid const  under_folder_guid,
-            object_guid const  relocation_frame_guid = invalid_object_guid(),
-            bool const  cache_imported_scene = true,
-            vector3 const&  linear_velocity = vector3_zero(),
-            vector3 const&  angular_velocity = vector3_zero(),
-            object_guid const  motion_frame_guid = invalid_object_guid()
-            );
+    void  insert_request_info_import_scene(device_request_info_id const&  drid, import_scene_props const&  props);
     void  insert_request_info_erase_folder(device_request_info_id const&  drid, object_guid const  folder_guid);
     void  insert_request_info_rigid_body_set_linear_velocity(device_request_info_id const&  drid, object_guid const  rb_guid,
                                                              vector3 const&  linear_velocity);
@@ -621,15 +613,7 @@ struct  simulation_context
     std::string  get_mesh_root_dir() const;
     std::string  get_scene_root_dir() const;
     std::string  get_texture_root_dir() const;
-    void  request_import_scene_from_directory(
-            std::string const&  directory_absolute_disk_path,
-            object_guid const  under_folder_guid,
-            object_guid const  relocation_frame_guid = invalid_object_guid(),
-            bool const  cache_imported_scene = true,
-            vector3 const&  linear_velocity = vector3_zero(),
-            vector3 const&  angular_velocity = vector3_zero(),
-            object_guid const  motion_frame_guid = invalid_object_guid()
-            ) const;
+    void  request_import_scene_from_directory(import_scene_props const&  props) const;
     // Disabled (not const) for modules.
     void  insert_imported_batch_to_cache(gfx::batch const  batch);
     void  insert_imported_effects_config_to_cache(gfx::effects_config const  effects_config);
@@ -874,12 +858,7 @@ private:
     struct  request_props_imported_scene
     {
         detail::imported_scene  scene;
-        object_guid  folder_guid;
-        object_guid  relocation_frame_guid;
-        bool  store_in_cache;
-        vector3  linear_velocity;
-        vector3  angular_velocity;
-        object_guid  motion_frame_guid;
+        import_scene_props  props;
     };
 
     mutable std::vector<request_props_imported_scene>  m_requests_queue_scene_import;

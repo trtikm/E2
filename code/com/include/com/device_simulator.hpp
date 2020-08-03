@@ -2,6 +2,7 @@
 #   define COM_DEVICE_SIMULATOR_HPP_INCLUDED
 
 #   include <com/object_guid.hpp>
+#   include <com/import_scene_props.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/dynamic_array.hpp>
 #   include <vector>
@@ -92,15 +93,7 @@ struct  device_simulator
     request_info_id  insert_request_info_reset_timer(timer_id const  tid);
     request_info_id  insert_request_info_increment_enable_level_of_sensor(sensor_id const  sid);
     request_info_id  insert_request_info_decrement_enable_level_of_sensor(sensor_id const  sid);
-    request_info_id  insert_request_info_import_scene(
-            std::string const&  import_dir,
-            object_guid const  under_folder_guid,
-            object_guid const  relocation_frame_guid = invalid_object_guid(),
-            bool const  cache_imported_scene = true,
-            vector3 const&  linear_velocity = vector3_zero(),
-            vector3 const&  angular_velocity = vector3_zero(),
-            object_guid const  motion_frame_guid = invalid_object_guid()
-            );
+    request_info_id  insert_request_info_import_scene(import_scene_props const&  props);
     request_info_id  insert_request_info_erase_folder(object_guid const  folder_guid);
     request_info_id  insert_request_info_rigid_body_set_linear_velocity(object_guid const  rb_guid, vector3 const&  linear_velocity);
     request_info_id  insert_request_info_rigid_body_set_angular_velocity(object_guid const  rb_guid, vector3 const&  angular_velocity);
@@ -231,17 +224,6 @@ private:
     // All other request infos
     //
 
-    struct  request_info_import_scene
-    {
-        std::string  import_dir;
-        object_guid  under_folder_guid;
-        object_guid  relocation_frame_guid;
-        bool  cache_imported_scene;
-        vector3  linear_velocity;
-        vector3  angular_velocity;
-        object_guid  motion_frame_guid;
-    };
-
     struct  request_info_update_radial_force_field
     {
         float_32_bit  multiplier;
@@ -250,7 +232,7 @@ private:
         bool  use_mass;
     };
 
-    dynamic_array<request_info<request_info_import_scene>, index_type>  m_request_infos_import_scene;
+    dynamic_array<request_info<import_scene_props>, index_type>  m_request_infos_import_scene;
     dynamic_array<request_info<object_guid>, index_type>  m_request_infos_erase_folder;
     dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_set_linear_velocity;
     dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_set_angular_velocity;

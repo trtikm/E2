@@ -32,12 +32,10 @@ struct  simulator : public com::simulator
         render_config().render_grid = true;
 
         if (get_program_options()->has_scene_dir())
-            context()->request_import_scene_from_directory(
-                    context()->get_scene_root_dir() + get_program_options()->scene_dir(),
-                    context()->root_folder(),
-                    com::invalid_object_guid(),
-                    true
-                    );
+            context()->request_import_scene_from_directory({
+                context()->get_scene_root_dir() + get_program_options()->scene_dir(),
+                context()->root_folder()
+                });
     }
 
     void  on_begin_round() override
@@ -92,12 +90,10 @@ struct  simulator : public com::simulator
             {
                 clear(shift);
                 if (get_program_options()->has_scene_dir())
-                    context()->request_import_scene_from_directory(
+                    context()->request_import_scene_from_directory({
                             context()->get_scene_root_dir() + get_program_options()->scene_dir(),
-                            context()->root_folder(),
-                            com::invalid_object_guid(),
-                            true
-                            );
+                            context()->root_folder()
+                            });
                 simulation_config().paused = true;
             }
         }

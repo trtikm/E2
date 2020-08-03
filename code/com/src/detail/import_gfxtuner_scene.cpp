@@ -1,3 +1,4 @@
+#include <com/import_scene_props.hpp>
 #include <com/detail/import_scene.hpp>
 #include <com/simulation_context.hpp>
 #include <utility/timeprof.hpp>
@@ -17,9 +18,7 @@ extern gfx::effects_config  import_effects_config(boost::property_tree::ptree co
 extern void  apply_initial_velocities_to_imported_rigid_bodies(
         simulation_context&  ctx,
         object_guid const  folder_guid,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
+        import_scene_props const&  props
         );
 
 extern std::string  generate_unique_folder_name_from(simulation_context const&  ctx, object_guid const  folder_guid, std::string  name);
@@ -268,11 +267,7 @@ static void  import_gfxtuner_scene_node(
 void  import_gfxtuner_scene(
         simulation_context&  ctx,
         imported_scene const  scene,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
+        com::import_scene_props const&  props
         )
 {
     ASSUMPTION(scene.hierarchy().count("@pivot") != 0UL);
@@ -283,9 +278,9 @@ void  import_gfxtuner_scene(
             continue;
 
         object_guid const  folder_guid =
-                ctx.insert_folder(under_folder_guid, generate_unique_folder_name_from(ctx, under_folder_guid, it->first));
-        import_gfxtuner_scene_node(ctx, { &it->second, &scene.effects() }, folder_guid, relocation_frame_guid);
-        apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, linear_velocity, angular_velocity, motion_frame_guid);
+                ctx.insert_folder(props.folder_guid, generate_unique_folder_name_from(ctx, props.folder_guid, it->first));
+        import_gfxtuner_scene_node(ctx, { &it->second, &scene.effects() }, folder_guid, props.relocation_frame_guid);
+        apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, props);
     }
 
     ctx.process_rigid_bodies_with_invalidated_shape();

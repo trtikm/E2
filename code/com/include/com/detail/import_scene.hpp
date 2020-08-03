@@ -2,6 +2,7 @@
 #   define COM_DETAIL_IMPORT_SCENE_HPP_INCLUDED
 
 #   include <com/object_guid.hpp>
+#   include <com/import_scene_props.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/async_resource_load.hpp>
 #   include <boost/property_tree/ptree.hpp>
@@ -38,15 +39,7 @@ struct  imported_scene : public async::resource_accessor<imported_scene_data>
 };
 
 
-void  import_scene(
-        simulation_context&  ctx,
-        imported_scene const  scene,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
-        );
+void  import_scene(simulation_context&  ctx, imported_scene const  scene, import_scene_props const&  props);
 
 
 }}

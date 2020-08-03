@@ -309,23 +309,9 @@ device_simulator::request_info_id  device_simulator::insert_request_info_decreme
 }
 
 
-device_simulator::request_info_id  device_simulator::insert_request_info_import_scene(
-        std::string const&  import_dir,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        bool const  cache_imported_scene,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
-        )
+device_simulator::request_info_id  device_simulator::insert_request_info_import_scene(import_scene_props const&  props)
 {
-    return {
-        REQUEST_KIND::IMPORT_SCENE,
-        m_request_infos_import_scene.insert(request_info_import_scene{
-            import_dir, under_folder_guid, relocation_frame_guid, cache_imported_scene,
-            linear_velocity, angular_velocity, motion_frame_guid
-            })
-    };
+    return { REQUEST_KIND::IMPORT_SCENE, m_request_infos_import_scene.insert(props) };
 }
 
 
@@ -560,13 +546,9 @@ void  device_simulator::next_round_of_request_info(
 
     // All other request infos
 
-    case REQUEST_KIND::IMPORT_SCENE: {
-        request_info_import_scene const&  data = m_request_infos_import_scene.at(rid.index).data;
-        ctx.request_import_scene_from_directory(
-                data.import_dir, data.under_folder_guid, data.relocation_frame_guid, data.cache_imported_scene,
-                data.linear_velocity, data.angular_velocity, data.motion_frame_guid
-                );
-        } break;
+    case REQUEST_KIND::IMPORT_SCENE:
+        ctx.request_import_scene_from_directory(m_request_infos_import_scene.at(rid.index).data);
+        break;
     case REQUEST_KIND::ERASE_FOLDER:
         ctx.request_erase_non_root_folder(m_request_infos_erase_folder.at(rid.index).data);
         break;

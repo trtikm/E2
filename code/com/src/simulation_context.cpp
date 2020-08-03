@@ -1976,18 +1976,10 @@ void  simulation_context::insert_request_info_decrement_enable_level_of_sensor(
 }
 
 
-void  simulation_context::insert_request_info_import_scene(
-        device_request_info_id const&  drid, std::string const&  import_dir, object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid, bool const  cache_imported_scene,
-        vector3 const&  linear_velocity, vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
-        )
+void  simulation_context::insert_request_info_import_scene(device_request_info_id const&  drid, import_scene_props const&  props)
 {
-    ASSUMPTION(is_valid_folder_guid(under_folder_guid));
-    register_request_info(drid, m_device_simulator_ptr->insert_request_info_import_scene(
-            import_dir, under_folder_guid, relocation_frame_guid, cache_imported_scene,
-            linear_velocity, angular_velocity, motion_frame_guid
-            ));
+    ASSUMPTION(is_valid_folder_guid(props.folder_guid));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_import_scene(props));
 }
 
 
@@ -2311,25 +2303,12 @@ std::string  simulation_context::get_texture_root_dir() const
 }
 
 
-void  simulation_context::request_import_scene_from_directory(
-        std::string const&  directory_absolute_disk_path,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        bool const  cache_imported_scene,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
-        ) const
+void  simulation_context::request_import_scene_from_directory(import_scene_props const&  props) const
 {
-    auto const  it = m_cache_of_imported_scenes.find(detail::imported_scene::key_from_path(directory_absolute_disk_path));
+    auto const  it = m_cache_of_imported_scenes.find(detail::imported_scene::key_from_path(props.import_dir));
     m_requests_queue_scene_import.push_back({
-            it == m_cache_of_imported_scenes.end() ? detail::imported_scene(directory_absolute_disk_path) : it->second,
-            under_folder_guid,
-            relocation_frame_guid,
-            cache_imported_scene,
-            linear_velocity,
-            angular_velocity,
-            motion_frame_guid
+            it == m_cache_of_imported_scenes.end() ? detail::imported_scene(props.import_dir) : it->second,
+            props
             });
 }
 
@@ -2619,16 +2598,8 @@ void  simulation_context::process_pending_requests_import_scene()
             if (request.scene.loaded_successfully())
                 try
                 {
-                    detail::import_scene(
-                            *this,
-                            request.scene,
-                            request.folder_guid,
-                            request.relocation_frame_guid,
-                            request.linear_velocity,
-                            request.angular_velocity,
-                            request.motion_frame_guid
-                            );
-                    if (request.store_in_cache)
+                    detail::import_scene(*this, request.scene, request.props);
+                    if (request.props.store_in_cache)
                         m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
                 }
                 catch (std::exception const&  e)

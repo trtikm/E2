@@ -351,22 +351,28 @@ static void  import_reques_info(
                 ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("sensor"))
                 );
     else if (kind == "ctx.insert_SCENE")
-        ctx.insert_request_info_import_scene(
-                { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },
-                ctx.get_data_root_dir() + hierarchy.get<std::string>("import_dir"),
+    {
+        import_scene_props  props(
+                ctx.get_import_root_dir() + hierarchy.get<std::string>("import_dir"),
                 hierarchy.count("under_folder") == 0UL ?
                         ctx.root_folder() :
-                        ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("under_folder")),
-                hierarchy.count("relocation_frame") == 0UL ?
-                        invalid_object_guid() :
-                        ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("relocation_frame")),
-                hierarchy.get<bool>("cache_imported_scene"),
-                import_vector3(hierarchy.get_child("linear_velocity")),
-                import_vector3(hierarchy.get_child("angular_velocity")),
-                hierarchy.count("motion_frame") == 0UL ?
-                        invalid_object_guid() :
-                        ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("motion_frame"))
+                        ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("under_folder"))
                 );
+        props.relocation_frame_guid = hierarchy.count("relocation_frame") == 0UL ?
+                invalid_object_guid() :
+                ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("relocation_frame"));
+        props.store_in_cache = hierarchy.get<bool>("cache_imported_scene");
+        props.apply_linear_velocity = hierarchy.count("linear_velocity") != 0U;
+        props.apply_angular_velocity = hierarchy.count("angular_velocity") != 0U;
+        if (props.apply_linear_velocity)
+            props.linear_velocity = import_vector3(hierarchy.get_child("linear_velocity"));
+        if (props.apply_angular_velocity)
+            props.angular_velocity = import_vector3(hierarchy.get_child("angular_velocity"));
+        props.motion_frame_guid = hierarchy.count("motion_frame") == 0UL ?
+                invalid_object_guid() :
+                ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("motion_frame"));
+        ctx.insert_request_info_import_scene({ owner_guid, to_device_event(hierarchy.get<std::string>("event")) }, props);
+    }
     else if (kind == "ERASE_FOLDER")
         ctx.insert_request_info_erase_folder(
                 { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },
@@ -534,11 +540,12 @@ static void  import_under_folder(
 void  apply_initial_velocities_to_imported_rigid_bodies(
         simulation_context&  ctx,
         object_guid const  folder_guid,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
+        import_scene_props const&  props
         )
 {
+    if (!props.apply_linear_velocity && !props.apply_angular_velocity)
+        return;
+
     std::vector<object_guid>  rigid_body_guids;
     ctx.for_each_child_folder(folder_guid, true, true,
         [&rigid_body_guids](object_guid const  folder_guid, simulation_context::folder_content_type const&  fct) -> bool {
@@ -553,20 +560,26 @@ void  apply_initial_velocities_to_imported_rigid_bodies(
     if (!rigid_body_guids.empty())
     {
         vector3  lin_vel, ang_vel;
-        if (motion_frame_guid == invalid_object_guid())
+        if (props.motion_frame_guid == invalid_object_guid())
         {
-            lin_vel = linear_velocity;
-            ang_vel = angular_velocity;
+            if (props.apply_linear_velocity)
+                lin_vel = props.linear_velocity;
+            if (props.apply_angular_velocity)
+                ang_vel = props.angular_velocity;
         }
         else
         {
-            lin_vel = transform_vector(linear_velocity, ctx.frame_world_matrix(motion_frame_guid));
-            ang_vel = transform_vector(angular_velocity, ctx.frame_world_matrix(motion_frame_guid));
+            if (props.apply_linear_velocity)
+                lin_vel = transform_vector(props.linear_velocity, ctx.frame_world_matrix(props.motion_frame_guid));
+            if (props.apply_angular_velocity)
+                ang_vel = transform_vector(props.angular_velocity, ctx.frame_world_matrix(props.motion_frame_guid));
         }
         for (object_guid rb_guid : rigid_body_guids)
         {
-            ctx.set_rigid_body_linear_velocity(rb_guid, lin_vel);
-            ctx.set_rigid_body_angular_velocity(rb_guid, ang_vel);
+            if (props.apply_linear_velocity)
+                ctx.set_rigid_body_linear_velocity(rb_guid, lin_vel);
+            if (props.apply_angular_velocity)
+                ctx.set_rigid_body_angular_velocity(rb_guid, ang_vel);
         }
     }
 }
@@ -589,28 +602,15 @@ std::string  generate_unique_folder_name_from(simulation_context const&  ctx, ob
 extern void  import_gfxtuner_scene(
         simulation_context&  ctx,
         imported_scene const  scene,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
+        import_scene_props const&  props
         );
 
 
-void  import_scene(
-        simulation_context&  ctx,
-        imported_scene const  scene,
-        object_guid const  under_folder_guid,
-        object_guid const  relocation_frame_guid,
-        vector3 const&  linear_velocity,
-        vector3 const&  angular_velocity,
-        object_guid const  motion_frame_guid
-        )
+void  import_scene(simulation_context&  ctx, imported_scene const  scene, import_scene_props const&  props)
 {
     if (scene.hierarchy().count("@pivot") != 0UL)
     {
-        import_gfxtuner_scene(ctx, scene, under_folder_guid, relocation_frame_guid,
-                              linear_velocity, angular_velocity, motion_frame_guid);
+        import_gfxtuner_scene(ctx, scene, props);
         return;
     }
 
@@ -620,9 +620,9 @@ void  import_scene(
         for (auto it = folders->second.begin(); it != folders->second.end(); ++it)
         {
             object_guid const  folder_guid =
-                    ctx.insert_folder(under_folder_guid, generate_unique_folder_name_from(ctx, under_folder_guid, it->first));
-            import_under_folder(ctx, delayed_tasks, folder_guid, it->second, scene.effects(), relocation_frame_guid);
-            apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, linear_velocity, angular_velocity, motion_frame_guid);
+                    ctx.insert_folder(props.folder_guid, generate_unique_folder_name_from(ctx, props.folder_guid, it->first));
+            import_under_folder(ctx, delayed_tasks, folder_guid, it->second, scene.effects(), props.relocation_frame_guid);
+            apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, props);
         }
     for (auto request_infos_it = delayed_tasks.request_infos.begin(); request_infos_it != delayed_tasks.request_infos.end(); ++request_infos_it)
         import_reques_info(ctx, *request_infos_it->ptree, request_infos_it->guid);
