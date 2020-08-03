@@ -720,8 +720,9 @@ void  device_simulator::next_round_of_timer_request_infos(simulation_context con
     for (index_type  idx : m_enabled_timers)
     {
         timer const&  t = m_timers.at(idx);
-        for (request_info_id const&  id : t.request_infos)
-            next_round_of_request_info(invalid_object_guid(), invalid_object_guid(), id, ctx);
+        if (t.is_signalling)
+            for (request_info_id const&  id : t.request_infos)
+                next_round_of_request_info(invalid_object_guid(), invalid_object_guid(), id, ctx);
     }
 }
 
