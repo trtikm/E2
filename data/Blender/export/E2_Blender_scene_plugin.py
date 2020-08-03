@@ -186,6 +186,18 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             items=list_of_name_of_scene_objects
             )
 
+    apply_linear_velocity: bpy.props.BoolProperty(
+            name="Apply linear velocity",
+            description="Apply linear velocity to imported rigid bodies",
+            default=True
+            )
+
+    apply_angular_velocity: bpy.props.BoolProperty(
+            name="Apply angular velocity",
+            description="Apply angular velocity to imported rigid bodies",
+            default=True
+            )
+
     linear_velocity: bpy.props.FloatVectorProperty(
             name="Linear velocity",
             description="A linear velocity for the rigid body",
@@ -865,8 +877,10 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         self.warn_object_of_name_is_not_under_root_folder(request_info.import_under_folder, layout, "Under folder")
         self.warn_object_is_not_folder_with_frame(request_info.import_relocation_frame_folder, layout, "Relocation frame", True)
         self.warn_object_of_name_is_not_under_root_folder(request_info.import_relocation_frame_folder, layout, "Relocation frame")
-        self.warn_object_is_not_folder_with_frame(request_info.import_motion_frame, layout, "Motion frame", True)
-        self.warn_object_of_name_is_not_under_root_folder(request_info.import_motion_frame, layout, "Motion frame")
+        if request_info.apply_linear_velocity is True or request_info.apply_angular_velocity is True:
+            self.warn_object_is_not_folder_with_frame(request_info.import_motion_frame, layout, "Motion frame", True)
+            self.warn_object_of_name_is_not_under_root_folder(request_info.import_motion_frame, layout, "Motion frame")
+
         row = layout.row()
         row.prop(request_info, "import_dir")
         row = layout.row()
@@ -875,12 +889,24 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(request_info, "import_relocation_frame_folder")
         row = layout.row()
         row.prop(request_info, "cache_imported_scene")
-        row = layout.row()
-        row.prop(request_info, "import_motion_frame")
-        row = layout.row()
-        row.prop(request_info, "linear_velocity")
-        row = layout.row()
-        row.prop(request_info, "angular_velocity")
+
+        box = layout.box()
+        row = box.row()
+        row.prop(request_info, "apply_linear_velocity")
+        if request_info.apply_linear_velocity is True:
+            row = box.row()
+            row.prop(request_info, "linear_velocity")
+
+        box = layout.box()
+        row = box.row()
+        row.prop(request_info, "apply_angular_velocity")
+        if request_info.apply_angular_velocity is True:
+            row = layout.row()
+            row.prop(request_info, "angular_velocity")
+
+        if request_info.apply_linear_velocity is True or request_info.apply_angular_velocity is True:
+            row = layout.row()
+            row.prop(request_info, "import_motion_frame")
 
     def draw_request_info_erase_folder(self, layout, object, object_props, request_info):
         self.warn_object_is_not_folder(request_info.erase_folder, layout, "Folder to erase")
@@ -1403,16 +1429,19 @@ class E2SceneExportOperator(bpy.types.Operator):
     def export_request_info_import_scene(self, info, name, data_root_dir):
         result = {
             "import_dir": normalise_disk_path(info.import_dir, data_root_dir),
-            "cache_imported_scene": bool2str(info.cache_imported_scene),
-            "linear_velocity": self.export_vector(info.linear_velocity),
-            "angular_velocity": self.export_vector(info.angular_velocity)
+            "cache_imported_scene": bool2str(info.cache_imported_scene)
         }
         if not is_root_folder(get_scene_object_of_name(info.import_under_folder)):
             result["under_folder"] = relative_scene_path_to_folder(info.import_under_folder, name)
         if not is_root_folder(get_scene_object_of_name(info.import_relocation_frame_folder)):
             result["relocation_frame"] = relative_scene_path_to_content(info.import_relocation_frame_folder, name, "FRAME")
-        if not is_root_folder(get_scene_object_of_name(info.import_motion_frame)):
-            result["motion_frame"] = relative_scene_path_to_content(info.import_motion_frame, name, "FRAME")
+        if info.apply_linear_velocity is True:
+            result["linear_velocity"] = self.export_vector(info.linear_velocity)
+        if info.apply_angular_velocity is True:
+            result["angular_velocity"] = self.export_vector(info.angular_velocity)
+        if info.apply_linear_velocity is True or info.apply_angular_velocity is True:
+            if not is_root_folder(get_scene_object_of_name(info.import_motion_frame)):
+                result["motion_frame"] = relative_scene_path_to_content(info.import_motion_frame, name, "FRAME")
         return result
 
     def export_request_info_erase_folder(self, info, name):
