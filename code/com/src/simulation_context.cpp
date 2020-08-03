@@ -1351,6 +1351,19 @@ void  simulation_context::release_acquired_custom_constraint_id_back_to_physics(
 }
 
 
+vector3  simulation_context::compute_velocity_of_point_of_rigid_body(
+        object_guid const  rigid_body_guid, vector3 const&  point_in_world_space
+        ) const
+{
+    return angeo::compute_velocity_of_point_of_rigid_body(
+                mass_centre_of_rigid_body(rigid_body_guid),
+                linear_velocity_of_rigid_body(rigid_body_guid),
+                angular_velocity_of_rigid_body(rigid_body_guid),
+                point_in_world_space    
+                );
+}
+
+
 object_guid  simulation_context::insert_rigid_body(
         object_guid const  under_folder_guid,
         bool const  is_moveable,
