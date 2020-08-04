@@ -68,12 +68,12 @@ inline bool  has_sensor(scene const&  s, scene_record_id const&  id)
     return has_record(s, id);
 }
 
-inline void  insert_sensor(scene_node&  n, scene_node::record_name const&  sensor_name, ai::sensor_id const  sensor_id, sensor_props const&  props)
+inline void  insert_sensor(scene_node&  n, scene_node::record_name const&  sensor_name, aiold::sensor_id const  sensor_id, sensor_props const&  props)
 {
     insert_record<sensor>(n, make_sensor_node_record_id(sensor_name), sensor(sensor_id, props));
 }
 
-inline void  insert_sensor(scene&  s, scene_record_id const&  id, ai::sensor_id const  sensor_id, sensor_props const&  props)
+inline void  insert_sensor(scene&  s, scene_record_id const&  id, aiold::sensor_id const  sensor_id, sensor_props const&  props)
 {
     insert_record<sensor>(s, id, sensor(sensor_id, props));
 }

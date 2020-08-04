@@ -9,8 +9,8 @@
 #include <scene/scene_history.hpp>
 #include <scene/scene_node_record_id.hpp>
 #include <scene/scene_utils_specialised.hpp>
-#include <ai/devices.hpp>
-#include <ai/skeleton_utils.hpp>
+#include <aiold/devices.hpp>
+#include <aiold/skeleton_utils.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -116,10 +116,10 @@ void  register_record_handler_for_insert_scene_record(
                         //    }
                         //}
 
-                        ai::skeletal_motion_templates  skeletal_motion_templates;
+                        aiold::skeletal_motion_templates  skeletal_motion_templates;
                         if (!skeleton_dir.empty())
                         {
-                            skeletal_motion_templates = ai::skeletal_motion_templates(skeleton_dir, 100U);
+                            skeletal_motion_templates = aiold::skeletal_motion_templates(skeleton_dir, 100U);
                             if (!skeletal_motion_templates.wait_till_load_is_finished())
                             {
                                 w->wnd()->print_status_message("ERROR: Load of skeletal_motion_templates '" + skeletal_motion_templates.key().get_unique_id() + "' has FAILED!", 10000);
@@ -133,10 +133,10 @@ void  register_record_handler_for_insert_scene_record(
                                 scn::scene_record_id const&  record_id) -> bool
                                 {
                                     scn::device_props const  props {
-                                        ai::DEVICE_KIND::DEFAULT,
+                                        aiold::DEVICE_KIND::DEFAULT,
                                         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates)
                                     };
-                                    std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >  sensor_nodes_and_kinds;
+                                    std::vector<std::pair<scn::scene_record_id, aiold::SENSOR_KIND> >  sensor_nodes_and_kinds;
                                     dialog_windows::device_props_dialog  dlg(w->wnd(), props, sensor_nodes_and_kinds);
                                     dlg.exec();
                                     if (!dlg.ok())
@@ -163,7 +163,7 @@ void  register_record_handler_for_update_scene_record(
             [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
                     scn::device_props  old_props;
                     w->wnd()->glwindow().call_now(&simulator::get_device_info, std::cref(record_id.get_node_id()), std::ref(old_props));
-                    std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >  sensor_nodes_and_kinds;
+                    std::vector<std::pair<scn::scene_record_id, aiold::SENSOR_KIND> >  sensor_nodes_and_kinds;
                     w->wnd()->glwindow().call_now(
                             &simulator::get_sensor_nodes_and_kinds_under_scene_node,
                             std::cref(record_id.get_node_id()),

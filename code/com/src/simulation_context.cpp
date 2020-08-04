@@ -22,7 +22,7 @@ simulation_context_ptr  simulation_context::create(
         std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
         std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
         std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-        std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
+        std::shared_ptr<aiold::simulator> const  ai_simulator_ptr_,
         std::string const&  data_root_dir_
         )
 {
@@ -41,7 +41,7 @@ simulation_context::simulation_context(
         std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
         std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
         std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-        std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
+        std::shared_ptr<aiold::simulator> const  ai_simulator_ptr_,
         std::string const&  data_root_dir_
         )
     : m_root_folder()
@@ -2073,7 +2073,7 @@ std::string const&  simulation_context::name_of_agent(object_guid const  agent_g
 }
 
 
-object_guid  simulation_context::to_agent_guid(ai::object_id const  agid) const
+object_guid  simulation_context::to_agent_guid(aiold::object_id const  agid) const
 {
     return m_agids_to_guids.at(agid);
 }

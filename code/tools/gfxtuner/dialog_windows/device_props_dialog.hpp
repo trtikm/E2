@@ -6,10 +6,10 @@
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/records/device/device.hpp>
-#   include <ai/device_kind.hpp>
-#   include <ai/sensor_kind.hpp>
-#   include <ai/sensor_action.hpp>
-#   include <ai/property_map.hpp>
+#   include <aiold/device_kind.hpp>
+#   include <aiold/sensor_kind.hpp>
+#   include <aiold/sensor_action.hpp>
+#   include <aiold/property_map.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <QDialog>
 #   include <QPushButton>
@@ -23,7 +23,7 @@ struct  device_props_dialog : public QDialog
     device_props_dialog(
             program_window* const  wnd,
             scn::device_props const&  current_props,
-            std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> > const&  sensor_nodes_and_kinds
+            std::vector<std::pair<scn::scene_record_id, aiold::SENSOR_KIND> > const&  sensor_nodes_and_kinds
             );
 
     bool  ok() const { return m_ok; }

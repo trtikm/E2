@@ -9,10 +9,10 @@
 #include <angeo/skeleton_kinematics.hpp>
 #include <angeo/utility.hpp>
 #include <angeo/tensor_std_specialisations.hpp>
-#include <ai/skeleton_utils.hpp>
-#include <ai/sensory_controller_ray_cast_sight.hpp>
-#include <ai/property_map.hpp>
-#include <ai/sensor_action.hpp>
+#include <aiold/skeleton_utils.hpp>
+#include <aiold/sensory_controller_ray_cast_sight.hpp>
+#include <aiold/property_map.hpp>
+#include <aiold/sensor_action.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -81,7 +81,7 @@ private:
 
 void  skeleton_enumerate_nodes_of_bones(
         scn::scene_node_ptr const  agent_node_ptr,
-        ai::skeletal_motion_templates&  motion_templates,
+        aiold::skeletal_motion_templates&  motion_templates,
         std::function<
                 bool(    // Continue in the enumeration of the remaining bones? I.e. 'false' early terminates the enumeration.
                     natural_32_bit,         // bone index
@@ -113,7 +113,7 @@ void  skeleton_enumerate_nodes_of_bones(
 scn::scene_node_id  skeleton_build_scene_node_id_of_bones(
         natural_32_bit const  bone,
         std::vector<integer_32_bit> const&  parents,
-        ai::skeletal_motion_templates::bone_names const&  names
+        aiold::skeletal_motion_templates::bone_names const&  names
         )
 {
     scn::scene_node_id::path_type  path;
@@ -495,7 +495,7 @@ simulator::simulator()
     , m_binding_of_rigid_bodies()
     , m_rigid_bodies_external_linear_accelerations()
     , m_rigid_bodies_external_angular_accelerations()
-    , m_ai_simulator_ptr(std::make_shared<ai::simulator>(std::make_shared<bind_ai_scene_to_simulator>(this)))
+    , m_ai_simulator_ptr(std::make_shared<aiold::simulator>(std::make_shared<bind_ai_scene_to_simulator>(this)))
     , m_ai_requests_immediate()
     , m_ai_requests_delayed()
 
@@ -797,13 +797,13 @@ if (keyboard_props().was_just_released(qtgl::KEY_F3()))
 
 if (render_retinas)
 {
-    ai::agents const&  agents = get_ai_simulator()->get_agents();
-    for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
+    aiold::agents const&  agents = get_ai_simulator()->get_agents();
+    for (aiold::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
     {
         if (!agents.ready(agent_id))
             continue;
 
-        ai::retina_ptr const  retina_ptr = agents.at(agent_id).get_blackboard()->m_retina_ptr;
+        aiold::retina_ptr const  retina_ptr = agents.at(agent_id).get_blackboard()->m_retina_ptr;
         if (retina_ptr == nullptr)
             continue;
 
@@ -960,11 +960,11 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 
     if (m_do_show_ai_action_controller_props)
     {
-        ai::agents const&  agents = get_ai_simulator()->get_agents();
-        for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
+        aiold::agents const&  agents = get_ai_simulator()->get_agents();
+        for (aiold::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
             if (agents.ready(agent_id))
             {
-                ai::blackboard_agent_const_ptr const  blackboard = agents.at(agent_id).get_blackboard();
+                aiold::blackboard_agent_const_ptr const  blackboard = agents.at(agent_id).get_blackboard();
                 for (auto const&  name_and_info : blackboard->m_motion_templates.look_at())
                 {
                     scn::scene_node_id const  raw_bone_id = detail::skeleton_build_scene_node_id_of_bones(
@@ -973,7 +973,7 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                             blackboard->m_motion_templates.names()
                             );
                     scn::scene_node_id const  bone_id =
-                            get_ai_simulator()->get_record_id({ ai::OBJECT_KIND::AGENT, agent_id })->get_node_id() / raw_bone_id;
+                            get_ai_simulator()->get_record_id({ aiold::OBJECT_KIND::AGENT, agent_id })->get_node_id() / raw_bone_id;
                     scn::scene_node_ptr const  bone_node_ptr = get_scene_node(bone_id);
                     if (bone_node_ptr != nullptr)
                     {
@@ -1119,18 +1119,18 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 
 
 void  simulator::process_ai_requests(
-        std::vector<ai::scene::request_ptr>&  ai_requests,
+        std::vector<aiold::scene::request_ptr>&  ai_requests,
         float_64_bit const  time_to_simulate_in_seconds
         )
 {
     TMPROF_BLOCK();
 
-    std::vector<ai::scene::request_ptr>  requests(ai_requests.rbegin(), ai_requests.rend());
+    std::vector<aiold::scene::request_ptr>  requests(ai_requests.rbegin(), ai_requests.rend());
     ai_requests.clear();
 
     while (!requests.empty())
     {
-        if (auto const  request = ai::scene::cast<ai::scene::request_merge_scene>(requests.back()))
+        if (auto const  request = aiold::scene::cast<aiold::scene::request_merge_scene>(requests.back()))
         {
             scn::scene_node_ptr const  root_node_ptr =
                     import_scene(
@@ -1187,7 +1187,7 @@ void  simulator::process_ai_requests(
                             );
             }
         }
-        else if (auto const  request = ai::scene::cast<ai::scene::request_erase_nodes_tree>(requests.back()))
+        else if (auto const  request = aiold::scene::cast<aiold::scene::request_erase_nodes_tree>(requests.back()))
         {
             ASSUMPTION(
                 [](scn::scene_node_ptr const  node_ptr) -> bool {
@@ -1199,7 +1199,7 @@ void  simulator::process_ai_requests(
                 );
             erase_scene_node(request->root_nid);
         }
-        else if (auto const  request = ai::scene::cast<ai::scene::request_update_radial_force_field>(requests.back()))
+        else if (auto const  request = aiold::scene::cast<aiold::scene::request_update_radial_force_field>(requests.back()))
         {
             scn::scene_node_ptr const  affected_node_ptr = find_nearest_rigid_body_node(request->affected_object_rid.get_node_id());
             scn::scene_node_ptr const  field_node_ptr = get_scene_node(request->force_field_rid.get_node_id());
@@ -1255,7 +1255,7 @@ void  simulator::process_ai_requests(
                         );
             }
         }
-        else if (auto const  request = ai::scene::cast<ai::scene::request_update_linear_force_field>(requests.back()))
+        else if (auto const  request = aiold::scene::cast<aiold::scene::request_update_linear_force_field>(requests.back()))
         {
             scn::scene_node_ptr const  affected_node_ptr = find_nearest_rigid_body_node(request->affected_object_rid.get_node_id());
             if (affected_node_ptr != nullptr)
@@ -1287,7 +1287,7 @@ void  simulator::process_ai_requests(
                         );
             }
         }
-        else if (auto const  request = ai::scene::cast<ai::scene::request_leave_force_field>(requests.back()))
+        else if (auto const  request = aiold::scene::cast<aiold::scene::request_leave_force_field>(requests.back()))
         {
             scn::scene_node_ptr const  affected_node_ptr = find_nearest_rigid_body_node(request->affected_object_rid.get_node_id());
             if (affected_node_ptr != nullptr)
@@ -1299,7 +1299,7 @@ void  simulator::process_ai_requests(
                         request->force_field_rid.get_node_id()
                         );
         }
-        else if (auto const  request = ai::scene::cast<ai::scene::request_insert_rigid_body_constraint>(requests.back()))
+        else if (auto const  request = aiold::scene::cast<aiold::scene::request_insert_rigid_body_constraint>(requests.back()))
         {
             scn::scene_node_ptr const  other_node_ptr = find_nearest_rigid_body_node(request->other_rb_nid);
             if (other_node_ptr != nullptr)
@@ -1467,14 +1467,14 @@ void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit cons
     float_32_bit const  camera_proj_dist = 0.05f;
     float_32_bit const  camera_origin_z_shift = 0.0f;
 
-    ai::agents const&  agents = get_ai_simulator()->get_agents();
-    for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
+    aiold::agents const&  agents = get_ai_simulator()->get_agents();
+    for (aiold::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
     {
-        ai::agents const&  agents = get_ai_simulator()->get_agents();
+        aiold::agents const&  agents = get_ai_simulator()->get_agents();
         if (!agents.ready(agent_id))
             continue;
 
-        ai::retina_ptr const  retina_ptr = agents.at(agent_id).get_blackboard()->m_retina_ptr;
+        aiold::retina_ptr const  retina_ptr = agents.at(agent_id).get_blackboard()->m_retina_ptr;
         if (retina_ptr == nullptr)
             continue;
 
@@ -1487,10 +1487,10 @@ void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit cons
             continue;
         m_offscreen_recovery_times.erase(recovery_time_it);
 
-        ai::sensory_controller_sight_ptr const  sight_ptr = agents.at(agent_id).get_sensory_controller().get_sight();
+        aiold::sensory_controller_sight_ptr const  sight_ptr = agents.at(agent_id).get_sensory_controller().get_sight();
         if (sight_ptr == nullptr)
             continue;
-        ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
+        aiold::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
         if (camera_ptr == nullptr)
             continue;
 
@@ -1965,7 +1965,7 @@ void  simulator::render_scene_batches(
             else
                 for (auto const& node_ptr : batch_and_nodes.second)
                 {
-                    ai::skeletal_motion_templates  motion_templates;
+                    aiold::skeletal_motion_templates  motion_templates;
                     {
                         scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
                         if (agent_ptr != nullptr && agent_ptr->get_props().m_skeleton_props != nullptr)
@@ -2408,16 +2408,16 @@ void  simulator::render_ai_action_controller_props(
         draw_state = m_cache_of_batches_of_ai_agents.lines_batch.get_draw_state();
     }
 
-    ai::agents const&  agents = get_ai_simulator()->get_agents();
+    aiold::agents const&  agents = get_ai_simulator()->get_agents();
 
-    for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
+    for (aiold::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
     {
         if (!agents.ready(agent_id))
             continue;
-        ai::sensory_controller_sight_ptr const  sight_ptr = agents.at(agent_id).get_sensory_controller().get_sight();
+        aiold::sensory_controller_sight_ptr const  sight_ptr = agents.at(agent_id).get_sensory_controller().get_sight();
         if (sight_ptr == nullptr)
             continue;
-        ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
+        aiold::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
         if (camera_ptr == nullptr)
         {
             m_cache_of_batches_of_ai_agents.sight_frustum_batches.erase(agent_id);
@@ -2473,18 +2473,18 @@ void  simulator::render_ai_action_controller_props(
             __dbg_batch_coord_cross.has_instancing_data()
             ;
 
-    for (ai::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
+    for (aiold::agent_id  agent_id = 0U; agent_id != agents.size(); ++agent_id)
     {
         if (!agents.ready(agent_id))
             continue;
 
-        ai::sensory_controller_ray_cast_sight_ptr const  sight_ptr =
-                std::dynamic_pointer_cast<ai::sensory_controller_ray_cast_sight>(
+        aiold::sensory_controller_ray_cast_sight_ptr const  sight_ptr =
+                std::dynamic_pointer_cast<aiold::sensory_controller_ray_cast_sight>(
                         agents.at(agent_id).get_sensory_controller().get_sight()
                         );
         if (sight_ptr == nullptr)
             continue;
-        ai::sensory_controller_ray_cast_sight::ray_casts_in_time const&  ray_casts_in_time = sight_ptr->get_ray_casts_in_time();
+        aiold::sensory_controller_ray_cast_sight::ray_casts_in_time const&  ray_casts_in_time = sight_ptr->get_ray_casts_in_time();
         if (ray_casts_in_time.empty())
             continue;
 
@@ -2554,7 +2554,7 @@ void  simulator::render_ai_action_controller_props(
 }
 
 
-void  simulator::accept_ai_request(ai::scene::request_ptr const  request, bool const  delay_processing_to_next_time_step)
+void  simulator::accept_ai_request(aiold::scene::request_ptr const  request, bool const  delay_processing_to_next_time_step)
 {
     (delay_processing_to_next_time_step ? &m_ai_requests_delayed : &m_ai_requests_immediate)->push_back(request);
 }
@@ -3236,17 +3236,17 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::agent_props 
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     ASSUMPTION(node_ptr != nullptr && !node_ptr->has_parent());
-    ai::agent_id const  agent_id =
+    aiold::agent_id const  agent_id =
             get_ai_simulator()->insert_agent(
                     id,
                     props.m_skeleton_props->skeletal_motion_templates,
                     props.m_agent_kind,
                     props.m_sensor_action_map,
-                    ai::make_retina(100U, 100U, true)
+                    aiold::make_retina(100U, 100U, true)
                     );
     scn::insert_agent(*node_ptr, agent_id, props);
 
-    ai::object_id const  agent_oid{ ai::OBJECT_KIND::AGENT, agent_id };
+    aiold::object_id const  agent_oid{ aiold::OBJECT_KIND::AGENT, agent_id };
     auto const  set_owner_of_sensor = [this, &agent_oid](scn::scene_node_ptr const  node_ptr) -> bool {
         for (auto const& name_holder : scn::get_sensor_holders(*node_ptr))
             get_ai_simulator()->set_owner_of_sensor(scn::as_sensor(name_holder.second)->id(), agent_oid);
@@ -3301,7 +3301,7 @@ void  simulator::insert_device(scn::scene_record_id const&  id, scn::device_prop
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
-    ai::device_id const  device_id =
+    aiold::device_id const  device_id =
             get_ai_simulator()->insert_device(
                     id,
                     props.m_skeleton_props->skeletal_motion_templates,
@@ -3310,7 +3310,7 @@ void  simulator::insert_device(scn::scene_record_id const&  id, scn::device_prop
                     );
     scn::insert_device(*node_ptr, device_id, props);
 
-    ai::object_id const  device_oid{ ai::OBJECT_KIND::DEVICE, device_id };
+    aiold::object_id const  device_oid{ aiold::OBJECT_KIND::DEVICE, device_id };
     auto const  set_owner_of_sensor = [this, &device_oid](scn::scene_node_ptr const  node_ptr) -> bool {
         for (auto const&  name_holder : scn::get_sensor_holders(*node_ptr))
             get_ai_simulator()->set_owner_of_sensor(scn::as_sensor(name_holder.second)->id(), device_oid);
@@ -3365,17 +3365,17 @@ void  simulator::insert_sensor(scn::scene_record_id const&  id, scn::sensor_prop
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
-    ai::object_id  owner_id = ai::object_id::make_invalid();
+    aiold::object_id  owner_id = aiold::object_id::make_invalid();
     for (scn::scene_node_ptr  owner_node_ptr = node_ptr; owner_node_ptr != nullptr; owner_node_ptr = owner_node_ptr->get_parent())
     {
         if (scn::agent const* const  agent_ptr = scn::get_agent(*owner_node_ptr))
         {
-            owner_id = ai::object_id(ai::OBJECT_KIND::AGENT, agent_ptr->id());
+            owner_id = aiold::object_id(aiold::OBJECT_KIND::AGENT, agent_ptr->id());
             break;
         }
         if (scn::device const* const  device_ptr = scn::get_device(*owner_node_ptr))
         {
-            owner_id = ai::object_id(ai::OBJECT_KIND::DEVICE, device_ptr->id());
+            owner_id = aiold::object_id(aiold::OBJECT_KIND::DEVICE, device_ptr->id());
             break;
         }
     }
@@ -3385,7 +3385,7 @@ void  simulator::insert_sensor(scn::scene_record_id const&  id, scn::sensor_prop
             [&collider_nids](scn::collider&, scn::scene_node_ptr const  ptr) -> void {
                 collider_nids.push_back(ptr->get_id());
             });
-    ai::sensor_id const  sensor_id =
+    aiold::sensor_id const  sensor_id =
             get_ai_simulator()->insert_sensor(
                     id,
                     props.m_sensor_kind,
@@ -3426,7 +3426,7 @@ void  simulator::get_sensor_info(scn::scene_record_id const& id, scn::sensor_pro
 
 void  simulator::get_sensor_nodes_and_kinds_under_scene_node(
         scn::scene_node_id const&  search_root_id,
-        std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >&  output_sensor_nodes_and_kinds,
+        std::vector<std::pair<scn::scene_record_id, aiold::SENSOR_KIND> >&  output_sensor_nodes_and_kinds,
         bool const  relativise_sensor_record_ids_to_root_id
         )
 {
@@ -3640,9 +3640,9 @@ void  simulator::load_agent(boost::property_tree::ptree const&  data, scn::scene
     TMPROF_BLOCK();
 
     boost::filesystem::path const  skeleton_dir = data.get<std::string>("skeleton_dir");
-    ai::skeletal_motion_templates const skeletal_motion_templates(skeleton_dir, 75U);
+    aiold::skeletal_motion_templates const skeletal_motion_templates(skeleton_dir, 75U);
     scn::agent_props const  props{
-        ai::as_agent_kind(data.get<std::string>("kind")),
+        aiold::as_agent_kind(data.get<std::string>("kind")),
         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates),
         as_sensor_action_map(data.get_child("sensor_action_map"))
     };
@@ -3656,7 +3656,7 @@ void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property
 
     scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
     ASSUMPTION(agent_ptr != nullptr);
-    data.put("kind", ai::as_string(agent_ptr->get_props().m_agent_kind));
+    data.put("kind", aiold::as_string(agent_ptr->get_props().m_agent_kind));
     data.put("skeleton_dir", agent_ptr->get_props().m_skeleton_props->skeleton_directory.string());
     data.put_child("sensor_action_map", as_ptree(agent_ptr->get_props().m_sensor_action_map));
 }
@@ -3668,10 +3668,10 @@ void  simulator::load_device(boost::property_tree::ptree const&  data, scn::scen
 
     boost::filesystem::path const  skeleton_dir = data.get<std::string>("skeleton_dir");
     scn::device_props const  props{
-        ai::as_device_kind(data.get<std::string>("kind")),
+        aiold::as_device_kind(data.get<std::string>("kind")),
         scn::create_skeleton_props(
                 skeleton_dir,
-                skeleton_dir.empty() ? ai::skeletal_motion_templates() : ai::skeletal_motion_templates(skeleton_dir, 75U)
+                skeleton_dir.empty() ? aiold::skeletal_motion_templates() : aiold::skeletal_motion_templates(skeleton_dir, 75U)
                 ),
         as_sensor_action_map(data.get_child("sensor_action_map"))
     };
@@ -3685,7 +3685,7 @@ void  simulator::save_device(scn::scene_node_ptr const  node_ptr, boost::propert
 
     scn::device* const  device_ptr = scn::get_device(*node_ptr);
     ASSUMPTION(device_ptr != nullptr);
-    data.put("kind", ai::as_string(device_ptr->get_props().m_device_kind));
+    data.put("kind", aiold::as_string(device_ptr->get_props().m_device_kind));
     data.put("skeleton_dir", device_ptr->get_props().m_skeleton_props->skeleton_directory.string());
     data.put_child("sensor_action_map", as_ptree(device_ptr->get_props().m_sensor_action_map));
 }

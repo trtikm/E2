@@ -25,7 +25,7 @@
 #   include <angeo/tensor_equal_to.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
-#   include <ai/simulator.hpp>
+#   include <aiold/simulator.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <utility/random.hpp>
 #   include <boost/property_tree/ptree.hpp>
@@ -102,7 +102,7 @@ struct simulator : public qtgl::real_time_simulator
     scn::scene_node_ptr  get_scene_node(scn::scene_node_id const&  id) const
     { return get_scene().get_scene_node(id); }
 
-    void  accept_ai_request(ai::scene::request_ptr const  request, bool const  delay_processing_to_next_time_step);
+    void  accept_ai_request(aiold::scene::request_ptr const  request, bool const  delay_processing_to_next_time_step);
 
     scn::scene_node_ptr  insert_scene_simulation_node(scn::scene_node_id const& id);
 
@@ -262,7 +262,7 @@ struct simulator : public qtgl::real_time_simulator
 
     void  get_sensor_nodes_and_kinds_under_scene_node(
             scn::scene_node_id const&  search_root_id,
-            std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> >&  output_sensor_nodes_and_kinds,
+            std::vector<std::pair<scn::scene_record_id, aiold::SENSOR_KIND> >&  output_sensor_nodes_and_kinds,
             bool const  relativise_sensor_record_ids_to_root_id
             );
 
@@ -286,7 +286,7 @@ struct simulator : public qtgl::real_time_simulator
     scn::scene_history_ptr  get_scene_history() { return m_scene_history; }
     std::shared_ptr<angeo::collision_scene>  get_collision_scene() const { return m_collision_scene_ptr; }
     std::shared_ptr<angeo::rigid_body_simulator>  get_rigid_body_simulator() const { return m_rigid_body_simulator_ptr; }
-    std::shared_ptr<ai::simulator>  get_ai_simulator() const { return m_ai_simulator_ptr; }
+    std::shared_ptr<aiold::simulator>  get_ai_simulator() const { return m_ai_simulator_ptr; }
 
     void  set_position_of_scene_node(scn::scene_node_id const&  id, vector3 const&  new_origin);
     void  set_orientation_of_scene_node(scn::scene_node_id const&  id, quaternion const&  new_orientation);
@@ -346,7 +346,7 @@ private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
-    void  process_ai_requests(std::vector<ai::scene::request_ptr>&  ai_requests, float_64_bit const  time_to_simulate_in_seconds);
+    void  process_ai_requests(std::vector<aiold::scene::request_ptr>&  ai_requests, float_64_bit const  time_to_simulate_in_seconds);
     scn::scene_node_ptr  import_scene(
             std::string const&  scene_id,
             scn::scene_node_id const&  parent_id,
@@ -491,7 +491,7 @@ private:
     {
         std::unique_ptr<std::pair<std::vector< std::pair<vector3, vector3> >, std::vector<vector4> > >  lines;
         qtgl::batch  lines_batch;
-        std::unordered_map<ai::agent_id, qtgl::batch>  sight_frustum_batches;
+        std::unordered_map<aiold::agent_id, qtgl::batch>  sight_frustum_batches;
 
         void clear()
         {
@@ -518,9 +518,9 @@ private:
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
     std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> >  m_rigid_bodies_external_linear_accelerations;
     std::unordered_map<scn::scene_node_id, std::unordered_map<scn::scene_node_id, vector3> >  m_rigid_bodies_external_angular_accelerations;
-    std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
-    std::vector<ai::scene::request_ptr>  m_ai_requests_immediate;
-    std::vector<ai::scene::request_ptr>  m_ai_requests_delayed;
+    std::shared_ptr<aiold::simulator>  m_ai_simulator_ptr;
+    std::vector<aiold::scene::request_ptr>  m_ai_requests_immediate;
+    std::vector<aiold::scene::request_ptr>  m_ai_requests_delayed;
 
     // Debugging
 
@@ -528,8 +528,8 @@ private:
 
     // Experiment
 
-    std::unordered_map<ai::agent_id, std::pair<qtgl::offscreen_ptr, qtgl::offscreen_ptr> >  m_offscreens;
-    std::unordered_map<ai::agent_id, float_32_bit >  m_offscreen_recovery_times;
+    std::unordered_map<aiold::agent_id, std::pair<qtgl::offscreen_ptr, qtgl::offscreen_ptr> >  m_offscreens;
+    std::unordered_map<aiold::agent_id, float_32_bit >  m_offscreen_recovery_times;
 };
 
 

@@ -38,12 +38,12 @@ inline bool  has_device(scene_node const&  node)
     return get_device(node) != nullptr;
 }
 
-inline void  insert_device(scene_node&  n, ai::device_id const  device_id, device_props const&  props)
+inline void  insert_device(scene_node&  n, aiold::device_id const  device_id, device_props const&  props)
 {
     insert_record<device>(n, make_device_node_record_id(), device(device_id, props));
 }
 
-inline void  insert_device(scene&  s, scene_node_id const&  node_id, ai::device_id const  device_id, device_props const&  props)
+inline void  insert_device(scene&  s, scene_node_id const&  node_id, aiold::device_id const  device_id, device_props const&  props)
 {
     insert_record<device>(s, make_device_record_id(node_id), device(device_id, props));
 }

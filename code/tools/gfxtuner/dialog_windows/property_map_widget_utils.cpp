@@ -1,5 +1,5 @@
 #include <gfxtuner/dialog_windows/property_map_widget_utils.hpp>
-#include <ai/sensor.hpp>
+#include <aiold/sensor.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/lock_bool.hpp>
 #include <utility/assumptions.hpp>
@@ -11,7 +11,7 @@
 namespace dialog_windows {
 
 
-void  on_property_map_table_changed(QTableWidget* const  table, ai::property_map&  props)
+void  on_property_map_table_changed(QTableWidget* const  table, aiold::property_map&  props)
 {
     int const  row = table->currentRow();
     int const  column = table->currentColumn();
@@ -26,23 +26,23 @@ void  on_property_map_table_changed(QTableWidget* const  table, ai::property_map
     if (props.has(name))
         props.set(name, as_property_map_value(props.get_type(name), value));
     else if (value.empty())
-        props.set(name, as_property_map_value(ai::property_map::PROPERTY_TYPE::STRING, value));
+        props.set(name, as_property_map_value(aiold::property_map::PROPERTY_TYPE::STRING, value));
     else if (value.front() == '+' || value.front() == '-' || std::isdigit(value.front()))
     {
         if (value.find('.') == std::string::npos)
-            props.set(name, as_property_map_value(ai::property_map::PROPERTY_TYPE::INT, value));
+            props.set(name, as_property_map_value(aiold::property_map::PROPERTY_TYPE::INT, value));
         else
-            props.set(name, as_property_map_value(ai::property_map::PROPERTY_TYPE::FLOAT, value));
+            props.set(name, as_property_map_value(aiold::property_map::PROPERTY_TYPE::FLOAT, value));
     }
     else
-        props.set(name, as_property_map_value(ai::property_map::PROPERTY_TYPE::STRING, value));
+        props.set(name, as_property_map_value(aiold::property_map::PROPERTY_TYPE::STRING, value));
 }
 
 
 void  rebuild_property_map_table(
         QTableWidget* const  table,
-        ai::property_map&  props,
-        ai::property_map::default_config_records_map const&  default_content,
+        aiold::property_map&  props,
+        aiold::property_map::default_config_records_map const&  default_content,
         bool const  reset_to_defaults
         )
 {
@@ -87,7 +87,7 @@ void  rebuild_property_map_table(
         }
 
         std::string const  value_text = as_string(
-                props.has(order_and_name.second) ? ((ai::property_map const&)props).at(order_and_name.second) : *record_it->second.value
+                props.has(order_and_name.second) ? ((aiold::property_map const&)props).at(order_and_name.second) : *record_it->second.value
                 );
         value_item->setText(value_text.c_str());
 
@@ -98,19 +98,19 @@ void  rebuild_property_map_table(
 
 void  rebuild_sensor_property_map_table(
         QTableWidget* const  table,
-        ai::property_map&  props,
-        ai::SENSOR_KIND const  kind,
+        aiold::property_map&  props,
+        aiold::SENSOR_KIND const  kind,
         bool const  reset_to_defaults
         )
 {
-    rebuild_property_map_table(table, props, ai::default_sensor_configs().at(kind), reset_to_defaults);
+    rebuild_property_map_table(table, props, aiold::default_sensor_configs().at(kind), reset_to_defaults);
 }
 
 
 
 sensor_action_editor::sensor_action_editor(
-        ai::from_sensor_record_to_sensor_action_map* const  output_sensor_action_map_,
-        std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> > const&  sensor_nodes_and_kinds_
+        aiold::from_sensor_record_to_sensor_action_map* const  output_sensor_action_map_,
+        std::vector<std::pair<scn::scene_record_id, aiold::SENSOR_KIND> > const&  sensor_nodes_and_kinds_
         )
     : QWidget()
     , output_sensor_action_map(output_sensor_action_map_)
@@ -195,8 +195,8 @@ sensor_action_editor::sensor_action_editor(
     m_sensor_action_kind_delete_button->setDefault(false);
 
     std::sort(m_sensor_nodes_and_kinds.begin(), m_sensor_nodes_and_kinds.end(),
-        [](std::pair<scn::scene_record_id, ai::SENSOR_KIND> const&  left,
-           std::pair<scn::scene_record_id, ai::SENSOR_KIND> const&  right) -> bool {
+        [](std::pair<scn::scene_record_id, aiold::SENSOR_KIND> const&  left,
+           std::pair<scn::scene_record_id, aiold::SENSOR_KIND> const&  right) -> bool {
             return left.first < right.first;
         });
 
@@ -209,7 +209,7 @@ sensor_action_editor::sensor_action_editor(
     m_sensor_record_id_list->setCurrentRow(0);
 
     std::vector<std::string>  sensor_kind_names;
-    for (auto const& elem : ai::default_sensor_action_configs())
+    for (auto const& elem : aiold::default_sensor_action_configs())
         sensor_kind_names.push_back(as_string(elem.first));
     std::sort(sensor_kind_names.begin(), sensor_kind_names.end());
     for (auto const& sensor_kind_name : sensor_kind_names)
@@ -230,10 +230,10 @@ void  sensor_action_editor::on_sensor_record_id_list_selection_changed(int)
         auto const  it = output_sensor_action_map->find(id);
         if (it == output_sensor_action_map->end())
             return;
-        for (ai::sensor_action  action : it->second)
+        for (aiold::sensor_action  action : it->second)
         {
             std::string const  text = as_string(action.kind);
-            std::string const  tool_tip = ai::description(action.kind);
+            std::string const  tool_tip = aiold::description(action.kind);
             QListWidgetItem* const  item(new QListWidgetItem(text.c_str()));
             item->setToolTip(tool_tip.c_str());
             m_sensor_action_kind_list->addItem(item);
@@ -252,11 +252,11 @@ void  sensor_action_editor::on_sensor_action_kind_list_selection_changed(int)
         if (m_sensor_record_id_list->count() == 0 || m_sensor_action_kind_list->count() == 0)
             return;
         scn::scene_record_id const&  id = m_sensor_nodes_and_kinds.at(m_sensor_record_id_list->currentRow()).first;
-        ai::sensor_action&  action = output_sensor_action_map->at(id).at(m_sensor_action_kind_list->currentRow());
+        aiold::sensor_action&  action = output_sensor_action_map->at(id).at(m_sensor_action_kind_list->currentRow());
         rebuild_property_map_table(
             m_sensor_action_props_table,
             action.props,
-            ai::default_sensor_action_configs().at(action.kind),
+            aiold::default_sensor_action_configs().at(action.kind),
             false
             );
     LOCK_BOOL_BLOCK_END();
@@ -279,8 +279,8 @@ void  sensor_action_editor::on_sensor_action_kind_insert_button_pressed()
         if (it == output_sensor_action_map->end())
             it = output_sensor_action_map->insert({ id, {} }).first;
         std::string const  action_kind_name = qtgl::to_string(m_sensor_action_kind_combobox->currentText());
-        ai::SENSOR_ACTION_KIND  action_kind = as_sensor_action_kind(action_kind_name);
-        it->second.push_back({ action_kind, ai::property_map(ai::default_sensor_action_configs().at(action_kind)) });
+        aiold::SENSOR_ACTION_KIND  action_kind = as_sensor_action_kind(action_kind_name);
+        it->second.push_back({ action_kind, aiold::property_map(aiold::default_sensor_action_configs().at(action_kind)) });
     LOCK_BOOL_BLOCK_END();
     on_sensor_record_id_list_selection_changed();
 }

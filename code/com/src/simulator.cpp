@@ -440,7 +440,7 @@ void  simulator::render_task(render_task_info const&  task)
 
     for (object_guid  frame_guid : task.frame_guids)
     {
-        //ai::skeletal_motion_templates  motion_templates;
+        //aiold::skeletal_motion_templates  motion_templates;
         //{
         //    scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
         //    if (agent_ptr != nullptr && agent_ptr->get_props().m_skeleton_props != nullptr)

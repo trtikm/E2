@@ -38,12 +38,12 @@ inline bool  has_agent(scene_node const&  node)
     return get_agent(node) != nullptr;
 }
 
-inline void  insert_agent(scene_node&  n, ai::agent_id const  agent_id, agent_props const&  props)
+inline void  insert_agent(scene_node&  n, aiold::agent_id const  agent_id, agent_props const&  props)
 {
     insert_record<agent>(n, make_agent_node_record_id(), agent(agent_id, props));
 }
 
-inline void  insert_agent(scene&  s, scene_node_id const&  node_id, ai::agent_id const  agent_id, agent_props const&  props)
+inline void  insert_agent(scene&  s, scene_node_id const&  node_id, aiold::agent_id const  agent_id, agent_props const&  props)
 {
     insert_record<agent>(s, make_agent_record_id(node_id), agent(agent_id, props));
 }

@@ -5,8 +5,8 @@
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/records/sensor/sensor.hpp>
-#   include <ai/sensor_kind.hpp>
-#   include <ai/property_map.hpp>
+#   include <aiold/sensor_kind.hpp>
+#   include <aiold/property_map.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <QDialog>
 #   include <QPushButton>
@@ -41,7 +41,7 @@ private:
 
     Q_OBJECT
 
-    ai::SENSOR_KIND  read_kind_combo() const;
+    aiold::SENSOR_KIND  read_kind_combo() const;
 
     program_window*  m_wnd;
     bool  m_ok;

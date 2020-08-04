@@ -12,7 +12,7 @@
 #include <scene/scene_utils_specialised.hpp>
 #include <scene/scene_editing.hpp>
 #include <angeo/axis_aligned_bounding_box.hpp>
-#include <ai/skeleton_utils.hpp>
+#include <aiold/skeleton_utils.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/std_pair_hash.hpp>
 #include <utility/msgstream.hpp>

@@ -1,7 +1,7 @@
 #ifndef E2_TOOL_BIND_AI_SCENE_TO_SIMULATOR_HPP_INCLUDED
 #   define E2_TOOL_BIND_AI_SCENE_TO_SIMULATOR_HPP_INCLUDED
 
-#   include <ai/scene.hpp>
+#   include <aiold/scene.hpp>
 #   include <scene/scene_node_id.hpp>
 #   include <scene/scene_record_id.hpp>
 #   include <angeo/collision_scene.hpp>
@@ -12,7 +12,7 @@
 struct  simulator;
 
 
-struct bind_ai_scene_to_simulator : public ai::scene
+struct bind_ai_scene_to_simulator : public aiold::scene
 {
     explicit  bind_ai_scene_to_simulator(simulator* const  simulator_ptr)
         : m_simulator_ptr(simulator_ptr)
@@ -27,7 +27,7 @@ struct bind_ai_scene_to_simulator : public ai::scene
 
     void  accept(request_ptr const  req, bool const  delay_processing_to_next_time_step);
 
-    node_id  get_aux_root_node(ai::OBJECT_KIND const  kind, node_id const&  nid, std::string const&  aux_root_node_name) override;
+    node_id  get_aux_root_node(aiold::OBJECT_KIND const  kind, node_id const&  nid, std::string const&  aux_root_node_name) override;
 
     bool  has_scene_node(node_id const&  nid) const override;
     void  insert_scene_node(
@@ -113,11 +113,11 @@ struct bind_ai_scene_to_simulator : public ai::scene
 
     void  register_to_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
-            ai::object_id const&  oid       // Identifies an ai object which will receive the contancts of the collider to its blackboard.
+            aiold::object_id const&  oid       // Identifies an ai object which will receive the contancts of the collider to its blackboard.
             ) override;
     void  unregister_from_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
-            ai::object_id const&  oid       // Identifies an ai object which will stop receiving the contancts of the collider to its blackboard.
+            aiold::object_id const&  oid       // Identifies an ai object which will stop receiving the contancts of the collider to its blackboard.
             ) override;
     bool  do_tracking_collision_contact_of_collision_object(angeo::collision_object_id const  coid) const;
     void  on_collision_contact(
@@ -171,7 +171,7 @@ struct bind_ai_scene_to_simulator : public ai::scene
 private:
 
     using collision_contacts_stream_type =
-            std::unordered_map<angeo::collision_object_id, std::pair<node_id, std::unordered_set<ai::object_id> > >;
+            std::unordered_map<angeo::collision_object_id, std::pair<node_id, std::unordered_set<aiold::object_id> > >;
 
     simulator*  m_simulator_ptr;
     collision_contacts_stream_type  m_collision_contacts_stream;

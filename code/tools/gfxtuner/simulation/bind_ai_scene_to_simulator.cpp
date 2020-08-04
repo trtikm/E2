@@ -45,8 +45,8 @@ void  bind_ai_scene_to_simulator::accept(request_ptr const  req, bool const  del
 }
 
 
-ai::scene::node_id  bind_ai_scene_to_simulator::get_aux_root_node(
-        ai::OBJECT_KIND const  kind,
+aiold::scene::node_id  bind_ai_scene_to_simulator::get_aux_root_node(
+        aiold::OBJECT_KIND const  kind,
         node_id const&  nid,
         std::string const&  aux_root_node_name
         )
@@ -55,9 +55,9 @@ ai::scene::node_id  bind_ai_scene_to_simulator::get_aux_root_node(
     sstr << detail::get_ai_node_name_prefix();
     switch (kind)
     {
-    case ai::OBJECT_KIND::AGENT: sstr << "agent."; break;
-    case ai::OBJECT_KIND::DEVICE: sstr << "device."; break;
-    case ai::OBJECT_KIND::SENSOR: sstr << "sensor."; break;
+    case aiold::OBJECT_KIND::AGENT: sstr << "agent."; break;
+    case aiold::OBJECT_KIND::DEVICE: sstr << "device."; break;
+    case aiold::OBJECT_KIND::SENSOR: sstr << "sensor."; break;
     default: UNREACHABLE();
     }
     for (auto const&  name : nid.path())
@@ -445,7 +445,7 @@ void  bind_ai_scene_to_simulator::erase_rigid_body_from_scene_node(node_id const
 }
 
 
-ai::scene::node_id  bind_ai_scene_to_simulator::get_scene_node_of_rigid_body_associated_with_collider(
+aiold::scene::node_id  bind_ai_scene_to_simulator::get_scene_node_of_rigid_body_associated_with_collider(
         collision_object_id const  coid
         ) const
 {
@@ -459,7 +459,7 @@ ai::scene::node_id  bind_ai_scene_to_simulator::get_scene_node_of_rigid_body_ass
 }
 
 
-ai::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body_associated_with_collider(
+aiold::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body_associated_with_collider(
         collision_object_id const  coid
         ) const
 {
@@ -467,7 +467,7 @@ ai::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body
 }
 
 
-ai::scene::node_id  bind_ai_scene_to_simulator::get_scene_node_of_rigid_body_associated_with_collider_node(
+aiold::scene::node_id  bind_ai_scene_to_simulator::get_scene_node_of_rigid_body_associated_with_collider_node(
         node_id const&  collider_node_id
         ) const
 {
@@ -476,7 +476,7 @@ ai::scene::node_id  bind_ai_scene_to_simulator::get_scene_node_of_rigid_body_ass
 }
 
 
-ai::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body_associated_with_collider_node(
+aiold::scene::record_id  bind_ai_scene_to_simulator::get_scene_record_of_rigid_body_associated_with_collider_node(
         node_id const& collider_node_id
         ) const
 {
@@ -550,7 +550,7 @@ vector3  bind_ai_scene_to_simulator::get_linear_velocity_of_rigid_body_at_point(
 
 void  bind_ai_scene_to_simulator::register_to_collision_contacts_stream(
         node_id const&  collider_nid,
-        ai::object_id const&  oid
+        aiold::object_id const&  oid
         )
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
@@ -568,7 +568,7 @@ void  bind_ai_scene_to_simulator::register_to_collision_contacts_stream(
 
 void  bind_ai_scene_to_simulator::unregister_from_collision_contacts_stream(
         node_id const&  collider_nid,
-        ai::object_id const&  oid
+        aiold::object_id const&  oid
         )
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
@@ -614,7 +614,7 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
     ASSUMPTION(m_simulator_ptr != nullptr && it != m_collision_contacts_stream.cend());
 
     auto const  collision_info =
-            std::make_shared<ai::scene::collicion_contant_info>(
+            std::make_shared<aiold::scene::collicion_contant_info>(
                     contact_point_in_world_space,
                     unit_normal_in_world_space,
                     it->second.first,
@@ -629,7 +629,7 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
 
     if (other_it == m_collision_contacts_stream.cend())
         for (auto const&  oid : it->second.second)
-            m_simulator_ptr->get_ai_simulator()->on_collision_contact(oid, collision_info, ai::object_id::make_invalid());
+            m_simulator_ptr->get_ai_simulator()->on_collision_contact(oid, collision_info, aiold::object_id::make_invalid());
     else
         for (auto const&  oid : it->second.second)
             for (auto const& other_oid : other_it->second.second)

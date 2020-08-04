@@ -3,7 +3,7 @@
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <scene/scene.hpp>
-#include <ai/skeleton_utils.hpp>
+#include <aiold/skeleton_utils.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>

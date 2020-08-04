@@ -9,8 +9,8 @@
 #include <scene/scene_history.hpp>
 #include <scene/scene_node_record_id.hpp>
 #include <scene/scene_utils_specialised.hpp>
-#include <ai/sensors.hpp>
-#include <ai/skeleton_utils.hpp>
+#include <aiold/sensors.hpp>
+#include <aiold/skeleton_utils.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -93,9 +93,9 @@ void  register_record_handler_for_insert_scene_record(
                             "sensor",
                             [w](scn::scene_record_id const&  record_id) -> bool {
                                     scn::sensor_props const  props {
-                                        ai::SENSOR_KIND::TIMER,
+                                        aiold::SENSOR_KIND::TIMER,
                                         true,
-                                        ai::property_map(ai::default_sensor_configs().at(ai::SENSOR_KIND::TIMER))
+                                        aiold::property_map(aiold::default_sensor_configs().at(aiold::SENSOR_KIND::TIMER))
                                     };
                                     dialog_windows::sensor_props_dialog  dlg(w->wnd(), props);
                                     dlg.exec();

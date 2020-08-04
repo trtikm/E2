@@ -15,8 +15,8 @@
 #   include <angeo/collision_object_id.hpp>
 #   include <angeo/rigid_body.hpp>
 #   include <angeo/custom_constraint_id.hpp>
-//#   include <ai/simulator.hpp>
-#   include <ai/object_id.hpp>
+//#   include <aiold/simulator.hpp>
+#   include <aiold/object_id.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/dynamic_array.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -31,7 +31,7 @@ namespace angeo {
     struct  collision_scene;
     struct  rigid_body_simulator;
 }
-namespace ai {
+namespace aiold {
     struct  simulator;
 }
 
@@ -49,7 +49,7 @@ struct  simulation_context
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-            std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
+            std::shared_ptr<aiold::simulator> const  ai_simulator_ptr_,
             std::string const&  data_root_dir_
             );
     ~simulation_context();
@@ -529,7 +529,7 @@ struct  simulation_context
     bool  is_valid_agent_guid(object_guid const  agent_guid) const;
     object_guid  folder_of_agent(object_guid const  agent_guid) const;
     std::string const&  name_of_agent(object_guid const  agent_guid) const;
-    object_guid  to_agent_guid(ai::object_id const  agid) const;
+    object_guid  to_agent_guid(aiold::object_id const  agid) const;
     agent_guid_iterator  agents_begin() const;
     agent_guid_iterator  agents_end() const;
     // Disabled (not const) for modules.
@@ -739,7 +739,7 @@ private:
     };
 
     // TODO: folder_element_* below are NOT properly implemented, i.e. they have been ignored so far.
-    using  folder_element_agent = folder_element<ai::object_id>;
+    using  folder_element_agent = folder_element<aiold::object_id>;
 
     object_guid  m_root_folder;
     dynamic_array<folder_content_type, index_type>  m_folders;
@@ -755,7 +755,7 @@ private:
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::shared_ptr<com::device_simulator>  m_device_simulator_ptr;
-    std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
+    std::shared_ptr<aiold::simulator>  m_ai_simulator_ptr;
 
     std::unordered_map<frame_id, object_guid>  m_frids_to_guids;
     std::unordered_map<std::string, object_guid>  m_batches_to_guids;
@@ -763,7 +763,7 @@ private:
     std::unordered_map<angeo::rigid_body_id, object_guid>  m_rbids_to_guids;
     std::unordered_map<com::device_simulator::timer_id, object_guid>  m_tmids_to_guids;
     std::unordered_map<com::device_simulator::sensor_id, object_guid>  m_seids_to_guids;
-    std::unordered_map<ai::object_id, object_guid>  m_agids_to_guids;
+    std::unordered_map<aiold::object_id, object_guid>  m_agids_to_guids;
 
     std::unordered_set<index_type>  m_moveable_colliders;
     std::unordered_set<index_type>  m_moveable_rigid_bodies;
@@ -875,7 +875,7 @@ private:
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-            std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
+            std::shared_ptr<aiold::simulator> const  ai_simulator_ptr_,
             std::string const&  data_root_dir_
             );
 

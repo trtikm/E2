@@ -90,18 +90,18 @@ sensor_props_dialog::sensor_props_dialog(program_window* const  wnd, scn::sensor
             QLabel* const  kind_label = new QLabel("Sensor kind");
             std::string  descriptions_of_kinds =
                 "Defines what the sensor senses and/or what events it sends to the owner. These kinds are available:\n";
-            for (natural_8_bit i = 0U; i != ai::num_sensor_kinds(); ++i)
+            for (natural_8_bit i = 0U; i != aiold::num_sensor_kinds(); ++i)
             {
-                ai::SENSOR_KIND const  kind = ai::as_sensor_kind(i);
-                descriptions_of_kinds += "    " + as_string(kind) + ": " + ai::description(kind) + "\n";
+                aiold::SENSOR_KIND const  kind = aiold::as_sensor_kind(i);
+                descriptions_of_kinds += "    " + as_string(kind) + ": " + aiold::description(kind) + "\n";
             }
             kind_label->setToolTip(descriptions_of_kinds.c_str());
             kind_layout->addWidget(kind_label);
 
             LOCK_BOOL_BLOCK_BEGIN(m_locked);
-                for (natural_8_bit i = 0U; i != ai::num_sensor_kinds(); ++i)
+                for (natural_8_bit i = 0U; i != aiold::num_sensor_kinds(); ++i)
                 {
-                    std::string const  kind_name = as_string(ai::as_sensor_kind(i));
+                    std::string const  kind_name = as_string(aiold::as_sensor_kind(i));
                     m_sensor_kind_combobox->addItem(kind_name.c_str());
                 }
                 std::string const  current_kind_name = as_string(m_current_props.m_sensor_kind);
@@ -175,7 +175,7 @@ void  sensor_props_dialog::reject()
 void  sensor_props_dialog::on_kind_combo_changed(int)
 {
     LOCK_BOOL_BLOCK_BEGIN(m_locked);
-        ai::SENSOR_KIND const  new_kind = read_kind_combo();
+        aiold::SENSOR_KIND const  new_kind = read_kind_combo();
         if (new_kind != m_new_props.m_sensor_kind)
         {
             m_new_props.m_sensor_kind = new_kind;
@@ -226,7 +226,7 @@ void  sensor_props_dialog::on_props_table_changed(QTableWidgetItem*)
 }
 
 
-ai::SENSOR_KIND  sensor_props_dialog::read_kind_combo() const
+aiold::SENSOR_KIND  sensor_props_dialog::read_kind_combo() const
 {
     return as_sensor_kind(qtgl::to_string(m_sensor_kind_combobox->currentText()));
 }

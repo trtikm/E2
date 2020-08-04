@@ -12,7 +12,7 @@ namespace dialog_windows {
 device_props_dialog::device_props_dialog(
         program_window* const  wnd,
         scn::device_props const&  current_props,
-        std::vector<std::pair<scn::scene_record_id, ai::SENSOR_KIND> > const&  sensor_nodes_and_kinds
+        std::vector<std::pair<scn::scene_record_id, aiold::SENSOR_KIND> > const&  sensor_nodes_and_kinds
         )
     : QDialog(wnd)
     , m_wnd(wnd)
@@ -51,20 +51,20 @@ device_props_dialog::device_props_dialog(
         {
             QLabel* const  kind_label = new QLabel("Device kind");
             std::string  descriptions_of_kinds = "Defines a kind of the cortex, i.e. device's behaviour. These kinds are available:\n";
-            for (natural_8_bit i = 0U; i != ai::num_device_kinds(); ++i)
+            for (natural_8_bit i = 0U; i != aiold::num_device_kinds(); ++i)
             {
-                ai::DEVICE_KIND const  kind = ai::as_device_kind(i);
-                descriptions_of_kinds += "    " + ai::as_string(kind) + ": " + ai::description(kind) + "\n";
+                aiold::DEVICE_KIND const  kind = aiold::as_device_kind(i);
+                descriptions_of_kinds += "    " + aiold::as_string(kind) + ": " + aiold::description(kind) + "\n";
             }
             kind_label->setToolTip(descriptions_of_kinds.c_str());
             kind_layout->addWidget(kind_label);
 
-            for (natural_8_bit i = 0U; i != ai::num_device_kinds(); ++i)
+            for (natural_8_bit i = 0U; i != aiold::num_device_kinds(); ++i)
             {
-                std::string const  kind_name = ai::as_string(ai::as_device_kind(i));
+                std::string const  kind_name = aiold::as_string(aiold::as_device_kind(i));
                 m_device_kind_combobox->addItem(kind_name.c_str());
             }
-            std::string const  current_kind_name = ai::as_string(m_current_props.m_device_kind);
+            std::string const  current_kind_name = aiold::as_string(m_current_props.m_device_kind);
             m_device_kind_combobox->setCurrentText(current_kind_name.c_str());
             kind_layout->addWidget(m_device_kind_combobox);
 
@@ -124,7 +124,7 @@ device_props_dialog::device_props_dialog(
 
 void  device_props_dialog::accept()
 {
-    m_new_props.m_device_kind = ai::as_device_kind(qtgl::to_string(m_device_kind_combobox->currentText()));
+    m_new_props.m_device_kind = aiold::as_device_kind(qtgl::to_string(m_device_kind_combobox->currentText()));
     m_new_props.m_skeleton_props = m_current_props.m_skeleton_props;
 
     m_ok = true;
