@@ -1,5 +1,6 @@
 # Here follow all libraries of E2
 include_directories(
+    "${PROJECT_SOURCE_DIR}/code/ai/include"
     "${PROJECT_SOURCE_DIR}/code/aiold/include"
     "${PROJECT_SOURCE_DIR}/code/angeo/include"
     "${PROJECT_SOURCE_DIR}/code/qtgl/include"
@@ -11,6 +12,8 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/code/utility/include"
     )
 message("Including the following E2 libraries to the build:")
+add_subdirectory(./ai)
+    message("-- ai")
 add_subdirectory(./aiold)
     message("-- aiold")
 add_subdirectory(./angeo)

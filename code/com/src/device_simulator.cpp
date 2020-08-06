@@ -24,6 +24,21 @@ device_simulator::timer::timer(
 }
 
 
+device_simulator::sensor::sensor()
+    : collider(invalid_object_guid())
+    , triggers({})
+    , old_touching()
+    , touching()
+    , touch_begin()
+    , touch_end()
+    , target_enable_level(1U)
+    , current_enable_level(0U)
+    , request_infos_on_touching()
+    , request_infos_on_touch_begin()
+    , request_infos_on_touch_end()
+{}
+
+
 device_simulator::sensor::sensor(
         object_guid const  collider_,
         std::unordered_set<object_guid> const&  triggers_,

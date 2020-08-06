@@ -2,6 +2,7 @@
 #include <angeo/collision_scene.hpp>
 #include <angeo/rigid_body_simulator.hpp>
 #include <angeo/mass_and_inertia_tensor.hpp>
+#include <ai/simulator.hpp>
 #include <utility/async_resource_load.hpp>
 #include <utility/canonical_path.hpp>
 #include <utility/timeprof.hpp>
@@ -22,11 +23,11 @@ simulation_context_ptr  simulation_context::create(
         std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
         std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
         std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-        std::shared_ptr<aiold::simulator> const  ai_simulator_ptr_,
+        std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
         std::string const&  data_root_dir_
         )
 {
-    ASSUMPTION(collision_scene_ptr_ != nullptr && rigid_body_simulator_ptr_ != nullptr && ai_simulator_ptr_ == nullptr);
+    ASSUMPTION(collision_scene_ptr_ != nullptr && rigid_body_simulator_ptr_ != nullptr && ai_simulator_ptr_ != nullptr);
     return std::shared_ptr<simulation_context>(new simulation_context(
                 collision_scene_ptr_,
                 rigid_body_simulator_ptr_,
@@ -41,7 +42,7 @@ simulation_context::simulation_context(
         std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
         std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
         std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-        std::shared_ptr<aiold::simulator> const  ai_simulator_ptr_,
+        std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
         std::string const&  data_root_dir_
         )
     : m_root_folder()
@@ -79,6 +80,8 @@ simulation_context::simulation_context(
     , m_pending_requests()
     , m_requests_erase_folder()
     , m_requests_erase_frame()
+    , m_requests_relocate_frame()
+    , m_requests_set_parent_frame()
     , m_requests_erase_batch()
     , m_requests_enable_collider()
     , m_requests_enable_colliding()
@@ -253,10 +256,27 @@ void  simulation_context::for_each_child_folder(object_guid const  folder_guid, 
 }
 
 
-object_guid  simulation_context::insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name) const
+object_guid  simulation_context::insert_folder(object_guid const  under_folder_guid, std::string  folder_name,
+                                               bool const  resolve_name_collision) const
 {
-    ASSUMPTION(folder_content(under_folder_guid).child_folders.count(folder_name) == 0ULL);
+    ASSUMPTION(is_valid_folder_guid(under_folder_guid));
+
     simulation_context* const  self = const_cast<simulation_context*>(this);
+
+    {
+        folder_content_type::names_to_guids_map&  child_folders = self->m_folders.at(under_folder_guid.index).child_folders;
+
+        if (resolve_name_collision && child_folders.count(folder_name) != 0UL)
+        {
+            natural_32_bit  counter = 0U;
+            for ( ; child_folders.count(folder_name+ '.' + std::to_string(counter)) != 0UL; ++counter)
+                ;
+            folder_name = folder_name + '.' + std::to_string(counter);
+        }
+
+        ASSUMPTION(child_folders.count(folder_name) == 0UL);
+    }
+
     object_guid const  new_folder_guid = {
             OBJECT_KIND::FOLDER,
             self->m_folders.insert(folder_content_type(folder_name, under_folder_guid))
@@ -458,6 +478,26 @@ void  simulation_context::request_erase_frame(object_guid const  frame_guid) con
 }
 
 
+void  simulation_context::request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
+                                                                    quaternion const&  new_orientation) const
+{
+    ASSUMPTION(is_valid_frame_guid(frame_guid));
+    m_requests_relocate_frame.push_back({ frame_guid, new_origin, new_orientation });
+    m_pending_requests.push_back(REQUEST_RELOCATE_FRAME);
+}
+
+
+void  simulation_context::request_set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid) const
+{
+    ASSUMPTION(
+            is_valid_frame_guid(frame_guid) &&
+            (is_valid_frame_guid(parent_frame_guid) || parent_frame_guid == invalid_object_guid())
+            );
+    m_requests_set_parent_frame.push_back({ frame_guid, parent_frame_guid });
+    m_pending_requests.push_back(REQUEST_SET_PARENT_FRAME);
+}
+
+
 // Disabled (not const) for modules.
 
 
@@ -465,14 +505,18 @@ void  simulation_context::set_parent_frame(object_guid const  frame_guid, object
 {
     ASSUMPTION(
         is_valid_frame_guid(frame_guid) &&
+        (parent_frame_guid == invalid_object_guid() ||
         [this](object_guid const  folder_guid, object_guid  parent_folder_guid) -> bool {
             for ( ; parent_folder_guid != invalid_object_guid(); parent_folder_guid = folder_content(parent_folder_guid).parent_folder)
                 if (parent_folder_guid == folder_guid)
                     return false;
             return true;
-        }(folder_of_frame(frame_guid), folder_of_frame(parent_frame_guid))
+        }(folder_of_frame(frame_guid), folder_of_frame(parent_frame_guid)))
         );
-    m_frames_provider.set_parent(m_frames.at(frame_guid.index).id, m_frames.at(parent_frame_guid.index).id);
+    m_frames_provider.set_parent(
+            m_frames.at(frame_guid.index).id,
+            parent_frame_guid == invalid_object_guid() ? invalid_frame_id() : m_frames.at(parent_frame_guid.index).id
+            );
 }
 
 
@@ -1037,6 +1081,39 @@ object_guid  simulation_context::insert_collider_triangle_mesh(
 }
 
 
+object_guid  simulation_context::ray_cast_to_nearest_collider(
+        vector3 const&  ray_origin,
+        vector3 const&  ray_unit_direction_vector,
+        float_32_bit const  ray_length,
+        bool const  search_static,
+        bool const  search_dynamic,
+        float_32_bit*  ray_parameter_to_nearest_collider,
+        std::unordered_set<object_guid> const* const  ignored_collider_guids
+        ) const
+{
+    angeo::collision_object_id  nearest_coid;
+    std::unordered_set<angeo::collision_object_id>  ignored_coids;
+    if (ignored_collider_guids != nullptr)
+        for (object_guid  collider_guid : *ignored_collider_guids)
+        {
+            ASSUMPTION(is_valid_collider_guid(collider_guid));
+            ignored_coids.insert(m_colliders.at(collider_guid.index).id.front());
+        }
+    if (!m_collision_scene_ptr->ray_cast(
+            ray_origin,
+            ray_unit_direction_vector,
+            ray_length,
+            search_static,
+            search_dynamic,
+            &nearest_coid,
+            ray_parameter_to_nearest_collider,
+            ignored_collider_guids == nullptr ? nullptr : &ignored_coids
+            ))
+        return invalid_object_guid();
+    return m_coids_to_guids.at(nearest_coid);
+}
+
+
 void  simulation_context::request_enable_collider(object_guid const  collider_guid, bool const  state) const
 {
     m_requests_enable_collider.push_back({collider_guid, state});
@@ -1370,7 +1447,9 @@ object_guid  simulation_context::insert_rigid_body(
         vector3 const&  linear_velocity,
         vector3 const&  angular_velocity,
         vector3 const&  linear_acceleration,
-        vector3 const&  angular_acceleration
+        vector3 const&  angular_acceleration,
+        float_32_bit const  inverted_mass,
+        matrix33 const&  inverted_inertia_tensor
         ) const
 {
     ASSUMPTION((
@@ -1395,8 +1474,8 @@ object_guid  simulation_context::insert_rigid_body(
     angeo::rigid_body_id const  rbid = m_rigid_body_simulator_ptr->insert_rigid_body(
             frame_coord_system_in_world_space(frame_guid).origin(),
             frame_coord_system_in_world_space(frame_guid).orientation(),
-            0.0f,
-            matrix33_zero(),
+            inverted_mass,
+            inverted_inertia_tensor,
             linear_velocity,
             angular_velocity,
             linear_acceleration,
@@ -2073,7 +2152,7 @@ std::string const&  simulation_context::name_of_agent(object_guid const  agent_g
 }
 
 
-object_guid  simulation_context::to_agent_guid(aiold::object_id const  agid) const
+object_guid  simulation_context::to_agent_guid(ai::agent_id const  agid) const
 {
     return m_agids_to_guids.at(agid);
 }
@@ -2111,7 +2190,7 @@ std::vector<natural_32_bit> const&  simulation_context::collision_contacts_of_co
 }
 
 
-simulation_context::collision_contact const&  simulation_context::get_collision_contact(natural_32_bit const  contact_index) const
+collision_contact const&  simulation_context::get_collision_contact(natural_32_bit const  contact_index) const
 {
     ASSUMPTION(is_valid_collision_contact_index(contact_index));
     return m_collision_contacts.at(contact_index);
@@ -2488,6 +2567,8 @@ void  simulation_context::process_pending_requests()
 {
     std::vector<object_guid>::const_iterator  erase_folder_it = m_requests_erase_folder.begin();
     std::vector<object_guid>::const_iterator  erase_frame_it = m_requests_erase_frame.begin();
+    std::vector<request_data_relocate_frame>::const_iterator  relocate_frame_it = m_requests_relocate_frame.begin();
+    std::vector<request_data_set_parent_frame>::const_iterator  set_parent_frame_it = m_requests_set_parent_frame.begin();
     std::vector<object_guid>::const_iterator  erase_batch_it = m_requests_erase_batch.begin();
     std::vector<request_data_enable_collider>::const_iterator  enable_collider_it = m_requests_enable_collider.begin();
     std::vector<request_data_enable_colliding>::const_iterator  enable_colliding_it = m_requests_enable_colliding.begin();
@@ -2516,6 +2597,15 @@ void  simulation_context::process_pending_requests()
         case REQUEST_ERASE_FRAME:
             erase_frame(*erase_frame_it);
             ++erase_frame_it;
+            break;
+        case REQUEST_RELOCATE_FRAME:
+            frame_relocate_relative_to_parent(relocate_frame_it->frame_guid, relocate_frame_it->position,
+                                              relocate_frame_it->orientation);
+            ++relocate_frame_it;
+            break;
+        case REQUEST_SET_PARENT_FRAME:
+            set_parent_frame(set_parent_frame_it->frame_guid, set_parent_frame_it->parent_frame_guid);
+            ++set_parent_frame_it;
             break;
         case REQUEST_ERASE_BATCH:
             erase_batch(*erase_batch_it);
@@ -2583,6 +2673,8 @@ void  simulation_context::clear_pending_requests()
     m_pending_requests.clear();
     m_requests_erase_folder.clear();
     m_requests_erase_frame.clear();
+    m_requests_relocate_frame.clear();
+    m_requests_set_parent_frame.clear();
     m_requests_erase_batch.clear();
     m_requests_enable_collider.clear();
     m_requests_enable_colliding.clear();

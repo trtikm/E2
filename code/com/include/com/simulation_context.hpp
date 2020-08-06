@@ -5,6 +5,7 @@
 #   include <com/frame_of_reference.hpp>
 #   include <com/device_simulator.hpp>
 #   include <com/import_scene_props.hpp>
+#   include <com/collision_contact.hpp>
 #   include <com/detail/import_scene.hpp>
 #   include <gfx/batch.hpp>
 #   include <gfx/batch_generators.hpp>
@@ -15,8 +16,7 @@
 #   include <angeo/collision_object_id.hpp>
 #   include <angeo/rigid_body.hpp>
 #   include <angeo/custom_constraint_id.hpp>
-//#   include <aiold/simulator.hpp>
-#   include <aiold/object_id.hpp>
+#   include <ai/agent_id.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/dynamic_array.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -31,7 +31,7 @@ namespace angeo {
     struct  collision_scene;
     struct  rigid_body_simulator;
 }
-namespace aiold {
+namespace ai {
     struct  simulator;
 }
 
@@ -49,7 +49,7 @@ struct  simulation_context
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-            std::shared_ptr<aiold::simulator> const  ai_simulator_ptr_,
+            std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
             std::string const&  data_root_dir_
             );
     ~simulation_context();
@@ -143,7 +143,8 @@ struct  simulation_context
                                  folder_visitor_type const&  visitor) const;
     void  for_each_child_folder(object_guid const  folder_guid, bool const  recursively, bool const  including_passed_folder,
                                 folder_visitor_type const&  visitor) const;
-    object_guid  insert_folder(object_guid const  under_folder_guid, std::string const&  folder_name) const;
+    object_guid  insert_folder(object_guid const  under_folder_guid, std::string  folder_name,
+                               bool const  resolve_name_collision = true) const;
     void  request_erase_non_root_empty_folder(object_guid const  folder_guid) const;
     void  request_erase_non_root_folder(object_guid const  folder_guid) const;
     // Disabled (not const) for modules.
@@ -172,6 +173,9 @@ struct  simulation_context
     object_guid  insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
                               vector3 const&  origin, quaternion const&  orientation) const;
     void  request_erase_frame(object_guid const  frame_guid) const;
+    void  request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
+                                                    quaternion const&  new_orientation) const;
+    void  request_set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid) const;
     // Disabled (not const) for modules.
     void  set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid);
     object_guid  insert_frame(object_guid const  under_folder_guid);
@@ -328,6 +332,15 @@ struct  simulation_context
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class
             ) const;
+    object_guid  ray_cast_to_nearest_collider(
+            vector3 const&  ray_origin,
+            vector3 const&  ray_unit_direction_vector,
+            float_32_bit const  ray_length,
+            bool const  search_static,
+            bool const  search_dynamic,
+            float_32_bit*  ray_parameter_to_nearest_collider = nullptr,
+            std::unordered_set<object_guid> const* const  ignored_collider_guids = nullptr
+            ) const;
     void  request_enable_collider(object_guid const  collider_guid, bool const  state) const;
     void  request_enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state) const;
     void  request_erase_collider(object_guid const  collider_guid) const;
@@ -375,7 +388,9 @@ struct  simulation_context
             vector3 const&  linear_velocity = vector3_zero(),
             vector3 const&  angular_velocity = vector3_zero(),
             vector3 const&  linear_acceleration = vector3_zero(),
-            vector3 const&  angular_acceleration = vector3_zero()
+            vector3 const&  angular_acceleration = vector3_zero(),
+            float_32_bit const  inverted_mass = 0.0f,
+            matrix33 const&  inverted_inertia_tensor = matrix33_zero()
             ) const;
     void  request_erase_rigid_body(object_guid const  rigid_body_guid) const;
     void  request_set_rigid_body_linear_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity) const;
@@ -529,7 +544,7 @@ struct  simulation_context
     bool  is_valid_agent_guid(object_guid const  agent_guid) const;
     object_guid  folder_of_agent(object_guid const  agent_guid) const;
     std::string const&  name_of_agent(object_guid const  agent_guid) const;
-    object_guid  to_agent_guid(aiold::object_id const  agid) const;
+    object_guid  to_agent_guid(ai::agent_id const  agid) const;
     agent_guid_iterator  agents_begin() const;
     agent_guid_iterator  agents_end() const;
     // Disabled (not const) for modules.
@@ -537,51 +552,6 @@ struct  simulation_context
     /////////////////////////////////////////////////////////////////////////////////////
     // COLLISION CONTACTS API
     /////////////////////////////////////////////////////////////////////////////////////
-
-    struct  collision_contact
-    {
-        collision_contact()
-            : m_first_collider(invalid_object_guid())
-            , m_second_collider(invalid_object_guid())
-            , m_contact_point(vector3_zero())
-            , m_unit_normal(vector3_unit_z())
-            , m_penetration_depth(0.0f)
-        {}
-        collision_contact(object_guid const  first_collider_, object_guid  const  second_collider_,
-                          vector3 const&  contact_point_, vector3 const&  unit_normal_,
-                          float_32_bit const penetration_depth_)
-            : m_first_collider(first_collider_)
-            , m_second_collider(second_collider_)
-            , m_contact_point(contact_point_)
-            , m_unit_normal(unit_normal_)
-            , m_penetration_depth(penetration_depth_)
-        {}
-
-        object_guid  first_collider() const { return m_first_collider; }
-        object_guid  second_collider() const { return m_second_collider; }
-        vector3 const&  contact_point() const { return m_contact_point; }
-        vector3 const&  unit_normal() const { return m_unit_normal; }
-        float_32_bit  penetration_depth() const { return m_penetration_depth; }
-
-        object_guid  other_collider(object_guid const  collider_guid) const
-        {
-            return collider_guid == m_first_collider ? m_second_collider :
-                  (collider_guid == m_second_collider ? m_first_collider : invalid_object_guid());
-        }
-
-        vector3  unit_normal(object_guid const  collider_guid) const
-        {
-            return collider_guid == m_first_collider ? m_unit_normal : -m_unit_normal;
-        }
-
-    private:
-
-        object_guid  m_first_collider;
-        object_guid  m_second_collider;
-        vector3  m_contact_point;
-        vector3  m_unit_normal;
-        float_32_bit  m_penetration_depth;
-    };
 
     bool  is_valid_collision_contact_index(natural_32_bit const  contact_index) const;
     std::vector<natural_32_bit> const&  collision_contacts_of_collider(object_guid const  collider_guid) const;
@@ -738,8 +708,7 @@ private:
         object_guid  collider;
     };
 
-    // TODO: folder_element_* below are NOT properly implemented, i.e. they have been ignored so far.
-    using  folder_element_agent = folder_element<aiold::object_id>;
+    using  folder_element_agent = folder_element<ai::agent_id>;
 
     object_guid  m_root_folder;
     dynamic_array<folder_content_type, index_type>  m_folders;
@@ -755,7 +724,7 @@ private:
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::shared_ptr<com::device_simulator>  m_device_simulator_ptr;
-    std::shared_ptr<aiold::simulator>  m_ai_simulator_ptr;
+    std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
 
     std::unordered_map<frame_id, object_guid>  m_frids_to_guids;
     std::unordered_map<std::string, object_guid>  m_batches_to_guids;
@@ -763,7 +732,7 @@ private:
     std::unordered_map<angeo::rigid_body_id, object_guid>  m_rbids_to_guids;
     std::unordered_map<com::device_simulator::timer_id, object_guid>  m_tmids_to_guids;
     std::unordered_map<com::device_simulator::sensor_id, object_guid>  m_seids_to_guids;
-    std::unordered_map<aiold::object_id, object_guid>  m_agids_to_guids;
+    std::unordered_map<ai::agent_id, object_guid>  m_agids_to_guids;
 
     std::unordered_set<index_type>  m_moveable_colliders;
     std::unordered_set<index_type>  m_moveable_rigid_bodies;
@@ -812,23 +781,27 @@ private:
 
     enum REQUEST_KIND
     {
-        REQUEST_ERASE_FOLDER                 = 0,
-        REQUEST_ERASE_FRAME                  = 1,
-        REQUEST_ERASE_BATCH                  = 2,
-        REQUEST_ENABLE_COLLIDER              = 3,
-        REQUEST_ENABLE_COLLIDING             = 4,
-        REQUEST_ERASE_COLLIDER               = 5,
-        REQUEST_ERASE_RIGID_BODY             = 6,
-        REQUEST_SET_LINEAR_VELOCITY          = 7,
-        REQUEST_SET_ANGULAR_VELOCITY         = 8,
-        REQUEST_SET_LINEAR_ACCEL             = 9,
-        REQUEST_SET_ANGULAR_ACCEL            = 10,
-        REQUEST_DEL_LINEAR_ACCEL             = 11,
-        REQUEST_DEL_ANGULAR_ACCEL            = 12,
-        REQUEST_ERASE_TIMER                  = 13,
-        REQUEST_ERASE_SENSOR                 = 14,
+        REQUEST_ERASE_FOLDER                = 0,
+        REQUEST_ERASE_FRAME                 = 1,
+        REQUEST_RELOCATE_FRAME              = 2,
+        REQUEST_SET_PARENT_FRAME            = 3,
+        REQUEST_ERASE_BATCH                 = 4,
+        REQUEST_ENABLE_COLLIDER             = 5,
+        REQUEST_ENABLE_COLLIDING            = 6,
+        REQUEST_ERASE_COLLIDER              = 7,
+        REQUEST_ERASE_RIGID_BODY            = 8,
+        REQUEST_SET_LINEAR_VELOCITY         = 9,
+        REQUEST_SET_ANGULAR_VELOCITY        = 10,
+        REQUEST_SET_LINEAR_ACCEL            = 11,
+        REQUEST_SET_ANGULAR_ACCEL           = 12,
+        REQUEST_DEL_LINEAR_ACCEL            = 13,
+        REQUEST_DEL_ANGULAR_ACCEL           = 14,
+        REQUEST_ERASE_TIMER                 = 15,
+        REQUEST_ERASE_SENSOR                = 16,
     };
 
+    struct  request_data_relocate_frame { object_guid  frame_guid; vector3  position; quaternion  orientation; };
+    struct  request_data_set_parent_frame { object_guid  frame_guid; object_guid  parent_frame_guid; };
     struct  request_data_enable_collider { object_guid  collider_guid; bool  state; };
     struct  request_data_enable_colliding { object_guid  collider_1; object_guid  collider_2; bool  state; };
     struct  request_data_set_velocity { object_guid  rb_guid; vector3  velocity; };
@@ -838,6 +811,8 @@ private:
     mutable std::vector<REQUEST_KIND>  m_pending_requests;
     mutable std::vector<object_guid>  m_requests_erase_folder;
     mutable std::vector<object_guid>  m_requests_erase_frame;
+    mutable std::vector<request_data_relocate_frame>  m_requests_relocate_frame;
+    mutable std::vector<request_data_set_parent_frame>  m_requests_set_parent_frame;
     mutable std::vector<object_guid>  m_requests_erase_batch;
     mutable std::vector<request_data_enable_collider>  m_requests_enable_collider;
     mutable std::vector<request_data_enable_colliding>  m_requests_enable_colliding;
@@ -875,7 +850,7 @@ private:
             std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
-            std::shared_ptr<aiold::simulator> const  ai_simulator_ptr_,
+            std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
             std::string const&  data_root_dir_
             );
 

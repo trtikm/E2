@@ -119,7 +119,7 @@ private:
 
     struct  timer
     {
-        timer() {}
+        timer() : timer(1.0f, 1U, 0U) {}
         timer(float_32_bit const  period_in_seconds_,
               natural_8_bit const target_enable_level_,
               natural_8_bit const  current_enable_level_);
@@ -137,7 +137,7 @@ private:
     {
         using  collider_in_touch = std::unordered_set<object_guid>;
 
-        sensor() {}
+        sensor();
         sensor(object_guid const  collider_,
                std::unordered_set<object_guid> const&  triggers_,
                natural_8_bit const target_enable_level_,

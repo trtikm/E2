@@ -104,7 +104,7 @@ simulator::simulator(std::string const&  data_root_dir)
     : m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
     , m_device_simulator_ptr(std::make_shared<com::device_simulator>())
-    , m_ai_simulator_ptr()
+    , m_ai_simulator_ptr(std::make_shared<ai::simulator>())
 
     , m_context(simulation_context::create(
             m_collision_scene_ptr,
@@ -129,6 +129,7 @@ simulator::simulator(std::string const&  data_root_dir)
 simulator::~simulator()
 {
     m_ai_simulator_ptr.reset();
+    m_device_simulator_ptr.reset();
     m_rigid_body_simulator_ptr.reset();
     m_collision_scene_ptr.reset();
 
@@ -281,7 +282,12 @@ void  simulator::simulate()
             );
 
     device_simulator()->next_round((simulation_context const&)ctx, round_seconds());
-    //ai_simulator()->next_round(round_seconds(), get_keyboard_props(), get_mouse_props(), get_window_props());
+    ai_simulator()->next_round(
+            round_seconds(),
+            get_keyboard_props(),
+            get_mouse_props(),
+            get_window_props()
+            );
 
     ctx.process_rigid_bodies_with_invalidated_shape();
     ctx.process_pending_early_requests();

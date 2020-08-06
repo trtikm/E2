@@ -18,7 +18,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/com/import_scene_props.hpp
     ./src/import_scene_props.cpp
-    
+
+    ./include/com/collision_contact.hpp
+
     ./include/com/detail/import_scene.hpp
     ./src/detail/import_scene.cpp
     ./src/detail/import_gfxtuner_scene.cpp

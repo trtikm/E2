@@ -21,8 +21,6 @@ extern void  apply_initial_velocities_to_imported_rigid_bodies(
         import_scene_props const&  props
         );
 
-extern std::string  generate_unique_folder_name_from(simulation_context const&  ctx, object_guid const  folder_guid, std::string  name);
-
 
 struct  import_scene_props
 {
@@ -100,7 +98,7 @@ static void  import_gfxtuner_scene_node(
     for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
         if (folder_it->first == "batches")
         {
-            object_guid const  batches_folder_guid = ctx.insert_folder(folder_guid, folder_it->first);
+            object_guid const  batches_folder_guid = ctx.insert_folder(folder_guid, folder_it->first, false);
             for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
             {
                 object_guid  batch_guid;
@@ -258,7 +256,7 @@ static void  import_gfxtuner_scene_node(
         import_gfxtuner_scene_node(
                 ctx,
                 { &child_it->second, props.effects },
-                ctx.insert_folder(folder_guid, child_it->first),
+                ctx.insert_folder(folder_guid, child_it->first, false),
                 invalid_object_guid()
                 );
 }
@@ -277,8 +275,7 @@ void  import_gfxtuner_scene(
         if (it->first.empty() || it->first.front() == '@')
             continue;
 
-        object_guid const  folder_guid =
-                ctx.insert_folder(props.folder_guid, generate_unique_folder_name_from(ctx, props.folder_guid, it->first));
+        object_guid const  folder_guid = ctx.insert_folder(props.folder_guid, it->first, true);
         import_gfxtuner_scene_node(ctx, { &it->second, &scene.effects() }, folder_guid, props.relocation_frame_guid);
         apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, props);
     }

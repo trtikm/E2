@@ -14,7 +14,7 @@ add_executable(${THIS_TARGET_NAME}
     )
 
 target_link_libraries(${THIS_TARGET_NAME}
-    aiold
+    ai
     angeo
     osi
     com

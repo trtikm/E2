@@ -532,7 +532,7 @@ static void  import_under_folder(
             import_under_folder(
                     ctx,
                     delayed_tasks,
-                    ctx.insert_folder(folder_guid, folder_it->first),
+                    ctx.insert_folder(folder_guid, folder_it->first, false),
                     folder_it->second,
                     effects,
                     invalid_object_guid()
@@ -609,20 +609,6 @@ void  apply_initial_velocities_to_imported_rigid_bodies(
 }
 
 
-std::string  generate_unique_folder_name_from(simulation_context const&  ctx, object_guid const  folder_guid, std::string  name)
-{
-    simulation_context::folder_content_type const&  fct = ctx.folder_content(folder_guid);
-    if (fct.child_folders.count(name) != 0)
-    {
-        natural_32_bit  counter = 0U;
-        for ( ; fct.child_folders.count(name + '.' + std::to_string(counter)) != 0U; ++counter)
-            ;
-        name = name + '.' + std::to_string(counter);
-    }
-    return name;
-}
-
-
 extern void  import_gfxtuner_scene(
         simulation_context&  ctx,
         imported_scene const  scene,
@@ -643,8 +629,7 @@ void  import_scene(simulation_context&  ctx, imported_scene const  scene, import
     if (folders != scene.hierarchy().not_found())
         for (auto it = folders->second.begin(); it != folders->second.end(); ++it)
         {
-            object_guid const  folder_guid =
-                    ctx.insert_folder(props.folder_guid, generate_unique_folder_name_from(ctx, props.folder_guid, it->first));
+            object_guid const  folder_guid = ctx.insert_folder(props.folder_guid, it->first, true);
             import_under_folder(ctx, delayed_tasks, folder_guid, it->second, scene.effects(), props.relocation_frame_guid);
             apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, props);
         }
