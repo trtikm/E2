@@ -10,6 +10,24 @@
 namespace ai {
 
 
+scene_binding_ptr  scene_binding::create(
+        com::simulation_context const*  context_,
+        com::object_guid  folder_guid_of_agent_,
+        skeletal_motion_templates const&  motion_templates,
+        vector3 const&  skeleton_frame_origin,
+        quaternion const&  skeleton_frame_orientation
+        )
+{
+    return std::shared_ptr<scene_binding>(new scene_binding(
+            context_,
+            folder_guid_of_agent_,
+            motion_templates,
+            skeleton_frame_origin,
+            skeleton_frame_orientation
+            ));
+}
+
+
 scene_binding::scene_binding(
         com::simulation_context const*  context_,
         com::object_guid  folder_guid_of_agent_,
@@ -68,6 +86,12 @@ scene_binding::scene_binding(
                 pose_frame.orientation()
                 );
     }
+}
+
+
+scene_binding::~scene_binding()
+{
+    context->request_erase_non_root_folder(context->folder_of_frame(frame_guid_of_skeleton));
 }
 
 

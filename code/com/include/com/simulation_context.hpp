@@ -17,14 +17,18 @@
 #   include <angeo/rigid_body.hpp>
 #   include <angeo/custom_constraint_id.hpp>
 #   include <ai/agent_id.hpp>
+#   include <ai/agent_kind.hpp>
+#   include <ai/skeletal_motion_templates.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/dynamic_array.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <unordered_map>
 #   include <vector>
+#   include <list>
 #   include <string>
 #   include <functional>
+#   include <algorithm>
 #   include <memory>
 
 namespace angeo {
@@ -99,14 +103,17 @@ struct  simulation_context
     //      in the end of the currently processed simulation round. In all cases, no module should observe an effect
     //      of any request sent in the current simulation rounds earlier than in the next simulation round (the only
     //      exception is the physics simulator which may observe the effect of the early requests, as explained
-    //      above). Note that for some requests, like request_import_scene_from_directory, there may pass several
-    //      simulation rounds till the effect becomes observable.
+    //      above). Processing of requests from functions starting with 'request_late_', like request_late_insert_agent
+    //      or request_late_import_scene_from_directory, may take several simulation rounds till the effect becomes
+    //      observable.
 
     // INVARIANT:
     //      Function 'process_pending_early_requests()' applies requests from calls to functions whose names start
-    //      with 'request_early_'. The requests are applied in exactly the same order as the functions were called.
-    //      Function 'process_pending_requests()' applies requests from calls to all other request functions. These
-    //      requests are also applied in exactly the same order as the functions were called.
+    //      with 'request_early_'. The requests are applied in exactly the same order as they were accepted.
+    //      Function 'process_pending_late_requests()' applies requests from calls to functions whose names start
+    //      with 'request_late_'. The requests are applied in a non-deterministic order. Finally, the function
+    //      'process_pending_requests()' applies requests from calls to all other request functions. These
+    //      requests are applied in exactly the same order as they were accepted.
 
     // IMPORTANT NOTE:
     //      No function in this module is thread safe. TODO: Change that!!!
@@ -207,13 +214,15 @@ struct  simulation_context
     // Disabled (not const) for modules.
     std::string const&  from_batch_guid(object_guid const  batch_guid);
     gfx::batch  from_batch_guid_to_batch(object_guid const  batch_guid);
-    object_guid  insert_batch(object_guid const  folder_guid, std::string const&  name, gfx::batch const  batch);
+    object_guid  insert_batch(object_guid const  folder_guid, std::string const&  name, gfx::batch const  batch,
+                              std::vector<object_guid> const&  frame_guids = {});
     void  erase_batch(object_guid const  batch_guid);
     object_guid  load_batch(
             object_guid const  folder_guid, std::string const&  name,
             std::string const&  disk_path,
             gfx::effects_config  effects_config,
-            std::string const&  skin_name = "default"
+            std::string const&  skin_name = "default",
+            std::vector<object_guid> const&  frame_guids = {}
             );
     object_guid  insert_batch_lines3d(
             object_guid const  folder_guid, std::string const&  name,
@@ -547,7 +556,26 @@ struct  simulation_context
     object_guid  to_agent_guid(ai::agent_id const  agid) const;
     agent_guid_iterator  agents_begin() const;
     agent_guid_iterator  agents_end() const;
+    void  request_late_insert_agent(
+            object_guid const  under_folder_guid,
+            std::string const&  agent_root_folder_name_prefix,
+            ai::AGENT_KIND const  kind,
+            vector3 const&  skeleton_frame_origin,
+            quaternion const&  skeleton_frame_orientation,
+            gfx::batch const  skeleton_attached_batch
+            ) const;
+    void  request_erase_agent(object_guid const  agent_guid) const;
     // Disabled (not const) for modules.
+    object_guid  insert_agent(
+            object_guid const  under_folder_guid,
+            std::string const&  agent_root_folder_name_prefix,
+            ai::AGENT_KIND const  kind,
+            ai::skeletal_motion_templates const  motion_templates,
+            vector3 const&  skeleton_frame_origin,
+            quaternion const&  skeleton_frame_orientation,
+            gfx::batch const  skeleton_attached_batch
+            );
+    void  erase_agent(object_guid const  agent_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // COLLISION CONTACTS API
@@ -584,7 +612,7 @@ struct  simulation_context
     std::string  get_mesh_root_dir() const;
     std::string  get_scene_root_dir() const;
     std::string  get_texture_root_dir() const;
-    void  request_import_scene_from_directory(import_scene_props const&  props) const;
+    void  request_late_import_scene_from_directory(import_scene_props const&  props) const;
     // Disabled (not const) for modules.
     void  insert_imported_batch_to_cache(gfx::batch const  batch);
     void  insert_imported_effects_config_to_cache(gfx::effects_config const  effects_config);
@@ -603,8 +631,8 @@ struct  simulation_context
     void  process_pending_requests();
     void  clear_pending_requests();
 
-    void  process_pending_requests_import_scene();
-    void  clear_pending_requests_import_scene();
+    void  process_pending_late_requests();
+    void  clear_pending_late_requests();
 
     /////////////////////////////////////////////////////////////////////////////////////
     // SCENE CLEAR API
@@ -743,6 +771,14 @@ private:
     std::string  m_data_root_dir;
 
     /////////////////////////////////////////////////////////////////////////////////////
+    // CACHES
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    std::unordered_map<async::key_type, detail::imported_scene>  m_cache_of_imported_scenes;
+    std::unordered_map<async::key_type, gfx::effects_config>  m_cache_of_imported_effect_configs;
+    std::unordered_map<async::key_type, gfx::batch>  m_cache_of_imported_batches;
+
+    /////////////////////////////////////////////////////////////////////////////////////
     // EARLY REQUESTS HANDLING
     /////////////////////////////////////////////////////////////////////////////////////
 
@@ -771,9 +807,9 @@ private:
         float_32_bit  initial_value;
     };
 
-    mutable std::vector<REQUEST_EARLY_KIND>  m_pending_requests_early;
-    mutable std::vector<request_data_insertion_of_custom_constraint> m_requests_early_insert_custom_constraint;
-    mutable std::vector<request_data_insertion_of_instant_constraint> m_requests_early_insert_instant_constraint;
+    mutable std::list<REQUEST_EARLY_KIND>  m_pending_requests_early;
+    mutable std::list<request_data_insertion_of_custom_constraint> m_requests_early_insert_custom_constraint;
+    mutable std::list<request_data_insertion_of_instant_constraint> m_requests_early_insert_instant_constraint;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // REQUESTS HANDLING
@@ -808,39 +844,75 @@ private:
     struct  request_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
     struct  request_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
 
-    mutable std::vector<REQUEST_KIND>  m_pending_requests;
-    mutable std::vector<object_guid>  m_requests_erase_folder;
-    mutable std::vector<object_guid>  m_requests_erase_frame;
-    mutable std::vector<request_data_relocate_frame>  m_requests_relocate_frame;
-    mutable std::vector<request_data_set_parent_frame>  m_requests_set_parent_frame;
-    mutable std::vector<object_guid>  m_requests_erase_batch;
-    mutable std::vector<request_data_enable_collider>  m_requests_enable_collider;
-    mutable std::vector<request_data_enable_colliding>  m_requests_enable_colliding;
-    mutable std::vector<object_guid>  m_requests_erase_collider;
-    mutable std::vector<object_guid>  m_requests_erase_rigid_body;
-    mutable std::vector<request_data_set_velocity>  m_requests_set_linear_velocity;
-    mutable std::vector<request_data_set_velocity>  m_requests_set_angular_velocity;
-    mutable std::vector<request_data_set_acceleration_from_source>  m_requests_set_linear_acceleration_from_source;
-    mutable std::vector<request_data_set_acceleration_from_source>  m_requests_set_angular_acceleration_from_source;
-    mutable std::vector<request_data_del_acceleration_from_source>  m_requests_del_linear_acceleration_from_source;
-    mutable std::vector<request_data_del_acceleration_from_source>  m_requests_del_angular_acceleration_from_source;
-    mutable std::vector<object_guid>  m_requests_erase_timer;
-    mutable std::vector<object_guid>  m_requests_erase_sensor;
+    mutable std::list<REQUEST_KIND>  m_pending_requests;
+    mutable std::list<object_guid>  m_requests_erase_folder;
+    mutable std::list<object_guid>  m_requests_erase_frame;
+    mutable std::list<request_data_relocate_frame>  m_requests_relocate_frame;
+    mutable std::list<request_data_set_parent_frame>  m_requests_set_parent_frame;
+    mutable std::list<object_guid>  m_requests_erase_batch;
+    mutable std::list<request_data_enable_collider>  m_requests_enable_collider;
+    mutable std::list<request_data_enable_colliding>  m_requests_enable_colliding;
+    mutable std::list<object_guid>  m_requests_erase_collider;
+    mutable std::list<object_guid>  m_requests_erase_rigid_body;
+    mutable std::list<request_data_set_velocity>  m_requests_set_linear_velocity;
+    mutable std::list<request_data_set_velocity>  m_requests_set_angular_velocity;
+    mutable std::list<request_data_set_acceleration_from_source>  m_requests_set_linear_acceleration_from_source;
+    mutable std::list<request_data_set_acceleration_from_source>  m_requests_set_angular_acceleration_from_source;
+    mutable std::list<request_data_del_acceleration_from_source>  m_requests_del_linear_acceleration_from_source;
+    mutable std::list<request_data_del_acceleration_from_source>  m_requests_del_angular_acceleration_from_source;
+    mutable std::list<object_guid>  m_requests_erase_timer;
+    mutable std::list<object_guid>  m_requests_erase_sensor;
 
     /////////////////////////////////////////////////////////////////////////////////////
-    // SCENE IMPORT REQUESTS HANDLING
+    // LATE REQUESTS HANDLING
     /////////////////////////////////////////////////////////////////////////////////////
 
-    struct  request_props_imported_scene
+    template<typename T>
+    struct  requests_late_queue
+    {
+        using  data_type = T;
+        using  is_ready_func = std::function<bool(data_type&)>;
+        using  process_data_func = std::function<void(data_type&)>;
+
+        void  push_back(data_type const&  value) { data.push_back(value); }
+        bool  empty() const { return data.empty(); }
+        void  clear() { data.clear(); }
+        void  update(is_ready_func const&  is_ready, process_data_func const&  process_data)
+        {
+            for (natural_32_bit  i = 0U; i < (natural_32_bit)data.size(); )
+                if (is_ready(data.at(i)))
+                {
+                    std::swap(data.at(i), data.back());
+                    data_type  value = data.back();
+                    data.pop_back();
+                    process_data(value);
+                }
+                else
+                    ++i;
+        }
+    private:
+        std::vector<data_type>  data;
+    };
+
+    struct  request_data_imported_scene
     {
         detail::imported_scene  scene;
         import_scene_props  props;
     };
 
-    mutable std::vector<request_props_imported_scene>  m_requests_queue_scene_import;
-    std::unordered_map<async::key_type, detail::imported_scene>  m_cache_of_imported_scenes;
-    std::unordered_map<async::key_type, gfx::effects_config>  m_cache_of_imported_effect_configs;
-    std::unordered_map<async::key_type, gfx::batch>  m_cache_of_imported_batches;
+    struct  request_data_insert_agent
+    {
+        object_guid  under_folder_guid;
+        std::string  agent_root_folder_name_prefix;
+        ai::AGENT_KIND  kind;
+        vector3  skeleton_frame_origin;
+        quaternion  skeleton_frame_orientation;
+        gfx::batch  skeleton_attached_batch;
+        ai::skeletal_motion_templates  motion_templates;
+    };
+
+    mutable requests_late_queue<request_data_imported_scene>  m_requests_late_scene_import;
+    mutable requests_late_queue<request_data_insert_agent>  m_requests_late_insert_agent;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // IMPLEMENTATION DETAILS

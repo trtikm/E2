@@ -470,10 +470,33 @@ static void  import_agent(
         simulation_context&  ctx,
         boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
-        std::string const&  name
+        std::string const&  name,
+        std::unordered_map<std::string, boost::property_tree::ptree> const&  effects
         )
 {
-    NOT_IMPLEMENTED_YET();
+    gfx::effects_config  effects_config; 
+    {
+        auto const  it = effects.find(hierarchy.get<std::string>("skeleton_batch_effects"));
+        INVARIANT(it != effects.end());
+        effects_config = import_effects_config(it->second);
+        ctx.insert_imported_effects_config_to_cache(effects_config);
+    }
+
+    gfx::batch const  agent_batch(
+            hierarchy.get<std::string>("skeleton_batch_disk_path"),
+            effects_config,
+            hierarchy.get<std::string>("skeleton_batch_skin")
+            );
+    ctx.insert_imported_batch_to_cache(agent_batch);
+
+    ctx.request_late_insert_agent(
+            folder_guid,
+            name,
+            ai::as_agent_kind(hierarchy.get<std::string>("kind")),
+            import_vector3(hierarchy.get_child("skeleton_frame_origin")),
+            import_quaternion(hierarchy.get_child("skeleton_frame_orientation")),
+            agent_batch
+            );
 }
 
 
@@ -523,7 +546,7 @@ static void  import_under_folder(
         for (auto  content_it : load_tasks[OBJECT_KIND::SENSOR])
             import_sensor(ctx, delayed_tasks, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::AGENT])
-            import_agent(ctx, content_it->second, folder_guid, content_it->first);
+            import_agent(ctx, content_it->second, folder_guid, content_it->first, effects);
     }
 
     auto const  folders = hierarchy.find("folders");

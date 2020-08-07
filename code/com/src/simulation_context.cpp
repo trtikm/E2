@@ -3,6 +3,7 @@
 #include <angeo/rigid_body_simulator.hpp>
 #include <angeo/mass_and_inertia_tensor.hpp>
 #include <ai/simulator.hpp>
+#include <ai/scene_binding.hpp>
 #include <utility/async_resource_load.hpp>
 #include <utility/canonical_path.hpp>
 #include <utility/timeprof.hpp>
@@ -71,6 +72,10 @@ simulation_context::simulation_context(
     , m_collision_contacts()
     , m_from_colliders_to_contacts()
     , m_data_root_dir(canonical_path(data_root_dir_.empty() ? "." : data_root_dir_).string())
+    // CACHES
+    , m_cache_of_imported_scenes()
+    , m_cache_of_imported_effect_configs()
+    , m_cache_of_imported_batches()
     // EARLY REQUESTS HANDLING
     , m_rigid_bodies_with_invalidated_shape()
     , m_pending_requests_early()
@@ -96,10 +101,8 @@ simulation_context::simulation_context(
     , m_requests_erase_timer()
     , m_requests_erase_sensor()
     // SCENE IMPORT REQUESTS HANDLING
-    , m_requests_queue_scene_import()
-    , m_cache_of_imported_scenes()
-    , m_cache_of_imported_effect_configs()
-    , m_cache_of_imported_batches()
+    , m_requests_late_scene_import()
+    , m_requests_late_insert_agent()
 {
     ASSUMPTION(!m_data_root_dir.empty());
 
@@ -323,7 +326,7 @@ void  simulation_context::request_erase_non_root_folder(object_guid const  folde
             request_erase_sensor(name_and_guid.second);
             break;
         case OBJECT_KIND::AGENT:
-            NOT_IMPLEMENTED_YET();
+            request_erase_agent(name_and_guid.second);
             break;
         default: UNREACHABLE(); break;
         }
@@ -693,7 +696,8 @@ gfx::batch  simulation_context::from_batch_guid_to_batch(object_guid const  batc
 }
 
 
-object_guid  simulation_context::insert_batch(object_guid const  folder_guid, std::string const&  name, gfx::batch const  batch)
+object_guid  simulation_context::insert_batch(object_guid const  folder_guid, std::string const&  name, gfx::batch const  batch,
+                                              std::vector<object_guid> const&  frame_guids)
 {
     ASSUMPTION(folder_content(folder_guid).content.count(name) == 0UL);
 
@@ -703,10 +707,15 @@ object_guid  simulation_context::insert_batch(object_guid const  folder_guid, st
 
     m_folders.at(folder_guid.index).content.insert({ name, batch_guid });
 
-    object_guid const  frame_guid = find_closest_frame(folder_guid, true);
-    ASSUMPTION(frame_guid != invalid_object_guid());
+    if (frame_guids.empty())
+    {
+        object_guid const  frame_guid = find_closest_frame(folder_guid, true);
+        ASSUMPTION(frame_guid != invalid_object_guid());
 
-    m_batches.at(batch_guid.index).frames.push_back(frame_guid);
+        m_batches.at(batch_guid.index).frames.push_back(frame_guid);
+    }
+    else
+        m_batches.at(batch_guid.index).frames = frame_guids;
 
     return batch_guid;
 }
@@ -732,10 +741,11 @@ object_guid  simulation_context::load_batch(
         object_guid const  folder_guid, std::string const&  name,
         std::string const&  disk_path,
         gfx::effects_config  effects_config,
-        std::string const&  skin_name
+        std::string const&  skin_name,
+        std::vector<object_guid> const&  frame_guids
         )
 {
-    return insert_batch(folder_guid, name, gfx::batch(disk_path, effects_config, skin_name));
+    return insert_batch(folder_guid, name, gfx::batch(disk_path, effects_config, skin_name), frame_guids);
 }
 
 
@@ -2170,6 +2180,80 @@ simulation_context::agent_guid_iterator  simulation_context::agents_end() const
 }
 
 
+void  simulation_context::request_late_insert_agent(
+        object_guid const  under_folder_guid,
+        std::string const&  agent_root_folder_name_prefix,
+        ai::AGENT_KIND const  kind,
+        vector3 const&  skeleton_frame_origin,
+        quaternion const&  skeleton_frame_orientation,
+        gfx::batch const  skeleton_attached_batch
+        ) const
+{
+    ASSUMPTION(is_valid_folder_guid(under_folder_guid));
+
+    m_requests_late_insert_agent.push_back({ 
+            under_folder_guid,
+            agent_root_folder_name_prefix,
+            kind,
+            skeleton_frame_origin,
+            skeleton_frame_orientation,
+            skeleton_attached_batch,
+            ai::skeletal_motion_templates()
+            });
+}
+
+
+void  simulation_context::request_erase_agent(object_guid const  agent_guid) const
+{
+    NOT_IMPLEMENTED_YET();
+}
+
+
+// Disabled (not const) for modules.
+
+
+object_guid  simulation_context::insert_agent(
+        object_guid const  under_folder_guid,
+        std::string const&  agent_root_folder_name_prefix,
+        ai::AGENT_KIND const  kind,
+        ai::skeletal_motion_templates const  motion_templates,
+        vector3 const&  skeleton_frame_origin,
+        quaternion const&  skeleton_frame_orientation,
+        gfx::batch const  skeleton_attached_batch
+        )
+{
+    ASSUMPTION(
+        is_valid_folder_guid(under_folder_guid) &&
+        !agent_root_folder_name_prefix.empty() &&
+        motion_templates.loaded_successfully() &&
+        skeleton_attached_batch.loaded_successfully()
+        );
+
+    object_guid const  agent_root_folder_guid = insert_folder(under_folder_guid, agent_root_folder_name_prefix, true);
+
+    ai::scene_binding_ptr const  binding = ai::scene_binding::create(
+            this,
+            agent_root_folder_guid,
+            motion_templates,
+            skeleton_frame_origin,
+            skeleton_frame_orientation
+            );
+
+    ai::agent_id const  id = m_ai_simulator_ptr->insert_agent(kind, motion_templates, binding);
+
+    object_guid const  agent_batch_guid =
+            insert_batch(agent_root_folder_guid, "BATCH.agent", skeleton_attached_batch, binding->frame_guids_of_bones);
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  simulation_context::erase_agent(object_guid const  agent_guid)
+{
+    NOT_IMPLEMENTED_YET();
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 // COLLISION CONTACTS API
 /////////////////////////////////////////////////////////////////////////////////////
@@ -2395,10 +2479,10 @@ std::string  simulation_context::get_texture_root_dir() const
 }
 
 
-void  simulation_context::request_import_scene_from_directory(import_scene_props const&  props) const
+void  simulation_context::request_late_import_scene_from_directory(import_scene_props const&  props) const
 {
     auto const  it = m_cache_of_imported_scenes.find(detail::imported_scene::key_from_path(props.import_dir));
-    m_requests_queue_scene_import.push_back({
+    m_requests_late_scene_import.push_back({
             it == m_cache_of_imported_scenes.end() ? detail::imported_scene(props.import_dir) : it->second,
             props
             });
@@ -2513,45 +2597,60 @@ void  simulation_context::clear_rigid_bodies_with_invalidated_shape()
 }
 
 
+template<typename T>
+struct  cursor_to_requests_list
+{
+    cursor_to_requests_list(std::list<T>&  data_) : data(&data_), record(&data_.front()) {}
+    ~cursor_to_requests_list() { data->pop_front(); }
+    T*  operator->() const { return record; }
+    T  operator*() const { return *record; }
+private:
+    std::list<T>*  data;
+    T*  record;
+};
+
+template<typename T>
+inline cursor_to_requests_list<T>  make_request_cursor_to(std::list<T>&  data_) { return cursor_to_requests_list<T>(data_); }
+
+
 void  simulation_context::process_pending_early_requests()
 {
-    std::vector<request_data_insertion_of_custom_constraint>::const_iterator  insert_custom_constraint_it =
-        m_requests_early_insert_custom_constraint.begin();
-    std::vector<request_data_insertion_of_instant_constraint>::const_iterator  insert_instant_constraint_it =
-        m_requests_early_insert_instant_constraint.begin();
-
-    for (REQUEST_EARLY_KIND  kind : m_pending_requests_early)
-        switch (kind)
+    for ( ; !m_pending_requests_early.empty(); m_pending_requests_early.pop_front())
+        switch (m_pending_requests_early.front())
         {
-        case REQUEST_INSERT_CUSTOM_CONSTRAINT:
+        case REQUEST_INSERT_CUSTOM_CONSTRAINT: {
+            auto  cursor = make_request_cursor_to(m_requests_early_insert_custom_constraint);
             insert_custom_constraint_to_physics(
-                insert_custom_constraint_it->ccid,
-                insert_custom_constraint_it->rigid_body_0,
-                insert_custom_constraint_it->linear_component_0, insert_custom_constraint_it->angular_component_0,
-                insert_custom_constraint_it->rigid_body_1,
-                insert_custom_constraint_it->linear_component_1, insert_custom_constraint_it->angular_component_1,
-                insert_custom_constraint_it->bias,
-                insert_custom_constraint_it->variable_lower_bound, insert_custom_constraint_it->variable_upper_bound,
-                insert_custom_constraint_it->initial_value_for_cache_miss
+                    cursor->ccid,
+                    cursor->rigid_body_0,
+                    cursor->linear_component_0,
+                    cursor->angular_component_0,
+                    cursor->rigid_body_1,
+                    cursor->linear_component_1,
+                    cursor->angular_component_1,
+                    cursor->bias,
+                    cursor->variable_lower_bound,
+                    cursor->variable_upper_bound,
+                    cursor->initial_value_for_cache_miss
                 );
-            ++insert_custom_constraint_it;
-            break;
-        case REQUEST_INSERT_INSTANT_CONSTRAINT:
+            } break;
+        case REQUEST_INSERT_INSTANT_CONSTRAINT: {
+            auto  cursor = make_request_cursor_to(m_requests_early_insert_instant_constraint);
             insert_instant_constraint_to_physics(
-                insert_instant_constraint_it->rigid_body_0,
-                insert_instant_constraint_it->linear_component_0, insert_instant_constraint_it->angular_component_0,
-                insert_instant_constraint_it->rigid_body_1,
-                insert_instant_constraint_it->linear_component_1, insert_instant_constraint_it->angular_component_1,
-                insert_instant_constraint_it->bias,
-                insert_instant_constraint_it->variable_lower_bound, insert_instant_constraint_it->variable_upper_bound,
-                insert_instant_constraint_it->initial_value
+                cursor->rigid_body_0,
+                cursor->linear_component_0,
+                cursor->angular_component_0,
+                cursor->rigid_body_1,
+                cursor->linear_component_1,
+                cursor->angular_component_1,
+                cursor->bias,
+                cursor->variable_lower_bound,
+                cursor->variable_upper_bound,
+                cursor->initial_value
                 );
-            ++insert_instant_constraint_it;
-            break;
+            } break;
         default: UNREACHABLE(); break;
         }
-
-    clear_pending_early_requests();
 }
 
 
@@ -2565,106 +2664,72 @@ void  simulation_context::clear_pending_early_requests()
 
 void  simulation_context::process_pending_requests()
 {
-    std::vector<object_guid>::const_iterator  erase_folder_it = m_requests_erase_folder.begin();
-    std::vector<object_guid>::const_iterator  erase_frame_it = m_requests_erase_frame.begin();
-    std::vector<request_data_relocate_frame>::const_iterator  relocate_frame_it = m_requests_relocate_frame.begin();
-    std::vector<request_data_set_parent_frame>::const_iterator  set_parent_frame_it = m_requests_set_parent_frame.begin();
-    std::vector<object_guid>::const_iterator  erase_batch_it = m_requests_erase_batch.begin();
-    std::vector<request_data_enable_collider>::const_iterator  enable_collider_it = m_requests_enable_collider.begin();
-    std::vector<request_data_enable_colliding>::const_iterator  enable_colliding_it = m_requests_enable_colliding.begin();
-    std::vector<object_guid>::const_iterator  erase_collider_it = m_requests_erase_collider.begin();
-    std::vector<request_data_set_velocity>::const_iterator  set_linear_velocity_it = m_requests_set_linear_velocity.begin();
-    std::vector<request_data_set_velocity>::const_iterator  set_angular_velocity_it = m_requests_set_angular_velocity.begin();
-    std::vector<object_guid>::const_iterator  erase_rigid_body_it = m_requests_erase_rigid_body.begin();
-    std::vector<request_data_set_acceleration_from_source>::const_iterator  set_linear_acceleration_it =
-        m_requests_set_linear_acceleration_from_source.begin();
-    std::vector<request_data_set_acceleration_from_source>::const_iterator  set_angular_acceleration_it =
-        m_requests_set_angular_acceleration_from_source.begin();
-    std::vector<request_data_del_acceleration_from_source>::const_iterator  del_linear_acceleration_it =
-        m_requests_del_linear_acceleration_from_source.begin();
-    std::vector<request_data_del_acceleration_from_source>::const_iterator  del_angular_acceleration_it =
-        m_requests_del_angular_acceleration_from_source.begin();
-    std::vector<object_guid>::const_iterator  erase_timer_it = m_requests_erase_timer.begin();
-    std::vector<object_guid>::const_iterator  erase_sensor_it = m_requests_erase_sensor.begin();
-
-    for (REQUEST_KIND  kind : m_pending_requests)
-        switch (kind)
+    for ( ; !m_pending_requests.empty(); m_pending_requests.pop_front())
+        switch (m_pending_requests.front())
         {
         case REQUEST_ERASE_FOLDER:
-            erase_non_root_empty_folder(*erase_folder_it);
-            ++erase_folder_it;
+            erase_non_root_empty_folder(*make_request_cursor_to(m_requests_erase_folder));
             break;
         case REQUEST_ERASE_FRAME:
-            erase_frame(*erase_frame_it);
-            ++erase_frame_it;
+            erase_frame(*make_request_cursor_to(m_requests_erase_frame));
             break;
-        case REQUEST_RELOCATE_FRAME:
-            frame_relocate_relative_to_parent(relocate_frame_it->frame_guid, relocate_frame_it->position,
-                                              relocate_frame_it->orientation);
-            ++relocate_frame_it;
-            break;
-        case REQUEST_SET_PARENT_FRAME:
-            set_parent_frame(set_parent_frame_it->frame_guid, set_parent_frame_it->parent_frame_guid);
-            ++set_parent_frame_it;
-            break;
+        case REQUEST_RELOCATE_FRAME: {
+            auto  cursor = make_request_cursor_to(m_requests_relocate_frame);
+            frame_relocate_relative_to_parent(cursor->frame_guid, cursor->position, cursor->orientation);
+            } break;
+        case REQUEST_SET_PARENT_FRAME: {
+            auto  cursor = make_request_cursor_to(m_requests_set_parent_frame);
+            set_parent_frame(cursor->frame_guid, cursor->parent_frame_guid);
+            } break;
         case REQUEST_ERASE_BATCH:
-            erase_batch(*erase_batch_it);
-            ++erase_batch_it;
+            erase_batch(*make_request_cursor_to(m_requests_erase_batch));
             break;
-        case REQUEST_ENABLE_COLLIDER:
-            enable_collider(enable_collider_it->collider_guid, enable_collider_it->state);
-            ++enable_collider_it;
-            break;
-        case REQUEST_ENABLE_COLLIDING:
-            enable_colliding(enable_colliding_it->collider_1, enable_colliding_it->collider_2, enable_colliding_it->state);
-            ++enable_colliding_it;
-            break;
+        case REQUEST_ENABLE_COLLIDER: {
+            auto  cursor = make_request_cursor_to(m_requests_enable_collider);
+            enable_collider(cursor->collider_guid, cursor->state);
+            } break;
+        case REQUEST_ENABLE_COLLIDING: {
+            auto  cursor = make_request_cursor_to(m_requests_enable_colliding);
+            enable_colliding(cursor->collider_1, cursor->collider_2, cursor->state);
+            } break;
         case REQUEST_ERASE_COLLIDER:
-            erase_collider(*erase_collider_it);
-            ++erase_collider_it;
+            erase_collider(*make_request_cursor_to(m_requests_erase_collider));
             break;
         case REQUEST_ERASE_RIGID_BODY:
-            erase_rigid_body(*erase_rigid_body_it);
-            ++erase_rigid_body_it;
+            erase_rigid_body(*make_request_cursor_to(m_requests_erase_rigid_body));
             break;
-        case REQUEST_SET_LINEAR_VELOCITY:
-            set_rigid_body_linear_velocity(set_linear_velocity_it->rb_guid, set_linear_velocity_it->velocity);
-            ++set_linear_velocity_it;
-            break;
-        case REQUEST_SET_ANGULAR_VELOCITY:
-            set_rigid_body_angular_velocity(set_angular_velocity_it->rb_guid, set_angular_velocity_it->velocity);
-            ++set_angular_velocity_it;
-            break;
-        case REQUEST_SET_LINEAR_ACCEL:
-            set_rigid_body_linear_acceleration_from_source(set_linear_acceleration_it->rb_guid, set_linear_acceleration_it->source_guid,
-                                                           set_linear_acceleration_it->acceleration);
-            ++set_linear_acceleration_it;
-            break;
-        case REQUEST_SET_ANGULAR_ACCEL:
-            set_rigid_body_angular_acceleration_from_source(set_angular_acceleration_it->rb_guid, set_angular_acceleration_it->source_guid,
-                                                           set_angular_acceleration_it->acceleration);
-            ++set_angular_acceleration_it;
-            break;
-        case REQUEST_DEL_LINEAR_ACCEL:
-            remove_rigid_body_linear_acceleration_from_source(del_linear_acceleration_it->rb_guid, del_linear_acceleration_it->source_guid);
-            ++del_linear_acceleration_it;
-            break;
-        case REQUEST_DEL_ANGULAR_ACCEL:
-            remove_rigid_body_angular_acceleration_from_source(del_angular_acceleration_it->rb_guid, del_angular_acceleration_it->source_guid);
-            ++del_angular_acceleration_it;
-            break;
+        case REQUEST_SET_LINEAR_VELOCITY: {
+            auto  cursor = make_request_cursor_to(m_requests_set_linear_velocity);
+            set_rigid_body_linear_velocity(cursor->rb_guid, cursor->velocity);
+            } break;
+        case REQUEST_SET_ANGULAR_VELOCITY: {
+            auto  cursor = make_request_cursor_to(m_requests_set_angular_velocity);
+            set_rigid_body_angular_velocity(cursor->rb_guid, cursor->velocity);
+            } break;
+        case REQUEST_SET_LINEAR_ACCEL: {
+            auto  cursor = make_request_cursor_to(m_requests_set_linear_acceleration_from_source);
+            set_rigid_body_linear_acceleration_from_source(cursor->rb_guid, cursor->source_guid, cursor->acceleration);
+            } break;
+        case REQUEST_SET_ANGULAR_ACCEL: {
+            auto  cursor = make_request_cursor_to(m_requests_set_angular_acceleration_from_source);
+            set_rigid_body_angular_acceleration_from_source(cursor->rb_guid, cursor->source_guid, cursor->acceleration);
+            } break;
+        case REQUEST_DEL_LINEAR_ACCEL: {
+            auto  cursor = make_request_cursor_to(m_requests_del_linear_acceleration_from_source);
+            remove_rigid_body_linear_acceleration_from_source(cursor->rb_guid, cursor->source_guid);
+            } break;
+        case REQUEST_DEL_ANGULAR_ACCEL: {
+            auto  cursor = make_request_cursor_to(m_requests_del_angular_acceleration_from_source);
+            remove_rigid_body_angular_acceleration_from_source(cursor->rb_guid, cursor->source_guid);
+            } break;
         case REQUEST_ERASE_TIMER:
-            erase_timer(*erase_timer_it);
-            ++erase_timer_it;
+            erase_timer(*make_request_cursor_to(m_requests_erase_timer));
             break;
         case REQUEST_ERASE_SENSOR:
-            erase_sensor(*erase_sensor_it);
-            ++erase_sensor_it;
+            erase_sensor(*make_request_cursor_to(m_requests_erase_sensor));
             break;
         default: UNREACHABLE(); break;
         }
-
-    clear_pending_requests();
 }
 
 
@@ -2691,40 +2756,54 @@ void  simulation_context::clear_pending_requests()
 }
 
 
-void  simulation_context::process_pending_requests_import_scene()
+void  simulation_context::process_pending_late_requests()
 {
-    for (natural_32_bit  i = 0U; i < (natural_32_bit)m_requests_queue_scene_import.size(); )
-        if (m_requests_queue_scene_import.at(i).scene.is_load_finished())
-        {
-            std::swap(m_requests_queue_scene_import.at(i), m_requests_queue_scene_import.back());
-            request_props_imported_scene const  request = m_requests_queue_scene_import.back();
-            m_requests_queue_scene_import.pop_back();
-
-            if (request.scene.loaded_successfully())
-                try
-                {
-                    detail::import_scene(*this, request.scene, request.props);
-                    if (request.props.store_in_cache)
+    m_requests_late_scene_import.update(
+            [](request_data_imported_scene&  request) { return request.scene.is_load_finished(); },
+            [this](request_data_imported_scene&  request) {
+                if (request.scene.loaded_successfully())
+                    try
+                    {
+                        detail::import_scene(*this, request.scene, request.props);
+                        if (request.props.store_in_cache)
+                            m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
+                    }
+                    catch (std::exception const&  e)
+                    {
+                        LOG(error, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
+                        // To prevent subsequent attempts to load the scene from disk.
                         m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
-                }
-                catch (std::exception const&  e)
-                {
-                    LOG(error, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
+                    }
+                else
                     // To prevent subsequent attempts to load the scene from disk.
                     m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
-                }
-            else
-                // To prevent subsequent attempts to load the scene from disk.
-                m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
-        }
-        else
-            ++i;
+            });
+
+    m_requests_late_insert_agent.update(
+            [](request_data_insert_agent&  request) {
+                if (request.motion_templates.empty()
+                        && request.skeleton_attached_batch.get_available_resources().loaded_successfully())
+                    request.motion_templates = ai::skeletal_motion_templates(
+                            request.skeleton_attached_batch.get_available_resources().skeletal()->animation_dir(),
+                            1U,
+                            nullptr
+                            );
+                if (request.skeleton_attached_batch.is_load_finished() && (
+                        !request.skeleton_attached_batch.get_available_resources().loaded_successfully() ||
+                        request.motion_templates.is_load_finished()))
+                    return true;
+                return false;
+            },
+            [this](request_data_insert_agent&  request) {
+                NOT_IMPLEMENTED_YET();
+            });
 }
 
 
-void  simulation_context::clear_pending_requests_import_scene()
+void  simulation_context::clear_pending_late_requests()
 {
-    m_requests_queue_scene_import.clear();
+    m_requests_late_scene_import.clear();
+    m_requests_late_insert_agent.clear();
 }
 
 
@@ -2738,7 +2817,7 @@ void  simulation_context::clear(bool const  also_caches)
     clear_rigid_bodies_with_invalidated_shape();
     clear_pending_early_requests();
     clear_pending_requests();
-    clear_pending_requests_import_scene();
+    clear_pending_late_requests();
     clear_rigid_bodies_with_invalidated_shape();
 
     m_collision_contacts.clear();
@@ -2752,11 +2831,20 @@ void  simulation_context::clear(bool const  also_caches)
     }
 
     folder_content_type const&  fct = folder_content(root_folder());
+    INVARIANT(fct.content.empty());
     for (auto const&  name_and_guid : fct.child_folders)
         request_erase_non_root_folder(name_and_guid.second);
-    INVARIANT(fct.content.empty());
 
     process_pending_requests();
+
+    INVARIANT(
+        folder_content(root_folder()).content.empty() &&
+        folder_content(root_folder()).child_folders.empty() &&
+        m_pending_requests_early.empty() &&
+        m_pending_requests.empty() &&
+        m_requests_late_scene_import.empty() &&
+        m_requests_late_insert_agent.empty()
+        );
 }
 
 

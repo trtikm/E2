@@ -562,7 +562,7 @@ void  device_simulator::next_round_of_request_info(
     // All other request infos
 
     case REQUEST_KIND::IMPORT_SCENE:
-        ctx.request_import_scene_from_directory(m_request_infos_import_scene.at(rid.index).data);
+        ctx.request_late_import_scene_from_directory(m_request_infos_import_scene.at(rid.index).data);
         break;
     case REQUEST_KIND::ERASE_FOLDER:
         ctx.request_erase_non_root_folder(m_request_infos_erase_folder.at(rid.index).data);

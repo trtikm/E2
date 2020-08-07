@@ -32,7 +32,7 @@ struct  simulator : public com::simulator
         render_config().render_grid = true;
 
         if (get_program_options()->has_scene_dir())
-            context()->request_import_scene_from_directory({
+            context()->request_late_import_scene_from_directory({
                 context()->get_scene_root_dir() + get_program_options()->scene_dir(),
                 context()->root_folder()
                 });
@@ -90,7 +90,7 @@ struct  simulator : public com::simulator
             {
                 clear(shift);
                 if (get_program_options()->has_scene_dir())
-                    context()->request_import_scene_from_directory({
+                    context()->request_late_import_scene_from_directory({
                             context()->get_scene_root_dir() + get_program_options()->scene_dir(),
                             context()->root_folder()
                             });

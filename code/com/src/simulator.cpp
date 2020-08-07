@@ -185,7 +185,7 @@ void  simulator::round()
             SLOG(render_config().fps_prefix << FPS() << "\n");
 
         on_begin_simulation();
-            context()->process_pending_requests_import_scene();
+            context()->process_pending_late_requests();
             if (!simulation_config().paused)
             {
                 simulate();
