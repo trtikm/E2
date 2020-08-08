@@ -66,6 +66,8 @@ void  run(std::unique_ptr<simulator>  s)
         s.reset();
 
         osi::close();
+
+        throw e;
     }
 }
 
