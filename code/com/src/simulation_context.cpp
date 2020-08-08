@@ -688,6 +688,13 @@ std::vector<object_guid> const&  simulation_context::frames_of_batch(object_guid
 }
 
 
+std::vector<matrix44> const&  simulation_context::matrices_to_pose_bones_of_batch(object_guid const  batch_guid) const
+{
+    ASSUMPTION(is_valid_batch_guid(batch_guid));
+    return m_batches.at(batch_guid.index).matrices_to_pose_bones;
+}
+
+
 void  simulation_context::request_erase_batch(object_guid const  batch_guid) const
 {
     m_requests_erase_batch.push_back(batch_guid);
@@ -713,7 +720,8 @@ gfx::batch  simulation_context::from_batch_guid_to_batch(object_guid const  batc
 
 
 object_guid  simulation_context::insert_batch(object_guid const  folder_guid, std::string const&  name, gfx::batch const  batch,
-                                              std::vector<object_guid> const&  frame_guids)
+                                              std::vector<object_guid> const&  frame_guids,
+                                              std::vector<matrix44> const&  matrices_to_pose_bones)
 {
     ASSUMPTION(folder_content(folder_guid).content.count(name) == 0UL);
 
@@ -732,6 +740,8 @@ object_guid  simulation_context::insert_batch(object_guid const  folder_guid, st
     }
     else
         m_batches.at(batch_guid.index).frames = frame_guids;
+
+    m_batches.at(batch_guid.index).matrices_to_pose_bones = matrices_to_pose_bones;
 
     return batch_guid;
 }
@@ -2263,9 +2273,25 @@ object_guid  simulation_context::insert_agent(
 
     ai::agent_id const  id = m_ai_simulator_ptr->insert_agent(kind, motion_templates, binding);
 
-    object_guid const  agent_batch_guid =
-            insert_batch(under_folder_guid, "BATCH.agent", skeleton_attached_batch, binding->frame_guids_of_bones);
+    {
+        std::vector<matrix44>  to_bone_matrices;
+        {
+            matrix44 alignment_matrix;
+            angeo::from_base_matrix(skeleton_attached_batch.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
 
+            to_bone_matrices.resize(motion_templates.pose_frames().size());
+            for (natural_32_bit  bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
+            {
+                angeo::to_base_matrix(motion_templates.pose_frames().at(bone), to_bone_matrices.at(bone));
+                if (motion_templates.parents().at(bone) >= 0)
+                    to_bone_matrices.at(bone) = to_bone_matrices.at(bone) * to_bone_matrices.at(motion_templates.parents().at(bone));
+            }
+            for (natural_32_bit  bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
+                to_bone_matrices.at(bone) = to_bone_matrices.at(bone) * alignment_matrix;
+        }
+
+        insert_batch(under_folder_guid, "BATCH.agent", skeleton_attached_batch, binding->frame_guids_of_bones, to_bone_matrices);
+    }
     object_guid const  agent_guid = {
             OBJECT_KIND::AGENT,
             m_agents.insert({ id, under_folder_guid.index, to_string(OBJECT_KIND::AGENT) })

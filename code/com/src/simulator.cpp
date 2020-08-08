@@ -394,8 +394,8 @@ void  simulator::render_task(render_task_info const&  task)
     render_configuration&  cfg = render_config();
 
     bool const  use_instancing =
-            task.frame_guids.size() > 1UL &&    
-            task.batch.get_available_resources().skeletal() == nullptr &&
+            task.frame_guids.size() > 1UL &&
+            !task.batch.is_attached_to_skeleton() &&
             task.batch.has_instancing_data()
             ;
 
@@ -439,19 +439,43 @@ void  simulator::render_task(render_task_info const&  task)
                 fs_uniform_data_provider
                 );    
         cfg.draw_state = task.batch.get_draw_state();
-        return;
     }
-
-    for (object_guid  frame_guid : task.frame_guids)
+    else if (task.batch.is_attached_to_skeleton())
     {
-        //aiold::skeletal_motion_templates  motion_templates;
-        //{
-        //    scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
-        //    if (agent_ptr != nullptr && agent_ptr->get_props().m_skeleton_props != nullptr)
-        //        motion_templates = agent_ptr->get_props().m_skeleton_props->skeletal_motion_templates;
-        //}
-        //if (!motion_templates.loaded_successfully())
-        if (true)
+        std::vector<matrix44>  frames_of_bones;
+        {
+            std::vector<matrix44> const&  to_bone_matrices = ctx.matrices_to_pose_bones_of_batch(ctx.to_batch_guid(task.batch));
+            INVARIANT(task.frame_guids.size() == to_bone_matrices.size());
+            frames_of_bones.reserve(task.frame_guids.size());
+            for (natural_32_bit  i = 0U, n = (natural_32_bit)task.frame_guids.size(); i != n; ++i)
+                frames_of_bones.push_back(
+                        cfg.matrix_from_world_to_camera *
+                        ctx.frame_world_matrix(task.frame_guids.at(i)) *
+                        to_bone_matrices.at(i)
+                        );
+        }
+        gfx::render_batch(
+                task.batch,
+                gfx::vertex_shader_uniform_data_provider(
+                        task.batch,
+                        frames_of_bones,
+                        cfg.matrix_from_camera_to_clipspace,
+                        cfg.diffuse_colour,
+                        cfg.ambient_colour,
+                        cfg.specular_colour,
+                        cfg.directional_light_direction_in_camera_space,
+                        cfg.directional_light_colour,
+                        cfg.fog_colour,
+                        cfg.fog_near,
+                        cfg.fog_far
+                        ),
+                fs_uniform_data_provider
+                );
+        cfg.draw_state = task.batch.get_draw_state();
+    }
+    else
+        for (object_guid  frame_guid : task.frame_guids)
+        {
             gfx::render_batch(
                     task.batch,
                     gfx::vertex_shader_uniform_data_provider(
@@ -469,64 +493,8 @@ void  simulator::render_task(render_task_info const&  task)
                             ),
                     fs_uniform_data_provider
                     );
-        else
-        {
-            std::vector<matrix44>  frame;
-            {
-                NOT_IMPLEMENTED_YET();
-                //matrix44 alignment_matrix;
-                //angeo::from_base_matrix(batch_and_nodes.first.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
-
-                //std::vector<matrix44>  to_bone_matrices;
-                //{
-                //    to_bone_matrices.resize(motion_templates.pose_frames().size());
-                //    for (natural_32_bit  bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
-                //    {
-                //        angeo::to_base_matrix(motion_templates.pose_frames().at(bone), to_bone_matrices.at(bone));
-                //        if (motion_templates.parents().at(bone) >= 0)
-                //            to_bone_matrices.at(bone) *= to_bone_matrices.at(motion_templates.parents().at(bone));
-                //    }
-                //}
-
-                //detail::skeleton_enumerate_nodes_of_bones(
-                //        node_ptr,
-                //        motion_templates,
-                //        [&frame, &matrix_from_world_to_camera, motion_templates, &alignment_matrix, &to_bone_matrices, node_ptr](
-                //            natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
-                //            {
-
-                //                ASSUMPTION(bone_node_ptr != nullptr);
-                //                frame.push_back(
-                //                        matrix_from_world_to_camera *
-                //                        bone_node_ptr->get_world_matrix() *
-                //                        to_bone_matrices.at(bone) *
-                //                        alignment_matrix
-                //                        );
-                //                return true;
-                //            }
-                //        );
-            }
-            gfx::render_batch(
-                    task.batch,
-                    gfx::vertex_shader_uniform_data_provider(
-                            task.batch,
-                            frame,
-                            cfg.matrix_from_camera_to_clipspace,
-                            cfg.diffuse_colour,
-                            cfg.ambient_colour,
-                            cfg.specular_colour,
-                            cfg.directional_light_direction_in_camera_space,
-                            cfg.directional_light_colour,
-                            cfg.fog_colour,
-                            cfg.fog_near,
-                            cfg.fog_far
-                            ),
-                    fs_uniform_data_provider
-                    );
-
+            cfg.draw_state = task.batch.get_draw_state();
         }
-        cfg.draw_state = task.batch.get_draw_state();
-    }
 }
 
 

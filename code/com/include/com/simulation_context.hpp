@@ -212,12 +212,15 @@ struct  simulation_context
     batch_guid_iterator  batches_begin() const;
     batch_guid_iterator  batches_end() const;
     std::vector<object_guid> const&  frames_of_batch(object_guid const  batch_guid) const;
+    std::vector<matrix44> const&  matrices_to_pose_bones_of_batch(object_guid const  batch_guid) const;
     void  request_erase_batch(object_guid const  batch_guid) const;
     // Disabled (not const) for modules.
     std::string const&  from_batch_guid(object_guid const  batch_guid);
     gfx::batch  from_batch_guid_to_batch(object_guid const  batch_guid);
     object_guid  insert_batch(object_guid const  folder_guid, std::string const&  name, gfx::batch const  batch,
-                              std::vector<object_guid> const&  frame_guids = {});
+                              std::vector<object_guid> const&  frame_guids = {},
+                              std::vector<matrix44> const&  matrices_to_pose_bones = {}
+                              );
     void  erase_batch(object_guid const  batch_guid);
     object_guid  load_batch(
             object_guid const  folder_guid, std::string const&  name,
@@ -667,6 +670,7 @@ private:
             : base_type()
             , batch()
             , frames()
+            , matrices_to_pose_bones()
         {}
         folder_element_batch(module_specific_id const&  id_, index_type const  folder_index_, std::string const&  element_name_,
                 gfx::batch const  batch_
@@ -674,9 +678,11 @@ private:
             : base_type(id_, folder_index_, element_name_)
             , batch(batch_)
             , frames()
+            , matrices_to_pose_bones()
         {}
         gfx::batch  batch;
         std::vector<object_guid>  frames;
+        std::vector<matrix44>  matrices_to_pose_bones;
     };
 
     struct  folder_element_collider : public folder_element<std::vector<angeo::collision_object_id> >
