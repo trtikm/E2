@@ -170,8 +170,10 @@ action_controller_roller::~action_controller_roller()
         ctx().release_acquired_custom_constraint_id_back_to_physics(ccid);
     ctx().release_acquired_custom_constraint_id_back_to_physics(m_ccid_body_spin);
 
-    ctx().request_set_parent_frame(get_binding()->frame_guid_of_skeleton, com::invalid_object_guid());
-    ctx().request_erase_non_root_folder(m_root_folder_guid);
+    if (ctx().is_valid_frame_guid(get_binding()->frame_guid_of_skeleton))
+        ctx().request_set_parent_frame(get_binding()->frame_guid_of_skeleton, com::invalid_object_guid());
+    if (ctx().is_valid_frame_guid(m_root_folder_guid))
+        ctx().request_erase_non_root_folder(m_root_folder_guid);
 }
 
 

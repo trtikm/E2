@@ -91,7 +91,8 @@ scene_binding::scene_binding(
 
 scene_binding::~scene_binding()
 {
-    context->request_erase_non_root_folder(context->folder_of_frame(frame_guid_of_skeleton));
+    if (context->is_valid_frame_guid(frame_guid_of_skeleton))
+        context->request_erase_non_root_folder(context->folder_of_frame(frame_guid_of_skeleton));
 }
 
 
