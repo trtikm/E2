@@ -417,6 +417,11 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             name="Add 'timer' to the folder.",
             description="Whether to add a timer record into the folder or not",
             default=False
+            )    
+    folder_defines_agent: bpy.props.BoolProperty(
+            name="Add 'agent' to the folder.",
+            description="Whether to add an agent record into the folder or not",
+            default=False
             )
     
     #====================================================
@@ -450,6 +455,13 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             default="./batch.txt",
             maxlen=1000,
             subtype='FILE_PATH'
+            )
+
+    batch_skin_name: bpy.props.StringProperty(
+            name="Skin name",
+            description="A name of the skin to use for the batch.",
+            default="default",
+            maxlen=100
             )
 
     #====================================================
@@ -644,6 +656,23 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     request_info_items: bpy.props.CollectionProperty(type = E2_UL_RequestInfoListItem)
     request_info_index: bpy.props.IntProperty(name = "Index for E2_UL_RequestInfoListItem", default = 0)
 
+    #====================================================
+    # AGENT PROPS
+
+    AGENT_KIND=[
+        # Python ident, UI name, description, UID
+        ("MOCK", "MOCK", "The cortex is replaced with human user.", 1),
+        ("STATIONARY", "STATIONARY", "The cortex keeping the agent to just stay at one place.", 2),
+        ("RANDOM", "RANDOM", "The cortex performs random actions.", 3),
+        ("ROBOT", "ROBOT", "The cortex is a neural network.", 4),
+    ]
+    agent_kind: bpy.props.EnumProperty(
+            name="Agent kind",
+            description="Defines what kind of cortex cotrolls the agent.",
+            items=AGENT_KIND,
+            default="ROBOT"
+            )
+
 
 class E2ObjectPropertiesPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_e2_object_props_panel"
@@ -674,6 +703,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         self.warn_root_folder_has_non_folder_content(object, object_props, layout)
         self.warn_root_folder_is_relocated(object, layout)
         self.warn_root_object_is_not_folder(object, layout)
+        self.warn_root_is_imported(object_props, layout)
         self.warn_parent_is_not_folder(object, layout)
         self.warn_object_is_scaled(object, layout, "folder")
 
@@ -696,6 +726,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(object_props, "folder_defines_timer")
         if object_props.folder_defines_timer is True:
             self.draw_timer(layout.box(), object, object_props)
+
+        row = layout.row()
+        row.prop(object_props, "folder_defines_agent")
+        if object_props.folder_defines_agent is True:
+            self.draw_agent(layout.box(), object, object_props)
 
     def draw_frame(self, layout, object, object_props):
         row = layout.row()
@@ -723,8 +758,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(object_props, "batch_kind")
         if object_props.batch_kind == "REGULAR_GFX_BATCH":
+            self.warn_not_valid_file(object_props.batch_reguar_disk_path, layout, "Batch file")
             row = layout.row()
             row.prop(object_props, "batch_reguar_disk_path")
+            row = layout.row()
+            row.prop(object_props, "batch_skin_name")
         else:
             row = layout.row()
             row.prop(object, "scale")
@@ -976,8 +1014,13 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(request_info, "use_mass")
 
-    # == warnings ======================================================================
+    def draw_agent(self, layout, object, object_props):
+        self.warn_agent_inside_folder_with_wrong_content(object, object_props, layout)
+        row = layout.row()
+        row.prop(object_props, "agent_kind")
 
+    # == warnings ======================================================================
+    
     def warn_not_under_root_folder(self, object, layout, property_name=None):
         while object.parent is not None:
             object = object.parent
@@ -1011,6 +1054,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if object.parent is None and object.e2_custom_props.object_kind != "FOLDER":
             row = layout.row()
             row.label(text="!!! WARNING: An object without a parent can only be a folder !!!")
+
+    def warn_root_is_imported(self, object_props, layout):
+        if len(object_props.folder_imported_from_dir) > 0:
+            row = layout.row()
+            row.label(text="!!! WARNING: The 'E2_ROOT' folder has a 'Imported from' path !!!")
 
     def warn_parent_is_not_folder(self, object, layout):        
         if object.parent is not None and object.parent.e2_custom_props.object_kind != "FOLDER":
@@ -1164,6 +1212,14 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not valid scene directory !!!")
 
+    def warn_not_valid_file(self, path, layout, property_name, name=None):
+        if not os.path.isfile(path):
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not valid path to a file !!!")
+        elif name is not None and not path.endswith(name):
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " does not identify a file of name '" + name + "' !!!")
+
     def warn_not_valid_triangle_mesh_dir(self, path, layout, property_name):
         if not os.path.isdir(path) or any(not os.path.isfile(os.path.join(path, x + ".txt")) for x in ["vertices", "indices"]):
             row = layout.row()
@@ -1187,6 +1243,32 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if '/' in name or "\\" in name:
             row = layout.row()
             row.label(text="!!! WARNING: The object's name contains '/' or '\\' !!!")
+
+    def warn_agent_inside_folder_with_wrong_content(self, object, object_props, layout):
+        if len(object_props.folder_imported_from_dir) > 0:
+            row = layout.row()
+            row.label(text="!!! WARNING: The agent is defined in an imported folder !!!")
+        if object_props.folder_defines_frame is False:
+            row = layout.row()
+            row.label(text="!!! WARNING: Agent's folder does not define a frame !!!")
+        if object_props.folder_defines_rigid_body is True:
+            row = layout.row()
+            row.label(text="!!! WARNING: Agent's folder defines also a rigid body !!!")
+        if object_props.folder_defines_timer is True:
+            row = layout.row()
+            row.label(text="!!! WARNING: Agent's folder defines also a timer !!!")
+        if len(object.children) != 1:
+            row = layout.row()
+            row.label(text="!!! WARNING: Agent's folder does not have a 'BATCH' child !!!")
+        else:
+            child = object.children[0]
+            child_props = child.e2_custom_props
+            if child_props.object_kind != "BATCH":
+                row = layout.row()
+                row.label(text="!!! WARNING: Agent's child is not a 'BATCH' !!!")
+            elif child_props.batch_kind != "REGULAR_GFX_BATCH":
+                row = layout.row()
+                row.label(text="!!! WARNING: Agent's child 'BATCH' is not 'REGULAR_GFX_BATCH' !!!")
 
 
 ######################################################
@@ -1267,8 +1349,9 @@ class E2SceneExportOperator(bpy.types.Operator):
         result = { "folders":{}, "imports": {} }
         for folder in root_folders:
             if len(folder.e2_custom_props.folder_imported_from_dir) > 0:
-                result["imports"][folder.name] = normalise_disk_path(folder.e2_custom_props.folder_imported_from_dir,
-                                                                     data_root_dir)
+                result["imports"][folder.name] = normalise_disk_path(
+                        folder.e2_custom_props.folder_imported_from_dir,
+                        data_root_dir)
             else:
                 result["folders"][folder.name] = self.export_folder(folder, data_root_dir)
         result = self.clean_result(result)    
@@ -1278,26 +1361,30 @@ class E2SceneExportOperator(bpy.types.Operator):
 
     def export_folder(self, folder, data_root_dir):
         result = { "content":{}, "folders":{}, "imports": {} }
-        if folder.e2_custom_props.folder_defines_frame is True:
-            result["content"]["FRAME"] = self.export_frame(folder)
-        if folder.e2_custom_props.folder_defines_rigid_body is True:
-            result["content"]["RIGID_BODY"] = self.export_rigid_body(folder)
-        for child in folder.children:
-            child_props = child.e2_custom_props
-            if child_props.object_kind == "FOLDER":
-                if len(child_props.folder_imported_from_dir) > 0:
-                    result["imports"][child.name] = normalise_disk_path(child.e2_custom_props.folder_imported_from_dir,
-                                                                        data_root_dir)
-                else:
-                    result["folders"][child.name] = self.export_folder(child, data_root_dir)
-            elif child_props.object_kind == "BATCH":
-                result["content"][child.name] = self.export_batch(child, data_root_dir)
-            elif child_props.object_kind == "COLLIDER":
-                result["content"][child.name] = self.export_collider(child, data_root_dir)
-                if child_props.collider_defines_sensor is True:
-                    result["content"]["SENSOR." + child.name] = self.export_sensor(child, data_root_dir)
-        if folder.e2_custom_props.folder_defines_timer is True:
-            result["content"]["TIMER"] = self.export_timer(folder, data_root_dir)
+        if folder.e2_custom_props.folder_defines_agent is True:
+            result["content"]["AGENT"] = self.export_agent(folder, data_root_dir)
+        else:
+            if folder.e2_custom_props.folder_defines_frame is True:
+                result["content"]["FRAME"] = self.export_frame(folder)
+            if folder.e2_custom_props.folder_defines_rigid_body is True:
+                result["content"]["RIGID_BODY"] = self.export_rigid_body(folder)
+            for child in folder.children:
+                child_props = child.e2_custom_props
+                if child_props.object_kind == "FOLDER":
+                    if len(child_props.folder_imported_from_dir) > 0:
+                        result["imports"][child.name] = normalise_disk_path(
+                                child.e2_custom_props.folder_imported_from_dir,
+                                data_root_dir)
+                    else:
+                        result["folders"][child.name] = self.export_folder(child, data_root_dir)
+                elif child_props.object_kind == "BATCH":
+                    result["content"][child.name] = self.export_batch(child, data_root_dir)
+                elif child_props.object_kind == "COLLIDER":
+                    result["content"][child.name] = self.export_collider(child, data_root_dir)
+                    if child_props.collider_defines_sensor is True:
+                        result["content"]["SENSOR." + child.name] = self.export_sensor(child, data_root_dir)
+            if folder.e2_custom_props.folder_defines_timer is True:
+                result["content"]["TIMER"] = self.export_timer(folder, data_root_dir)
         return self.clean_result(result)
 
     def export_vector(self, v):
@@ -1326,7 +1413,9 @@ class E2SceneExportOperator(bpy.types.Operator):
             "batch_kind": object.e2_custom_props.batch_kind
         }
         if object.e2_custom_props.batch_kind == "REGULAR_GFX_BATCH":
-            result["path"] = normalise_disk_path(object.e2_custom_props.batch_reguar_disk_path, data_root_dir)
+            result["path"] = normalise_disk_path(object.e2_custom_props.batch_reguar_disk_path,
+                                                 os.path.join(data_root_dir, "batch"))
+            result["skin"] = object.e2_custom_props.batch_skin_name
         else:
             sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
             if object.e2_custom_props.batch_kind == "GENERIC_BOX":
@@ -1516,6 +1605,19 @@ class E2SceneExportOperator(bpy.types.Operator):
             "acceleration": self.export_vector(info.linear_force_field_acceleration),
             "use_mass": bool2str(info.use_mass)
         }
+        return result
+
+    def export_agent(self, object, data_root_dir):
+        object_props = object.e2_custom_props
+        result = {
+            "kind": object_props.agent_kind
+        }
+        frame_props = self.export_frame(object)
+        result["skeleton_frame_origin"] = frame_props["origin"]
+        result["skeleton_frame_orientation"] = frame_props["orientation"]
+        batch_props = self.export_batch(object.children[0], data_root_dir)
+        result["skeleton_batch_disk_path"] = batch_props["path"]
+        result["skeleton_batch_skin"] = batch_props["skin"]
         return result
 
     def clean_result(self, result):
