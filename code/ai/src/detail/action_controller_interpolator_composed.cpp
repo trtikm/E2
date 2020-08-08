@@ -14,10 +14,10 @@ action_controller_interpolator_composed::action_controller_interpolator_composed
         skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor,
         float_32_bit const  reference_offset
         )
-    : action_controller_interpolator(motion_templates, binding)
-    , m_animation(this, initial_template_cursor, reference_offset)
-    , m_look_at(this, initial_template_cursor)
-    , m_aim_at(this, initial_template_cursor)
+    : action_controller_interpolator_time(motion_templates, binding)
+    , m_animation(motion_templates, binding, initial_template_cursor, reference_offset)
+    , m_look_at(motion_templates, binding, initial_template_cursor)
+    , m_aim_at(motion_templates, binding, initial_template_cursor)
 {}
 
 

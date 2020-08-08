@@ -10,11 +10,12 @@ namespace ai { namespace detail {
 
 
 action_controller_interpolator_animation::action_controller_interpolator_animation(
-        action_controller_interpolator const* const  interpolator_,
+        skeletal_motion_templates const  motion_templates,
+        scene_binding_ptr const  binding,
         skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor,
         float_32_bit const  reference_offset
         )
-    : action_controller_interpolator_shared(interpolator_)
+    : action_controller_interpolator_base(motion_templates, binding)
     , m_src_frames()
     , m_current_frames()
     , m_dst_frames()

@@ -12,10 +12,11 @@
 namespace ai { namespace detail {
 
 
-struct  action_controller_interpolator_look_at  final : public action_controller_interpolator_shared
+struct  action_controller_interpolator_look_at  final : public action_controller_interpolator_base
 {
-    explicit action_controller_interpolator_look_at(
-            action_controller_interpolator const* const  interpolator_,
+    action_controller_interpolator_look_at(
+            skeletal_motion_templates const  motion_templates,
+            scene_binding_ptr const  binding,
             skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor
             );
     void  interpolate(

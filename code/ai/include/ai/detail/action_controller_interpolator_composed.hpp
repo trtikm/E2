@@ -14,7 +14,7 @@
 namespace ai { namespace detail {
 
 
-struct  action_controller_interpolator_composed : public  action_controller_interpolator
+struct  action_controller_interpolator_composed : public  action_controller_interpolator_time
 {
     action_controller_interpolator_composed(
             skeletal_motion_templates const  motion_templates,

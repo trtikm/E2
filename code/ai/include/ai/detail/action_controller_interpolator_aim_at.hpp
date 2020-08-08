@@ -10,12 +10,13 @@
 namespace ai { namespace detail {
 
 
-struct  action_controller_interpolator_aim_at  final : public action_controller_interpolator_shared
+struct  action_controller_interpolator_aim_at : public action_controller_interpolator_base
 {
     using  aim_at_infos = std::vector<skeletal_motion_templates::aim_at_info_ptr>;
     
-    explicit action_controller_interpolator_aim_at(
-            action_controller_interpolator const* const  interpolator_,
+    action_controller_interpolator_aim_at(
+            skeletal_motion_templates const  motion_templates,
+            scene_binding_ptr const  binding,
             skeletal_motion_templates::motion_template_cursor const&  initial_template_cursor
             );
     void  interpolate(
