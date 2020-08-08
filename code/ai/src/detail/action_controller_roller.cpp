@@ -54,84 +54,18 @@ action_controller_roller::action_controller_roller(
 
     , m_root_folder_guid(m_binding->context->insert_folder(m_binding->folder_guid_of_agent, "roller_root", false))
 
-    , m_skeleton_frame(ctx().frame_coord_system_in_world_space(get_binding()->frame_guid_of_skeleton))
-
     , m_roller_folder_guid(m_binding->context->insert_folder(m_root_folder_guid, "roller", false))
-    , m_roller_frame_guid(
-            m_binding->context->insert_frame(
-                    m_roller_folder_guid,
-                    com::invalid_object_guid(),
-                    m_skeleton_frame.origin() - (m_config.AGENT_FRAME_ORIGIN_Z_OFFSET_FROM_BOTTOM - m_config.ROLLER_RADIUS)
-                                                * m_skeleton_frame.basis_vector_z(),
-                    ctx().frame_coord_system_in_world_space(get_binding()->frame_guid_of_skeleton).orientation()
-                    )
-            )
-    , m_roller_rigid_body_guid(
-            m_binding->context->insert_rigid_body(
-                    m_roller_folder_guid,
-                    true,
-                    vector3_zero(),
-                    vector3_zero(),
-                    vector3_zero(),
-                    vector3_zero(),
-                    m_config.ROLLER_MASS_INVERTED,
-                    matrix33_zero()
-                    )
-            )
-    , m_roller_collider_guid(
-            m_binding->context->insert_collider_sphere(
-                    m_roller_folder_guid,
-                    "COLLIDER.roller_sphere",
-                    m_config.ROLLER_RADIUS,
-                    m_config.ROLLER_MATERIAL,
-                    m_config.ROLLER_COLLISION_CLASS
-                    )
-            )
-    , m_roller_frame(ctx().frame_coord_system_in_world_space(m_roller_frame_guid))
+    , m_roller_frame_guid(com::invalid_object_guid())
+    , m_roller_rigid_body_guid(com::invalid_object_guid())
+    , m_roller_collider_guid(com::invalid_object_guid())
 
     , m_body_folder_guid(m_binding->context->insert_folder(m_root_folder_guid, "body", false))
-    , m_body_frame_guid(
-            m_binding->context->insert_frame(
-                    m_body_folder_guid,
-                    com::invalid_object_guid(),
-                    m_roller_frame.origin() + (m_config.ROLLER_RADIUS + m_config.BODY_EXCENTRICITY) * m_roller_frame.basis_vector_z(),
-                    ctx().frame_coord_system_in_world_space(m_roller_frame_guid).orientation()
-                    )
-            )
-    , m_body_rigid_body_guid(
-            m_binding->context->insert_rigid_body(
-                    m_body_folder_guid,
-                    true,
-                    vector3_zero(),
-                    vector3_zero(),
-                    vector3_zero(),
-                    vector3_zero(),
-                    m_config.BODY_MASS_INVERTED,
-                    m_config.BODY_INERTIA_TENSOR_INVERTED
-                    )
-            )
-    , m_body_collider_guid(
-            m_binding->context->insert_collider_capsule(
-                    m_body_folder_guid,
-                    "COLLIDER.body_capsule",
-                    m_config.BODY_EXCENTRICITY,
-                    m_config.ROLLER_RADIUS, // Yes, roller, because it is the same radius used for the capsule too.
-                    m_config.BODY_MATERIAL,
-                    m_config.BODY_COLLISION_CLASS
-                    )
-            )
-    , m_body_frame(ctx().frame_coord_system_in_world_space(m_body_frame_guid))
+    , m_body_frame_guid(com::invalid_object_guid())
+    , m_body_rigid_body_guid(com::invalid_object_guid())
+    , m_body_collider_guid(com::invalid_object_guid())
 
-    , m_skeleton_sync_folder_guid(m_binding->context->insert_folder(m_body_folder_guid, "skeleton_sync_folder", false))
-    , m_skeleton_sync_frame_guid(
-            m_binding->context->insert_frame(
-                    m_skeleton_sync_folder_guid,
-                    m_body_frame_guid,
-                    (m_config.AGENT_FRAME_ORIGIN_Z_OFFSET_FROM_BOTTOM - m_config.ROLLER_RADIUS - m_config.BODY_EXCENTRICITY)
-                            * vector3_unit_z(),
-                    quaternion_identity()
-                    )
-            )
+    , m_skeleton_sync_folder_guid(com::invalid_object_guid())
+    , m_skeleton_sync_frame_guid(com::invalid_object_guid())
 
     , m_ccid_lower_joint_roller_and_body{
             m_binding->context->acquire_fresh_custom_constraint_id_from_physics(),
@@ -145,7 +79,10 @@ action_controller_roller::action_controller_roller(
             }
     , m_ccid_body_spin{ m_binding->context->acquire_fresh_custom_constraint_id_from_physics() }
 
-    , m_desire_frame(m_roller_frame)
+    , m_roller_frame()
+    , m_body_frame()
+    , m_skeleton_frame(ctx().frame_explicit_coord_system_in_world_space(get_binding()->frame_guid_of_skeleton))
+    , m_desire_frame()
     , m_roller_contacts()
     , m_all_contacts()
     , m_seconds_since_last_contact(0.0f)
@@ -157,7 +94,72 @@ action_controller_roller::action_controller_roller(
     , m_linear_velocity(vector3_zero())
     , m_angular_velocity(vector3_zero())
 {
+    m_roller_frame_guid = m_binding->context->insert_frame(
+            m_roller_folder_guid,
+            com::invalid_object_guid(),
+            m_skeleton_frame.origin() + m_config.ROLLER_RADIUS * m_skeleton_frame.basis_vector_z(),
+            ctx().frame_coord_system_in_world_space(get_binding()->frame_guid_of_skeleton).orientation()
+            );
+    m_roller_rigid_body_guid = m_binding->context->insert_rigid_body(
+            m_roller_folder_guid,
+            true,
+            vector3_zero(),
+            vector3_zero(),
+            vector3_zero(),
+            vector3_zero(),
+            m_config.ROLLER_MASS_INVERTED,
+            matrix33_zero()
+            );
+    m_roller_collider_guid = m_binding->context->insert_collider_sphere(
+            m_roller_folder_guid,
+            "COLLIDER.roller_sphere",
+            m_config.ROLLER_RADIUS,
+            m_config.ROLLER_MATERIAL,
+            m_config.ROLLER_COLLISION_CLASS
+            );
+
+    m_roller_frame = ctx().frame_coord_system_in_world_space(m_roller_frame_guid);
+
+    m_body_frame_guid = m_binding->context->insert_frame(
+            m_body_folder_guid,
+            com::invalid_object_guid(),
+            m_roller_frame.origin() + (m_config.ROLLER_RADIUS + m_config.BODY_EXCENTRICITY) * m_roller_frame.basis_vector_z(),
+            ctx().frame_coord_system_in_world_space(m_roller_frame_guid).orientation()
+            );
+    m_body_rigid_body_guid = m_binding->context->insert_rigid_body(
+            m_body_folder_guid,
+            true,
+            vector3_zero(),
+            vector3_zero(),
+            vector3_zero(),
+            vector3_zero(),
+            m_config.BODY_MASS_INVERTED,
+            m_config.BODY_INERTIA_TENSOR_INVERTED
+            );
+    m_body_collider_guid = m_binding->context->insert_collider_capsule(
+            m_body_folder_guid,
+            "COLLIDER.body_capsule",
+            m_config.BODY_EXCENTRICITY,
+            m_config.ROLLER_RADIUS, // Yes, roller, because it is the same radius used for the capsule too.
+            m_config.BODY_MATERIAL,
+            m_config.BODY_COLLISION_CLASS
+            );
+
+    m_body_frame = ctx().frame_coord_system_in_world_space(m_body_frame_guid);
+
+    m_desire_frame = m_roller_frame;
+
+    m_skeleton_sync_folder_guid = m_binding->context->insert_folder(m_body_folder_guid, "skeleton_sync_folder", false);
+    m_skeleton_sync_frame_guid = m_binding->context->insert_frame(
+            m_skeleton_sync_folder_guid,
+            m_body_frame_guid,
+            (m_config.AGENT_FRAME_ORIGIN_Z_OFFSET_FROM_BOTTOM - (2.0f * m_config.ROLLER_RADIUS + m_config.BODY_EXCENTRICITY))
+                    * vector3_unit_z(),
+            quaternion_identity()
+            );
+
     ctx().request_set_parent_frame(get_binding()->frame_guid_of_skeleton, m_skeleton_sync_frame_guid);
+    ctx().request_relocate_frame(get_binding()->frame_guid_of_skeleton, vector3_zero(), quaternion_identity());
     set_desire_frame();
 }
 
@@ -181,9 +183,9 @@ void  action_controller_roller::synchronise_with_scene()
 {
     TMPROF_BLOCK();
 
-    m_roller_frame = ctx().frame_coord_system_in_world_space(m_roller_rigid_body_guid);
-    m_body_frame = ctx().frame_coord_system_in_world_space(m_body_rigid_body_guid);
-    m_skeleton_frame = ctx().frame_coord_system_in_world_space(get_binding()->frame_guid_of_skeleton);
+    m_roller_frame = ctx().frame_explicit_coord_system_in_world_space(ctx().frame_of_rigid_body(m_roller_rigid_body_guid));
+    m_body_frame = ctx().frame_explicit_coord_system_in_world_space(ctx().frame_of_rigid_body(m_body_rigid_body_guid));
+    m_skeleton_frame = ctx().frame_explicit_coord_system_in_world_space(get_binding()->frame_guid_of_skeleton);
 
     m_roller_contacts.clear();
     filter_contacts(m_roller_collider_guid, m_roller_contacts);

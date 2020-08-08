@@ -17,7 +17,7 @@ agent_id  simulator::insert_agent(
         scene_binding_ptr const  binding
         )
 {
-    return m_agents.insert(std::make_shared<agent>(agent{ agent_kind, motion_templates, binding }));
+    return m_agents.insert(std::make_shared<agent>(agent_kind, motion_templates, binding));
 }
 
 

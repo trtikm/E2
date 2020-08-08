@@ -132,7 +132,7 @@ static void  import_batch(
             batch_guid = ctx.load_batch(
                     folder_guid,
                     name,
-                    hierarchy.get<std::string>("id"),
+                    hierarchy.get<std::string>("path"),
                     hierarchy.get<std::string>("skin")
                     );
         }
@@ -423,7 +423,7 @@ static void  import_agent(
     ASSUMPTION(name == to_string(OBJECT_KIND::AGENT));
 
     gfx::batch const  agent_batch(
-            hierarchy.get<std::string>("skeleton_batch_disk_path"),
+            boost::filesystem::path(ctx.get_data_root_dir()) / "batch" / hierarchy.get<std::string>("skeleton_batch_disk_path"),
             gfx::default_effects_config(),
             hierarchy.get<std::string>("skeleton_batch_skin")
             );

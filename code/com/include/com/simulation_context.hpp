@@ -180,6 +180,8 @@ struct  simulation_context
     object_guid  insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
                               vector3 const&  origin, quaternion const&  orientation) const;
     void  request_erase_frame(object_guid const  frame_guid) const;
+    void  request_relocate_frame(object_guid const  frame_guid, vector3 const&  new_origin,
+                                 quaternion const&  new_orientation) const;
     void  request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
                                                     quaternion const&  new_orientation) const;
     void  request_set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid) const;
@@ -219,7 +221,7 @@ struct  simulation_context
     void  erase_batch(object_guid const  batch_guid);
     object_guid  load_batch(
             object_guid const  folder_guid, std::string const&  name,
-            std::string const&  disk_path,
+            std::string const&  relative_disk_path,
             std::string const&  skin_name = "default",
             std::vector<object_guid> const&  frame_guids = {}
             );
@@ -813,24 +815,25 @@ private:
 
     enum REQUEST_KIND
     {
-        REQUEST_ERASE_FOLDER                = 0,
-        REQUEST_ERASE_FRAME                 = 1,
-        REQUEST_RELOCATE_FRAME              = 2,
-        REQUEST_SET_PARENT_FRAME            = 3,
-        REQUEST_ERASE_BATCH                 = 4,
-        REQUEST_ENABLE_COLLIDER             = 5,
-        REQUEST_ENABLE_COLLIDING            = 6,
-        REQUEST_ERASE_COLLIDER              = 7,
-        REQUEST_ERASE_RIGID_BODY            = 8,
-        REQUEST_SET_LINEAR_VELOCITY         = 9,
-        REQUEST_SET_ANGULAR_VELOCITY        = 10,
-        REQUEST_SET_LINEAR_ACCEL            = 11,
-        REQUEST_SET_ANGULAR_ACCEL           = 12,
-        REQUEST_DEL_LINEAR_ACCEL            = 13,
-        REQUEST_DEL_ANGULAR_ACCEL           = 14,
-        REQUEST_ERASE_TIMER                 = 15,
-        REQUEST_ERASE_SENSOR                = 16,
-        REQUEST_ERASE_AGENT                 = 17,
+        REQUEST_ERASE_FOLDER                        = 0,
+        REQUEST_ERASE_FRAME                         = 1,
+        REQUEST_RELOCATE_FRAME                      = 2,
+        REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT   = 3,
+        REQUEST_SET_PARENT_FRAME                    = 4,
+        REQUEST_ERASE_BATCH                         = 5,
+        REQUEST_ENABLE_COLLIDER                     = 6,
+        REQUEST_ENABLE_COLLIDING                    = 7,
+        REQUEST_ERASE_COLLIDER                      = 8,
+        REQUEST_ERASE_RIGID_BODY                    = 9,
+        REQUEST_SET_LINEAR_VELOCITY                 = 10,
+        REQUEST_SET_ANGULAR_VELOCITY                = 11,
+        REQUEST_SET_LINEAR_ACCEL                    = 12,
+        REQUEST_SET_ANGULAR_ACCEL                   = 13,
+        REQUEST_DEL_LINEAR_ACCEL                    = 14,
+        REQUEST_DEL_ANGULAR_ACCEL                   = 15,
+        REQUEST_ERASE_TIMER                         = 16,
+        REQUEST_ERASE_SENSOR                        = 17,
+        REQUEST_ERASE_AGENT                         = 18,
     };
 
     struct  request_data_relocate_frame { object_guid  frame_guid; vector3  position; quaternion  orientation; };
@@ -845,6 +848,7 @@ private:
     mutable std::list<object_guid>  m_requests_erase_folder;
     mutable std::list<object_guid>  m_requests_erase_frame;
     mutable std::list<request_data_relocate_frame>  m_requests_relocate_frame;
+    mutable std::list<request_data_relocate_frame>  m_requests_relocate_frame_relative_to_parent;
     mutable std::list<request_data_set_parent_frame>  m_requests_set_parent_frame;
     mutable std::list<object_guid>  m_requests_erase_batch;
     mutable std::list<request_data_enable_collider>  m_requests_enable_collider;

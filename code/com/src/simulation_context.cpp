@@ -86,6 +86,7 @@ simulation_context::simulation_context(
     , m_requests_erase_folder()
     , m_requests_erase_frame()
     , m_requests_relocate_frame()
+    , m_requests_relocate_frame_relative_to_parent()
     , m_requests_set_parent_frame()
     , m_requests_erase_batch()
     , m_requests_enable_collider()
@@ -487,12 +488,21 @@ void  simulation_context::request_erase_frame(object_guid const  frame_guid) con
 }
 
 
-void  simulation_context::request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
-                                                                    quaternion const&  new_orientation) const
+void  simulation_context::request_relocate_frame(object_guid const  frame_guid, vector3 const&  new_origin,
+                                                 quaternion const&  new_orientation) const
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
     m_requests_relocate_frame.push_back({ frame_guid, new_origin, new_orientation });
     m_pending_requests.push_back(REQUEST_RELOCATE_FRAME);
+}
+
+
+void  simulation_context::request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
+                                                                    quaternion const&  new_orientation) const
+{
+    ASSUMPTION(is_valid_frame_guid(frame_guid));
+    m_requests_relocate_frame_relative_to_parent.push_back({ frame_guid, new_origin, new_orientation });
+    m_pending_requests.push_back(REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT);
 }
 
 
@@ -745,12 +755,21 @@ void  simulation_context::erase_batch(object_guid const  batch_guid)
 
 object_guid  simulation_context::load_batch(
         object_guid const  folder_guid, std::string const&  name,
-        std::string const&  disk_path,
+        std::string const&  relative_disk_path,
         std::string const&  skin_name,
         std::vector<object_guid> const&  frame_guids
         )
 {
-    return insert_batch(folder_guid, name, gfx::batch(disk_path, gfx::default_effects_config(), skin_name), frame_guids);
+    return insert_batch(
+            folder_guid,
+            name,
+            gfx::batch(
+                    boost::filesystem::path(get_data_root_dir()) / "batch" / relative_disk_path,
+                    gfx::default_effects_config(),
+                    skin_name
+                    ),
+            frame_guids
+            );
 }
 
 
@@ -1485,10 +1504,11 @@ object_guid  simulation_context::insert_rigid_body(
 
     object_guid const  frame_guid = find_closest_frame(under_folder_guid, true);
     ASSUMPTION(frame_guid != invalid_object_guid());
+    angeo::coordinate_system const  frame = frame_coord_system_in_world_space(frame_guid);
 
     angeo::rigid_body_id const  rbid = m_rigid_body_simulator_ptr->insert_rigid_body(
-            frame_coord_system_in_world_space(frame_guid).origin(),
-            frame_coord_system_in_world_space(frame_guid).orientation(),
+            frame.origin(),
+            frame.orientation(),
             inverted_mass,
             inverted_inertia_tensor,
             linear_velocity,
@@ -2695,6 +2715,10 @@ void  simulation_context::process_pending_requests()
             break;
         case REQUEST_RELOCATE_FRAME: {
             auto  cursor = make_request_cursor_to(m_requests_relocate_frame);
+            frame_relocate(cursor->frame_guid, cursor->position, cursor->orientation);
+            } break;
+        case REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT: {
+            auto  cursor = make_request_cursor_to(m_requests_relocate_frame_relative_to_parent);
             frame_relocate_relative_to_parent(cursor->frame_guid, cursor->position, cursor->orientation);
             } break;
         case REQUEST_SET_PARENT_FRAME: {
@@ -2762,6 +2786,7 @@ void  simulation_context::clear_pending_requests()
     m_requests_erase_folder.clear();
     m_requests_erase_frame.clear();
     m_requests_relocate_frame.clear();
+    m_requests_relocate_frame_relative_to_parent.clear();
     m_requests_set_parent_frame.clear();
     m_requests_erase_batch.clear();
     m_requests_enable_collider.clear();
@@ -2804,43 +2829,48 @@ void  simulation_context::process_pending_late_requests()
             });
 
     m_requests_late_insert_agent.update(
-            [](request_data_insert_agent&  request) {
-                if (request.motion_templates.empty()
-                        && request.skeleton_attached_batch.get_available_resources().loaded_successfully())
+            [this](request_data_insert_agent&  request) {
+                if (!request.skeleton_attached_batch.is_load_finished())
+                    return false;
+                if (!request.skeleton_attached_batch.loaded_successfully())
+                    return true;
+                if (request.motion_templates.empty())
                 {
                     ASSUMPTION(request.skeleton_attached_batch.get_available_resources().skeletal() != nullptr);
                     request.motion_templates = ai::skeletal_motion_templates(
-                            request.skeleton_attached_batch.get_available_resources().skeletal()->animation_dir(),
+                            boost::filesystem::path(get_data_root_dir())
+                                / request.skeleton_attached_batch.get_available_resources().skeletal()->animation_dir(),
                             1U,
                             nullptr
                             );
+                    return false;
                 }
-                if (request.skeleton_attached_batch.is_load_finished() && (
-                        !request.skeleton_attached_batch.get_available_resources().loaded_successfully() ||
-                        request.motion_templates.is_load_finished()))
-                    return true;
-                return false;
+                return request.motion_templates.is_load_finished();
             },
             [this](request_data_insert_agent&  request) {
                 if (!request.motion_templates.loaded_successfully())
+                {
                     LOG(error, "Failed to import motion templates '" << request.motion_templates.key().get_unique_id() << "' " <<
                                "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
+                    return;
+                }
                 if (!request.skeleton_attached_batch.loaded_successfully())
+                {
                     LOG(error, "Failed to import skeleton attached batch '" <<
                                request.skeleton_attached_batch.key().get_unique_id() << "' " <<
                                "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
-
+                    return;
+                }
                 if (!request.motion_templates.empty())
                     m_cache_of_imported_motion_templates.insert({ request.motion_templates.key(), request.motion_templates });
-                if (request.motion_templates.loaded_successfully())
-                    insert_agent(
-                            request.under_folder_guid,
-                            request.kind,
-                            request.motion_templates,
-                            request.skeleton_frame_origin,
-                            request.skeleton_frame_orientation,
-                            request.skeleton_attached_batch
-                            );
+                insert_agent(
+                        request.under_folder_guid,
+                        request.kind,
+                        request.motion_templates,
+                        request.skeleton_frame_origin,
+                        request.skeleton_frame_orientation,
+                        request.skeleton_attached_batch
+                        );
             });
 }
 

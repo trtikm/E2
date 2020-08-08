@@ -62,7 +62,7 @@ void  action_controller_interpolator_animation::commit() const
     vector3 const  origin_offset(0.0f, 0.0f, m_current_offset - m_reference_offset);
     auto const&  parents = get_motion_templates().parents();
     for (natural_32_bit bone = 0; bone != m_current_frames.size(); ++bone)
-        ctx().request_relocate_frame_relative_to_parent(
+        ctx().request_relocate_frame(
                 get_frame_guids_of_bones().at(bone),
                 m_current_frames.at(bone).origin() + (parents.at(bone) < 0 ? origin_offset : vector3_zero()),
                 m_current_frames.at(bone).orientation()
