@@ -1610,6 +1610,7 @@ class E2SceneExportOperator(bpy.types.Operator):
     def export_agent(self, object, data_root_dir):
         object_props = object.e2_custom_props
         result = {
+            "object_kind": "AGENT",
             "kind": object_props.agent_kind
         }
         frame_props = self.export_frame(object)
