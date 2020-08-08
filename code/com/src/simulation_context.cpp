@@ -2229,7 +2229,8 @@ object_guid  simulation_context::insert_agent(
         folder_content(under_folder_guid).content.empty() &&
         folder_content(under_folder_guid).child_folders.empty() &&
         motion_templates.loaded_successfully() &&
-        skeleton_attached_batch.loaded_successfully()
+        skeleton_attached_batch.loaded_successfully() &&
+        skeleton_attached_batch.is_attached_to_skeleton()
         );
 
     ai::scene_binding_ptr const  binding = ai::scene_binding::create(
@@ -2806,11 +2807,14 @@ void  simulation_context::process_pending_late_requests()
             [](request_data_insert_agent&  request) {
                 if (request.motion_templates.empty()
                         && request.skeleton_attached_batch.get_available_resources().loaded_successfully())
+                {
+                    ASSUMPTION(request.skeleton_attached_batch.get_available_resources().skeletal() != nullptr);
                     request.motion_templates = ai::skeletal_motion_templates(
                             request.skeleton_attached_batch.get_available_resources().skeletal()->animation_dir(),
                             1U,
                             nullptr
                             );
+                }
                 if (request.skeleton_attached_batch.is_load_finished() && (
                         !request.skeleton_attached_batch.get_available_resources().loaded_successfully() ||
                         request.motion_templates.is_load_finished()))
