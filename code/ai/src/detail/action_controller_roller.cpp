@@ -84,7 +84,7 @@ action_controller_roller::action_controller_roller(
     , m_skeleton_frame(ctx().frame_explicit_coord_system_in_world_space(get_binding()->frame_guid_of_skeleton))
     , m_desire_frame()
     , m_roller_contacts()
-    , m_all_contacts()
+    , m_body_contacts()
     , m_seconds_since_last_contact(0.0f)
     , m_environment_linear_velocity(vector3_zero())
     , m_environment_angular_velocity(vector3_zero())
@@ -145,6 +145,8 @@ action_controller_roller::action_controller_roller(
             m_config.BODY_COLLISION_CLASS
             );
 
+    ctx().request_enable_colliding(m_roller_collider_guid, m_body_collider_guid, false);
+
     m_body_frame = ctx().frame_coord_system_in_world_space(m_body_frame_guid);
 
     m_desire_frame = m_roller_frame;
@@ -189,10 +191,10 @@ void  action_controller_roller::synchronise_with_scene()
 
     m_roller_contacts.clear();
     filter_contacts(m_roller_collider_guid, m_roller_contacts);
-    m_all_contacts = m_roller_contacts;
-    filter_contacts(m_body_collider_guid, m_all_contacts);
+    m_body_contacts.clear();
+    filter_contacts(m_body_collider_guid, m_body_contacts);
 
-    if (!m_all_contacts.empty())
+    if (!m_roller_contacts.empty() || !m_body_contacts.empty())
     {
         m_seconds_since_last_contact = 0.0f;
         m_environment_linear_velocity = compute_environment_linear_velocity();
@@ -242,7 +244,7 @@ void  action_controller_roller::apply_desire(
                     );
 
     insert_lower_joint_between_roller_and_body();
-    if (!disable_upper_joint && !m_all_contacts.empty())
+    if (!disable_upper_joint && (!m_roller_contacts.empty() || !m_body_contacts.empty()))
         insert_upper_joint_between_roller_and_body();
     insert_roller_and_body_spin_motor();
 
@@ -278,11 +280,21 @@ void  action_controller_roller::filter_contacts(
 vector3  action_controller_roller::compute_environment_linear_velocity() const
 {
     vector3  environment_linear_velocity = vector3_zero();
-    for (com::collision_contact const*  info : m_all_contacts)
-        environment_linear_velocity +=
-                ctx().compute_velocity_of_point_of_rigid_body(info->other_collider(m_roller_collider_guid),m_roller_frame.origin());
-    if (!m_all_contacts.empty())
-        environment_linear_velocity /= (float_32_bit)m_all_contacts.size();
+    natural_32_bit const  num_contacts = (natural_32_bit)(m_roller_contacts.size() + m_body_contacts.size());
+    if (num_contacts > 0U)
+    {
+        for (com::collision_contact const*  info : m_roller_contacts)
+            environment_linear_velocity += ctx().compute_velocity_of_point_of_rigid_body(
+                    ctx().rigid_body_of_collider(info->other_collider(m_roller_collider_guid)),
+                    m_roller_frame.origin()
+                    );
+        for (com::collision_contact const*  info : m_body_contacts)
+            environment_linear_velocity += ctx().compute_velocity_of_point_of_rigid_body(
+                    ctx().rigid_body_of_collider(info->other_collider(m_body_collider_guid)),
+                    m_body_frame.origin()
+                    );
+        environment_linear_velocity /= (float_32_bit)num_contacts;
+    }
     return  environment_linear_velocity;
 }
 
@@ -290,10 +302,19 @@ vector3  action_controller_roller::compute_environment_linear_velocity() const
 vector3  action_controller_roller::compute_environment_angular_velocity() const
 {
     vector3  environment_angular_velocity = vector3_zero();
-    for (com::collision_contact const*  info : m_all_contacts)
-        environment_angular_velocity += ctx().angular_velocity_of_rigid_body(info->other_collider(m_roller_collider_guid));
-    if (!m_all_contacts.empty())
-        environment_angular_velocity /= (float_32_bit)m_all_contacts.size();
+    natural_32_bit const  num_contacts = (natural_32_bit)(m_roller_contacts.size() + m_body_contacts.size());
+    if (num_contacts > 0U)
+    {
+        for (com::collision_contact const*  info : m_roller_contacts)
+            environment_angular_velocity += ctx().angular_velocity_of_rigid_body(
+                    ctx().rigid_body_of_collider(info->other_collider(m_roller_collider_guid))
+                    );
+        for (com::collision_contact const*  info : m_body_contacts)
+            environment_angular_velocity += ctx().angular_velocity_of_rigid_body(
+                    ctx().rigid_body_of_collider(info->other_collider(m_body_collider_guid))
+                    );
+        environment_angular_velocity /= (float_32_bit)num_contacts;
+    }
     return  environment_angular_velocity;
 }
 
@@ -371,13 +392,14 @@ void  action_controller_roller::insert_jump_constraints_between_roller_body_and_
     natural_32_bit  ccid_idx = 0U;
     for (com::object_guid const  floor_guid : floor_guids)
     {
-        vector3 const  floor_mass_centre = ctx().frame_coord_system_in_world_space(floor_guid).origin();
+        vector3 const  floor_mass_centre = ctx().frame_coord_system_in_world_space(ctx().frame_of_collider(floor_guid)).origin();
+        com::object_guid const  floor_rb_guid = ctx().rigid_body_of_collider(floor_guid);
 
         ctx().request_early_insertion_of_instant_constraint_to_physics(
                 m_roller_rigid_body_guid,
                 unit_constraint_vector,
                 vector3_zero(),
-                floor_guid,
+                floor_rb_guid,
                 -unit_constraint_vector,
                 -cross_product(m_roller_frame.origin() - floor_mass_centre, unit_constraint_vector),
                 bias,
@@ -389,7 +411,7 @@ void  action_controller_roller::insert_jump_constraints_between_roller_body_and_
                 m_body_rigid_body_guid,
                 unit_constraint_vector,
                 vector3_zero(),
-                floor_guid,
+                floor_rb_guid,
                 -unit_constraint_vector,
                 -cross_product(m_body_frame.origin() - floor_mass_centre, unit_constraint_vector),
                 bias,
