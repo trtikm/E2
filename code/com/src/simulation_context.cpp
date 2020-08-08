@@ -74,7 +74,6 @@ simulation_context::simulation_context(
     , m_data_root_dir(canonical_path(data_root_dir_.empty() ? "." : data_root_dir_).string())
     // CACHES
     , m_cache_of_imported_scenes()
-    , m_cache_of_imported_effect_configs()
     , m_cache_of_imported_batches()
     , m_cache_of_imported_motion_templates()
     // EARLY REQUESTS HANDLING
@@ -747,12 +746,11 @@ void  simulation_context::erase_batch(object_guid const  batch_guid)
 object_guid  simulation_context::load_batch(
         object_guid const  folder_guid, std::string const&  name,
         std::string const&  disk_path,
-        gfx::effects_config  effects_config,
         std::string const&  skin_name,
         std::vector<object_guid> const&  frame_guids
         )
 {
-    return insert_batch(folder_guid, name, gfx::batch(disk_path, effects_config, skin_name), frame_guids);
+    return insert_batch(folder_guid, name, gfx::batch(disk_path, gfx::default_effects_config(), skin_name), frame_guids);
 }
 
 
@@ -2525,12 +2523,6 @@ void  simulation_context::insert_imported_batch_to_cache(gfx::batch const  batch
 }
 
 
-void  simulation_context::insert_imported_effects_config_to_cache(gfx::effects_config const  effects_config)
-{
-    m_cache_of_imported_effect_configs.insert({effects_config.key(), effects_config });
-}
-
-
 /////////////////////////////////////////////////////////////////////////////////////
 // REQUESTS PROCESSING API
 /////////////////////////////////////////////////////////////////////////////////////
@@ -2875,7 +2867,6 @@ void  simulation_context::clear(bool const  also_caches)
     if (also_caches)
     {
         m_cache_of_imported_scenes.clear();
-        m_cache_of_imported_effect_configs.clear();
         m_cache_of_imported_batches.clear();
         m_cache_of_imported_motion_templates.clear();
     }

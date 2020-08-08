@@ -21,7 +21,6 @@ simulator::simulation_configuration::simulation_configuration()
 simulator::render_configuration::render_configuration(osi::window_props const&  wnd_props, std::string const&  data_root_dir)
     // Global config
     : free_fly_config(gfx::default_free_fly_config(wnd_props.pixel_width_mm(), wnd_props.pixel_height_mm()))
-    , effects_config(gfx::default_effects_config())
     , font_props(
             [&data_root_dir]() -> gfx::font_mono_props {
                 gfx::font_mono_props  props;
@@ -92,7 +91,6 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
 
 void  simulator::render_configuration::terminate()
 {
-    effects_config.release();
     font_props.release();
     batch_grid.release();
     batch_frame.release();

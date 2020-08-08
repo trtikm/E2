@@ -21,10 +21,8 @@ struct  imported_scene_data
 {
     imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser);
     boost::property_tree::ptree const&  hierarchy() const { return m_hierarchy; }
-    std::unordered_map<std::string, boost::property_tree::ptree> const&  effects() const { return m_effects; }
 private:
     boost::property_tree::ptree  m_hierarchy;
-    std::unordered_map<std::string, boost::property_tree::ptree>  m_effects;
 };
 
 
@@ -34,7 +32,6 @@ struct  imported_scene : public async::resource_accessor<imported_scene_data>
     imported_scene() : super() {}
     imported_scene(boost::filesystem::path const&  path) : super(key_from_path(path), 1U, nullptr) {}
     boost::property_tree::ptree const&  hierarchy() const { return resource().hierarchy(); }
-    std::unordered_map<std::string, boost::property_tree::ptree> const&  effects() const { return resource().effects(); }
     static async::key_type  key_from_path(boost::filesystem::path const&  path);
 };
 

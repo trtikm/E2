@@ -220,7 +220,6 @@ struct  simulation_context
     object_guid  load_batch(
             object_guid const  folder_guid, std::string const&  name,
             std::string const&  disk_path,
-            gfx::effects_config  effects_config,
             std::string const&  skin_name = "default",
             std::vector<object_guid> const&  frame_guids = {}
             );
@@ -613,7 +612,6 @@ struct  simulation_context
     void  request_late_import_scene_from_directory(import_scene_props const&  props) const;
     // Disabled (not const) for modules.
     void  insert_imported_batch_to_cache(gfx::batch const  batch);
-    void  insert_imported_effects_config_to_cache(gfx::effects_config const  effects_config);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // REQUESTS PROCESSING API
@@ -773,7 +771,6 @@ private:
     /////////////////////////////////////////////////////////////////////////////////////
 
     std::unordered_map<async::key_type, detail::imported_scene>  m_cache_of_imported_scenes;
-    std::unordered_map<async::key_type, gfx::effects_config>  m_cache_of_imported_effect_configs;
     std::unordered_map<async::key_type, gfx::batch>  m_cache_of_imported_batches;
     std::unordered_map<async::key_type, ai::skeletal_motion_templates>  m_cache_of_imported_motion_templates;
 

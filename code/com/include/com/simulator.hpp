@@ -5,7 +5,6 @@
 #   include <osi/simulator.hpp>
 #   include <gfx/camera.hpp>
 #   include <gfx/free_fly.hpp>
-#   include <gfx/effects_config.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
@@ -36,7 +35,6 @@ struct  simulator : public osi::simulator
         // Global config - fields are only initialised in the constructor and then never changed in this class.
         //                 Feel free to modify these field, ideally in the callback 'on_begin_round()'
         gfx::free_fly_config  free_fly_config;
-        gfx::effects_config  effects_config;
         gfx::font_mono_props  font_props;
         vector3  clear_colour;
         vector4  diffuse_colour;

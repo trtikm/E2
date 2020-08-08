@@ -13,20 +13,11 @@
 namespace com { namespace detail {
 
 
-extern gfx::effects_config  import_effects_config(boost::property_tree::ptree const&  ptree);
-
 extern void  apply_initial_velocities_to_imported_rigid_bodies(
         simulation_context&  ctx,
         object_guid const  folder_guid,
         import_scene_props const&  props
         );
-
-
-struct  import_scene_props
-{
-    boost::property_tree::ptree const*  hierarchy;
-    std::unordered_map<std::string, boost::property_tree::ptree> const* effects;
-};
 
 
 static bool  is_static_collider_in_tree(boost::property_tree::ptree const&  ptree)
@@ -49,7 +40,7 @@ static bool  is_static_collider_in_tree(boost::property_tree::ptree const&  ptre
 
 static void  import_gfxtuner_scene_node(
         simulation_context&  ctx,
-        import_scene_props const&  props,
+        boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
         object_guid const  relocation_frame_guid
         )
@@ -59,10 +50,10 @@ static void  import_gfxtuner_scene_node(
         ctx.frame_relocate_relative_to_parent(frame_guid, relocation_frame_guid);
     else
     {
-        boost::property_tree::ptree const&  origin_tree = props.hierarchy->find("origin")->second;
+        boost::property_tree::ptree const&  origin_tree = hierarchy.find("origin")->second;
         vector3 const  origin = vector3(origin_tree.get<scalar>("x"), origin_tree.get<scalar>("y"), origin_tree.get<scalar>("z"));
 
-        boost::property_tree::ptree const&  orientation_tree = props.hierarchy->find("orientation")->second;
+        boost::property_tree::ptree const&  orientation_tree = hierarchy.find("orientation")->second;
         quaternion const  orientation = make_quaternion_xyzw(
                 orientation_tree.get<scalar>("x"),
                 orientation_tree.get<scalar>("y"),
@@ -72,7 +63,7 @@ static void  import_gfxtuner_scene_node(
         ctx.frame_relocate(frame_guid, origin, orientation);
     }
 
-    boost::property_tree::ptree const&  folders = props.hierarchy->find("folders")->second;
+    boost::property_tree::ptree const&  folders = hierarchy.find("folders")->second;
 
     auto rb_it = folders.find("rigid_body");
     if (rb_it != folders.not_found())
@@ -88,7 +79,7 @@ static void  import_gfxtuner_scene_node(
 
         ctx.insert_rigid_body(
                 folder_guid,
-                !is_static_collider_in_tree(*props.hierarchy),
+                !is_static_collider_in_tree(hierarchy),
                 load_vector("linear_velocity"),
                 load_vector("angular_velocity"),
                 load_vector("external_linear_acceleration"),
@@ -141,19 +132,10 @@ static void  import_gfxtuner_scene_node(
                 }
                 else
                 {
-                    gfx::effects_config  effects_config; 
-                    {
-                        auto const  it = props.effects->find(record_it->second.get<std::string>("effects"));
-                        INVARIANT(it != props.effects->end());
-                        effects_config = detail::import_effects_config(it->second);
-                        ctx.insert_imported_effects_config_to_cache(effects_config);
-                    }
-
                     batch_guid = ctx.load_batch(
                             batches_folder_guid,
                             to_string(OBJECT_KIND::BATCH) + record_it->first,
                             record_it->second.get<std::string>("id"),
-                            effects_config,
                             record_it->second.get<std::string>("skin")
                             );
                 }
@@ -251,11 +233,11 @@ static void  import_gfxtuner_scene_node(
             }
         }
 
-    boost::property_tree::ptree const&  children = props.hierarchy->find("children")->second;
+    boost::property_tree::ptree const&  children = hierarchy.find("children")->second;
     for (auto child_it = children.begin(); child_it != children.end(); ++child_it)
         import_gfxtuner_scene_node(
                 ctx,
-                { &child_it->second, props.effects },
+                child_it->second,
                 ctx.insert_folder(folder_guid, child_it->first, false),
                 invalid_object_guid()
                 );
@@ -276,7 +258,7 @@ void  import_gfxtuner_scene(
             continue;
 
         object_guid const  folder_guid = ctx.insert_folder(props.folder_guid, it->first, true);
-        import_gfxtuner_scene_node(ctx, { &it->second, &scene.effects() }, folder_guid, props.relocation_frame_guid);
+        import_gfxtuner_scene_node(ctx, it->second, folder_guid, props.relocation_frame_guid);
         apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, props);
     }
 

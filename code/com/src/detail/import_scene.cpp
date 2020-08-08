@@ -14,7 +14,6 @@ namespace com { namespace detail {
 
 imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : m_hierarchy()
-    , m_effects()
 {
     boost::filesystem::path const  scene_dir = finaliser->get_key().get_unique_id();
 
@@ -30,54 +29,12 @@ imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr con
 
         boost::property_tree::read_json(istr, m_hierarchy);
     }
-
-    {
-        boost::filesystem::path  pathname = scene_dir / "effects.json";
-        if (boost::filesystem::is_regular_file(pathname))
-        {
-            std::ifstream  istr(pathname.string(), std::ios_base::binary);
-            if (!istr.good())
-                throw std::runtime_error(msgstream() << "Cannot open the effects file '" << pathname << "'.");
-
-            boost::property_tree::ptree  ptree;
-            boost::property_tree::read_json(istr, ptree);
-            for (auto it = ptree.begin(); it != ptree.end(); ++it)
-                m_effects.insert({it->first, it->second});
-        }
-    }
 }
 
 
 async::key_type  imported_scene::key_from_path(boost::filesystem::path const&  path)
 {
     return { "com::detail::imported_scene", boost::filesystem::absolute(path).string() };
-}
-
-
-gfx::effects_config  import_effects_config(boost::property_tree::ptree const&  ptree)
-{
-    gfx::effects_config::light_types  light_types;
-    for (auto const& lt_and_tree : ptree.get_child("light_types"))
-        light_types.insert((gfx::LIGHT_TYPE)lt_and_tree.second.get_value<int>());
-    gfx::effects_config::lighting_data_types  lighting_data_types;
-    for (auto const& ldt_and_tree : ptree.get_child("lighting_data_types"))
-        lighting_data_types.insert({
-            (gfx::LIGHTING_DATA_TYPE)std::atoi(ldt_and_tree.first.c_str()),
-            (gfx::SHADER_DATA_INPUT_TYPE)ldt_and_tree.second.get_value<int>()
-        });
-    gfx::effects_config::shader_output_types  shader_output_types;
-    for (auto const& sot_and_tree : ptree.get_child("shader_output_types"))
-        shader_output_types.insert((gfx::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
-
-    return gfx::effects_config(
-            nullptr,
-            light_types,
-            lighting_data_types,
-            (gfx::SHADER_PROGRAM_TYPE)ptree.get<int>("lighting_algo_location"),
-            shader_output_types,
-            (gfx::FOG_TYPE)ptree.get<int>("fog_type"),
-            (gfx::SHADER_PROGRAM_TYPE)ptree.get<int>("fog_algo_location")
-            );
 }
 
 
@@ -140,8 +97,7 @@ static void  import_batch(
         simulation_context&  ctx,
         boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
-        std::string const&  name,
-        std::unordered_map<std::string, boost::property_tree::ptree> const&  effects
+        std::string const&  name
         )
 {
     object_guid  batch_guid;
@@ -173,19 +129,10 @@ static void  import_batch(
                     );
         else if (batch_kind == "REGULAR_GFX_BATCH")
         {
-            gfx::effects_config  effects_config; 
-            {
-                auto const  it = effects.find(hierarchy.get<std::string>("effects"));
-                INVARIANT(it != effects.end());
-                effects_config = import_effects_config(it->second);
-                ctx.insert_imported_effects_config_to_cache(effects_config);
-            }
-
             batch_guid = ctx.load_batch(
                     folder_guid,
                     name,
                     hierarchy.get<std::string>("id"),
-                    effects_config,
                     hierarchy.get<std::string>("skin")
                     );
         }
@@ -470,23 +417,14 @@ static void  import_agent(
         simulation_context&  ctx,
         boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
-        std::string const&  name,
-        std::unordered_map<std::string, boost::property_tree::ptree> const&  effects
+        std::string const&  name
         )
 {
     ASSUMPTION(name == to_string(OBJECT_KIND::AGENT));
 
-    gfx::effects_config  effects_config; 
-    {
-        auto const  it = effects.find(hierarchy.get<std::string>("skeleton_batch_effects"));
-        INVARIANT(it != effects.end());
-        effects_config = import_effects_config(it->second);
-        ctx.insert_imported_effects_config_to_cache(effects_config);
-    }
-
     gfx::batch const  agent_batch(
             hierarchy.get<std::string>("skeleton_batch_disk_path"),
-            effects_config,
+            gfx::default_effects_config(),
             hierarchy.get<std::string>("skeleton_batch_skin")
             );
     ctx.insert_imported_batch_to_cache(agent_batch);
@@ -506,7 +444,6 @@ static void  import_under_folder(
         delayed_import_tasks&  delayed_tasks,
         object_guid const  folder_guid,
         boost::property_tree::ptree const&  hierarchy,
-        std::unordered_map<std::string, boost::property_tree::ptree> const&  effects,
         object_guid const  relocation_frame_guid
         )
 {
@@ -537,7 +474,7 @@ static void  import_under_folder(
         for (auto  content_it : load_tasks[OBJECT_KIND::FRAME])
             import_frame(ctx, content_it->second, folder_guid, relocation_frame_guid);
         for (auto  content_it : load_tasks[OBJECT_KIND::BATCH])
-            import_batch(ctx, content_it->second, folder_guid, content_it->first, effects);
+            import_batch(ctx, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::RIGID_BODY])
             import_rigid_body(ctx, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::COLLIDER])
@@ -547,7 +484,7 @@ static void  import_under_folder(
         for (auto  content_it : load_tasks[OBJECT_KIND::SENSOR])
             import_sensor(ctx, delayed_tasks, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::AGENT])
-            import_agent(ctx, content_it->second, folder_guid, content_it->first, effects);
+            import_agent(ctx, content_it->second, folder_guid, content_it->first);
     }
 
     auto const  folders = hierarchy.find("folders");
@@ -558,7 +495,6 @@ static void  import_under_folder(
                     delayed_tasks,
                     ctx.insert_folder(folder_guid, folder_it->first, false),
                     folder_it->second,
-                    effects,
                     invalid_object_guid()
                     );
 }
@@ -654,7 +590,7 @@ void  import_scene(simulation_context&  ctx, imported_scene const  scene, import
         for (auto it = folders->second.begin(); it != folders->second.end(); ++it)
         {
             object_guid const  folder_guid = ctx.insert_folder(props.folder_guid, it->first, true);
-            import_under_folder(ctx, delayed_tasks, folder_guid, it->second, scene.effects(), props.relocation_frame_guid);
+            import_under_folder(ctx, delayed_tasks, folder_guid, it->second, props.relocation_frame_guid);
             apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, props);
         }
     for (auto request_infos_it = delayed_tasks.request_infos.begin(); request_infos_it != delayed_tasks.request_infos.end(); ++request_infos_it)
