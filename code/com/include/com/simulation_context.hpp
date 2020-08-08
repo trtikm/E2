@@ -558,7 +558,6 @@ struct  simulation_context
     agent_guid_iterator  agents_end() const;
     void  request_late_insert_agent(
             object_guid const  under_folder_guid,
-            std::string const&  agent_root_folder_name_prefix,
             ai::AGENT_KIND const  kind,
             vector3 const&  skeleton_frame_origin,
             quaternion const&  skeleton_frame_orientation,
@@ -568,7 +567,6 @@ struct  simulation_context
     // Disabled (not const) for modules.
     object_guid  insert_agent(
             object_guid const  under_folder_guid,
-            std::string const&  agent_root_folder_name_prefix,
             ai::AGENT_KIND const  kind,
             ai::skeletal_motion_templates const  motion_templates,
             vector3 const&  skeleton_frame_origin,
@@ -777,6 +775,7 @@ private:
     std::unordered_map<async::key_type, detail::imported_scene>  m_cache_of_imported_scenes;
     std::unordered_map<async::key_type, gfx::effects_config>  m_cache_of_imported_effect_configs;
     std::unordered_map<async::key_type, gfx::batch>  m_cache_of_imported_batches;
+    std::unordered_map<async::key_type, ai::skeletal_motion_templates>  m_cache_of_imported_motion_templates;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // EARLY REQUESTS HANDLING
@@ -834,6 +833,7 @@ private:
         REQUEST_DEL_ANGULAR_ACCEL           = 14,
         REQUEST_ERASE_TIMER                 = 15,
         REQUEST_ERASE_SENSOR                = 16,
+        REQUEST_ERASE_AGENT                 = 17,
     };
 
     struct  request_data_relocate_frame { object_guid  frame_guid; vector3  position; quaternion  orientation; };
@@ -862,6 +862,7 @@ private:
     mutable std::list<request_data_del_acceleration_from_source>  m_requests_del_angular_acceleration_from_source;
     mutable std::list<object_guid>  m_requests_erase_timer;
     mutable std::list<object_guid>  m_requests_erase_sensor;
+    mutable std::list<object_guid>  m_requests_erase_agent;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // LATE REQUESTS HANDLING
@@ -903,7 +904,6 @@ private:
     struct  request_data_insert_agent
     {
         object_guid  under_folder_guid;
-        std::string  agent_root_folder_name_prefix;
         ai::AGENT_KIND  kind;
         vector3  skeleton_frame_origin;
         quaternion  skeleton_frame_orientation;

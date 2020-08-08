@@ -76,6 +76,7 @@ simulation_context::simulation_context(
     , m_cache_of_imported_scenes()
     , m_cache_of_imported_effect_configs()
     , m_cache_of_imported_batches()
+    , m_cache_of_imported_motion_templates()
     // EARLY REQUESTS HANDLING
     , m_rigid_bodies_with_invalidated_shape()
     , m_pending_requests_early()
@@ -100,7 +101,8 @@ simulation_context::simulation_context(
     , m_requests_del_angular_acceleration_from_source()
     , m_requests_erase_timer()
     , m_requests_erase_sensor()
-    // SCENE IMPORT REQUESTS HANDLING
+    , m_requests_erase_agent()
+    // LATE REQUESTS HANDLING
     , m_requests_late_scene_import()
     , m_requests_late_insert_agent()
 {
@@ -304,10 +306,12 @@ void  simulation_context::request_erase_non_root_folder(object_guid const  folde
         request_erase_non_root_folder(name_and_guid.second);
 
     object_guid  frame_guid = invalid_object_guid();
+    object_guid  agent_guid = invalid_object_guid();
     for (auto const&  name_and_guid : fct.content)
         switch (name_and_guid.second.kind)
         {
         case OBJECT_KIND::FRAME:
+            INVARIANT(frame_guid == invalid_object_guid());
             frame_guid = name_and_guid.second;
             break;
         case OBJECT_KIND::BATCH:
@@ -326,10 +330,13 @@ void  simulation_context::request_erase_non_root_folder(object_guid const  folde
             request_erase_sensor(name_and_guid.second);
             break;
         case OBJECT_KIND::AGENT:
-            request_erase_agent(name_and_guid.second);
+            INVARIANT(agent_guid == invalid_object_guid());
+            agent_guid = name_and_guid.second;
             break;
         default: UNREACHABLE(); break;
         }
+    if (agent_guid != invalid_object_guid())
+        request_erase_agent(agent_guid);
     if (frame_guid != invalid_object_guid())
         request_erase_frame(frame_guid);
 
@@ -2182,7 +2189,6 @@ simulation_context::agent_guid_iterator  simulation_context::agents_end() const
 
 void  simulation_context::request_late_insert_agent(
         object_guid const  under_folder_guid,
-        std::string const&  agent_root_folder_name_prefix,
         ai::AGENT_KIND const  kind,
         vector3 const&  skeleton_frame_origin,
         quaternion const&  skeleton_frame_orientation,
@@ -2193,7 +2199,6 @@ void  simulation_context::request_late_insert_agent(
 
     m_requests_late_insert_agent.push_back({ 
             under_folder_guid,
-            agent_root_folder_name_prefix,
             kind,
             skeleton_frame_origin,
             skeleton_frame_orientation,
@@ -2205,7 +2210,8 @@ void  simulation_context::request_late_insert_agent(
 
 void  simulation_context::request_erase_agent(object_guid const  agent_guid) const
 {
-    NOT_IMPLEMENTED_YET();
+    m_requests_erase_agent.push_back(agent_guid);
+    m_pending_requests.push_back(REQUEST_ERASE_AGENT);
 }
 
 
@@ -2214,7 +2220,6 @@ void  simulation_context::request_erase_agent(object_guid const  agent_guid) con
 
 object_guid  simulation_context::insert_agent(
         object_guid const  under_folder_guid,
-        std::string const&  agent_root_folder_name_prefix,
         ai::AGENT_KIND const  kind,
         ai::skeletal_motion_templates const  motion_templates,
         vector3 const&  skeleton_frame_origin,
@@ -2223,17 +2228,15 @@ object_guid  simulation_context::insert_agent(
         )
 {
     ASSUMPTION(
-        is_valid_folder_guid(under_folder_guid) &&
-        !agent_root_folder_name_prefix.empty() &&
+        folder_content(under_folder_guid).content.empty() &&
+        folder_content(under_folder_guid).child_folders.empty() &&
         motion_templates.loaded_successfully() &&
         skeleton_attached_batch.loaded_successfully()
         );
 
-    object_guid const  agent_root_folder_guid = insert_folder(under_folder_guid, agent_root_folder_name_prefix, true);
-
     ai::scene_binding_ptr const  binding = ai::scene_binding::create(
             this,
-            agent_root_folder_guid,
+            under_folder_guid,
             motion_templates,
             skeleton_frame_origin,
             skeleton_frame_orientation
@@ -2242,15 +2245,39 @@ object_guid  simulation_context::insert_agent(
     ai::agent_id const  id = m_ai_simulator_ptr->insert_agent(kind, motion_templates, binding);
 
     object_guid const  agent_batch_guid =
-            insert_batch(agent_root_folder_guid, "BATCH.agent", skeleton_attached_batch, binding->frame_guids_of_bones);
+            insert_batch(under_folder_guid, "BATCH.agent", skeleton_attached_batch, binding->frame_guids_of_bones);
 
-    NOT_IMPLEMENTED_YET();
+    object_guid const  agent_guid = {
+            OBJECT_KIND::AGENT,
+            m_agents.insert({ id, under_folder_guid.index, to_string(OBJECT_KIND::AGENT) })
+            };
+
+    m_agids_to_guids.insert({ id, agent_guid });
+
+    m_folders.at(under_folder_guid.index).content.insert({ to_string(OBJECT_KIND::AGENT), agent_guid });
+
+    return agent_guid;
 }
 
 
 void  simulation_context::erase_agent(object_guid const  agent_guid)
 {
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+
+    auto const&  elem = m_agents.at(agent_guid.index);
+
+    m_ai_simulator_ptr->erase_agent(elem.id);
+
+    {
+        folder_content_type const&  fct = folder_content(folder_of_agent(agent_guid));        
+        auto const batch_it = fct.content.find("BATCH.agent");
+        if (batch_it != fct.content.end())
+            erase_batch(batch_it->second);
+    }
+
+    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_agids_to_guids.erase(elem.id);
+    m_agents.erase(agent_guid.index);
 }
 
 
@@ -2728,6 +2755,9 @@ void  simulation_context::process_pending_requests()
         case REQUEST_ERASE_SENSOR:
             erase_sensor(*make_request_cursor_to(m_requests_erase_sensor));
             break;
+        case REQUEST_ERASE_AGENT:
+            erase_agent(*make_request_cursor_to(m_requests_erase_agent));
+            break;
         default: UNREACHABLE(); break;
         }
 }
@@ -2753,6 +2783,7 @@ void  simulation_context::clear_pending_requests()
     m_requests_del_angular_acceleration_from_source.clear();
     m_requests_erase_timer.clear();
     m_requests_erase_sensor.clear();
+    m_requests_erase_agent.clear();
 }
 
 
@@ -2795,7 +2826,25 @@ void  simulation_context::process_pending_late_requests()
                 return false;
             },
             [this](request_data_insert_agent&  request) {
-                NOT_IMPLEMENTED_YET();
+                if (!request.motion_templates.loaded_successfully())
+                    LOG(error, "Failed to import motion templates '" << request.motion_templates.key().get_unique_id() << "' " <<
+                               "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
+                if (!request.skeleton_attached_batch.loaded_successfully())
+                    LOG(error, "Failed to import skeleton attached batch '" <<
+                               request.skeleton_attached_batch.key().get_unique_id() << "' " <<
+                               "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
+
+                if (!request.motion_templates.empty())
+                    m_cache_of_imported_motion_templates.insert({ request.motion_templates.key(), request.motion_templates });
+                if (request.motion_templates.loaded_successfully())
+                    insert_agent(
+                            request.under_folder_guid,
+                            request.kind,
+                            request.motion_templates,
+                            request.skeleton_frame_origin,
+                            request.skeleton_frame_orientation,
+                            request.skeleton_attached_batch
+                            );
             });
 }
 
@@ -2828,6 +2877,7 @@ void  simulation_context::clear(bool const  also_caches)
         m_cache_of_imported_scenes.clear();
         m_cache_of_imported_effect_configs.clear();
         m_cache_of_imported_batches.clear();
+        m_cache_of_imported_motion_templates.clear();
     }
 
     folder_content_type const&  fct = folder_content(root_folder());

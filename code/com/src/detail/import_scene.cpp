@@ -474,6 +474,8 @@ static void  import_agent(
         std::unordered_map<std::string, boost::property_tree::ptree> const&  effects
         )
 {
+    ASSUMPTION(name == to_string(OBJECT_KIND::AGENT));
+
     gfx::effects_config  effects_config; 
     {
         auto const  it = effects.find(hierarchy.get<std::string>("skeleton_batch_effects"));
@@ -491,7 +493,6 @@ static void  import_agent(
 
     ctx.request_late_insert_agent(
             folder_guid,
-            name,
             ai::as_agent_kind(hierarchy.get<std::string>("kind")),
             import_vector3(hierarchy.get_child("skeleton_frame_origin")),
             import_quaternion(hierarchy.get_child("skeleton_frame_orientation")),
