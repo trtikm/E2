@@ -1169,6 +1169,7 @@ void  simulation_context::request_enable_colliding(
         object_guid const  collider_1, object_guid const  collider_2, const bool  state
         ) const
 {
+    ASSUMPTION(collider_1 != collider_2);
     m_requests_enable_colliding.push_back({collider_1, collider_2, state});
     m_pending_requests.push_back(REQUEST_ENABLE_COLLIDING);
 }
