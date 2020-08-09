@@ -118,7 +118,7 @@ action_controller_roller::action_controller_roller(
             m_config.ROLLER_COLLISION_CLASS
             );
 
-    m_roller_frame = ctx().frame_coord_system_in_world_space(m_roller_frame_guid);
+    m_roller_frame = ctx().frame_explicit_coord_system_in_world_space(m_roller_frame_guid);
 
     m_body_frame_guid = m_binding->context->insert_frame(
             m_body_folder_guid,
@@ -147,7 +147,7 @@ action_controller_roller::action_controller_roller(
 
     ctx().request_enable_colliding(m_roller_collider_guid, m_body_collider_guid, false);
 
-    m_body_frame = ctx().frame_coord_system_in_world_space(m_body_frame_guid);
+    m_body_frame = ctx().frame_explicit_coord_system_in_world_space(m_body_frame_guid);
 
     m_desire_frame = m_roller_frame;
 
@@ -162,6 +162,7 @@ action_controller_roller::action_controller_roller(
 
     ctx().request_set_parent_frame(get_binding()->frame_guid_of_skeleton, m_skeleton_sync_frame_guid);
     ctx().request_relocate_frame(get_binding()->frame_guid_of_skeleton, vector3_zero(), quaternion_identity());
+
     set_desire_frame();
 }
 

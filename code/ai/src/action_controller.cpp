@@ -100,7 +100,9 @@ action_controller::action_controller(
             m_template_cursor,
             m_roller.get_config().AGENT_FRAME_ORIGIN_Z_OFFSET_FROM_BOTTOM
             )
-{}
+{
+    m_interpolator.commit();
+}
 
 
 void  action_controller::next_round(
