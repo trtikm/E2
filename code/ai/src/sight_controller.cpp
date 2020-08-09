@@ -78,7 +78,6 @@ sight_controller::ray_cast_config::ray_cast_config(
     , distribution_of_cells_in_camera_space(distribution_of_cells_in_camera_space_)
 {
     ASSUMPTION(
-        num_raycasts_per_second > 0U &&
         max_ray_cast_info_life_time_in_seconds >= 0.0f &&
         num_cells_along_any_axis > 0U &&
         distribution_of_cells_in_camera_space.operator bool()
@@ -126,6 +125,9 @@ sight_controller::sight_controller(
 void  sight_controller::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
+
+    if (m_ray_cast_config.num_raycasts_per_second == 0U)
+        return;
 
     m_current_time += time_step_in_seconds;
     while (!m_ray_casts_in_time.empty() && (float_32_bit)(m_current_time - m_ray_casts_in_time.begin()->first) >=
