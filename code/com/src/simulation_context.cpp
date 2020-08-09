@@ -2247,6 +2247,13 @@ void  simulation_context::request_erase_agent(object_guid const  agent_guid) con
 // Disabled (not const) for modules.
 
 
+ai::agent_id  simulation_context::from_agent_guid(object_guid const  agent_guid)
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    return m_agents.at(agent_guid.index).id;
+}
+
+
 object_guid  simulation_context::insert_agent(
         object_guid const  under_folder_guid,
         ai::AGENT_KIND const  kind,

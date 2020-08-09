@@ -569,6 +569,7 @@ struct  simulation_context
             ) const;
     void  request_erase_agent(object_guid const  agent_guid) const;
     // Disabled (not const) for modules.
+    ai::agent_id  from_agent_guid(object_guid const  agent_guid);
     object_guid  insert_agent(
             object_guid const  under_folder_guid,
             ai::AGENT_KIND const  kind,
