@@ -54,6 +54,7 @@ struct  simulator : public osi::simulator
         gfx::batch  batch_frame;
         gfx::batch  batch_sensory_collision_contact;
         gfx::batch  batch_physics_collision_contact;
+        gfx::batch  batch_sight_raycast_contact;
         bool  render_fps;
         bool  render_grid;
         bool  render_frames;
@@ -66,6 +67,7 @@ struct  simulator : public osi::simulator
         bool  render_colliders_of_agents;
         bool  render_colliders_of_ray_casts;
         bool  render_collision_contacts;
+        bool  render_sight_contacts;
         vector4  colour_of_rigid_body_collider;
         vector4  colour_of_field_collider;
         vector4  colour_of_sensor_collider;
@@ -154,6 +156,7 @@ private:
     void  render_frames();
     void  render_colliders();
     void  render_collision_contacts();
+    void  render_sight_contacts();
     void  render_text();
 
     gfx::batch  create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled);

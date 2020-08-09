@@ -1,5 +1,6 @@
 #include <com/simulator.hpp>
 #include <gfx/draw.hpp>
+#include <ai/sight_controller.hpp>
 #include <osi/opengl.hpp>
 #include <angeo/utility.hpp>
 #include <utility/canonical_path.hpp>
@@ -59,6 +60,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , batch_frame(gfx::create_basis_vectors())
     , batch_sensory_collision_contact(gfx::create_arrow(0.1f, { 1.0f, 1.0f, 0.0f, 1.0f }))
     , batch_physics_collision_contact(gfx::create_arrow(0.1f, { 1.0f, 0.0f, 0.0f, 1.0f }))
+    , batch_sight_raycast_contact(gfx::create_coord_cross(0.025f, { 0.5f, 0.7f, 1.0f, 1.0f }))
     , render_fps(true)
     , render_grid(true)
     , render_frames(false)
@@ -71,6 +73,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_colliders_of_agents(true)
     , render_colliders_of_ray_casts(true)
     , render_collision_contacts(true)
+    , render_sight_contacts(true)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_field_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
     , colour_of_sensor_collider{ 0.0f, 0.85f, 0.85f, 1.0f }
@@ -416,6 +419,9 @@ void  simulator::render()
     if (cfg.render_collision_contacts)
         render_collision_contacts();
 
+    if (cfg.render_sight_contacts)
+        render_sight_contacts();
+
     if (cfg.render_text)
         render_text();
 }
@@ -724,6 +730,35 @@ void  simulator::render_collision_contacts()
     }
     render_task(sensory_task);
     render_task(physics_task);
+}
+
+
+void  simulator::render_sight_contacts()
+{
+    simulation_context&  ctx = *context();
+
+    render_task_info  task_sight_contacts{ render_config().batch_sight_raycast_contact, {}, {} };
+    for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
+    {
+        ai::sight_controller const&  sight = m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it)).get_sight_controller();
+        gfx::camera_perspective_ptr  camera = sight.get_camera();
+        if (camera == nullptr)
+            continue;
+
+        ai::sight_controller::ray_casts_in_time const&  ray_casts = sight.get_ray_casts_in_time();
+        task_sight_contacts.world_matrices.reserve(task_sight_contacts.world_matrices.size() + ray_casts.size());
+        for (auto  ray_it = ray_casts.begin(), end = ray_casts.end(); ray_it != end; ++ray_it)
+        {
+            vector3 const  contact_point =
+                    ray_it->second.ray_origin_in_world_space +
+                    ray_it->second.parameter_to_coid * ray_it->second.ray_unit_direction_in_world_space
+                    ;
+            matrix44  W;
+            compose_from_base_matrix(contact_point, matrix33_identity(), W);
+            task_sight_contacts.world_matrices.push_back(W);
+        }
+    }
+    render_task(task_sight_contacts);
 }
 
 
