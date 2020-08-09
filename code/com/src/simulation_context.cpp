@@ -2354,6 +2354,24 @@ collision_contact const&  simulation_context::get_collision_contact(natural_32_b
 }
 
 
+natural_32_bit  simulation_context::num_collision_contacts() const
+{
+    return (natural_32_bit)m_collision_contacts.valid_indices().size();
+}
+
+
+simulation_context::collision_contacts_iterator  simulation_context::collision_contacts_begin() const
+{
+    return m_collision_contacts.begin();
+}
+
+
+simulation_context::collision_contacts_iterator  simulation_context::collision_contacts_end() const
+{
+    return m_collision_contacts.end();
+}
+
+
 // Disabled (not const) for modules.
 
 

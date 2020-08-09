@@ -583,9 +583,14 @@ struct  simulation_context
     // COLLISION CONTACTS API
     /////////////////////////////////////////////////////////////////////////////////////
 
+    using  collision_contacts_iterator = dynamic_array<collision_contact, natural_32_bit>::const_iterator;
+
     bool  is_valid_collision_contact_index(natural_32_bit const  contact_index) const;
     std::vector<natural_32_bit> const&  collision_contacts_of_collider(object_guid const  collider_guid) const;
     collision_contact const&  get_collision_contact(natural_32_bit const  contact_index) const;
+    natural_32_bit  num_collision_contacts() const;
+    collision_contacts_iterator  collision_contacts_begin() const;
+    collision_contacts_iterator  collision_contacts_end() const;
     // Disabled (not const) for modules.
     natural_32_bit  insert_collision_contact(collision_contact const&  cc);
     void  clear_collision_contacts();
