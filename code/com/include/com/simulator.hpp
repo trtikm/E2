@@ -26,6 +26,7 @@ struct  simulator : public osi::simulator
         simulation_configuration();
         bool  paused;
         natural_32_bit  num_rounds_to_pause;
+        bool  commit_state_changes_in_the_same_round;
     };
 
     struct  render_configuration
@@ -142,6 +143,8 @@ private:
     using  render_tasks_map = std::unordered_map<std::string, render_task_info>;
 
     void  simulate();
+    void  update_collision_contacts_and_constraints();
+    void  commit_state_changes();
 
     void  camera_update();
 

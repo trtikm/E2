@@ -28,6 +28,7 @@ namespace com {
 simulator::simulation_configuration::simulation_configuration()
     : paused(true)
     , num_rounds_to_pause(0U)
+    , commit_state_changes_in_the_same_round(false)
 {}
 
 
@@ -231,6 +232,23 @@ void  simulator::simulate()
 {
     TMPROF_BLOCK();
 
+    if (!simulation_config().commit_state_changes_in_the_same_round)
+        commit_state_changes();
+
+    update_collision_contacts_and_constraints();
+
+    device_simulator()->next_round((simulation_context const&)*context(), round_seconds());
+    ai_simulator()->next_round(round_seconds(), get_keyboard_props(), get_mouse_props(), get_window_props());
+
+    if (simulation_config().commit_state_changes_in_the_same_round)
+        commit_state_changes();
+}
+
+
+void  simulator::update_collision_contacts_and_constraints()
+{
+    TMPROF_BLOCK();
+
     simulation_context&  ctx = *context();
 
     ctx.clear_collision_contacts();
@@ -292,14 +310,14 @@ void  simulator::simulate()
                 },
             true
             );
+}
 
-    device_simulator()->next_round((simulation_context const&)ctx, round_seconds());
-    ai_simulator()->next_round(
-            round_seconds(),
-            get_keyboard_props(),
-            get_mouse_props(),
-            get_window_props()
-            );
+
+void  simulator::commit_state_changes()
+{
+    TMPROF_BLOCK();
+
+    simulation_context&  ctx = *context();
 
     ctx.process_rigid_bodies_with_invalidated_shape();
     ctx.process_pending_early_requests();
@@ -320,6 +338,7 @@ void  simulator::simulate()
 
     ctx.process_pending_requests();
 }
+
 
 
 void  simulator::camera_update()
