@@ -4,7 +4,7 @@
 namespace gfx {
 
 
-batch  create_basis_vectors(FOG_TYPE const  fog_type_)
+batch  create_basis_vectors()
 {
     TMPROF_BLOCK();
 
@@ -19,7 +19,7 @@ batch  create_basis_vectors(FOG_TYPE const  fog_type_)
         { 0.0f, 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f, 1.0f, 1.0f },
     };
 
-    return create_lines3d(vertices, colours, fog_type_, "basis_vectors<fog:" + name(fog_type_) + ">");
+    return create_lines3d(vertices, colours, FOG_TYPE::NONE, get_sketch_id_prefix() + sketch_kind_basis_vectors());
 }
 
 

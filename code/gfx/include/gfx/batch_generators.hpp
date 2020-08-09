@@ -79,24 +79,27 @@ batch  create_grid(
 batch  create_default_grid();
 
 
-batch  create_basis_vectors(FOG_TYPE const  fog_type_ = FOG_TYPE::NONE);
-
-
-batch  create_coord_cross(
-        float_32_bit const  size,
-        vector4 const&  colour,
-        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
-        std::string const&  id = ""
-        );
-
-
 std::string  get_sketch_id_prefix();
 
+inline std::string  sketch_kind_basis_vectors() { return "basis_vectors"; }
+inline std::string  sketch_kind_coord_cross() { return "coord_cross"; }
+inline std::string  sketch_kind_arrow() { return "arrow"; }
 inline std::string  sketch_kind_box() { return "box"; }
 inline std::string  sketch_kind_capsule() { return "capsule"; }
 inline std::string  sketch_kind_sphere() { return "sphere"; }
 inline std::string  sketch_kind_mesh() { return "mesh"; }
 inline std::string  sketch_kind_convex_hull() { return "convex_hull"; }
+
+
+batch  create_basis_vectors();
+
+
+batch  create_coord_cross(float_32_bit const  size, vector4 const&  colour);
+std::string  make_coord_cross_id_without_prefix(float_32_bit const  size, vector4 const&  colour);
+
+
+batch  create_arrow(float_32_bit const  size, vector4 const&  colour);
+std::string  make_arrow_id_without_prefix(float_32_bit const  size, vector4 const&  colour);
 
 
 bool  read_sketch_info_from_id(std::string const& id, boost::property_tree::ptree&  output_info);
