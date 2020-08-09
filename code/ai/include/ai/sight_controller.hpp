@@ -21,13 +21,15 @@ struct  sight_controller
 
     struct  camera_config
     {
-        float_32_bit  fov_angle;
+        float_32_bit  horizontal_fov_angle;
+        float_32_bit  vertical_fov_angle;
         float_32_bit  near_plane;
         float_32_bit  far_plane;
         float_32_bit  origin_z_shift;
 
         camera_config(
-                float_32_bit const  fov_angle_ = PI() / 2.0f,
+                float_32_bit const  horizontal_fov_angle_ = PI() / 3.0f,
+                float_32_bit const  vertical_fov_angle_ = PI() / 4.0f,
                 float_32_bit const  near_plane_ = 0.05f,
                 float_32_bit const  far_plane_ = 50.0f,
                 float_32_bit const  origin_z_shift_ = 0.0f

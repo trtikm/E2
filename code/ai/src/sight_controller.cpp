@@ -52,12 +52,14 @@ namespace ai {
 
 
 sight_controller::camera_config::camera_config(
-        float_32_bit const  fov_angle_,
+        float_32_bit const  horizontal_fov_angle_,
+        float_32_bit const  vertical_fov_angle_,
         float_32_bit const  near_plane_,
         float_32_bit const  far_plane_,
         float_32_bit const  origin_z_shift_
         )
-    : fov_angle(fov_angle_)
+    : horizontal_fov_angle(horizontal_fov_angle_)
+    , vertical_fov_angle(vertical_fov_angle_)
     , near_plane(near_plane_)
     , far_plane(far_plane_)
     , origin_z_shift(origin_z_shift_)
@@ -268,17 +270,20 @@ void  sight_controller::update_camera(float_32_bit const  time_step_in_seconds)
 
     if (m_camera == nullptr)
     {
-        float_32_bit const  tan_half_FOV_angle = std::tanf(m_camera_config.fov_angle * 0.5f);
-        float_32_bit const  camera_window_half_size = m_camera_config.near_plane * tan_half_FOV_angle;
+        float_32_bit const  tan_half_HFOV_angle = std::tanf(m_camera_config.horizontal_fov_angle * 0.5f);
+        float_32_bit const  camera_window_half_width = m_camera_config.near_plane * tan_half_HFOV_angle;
+
+        float_32_bit const  tan_half_VFOV_angle = std::tanf(m_camera_config.vertical_fov_angle * 0.5f);
+        float_32_bit const  camera_window_half_height = m_camera_config.near_plane * tan_half_VFOV_angle;
 
         m_camera = gfx::camera_perspective::create(
                         angeo::coordinate_system::create(vector3_zero(), quaternion_identity()),
                         m_camera_config.near_plane,
                         m_camera_config.far_plane,
-                        -camera_window_half_size,
-                        camera_window_half_size,
-                        -camera_window_half_size,
-                        camera_window_half_size
+                        -camera_window_half_width,
+                        camera_window_half_width,
+                        -camera_window_half_height,
+                        camera_window_half_height
                         );
     }
 
