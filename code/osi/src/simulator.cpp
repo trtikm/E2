@@ -1,6 +1,7 @@
 #include <osi/simulator.hpp>
 #include <osi/provider.hpp>
 #include <utility/async_resource_load.hpp>
+#include <utility/config.hpp>
 #include <stdexcept>
 
 namespace osi {
@@ -36,7 +37,9 @@ void  run(std::unique_ptr<simulator>  s)
     if (s == nullptr)
         return;
 
+#if BUILD_RELEASE() == 1
     try
+#endif
     {
         osi::open();
         if (!osi::is_open())
@@ -60,6 +63,7 @@ void  run(std::unique_ptr<simulator>  s)
 
         osi::close();
     }
+#if BUILD_RELEASE() == 1
     catch (std::exception const&  e)
     {
         s->terminate();
@@ -69,6 +73,7 @@ void  run(std::unique_ptr<simulator>  s)
 
         throw e;
     }
+#endif
 }
 
 
