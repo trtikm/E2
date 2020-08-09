@@ -24,7 +24,7 @@ struct  simulator : public com::simulator
         set_window_icon((natural_8_bit)img.width, (natural_8_bit)img.height, img.data);
         set_window_pos(get_window_props().window_frame_size_left(), get_window_props().window_frame_size_top());
         set_window_size(1024U, 768U);
-        //maximise_window();
+        maximise_window();
 
         if (get_program_options()->has_scene_dir())
             context()->request_late_import_scene_from_directory({
@@ -72,6 +72,8 @@ struct  simulator : public com::simulator
                 render_config().render_colliders_of_ray_casts = !render_config().render_colliders_of_ray_casts;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_K()) != 0UL)
                 render_config().render_collision_contacts = !render_config().render_collision_contacts;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_H()) != 0UL)
+                render_config().render_sight_contacts = !render_config().render_sight_contacts;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_W()) != 0UL)
                 render_config().render_in_wireframe = !render_config().render_in_wireframe;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_G()) != 0UL)
@@ -120,6 +122,7 @@ struct  simulator : public com::simulator
                 "\tALT+A - colliders of agents\n"
                 "\tALT+L - colliders of fields\n"
                 "\tALT+Y - colliders of ray cast targets\n"
+                "\tALT+H - sight ray-cast contacts\n"
                 "\tALT+K - collisions\n"
                 );
             SLOG(
