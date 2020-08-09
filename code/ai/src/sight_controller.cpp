@@ -113,6 +113,7 @@ sight_controller::sight_controller(
     , m_camera()
     , m_ray_cast_config(ray_cast_config_)
     , m_ray_casts_in_time()
+    , m_current_time(0.0)
     , m_generator()
     , m_time_buffer(0.0f)
     , m_motion_templates(motion_templates)
@@ -124,12 +125,9 @@ void  sight_controller::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    std::chrono::system_clock::time_point const  now = std::chrono::system_clock::now();
-    auto const  num_seconds_till_now = [&now](std::chrono::system_clock::time_point const  time_point) {
-        return std::chrono::duration<float_32_bit>(now - time_point).count();
-    };
-
-    while (!m_ray_casts_in_time.empty() && num_seconds_till_now(m_ray_casts_in_time.begin()->first) >= m_ray_cast_config.max_ray_cast_info_life_time_in_seconds)
+    m_current_time += time_step_in_seconds;
+    while (!m_ray_casts_in_time.empty() && (float_32_bit)(m_current_time - m_ray_casts_in_time.begin()->first) >=
+                                           m_ray_cast_config.max_ray_cast_info_life_time_in_seconds)
         m_ray_casts_in_time.erase(m_ray_casts_in_time.begin());
 
     update_camera(time_step_in_seconds);
@@ -178,7 +176,7 @@ void  sight_controller::next_round(float_32_bit const  time_step_in_seconds)
             continue;
 
         m_ray_casts_in_time.insert({
-                now,
+                m_current_time,
                 {
                     cell_x,
                     cell_y,

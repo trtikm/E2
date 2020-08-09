@@ -10,7 +10,6 @@
 #   include <unordered_map>
 #   include <functional>
 #   include <map>
-#   include <chrono>
 
 namespace ai {
 
@@ -83,7 +82,7 @@ struct  sight_controller
                 );
     };
 
-    using  ray_casts_in_time = std::multimap<std::chrono::system_clock::time_point, ray_cast_info>;
+    using  ray_casts_in_time = std::multimap<float_64_bit, ray_cast_info>;
 
     sight_controller(
             camera_config const&  camera_config_,
@@ -112,6 +111,7 @@ private:
     camera_perspective_ptr  m_camera;
     ray_cast_config  m_ray_cast_config;
     ray_casts_in_time  m_ray_casts_in_time;
+    float_64_bit  m_current_time;
     random_generator_for_natural_32_bit  m_generator;
     float_32_bit  m_time_buffer;
     skeletal_motion_templates  m_motion_templates;
