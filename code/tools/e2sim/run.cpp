@@ -26,11 +26,6 @@ struct  simulator : public com::simulator
         set_window_size(1024U, 768U);
         //maximise_window();
 
-        render_config().batch_grid = gfx::create_default_grid();
-        render_config().batch_frame = gfx::create_basis_vectors();
-
-        render_config().render_grid = true;
-
         if (get_program_options()->has_scene_dir())
             context()->request_late_import_scene_from_directory({
                 context()->get_scene_root_dir() + get_program_options()->scene_dir(),
