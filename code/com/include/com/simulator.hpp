@@ -51,6 +51,7 @@ struct  simulator : public osi::simulator
         std::string  fps_prefix;
         gfx::batch  batch_grid;
         gfx::batch  batch_frame;
+        gfx::batch  batch_collision_contact;
         bool  render_fps;
         bool  render_grid;
         bool  render_frames;
@@ -135,6 +136,7 @@ private:
     {
         gfx::batch  batch;
         std::vector<object_guid>  frame_guids;
+        std::vector<matrix44>  world_matrices;
     };
     using  render_tasks_map = std::unordered_map<std::string, render_task_info>;
 
@@ -147,6 +149,7 @@ private:
     void  render_grid();
     void  render_frames();
     void  render_colliders();
+    void  render_collision_contacts();
     void  render_text();
 
     gfx::batch  create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled);

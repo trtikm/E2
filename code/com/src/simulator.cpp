@@ -41,10 +41,11 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , text_shift{ 0.0f, -1.0f, 0.0f }
     , text_ambient_colour{ 1.0f, 0.0f, 1.0f }
     , fps_prefix("FPS:")
-    , batch_grid()
-    , batch_frame()
+    , batch_grid(gfx::create_default_grid())
+    , batch_frame(gfx::create_basis_vectors())
+    , batch_collision_contact(gfx::create_arrow(0.1f, { 1.0f, 0.0f, 0.0f, 1.0f }))
     , render_fps(true)
-    , render_grid(false)
+    , render_grid(true)
     , render_frames(false)
     , render_text(true)
     , render_in_wireframe(false)
@@ -94,6 +95,7 @@ void  simulator::render_configuration::terminate()
     font_props.release();
     batch_grid.release();
     batch_frame.release();
+    batch_collision_contact.release();
     draw_state.release();
 }
 
@@ -380,6 +382,9 @@ void  simulator::render()
             )
         render_colliders();
 
+    if (cfg.render_collision_contacts)
+        render_collision_contacts();
+
     if (cfg.render_text)
         render_text();
 }
@@ -387,14 +392,14 @@ void  simulator::render()
 
 void  simulator::render_task(render_task_info const&  task)
 {
-    if (task.frame_guids.empty())
+    if (task.frame_guids.empty() && task.world_matrices.empty())
         return;
 
     simulation_context&  ctx = *context();
     render_configuration&  cfg = render_config();
 
     bool const  use_instancing =
-            task.frame_guids.size() > 1UL &&
+            task.frame_guids.size() + task.world_matrices.size() > 1UL &&
             !task.batch.is_attached_to_skeleton() &&
             task.batch.has_instancing_data()
             ;
@@ -420,6 +425,8 @@ void  simulator::render_task(render_task_info const&  task)
             instanced_data_provider.insert_from_model_to_camera_matrix(
                     cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(frame_guid)
                     );
+        for (matrix44 const&  world_matrix : task.world_matrices)
+            instanced_data_provider.insert_from_model_to_camera_matrix(cfg.matrix_from_world_to_camera * world_matrix);
         gfx::render_batch(
                 task.batch,
                 instanced_data_provider,
@@ -445,14 +452,17 @@ void  simulator::render_task(render_task_info const&  task)
         std::vector<matrix44>  frames_of_bones;
         {
             std::vector<matrix44> const&  to_bone_matrices = ctx.matrices_to_pose_bones_of_batch(ctx.to_batch_guid(task.batch));
-            INVARIANT(task.frame_guids.size() == to_bone_matrices.size());
-            frames_of_bones.reserve(task.frame_guids.size());
+            INVARIANT(task.frame_guids.size() + task.world_matrices.size() == to_bone_matrices.size());
+            frames_of_bones.reserve(task.frame_guids.size() + task.world_matrices.size());
             for (natural_32_bit  i = 0U, n = (natural_32_bit)task.frame_guids.size(); i != n; ++i)
                 frames_of_bones.push_back(
                         cfg.matrix_from_world_to_camera *
                         ctx.frame_world_matrix(task.frame_guids.at(i)) *
                         to_bone_matrices.at(i)
                         );
+            for (natural_32_bit  i = 0U, j = (natural_32_bit)task.frame_guids.size(), n = (natural_32_bit)task.world_matrices.size();
+                    i != n; ++i)
+                frames_of_bones.push_back(cfg.matrix_from_world_to_camera * task.world_matrices.at(i) * to_bone_matrices.at(i+j));
         }
         gfx::render_batch(
                 task.batch,
@@ -474,13 +484,13 @@ void  simulator::render_task(render_task_info const&  task)
         cfg.draw_state = task.batch.get_draw_state();
     }
     else
-        for (object_guid  frame_guid : task.frame_guids)
-        {
+    {
+        auto const  render = [this, &task, &cfg, &fs_uniform_data_provider](matrix44 const&  world_matrix) {
             gfx::render_batch(
                     task.batch,
                     gfx::vertex_shader_uniform_data_provider(
                             task.batch,
-                            { cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(frame_guid) },
+                            { cfg.matrix_from_world_to_camera * world_matrix },
                             cfg.matrix_from_camera_to_clipspace,
                             cfg.diffuse_colour,
                             cfg.ambient_colour,
@@ -494,7 +504,12 @@ void  simulator::render_task(render_task_info const&  task)
                     fs_uniform_data_provider
                     );
             cfg.draw_state = task.batch.get_draw_state();
-        }
+        };
+        for (object_guid  frame_guid : task.frame_guids)
+            render(ctx.frame_world_matrix(frame_guid));
+        for (matrix44 const&  world_matrix : task.world_matrices)
+            render(world_matrix);
+    }
 }
 
 
@@ -648,6 +663,24 @@ void  simulator::render_colliders()
         render_task(id_and_task.second);
 
     glPolygonMode(GL_FRONT_AND_BACK, backup_polygon_mode[0]);
+}
+
+
+void  simulator::render_collision_contacts()
+{
+    simulation_context&  ctx = *context();
+    render_task_info  task{ render_config().batch_collision_contact, {}, {} };
+    task.world_matrices.reserve(ctx.num_collision_contacts());
+    for (simulation_context::collision_contacts_iterator  it = ctx.collision_contacts_begin(), end = ctx.collision_contacts_end();
+            it != end; ++it)
+    {
+        collision_contact const&  cc = *it;
+        vector3  X, Y;
+        angeo::compute_tangent_space_of_unit_vector(cc.unit_normal(), X, Y);
+        task.world_matrices.push_back({});
+        compose_from_base_matrix(cc.contact_point(), X, Y, cc.unit_normal(), task.world_matrices.back());
+    }
+    render_task(task);
 }
 
 
