@@ -371,4 +371,39 @@ void  render_batch(
 }
 
 
+extern texture  get_sprite_texture(batch const  sprite_batch);
+
+
+void  render_sprite_batch(
+        batch const  sprite_batch_,
+        natural_32_bit const  x_screen_pos,
+        natural_32_bit const  y_screen_pos,
+        natural_32_bit const  screen_width_in_pixels,
+        natural_32_bit const  screen_height_in_pixels,
+        float_32_bit const  scale
+        )
+{
+    matrix44  matrix_from_world_to_camera;
+    {
+        texture const  tex = get_sprite_texture(sprite_batch_);
+
+        float_32_bit const sx = scale * ((float_32_bit)tex.width()) / ((float_32_bit)screen_width_in_pixels);
+        float_32_bit const sy = scale * ((float_32_bit)tex.height()) / ((float_32_bit)screen_height_in_pixels);
+        float_32_bit const px = 2.0f * ((float_32_bit)x_screen_pos) / ((float_32_bit)screen_width_in_pixels) - 1.0f + sx;
+        float_32_bit const py = 2.0f * ((float_32_bit)y_screen_pos) / ((float_32_bit)screen_height_in_pixels) - 1.0f + sy;
+
+        matrix_from_world_to_camera = matrix44_identity();
+        matrix_from_world_to_camera(0, 0) = sx;
+        matrix_from_world_to_camera(0, 3) = px;
+        matrix_from_world_to_camera(1, 1) = sy;
+        matrix_from_world_to_camera(1, 3) = py;
+    }
+    render_batch(
+        sprite_batch_,
+        vertex_shader_uniform_data_provider(sprite_batch_, { matrix_from_world_to_camera }, matrix44_identity()),
+        fragment_shader_uniform_data_provider()
+        );
+}
+
+
 }

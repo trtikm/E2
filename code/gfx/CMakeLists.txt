@@ -50,6 +50,7 @@ add_library(${THIS_TARGET_NAME}
     ./src/batch_generator_wireframe_box.cpp
     ./src/batch_generator_wireframe_capsule.cpp
     ./src/batch_generator_wireframe_sphere.cpp
+    ./src/batch_generator_sprite.cpp
     ./src/batch_generator_text.cpp
     ./src/batch_generator_triangle_mesh.cpp
     ./src/batch_generator_perspective_frustum.cpp

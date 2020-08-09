@@ -3,6 +3,7 @@
 
 #   include <gfx/batch.hpp>
 #   include <gfx/texture.hpp>
+#   include <gfx/image.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <array>
 #   include <vector>
@@ -84,6 +85,7 @@ std::string  get_sketch_id_prefix();
 inline std::string  sketch_kind_basis_vectors() { return "basis_vectors"; }
 inline std::string  sketch_kind_coord_cross() { return "coord_cross"; }
 inline std::string  sketch_kind_arrow() { return "arrow"; }
+inline std::string  sketch_kind_perspective_frustum() { return "perspective_frustum"; }
 inline std::string  sketch_kind_box() { return "box"; }
 inline std::string  sketch_kind_capsule() { return "capsule"; }
 inline std::string  sketch_kind_sphere() { return "sphere"; }
@@ -100,6 +102,28 @@ std::string  make_coord_cross_id_without_prefix(float_32_bit const  size, vector
 
 batch  create_arrow(float_32_bit const  size, vector4 const&  colour);
 std::string  make_arrow_id_without_prefix(float_32_bit const  size, vector4 const&  colour);
+
+
+batch  create_wireframe_perspective_frustum(
+        float_32_bit const  near_plane,
+        float_32_bit const  far_plane,
+        float_32_bit const  left_plane,
+        float_32_bit const  right_plane,
+        float_32_bit const  top_plane,
+        float_32_bit const  bottom_plane,
+        vector4 const&  colour,
+        bool const  with_axis = false
+        );
+std::string  make_perspective_frustum_id_without_prefix(
+        float_32_bit const  near_plane,
+        float_32_bit const  far_plane,
+        float_32_bit const  left_plane,
+        float_32_bit const  right_plane,
+        float_32_bit const  top_plane,
+        float_32_bit const  bottom_plane,
+        vector4 const&  colour,
+        bool const  with_axis = false
+        );
 
 
 bool  read_sketch_info_from_id(std::string const& id, boost::property_tree::ptree&  output_info);
@@ -245,6 +269,7 @@ batch  create_triangle_mesh(
         std::vector< std::array<float_32_bit, 3> > const&  vertices,
         std::vector< std::array<float_32_bit, 2> > const&  texcoords,
         texture const&  diffuse,
+        bool const  use_alpha_blending = false,
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
         );
@@ -277,18 +302,9 @@ batch  create_triangle_mesh(
         );
 
 
-batch  create_wireframe_perspective_frustum(
-        float_32_bit const  near_plane,
-        float_32_bit const  far_plane,
-        float_32_bit const  left_plane,
-        float_32_bit const  right_plane,
-        float_32_bit const  top_plane,
-        float_32_bit const  bottom_plane,
-        vector4 const&  colour,
-        bool const  with_axis = false,
-        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
-        std::string const&  id = ""
-        );
+batch  create_sprite(image_rgba_8888 const&  img);
+texture  get_sprite_texture(batch const  sprite_batch);
+void  update_sprite(batch const  sprite_batch, image_rgba_8888 const&  img);
 
 
 struct  font_mono_props

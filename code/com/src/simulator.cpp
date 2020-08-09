@@ -73,6 +73,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_colliders_of_agents(true)
     , render_colliders_of_ray_casts(true)
     , render_collision_contacts(true)
+    , render_sight_frustums(true)
     , render_sight_contacts(true)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_field_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
@@ -80,6 +81,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , colour_of_agent_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_ray_cast_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_collision_contact{ 1.0f, 0.5f, 0.5f, 1.0f }
+    , colour_of_agent_perspective_frustum{0.5f, 0.5f, 0.5f, 1.0f}
     , disabled_collider_colour_multiplier(0.5f)
     , include_normals_to_batches_of_trinagle_mesh_colliders(true)
     , include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders(false)
@@ -142,6 +144,7 @@ simulator::simulator(std::string const&  data_root_dir)
 
     , m_text_cache()
     , m_collider_batches_cache()
+    , m_agent_sight_frustum_batches_cache()
 {}
 
 
@@ -181,6 +184,7 @@ void  simulator::clear(bool const  also_caches)
 {
     context()->clear(also_caches);
     clear_cache_of_collider_batches();
+    clear_cache_of_agent_sight_batches();
 }
 
 
@@ -419,6 +423,8 @@ void  simulator::render()
     if (cfg.render_collision_contacts)
         render_collision_contacts();
 
+    if (cfg.render_sight_frustums)
+        render_sight_frustums();
     if (cfg.render_sight_contacts)
         render_sight_contacts();
 
@@ -730,6 +736,46 @@ void  simulator::render_collision_contacts()
     }
     render_task(sensory_task);
     render_task(physics_task);
+}
+
+
+void  simulator::render_sight_frustums()
+{
+    simulation_context&  ctx = *context();
+
+    render_tasks_map  m_frustum_tasks;
+    for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
+    {
+        ai::sight_controller const&  sight = m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it)).get_sight_controller();
+        gfx::camera_perspective_ptr  camera_ptr = sight.get_camera();
+        if (camera_ptr == nullptr)
+            continue;
+
+        auto  frustum_it = m_agent_sight_frustum_batches_cache.find(*agent_it);
+        if (frustum_it == m_agent_sight_frustum_batches_cache.end())
+            frustum_it = m_agent_sight_frustum_batches_cache.insert({
+                    *agent_it,
+                    gfx::create_wireframe_perspective_frustum(
+                                        -camera_ptr->near_plane(),
+                                        -camera_ptr->far_plane(),
+                                        camera_ptr->left(),
+                                        camera_ptr->right(),
+                                        camera_ptr->top(),
+                                        camera_ptr->bottom(),
+                                        render_config().colour_of_agent_perspective_frustum,
+                                        true
+                                        )
+                    }).first;
+
+        matrix44  W;
+        angeo::from_base_matrix(*camera_ptr->coordinate_system(), W);
+        render_task_info&  frustum_task = m_frustum_tasks[frustum_it->second.uid()];
+        if (frustum_task.batch.empty())
+            frustum_task.batch = frustum_it->second;
+        frustum_task.world_matrices.push_back(W);
+    }
+    for (auto const&  key_and_task : m_frustum_tasks)
+        render_task(key_and_task.second);
 }
 
 

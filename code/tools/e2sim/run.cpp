@@ -72,6 +72,8 @@ struct  simulator : public com::simulator
                 render_config().render_colliders_of_ray_casts = !render_config().render_colliders_of_ray_casts;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_K()) != 0UL)
                 render_config().render_collision_contacts = !render_config().render_collision_contacts;
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_U()) != 0UL)
+                render_config().render_sight_frustums = !render_config().render_sight_frustums;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_H()) != 0UL)
                 render_config().render_sight_contacts = !render_config().render_sight_contacts;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_W()) != 0UL)
@@ -122,6 +124,7 @@ struct  simulator : public com::simulator
                 "\tALT+A - colliders of agents\n"
                 "\tALT+L - colliders of fields\n"
                 "\tALT+Y - colliders of ray cast targets\n"
+                "\tALT+U - sight perspective frustums\n"
                 "\tALT+H - sight ray-cast contacts\n"
                 "\tALT+K - collisions\n"
                 );

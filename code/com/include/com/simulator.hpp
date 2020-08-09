@@ -67,6 +67,7 @@ struct  simulator : public osi::simulator
         bool  render_colliders_of_agents;
         bool  render_colliders_of_ray_casts;
         bool  render_collision_contacts;
+        bool  render_sight_frustums;
         bool  render_sight_contacts;
         vector4  colour_of_rigid_body_collider;
         vector4  colour_of_field_collider;
@@ -74,6 +75,7 @@ struct  simulator : public osi::simulator
         vector4  colour_of_agent_collider;
         vector4  colour_of_ray_cast_collider;
         vector4  colour_of_collision_contact;
+        vector4  colour_of_agent_perspective_frustum;
         float_32_bit  disabled_collider_colour_multiplier;
         bool  include_normals_to_batches_of_trinagle_mesh_colliders;
         bool  include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders;
@@ -94,6 +96,7 @@ struct  simulator : public osi::simulator
     void  terminate() override;
 
     void  clear_cache_of_collider_batches() { m_collider_batches_cache.clear(); }
+    void  clear_cache_of_agent_sight_batches() { m_agent_sight_frustum_batches_cache.clear(); }
     void  clear(bool const  also_caches);
 
     void  round() override;
@@ -156,6 +159,7 @@ private:
     void  render_frames();
     void  render_colliders();
     void  render_collision_contacts();
+    void  render_sight_frustums();
     void  render_sight_contacts();
     void  render_text();
 
@@ -178,6 +182,7 @@ private:
     std::pair<std::string, gfx::batch>  m_text_cache;
     using  cached_collider_batch_state = std::array<gfx::batch, 2U>;
     std::unordered_map<object_guid, cached_collider_batch_state>  m_collider_batches_cache;
+    std::unordered_map<object_guid, gfx::batch>  m_agent_sight_frustum_batches_cache;
 };
 
 

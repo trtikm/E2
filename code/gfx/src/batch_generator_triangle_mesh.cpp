@@ -168,6 +168,7 @@ batch  create_triangle_mesh(
         std::vector< std::array<float_32_bit, 3> > const&  vertices,
         std::vector< std::array<float_32_bit, 2> > const&  texcoords,
         texture const&  diffuse,
+        bool const  use_alpha_blending,
         FOG_TYPE const  fog_type_,
         std::string const&  id
         )
@@ -202,7 +203,7 @@ batch  create_triangle_mesh(
             fog_type_,
             SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
-        draw_state(nullptr),
+        draw_state(nullptr, use_alpha_blending),
         modelspace(),
         skeleton_alignment(),
         batch_available_resources::alpha_testing_props()

@@ -917,7 +917,7 @@ object_guid  simulation_context::insert_batch_wireframe_perspective_frustum(
 {
     return insert_batch(folder_guid, name,
         gfx::create_wireframe_perspective_frustum(near_plane, far_plane, left_plane, right_plane, top_plane, bottom_plane,
-                                                  colour, with_axis, gfx::FOG_TYPE::NONE)
+                                                  colour, with_axis)
         );
 }
 

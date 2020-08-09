@@ -101,6 +101,16 @@ void  render_batch(
         );
 
 
+void  render_sprite_batch(
+        batch const  sprite_batch_,
+        natural_32_bit const  x_screen_pos,
+        natural_32_bit const  y_screen_pos,
+        natural_32_bit const  screen_width_in_pixels,
+        natural_32_bit const  screen_height_in_pixels,
+        float_32_bit const  scale
+        );
+
+
 }
 
 #endif
