@@ -51,7 +51,8 @@ struct  simulator : public osi::simulator
         std::string  fps_prefix;
         gfx::batch  batch_grid;
         gfx::batch  batch_frame;
-        gfx::batch  batch_collision_contact;
+        gfx::batch  batch_sensory_collision_contact;
+        gfx::batch  batch_physics_collision_contact;
         bool  render_fps;
         bool  render_grid;
         bool  render_frames;

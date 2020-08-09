@@ -9,7 +9,20 @@
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 
+namespace com { namespace detail {
+
+
+inline bool  should_compute_contact_response_for_rigid_body_guids(object_guid const  rb_1_guid, object_guid const  rb_2_guid)
+{
+    return rb_1_guid != rb_2_guid && rb_1_guid != invalid_object_guid() && rb_2_guid != invalid_object_guid();
+}
+
+
+}}
+
 namespace com {
+
+
 
 
 simulator::simulation_configuration::simulation_configuration()
@@ -43,7 +56,8 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , fps_prefix("FPS:")
     , batch_grid(gfx::create_default_grid())
     , batch_frame(gfx::create_basis_vectors())
-    , batch_collision_contact(gfx::create_arrow(0.1f, { 1.0f, 0.0f, 0.0f, 1.0f }))
+    , batch_sensory_collision_contact(gfx::create_arrow(0.1f, { 1.0f, 1.0f, 0.0f, 1.0f }))
+    , batch_physics_collision_contact(gfx::create_arrow(0.1f, { 1.0f, 0.0f, 0.0f, 1.0f }))
     , render_fps(true)
     , render_grid(true)
     , render_frames(false)
@@ -95,7 +109,8 @@ void  simulator::render_configuration::terminate()
     font_props.release();
     batch_grid.release();
     batch_frame.release();
-    batch_collision_contact.release();
+    batch_sensory_collision_contact.release();
+    batch_physics_collision_contact.release();
     draw_state.release();
 }
 
@@ -236,10 +251,7 @@ void  simulator::simulate()
                     object_guid const  rb_1_guid = ctx.rigid_body_of_collider(collider_1_guid);
                     object_guid const  rb_2_guid = ctx.rigid_body_of_collider(collider_2_guid);
 
-                    //INVARIANT(rb_1_guid != rb_2_guid);
-                    if (rb_1_guid == rb_2_guid) return true; // TODO: replace this 'if' statement by the invariant above!!!
-
-                    if (rb_1_guid == invalid_object_guid() || rb_2_guid == invalid_object_guid())
+                    if (!detail::should_compute_contact_response_for_rigid_body_guids(rb_1_guid, rb_2_guid))
                         return true;
 
                     INVARIANT(ctx.is_rigid_body_moveable(rb_1_guid) || ctx.is_rigid_body_moveable(rb_2_guid));
@@ -669,18 +681,30 @@ void  simulator::render_colliders()
 void  simulator::render_collision_contacts()
 {
     simulation_context&  ctx = *context();
-    render_task_info  task{ render_config().batch_collision_contact, {}, {} };
-    task.world_matrices.reserve(ctx.num_collision_contacts());
+    render_task_info  sensory_task{ render_config().batch_sensory_collision_contact, {}, {} };
+    render_task_info  physics_task{ render_config().batch_physics_collision_contact, {}, {} };
+    sensory_task.world_matrices.reserve(ctx.num_collision_contacts());
+    physics_task.world_matrices.reserve(ctx.num_collision_contacts());
     for (simulation_context::collision_contacts_iterator  it = ctx.collision_contacts_begin(), end = ctx.collision_contacts_end();
             it != end; ++it)
     {
         collision_contact const&  cc = *it;
-        vector3  X, Y;
-        angeo::compute_tangent_space_of_unit_vector(cc.unit_normal(), X, Y);
-        task.world_matrices.push_back({});
-        compose_from_base_matrix(cc.contact_point(), X, Y, cc.unit_normal(), task.world_matrices.back());
+
+        render_task_info*  task_ptr;
+        {
+            object_guid const  rb_1_guid = ctx.rigid_body_of_collider(cc.first_collider());
+            object_guid const  rb_2_guid = ctx.rigid_body_of_collider(cc.second_collider());
+            task_ptr = detail::should_compute_contact_response_for_rigid_body_guids(rb_1_guid, rb_2_guid) ?
+                            &physics_task : & sensory_task;
+        }
+
+        vector3  X, Y, Z = cc.unit_normal(cc.second_collider());
+        angeo::compute_tangent_space_of_unit_vector(Z, X, Y);
+        task_ptr->world_matrices.push_back({});
+        compose_from_base_matrix(cc.contact_point(), X, Y, Z, task_ptr->world_matrices.back());
     }
-    render_task(task);
+    render_task(sensory_task);
+    render_task(physics_task);
 }
 
 
