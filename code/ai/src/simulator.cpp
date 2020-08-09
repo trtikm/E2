@@ -27,6 +27,13 @@ void  simulator::erase_agent(agent_id const  id)
 }
 
 
+agent const&  simulator::get_agent(agent_id const  id) const
+{
+    ASSUMPTION(m_agents.valid(id) && m_agents.at(id) != nullptr);
+    return *m_agents.at(id);
+}
+
+
 void  simulator::clear()
 {
     m_agents.clear();

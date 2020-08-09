@@ -25,6 +25,8 @@ struct simulator
             );
     void  erase_agent(agent_id const  id);
 
+    agent const&  get_agent(agent_id const  id) const;
+
     void  clear();
 
     void  next_round(
