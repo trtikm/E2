@@ -31,7 +31,7 @@ struct  sight_controller
                 float_32_bit const  horizontal_fov_angle_ = PI() / 3.0f,
                 float_32_bit const  vertical_fov_angle_ = PI() / 4.0f,
                 float_32_bit const  near_plane_ = 0.05f,
-                float_32_bit const  far_plane_ = 50.0f,
+                float_32_bit const  far_plane_ = 10.0f,
                 float_32_bit const  origin_z_shift_ = 0.0f
                 );
     };
@@ -40,9 +40,8 @@ struct  sight_controller
     {
         natural_32_bit  num_raycasts_per_second;
         float_32_bit  max_ray_cast_info_life_time_in_seconds;
-        natural_16_bit  num_cells_along_any_axis;   // Sight cells in "retina" form a regular 2D grid, which is also rectangular;
-                                                    // i.e. there is the same number of cells along both axes. Each ray-cast is
-                                                    // performed for some (randomly chosen) cell.
+        natural_16_bit  num_cells_along_x_axis;     // Must be a power of 2.
+        natural_16_bit  num_cells_along_y_axis;     // Must be a power of 2.
         std::function<float_32_bit(float_32_bit)>  distribution_of_cells_in_camera_space; // Although the cells form a regular 2D grid
                                                     // in the memory model, it still might be useful to define a spatial distribution
                                                     // of the cells in the camera's projection plane. Typically, the density of cells
@@ -57,7 +56,8 @@ struct  sight_controller
         ray_cast_config(
                 natural_32_bit const  num_raycasts_per_second_ = 600U,
                 float_32_bit const  max_ray_cast_info_life_time_in_seconds_ = 0.1f,
-                natural_16_bit const  num_cells_along_any_axis_ = 100U,
+                natural_16_bit const  num_cells_along_x_axis_ = 128U,   // Must be a power of 2.
+                natural_16_bit const  num_cells_along_y_axis_ = 64U,    // Must be a power of 2.
                 std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_ =
                     [](float_32_bit const  x) -> float_32_bit { return x * x; } // This is a quadratic stretch of the cell's grid.
                 );
@@ -70,6 +70,7 @@ struct  sight_controller
         vector2  camera_coords_of_cell_coords;
         vector3  ray_origin_in_world_space;
         vector3  ray_unit_direction_in_world_space;
+        float_32_bit  parameter_to_coid_in_01;
         float_32_bit  parameter_to_coid;
         com::object_guid  collider_guid;
 
@@ -79,6 +80,7 @@ struct  sight_controller
                 vector2 const&  camera_coords_of_cell_coords_,
                 vector3 const&  ray_origin_in_world_space_,
                 vector3 const&  ray_unit_direction_in_world_space_,
+                float_32_bit const  parameter_to_coid_in_01_,
                 float_32_bit const  parameter_to_coid_,
                 com::object_guid const  collider_guid_
                 );
