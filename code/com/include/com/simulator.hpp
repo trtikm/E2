@@ -69,6 +69,7 @@ struct  simulator : public osi::simulator
         bool  render_collision_contacts;
         bool  render_sight_frustums;
         bool  render_sight_contacts;
+        bool  render_sight_image;
         vector4  colour_of_rigid_body_collider;
         vector4  colour_of_field_collider;
         vector4  colour_of_sensor_collider;
@@ -161,6 +162,7 @@ private:
     void  render_collision_contacts();
     void  render_sight_frustums();
     void  render_sight_contacts();
+    void  render_sight_image();
     void  render_text();
 
     gfx::batch  create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled);
@@ -183,6 +185,8 @@ private:
     using  cached_collider_batch_state = std::array<gfx::batch, 2U>;
     std::unordered_map<object_guid, cached_collider_batch_state>  m_collider_batches_cache;
     std::unordered_map<object_guid, gfx::batch>  m_agent_sight_frustum_batches_cache;
+    struct  sight_image_render_data;
+    std::shared_ptr<sight_image_render_data>  m_sight_image_render_data;
 };
 
 

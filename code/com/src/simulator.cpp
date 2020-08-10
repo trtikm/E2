@@ -1,5 +1,6 @@
 #include <com/simulator.hpp>
 #include <gfx/draw.hpp>
+#include <gfx/image.hpp>
 #include <ai/sight_controller.hpp>
 #include <osi/opengl.hpp>
 #include <angeo/utility.hpp>
@@ -75,6 +76,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_collision_contacts(true)
     , render_sight_frustums(true)
     , render_sight_contacts(true)
+    , render_sight_image(true)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_field_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
     , colour_of_sensor_collider{ 0.0f, 0.85f, 0.85f, 1.0f }
@@ -121,6 +123,13 @@ void  simulator::render_configuration::terminate()
 }
 
 
+struct  simulator::sight_image_render_data
+{
+    gfx::image_rgba_8888  img;
+    gfx::batch  batch;
+};
+
+
 simulator::simulator(std::string const&  data_root_dir)
     : m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
@@ -145,6 +154,7 @@ simulator::simulator(std::string const&  data_root_dir)
     , m_text_cache()
     , m_collider_batches_cache()
     , m_agent_sight_frustum_batches_cache()
+    , m_sight_image_render_data(nullptr)
 {}
 
 
@@ -185,6 +195,7 @@ void  simulator::clear(bool const  also_caches)
     context()->clear(also_caches);
     clear_cache_of_collider_batches();
     clear_cache_of_agent_sight_batches();
+    m_sight_image_render_data = nullptr;
 }
 
 
@@ -427,6 +438,8 @@ void  simulator::render()
         render_sight_frustums();
     if (cfg.render_sight_contacts)
         render_sight_contacts();
+    if (cfg.render_sight_image)
+        render_sight_image();
 
     if (cfg.render_text)
         render_text();
@@ -805,6 +818,67 @@ void  simulator::render_sight_contacts()
         }
     }
     render_task(task_sight_contacts);
+}
+
+
+void  simulator::render_sight_image()
+{
+    simulation_context&  ctx = *context();
+
+    ai::agent const*  mocked_agent = nullptr;
+    for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
+    {
+        ai::agent const&  agent = m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it));
+        if (agent.get_kind() == ai::AGENT_KIND::MOCK)
+        {
+            mocked_agent = &agent;
+            break;
+        }
+    }
+
+    if (mocked_agent == nullptr)
+        return;
+
+    ai::sight_controller const&  sight = mocked_agent->get_sight_controller();
+
+    if (m_sight_image_render_data == nullptr)
+    {
+        m_sight_image_render_data = std::make_shared<sight_image_render_data>();
+        m_sight_image_render_data->img.width = sight.get_ray_cast_config().num_cells_along_x_axis;
+        m_sight_image_render_data->img.height = sight.get_ray_cast_config().num_cells_along_y_axis;
+        natural_32_bit const  n = m_sight_image_render_data->img.width * m_sight_image_render_data->img.height * 4U;
+        m_sight_image_render_data->img.data.resize(n, 255U);
+        m_sight_image_render_data->batch = gfx::create_sprite(m_sight_image_render_data->img);
+    }
+
+    natural_32_bit  n = m_sight_image_render_data->img.width * m_sight_image_render_data->img.height * 4U;
+    for (natural_32_bit  i = 0U; i < n; i += 4U)
+        for (natural_32_bit  j = 0U; j != 3U; ++j)
+            m_sight_image_render_data->img.data.at(i + j) = 0U;
+    for (auto  it = sight.get_ray_casts_in_time().begin(); it != sight.get_ray_casts_in_time().end(); ++it)
+    {
+        natural_32_bit const  index = (it->second.cell_x + it->second.cell_y * m_sight_image_render_data->img.width) * 4U;
+        ASSUMPTION(index + 3U < n);
+        natural_8_bit const  value = (natural_8_bit)std::max(0U, std::min(255U,
+                (natural_32_bit)std::roundf(255.0f * (1.0f - it->second.parameter_to_coid_in_01))
+                ));
+        for (natural_32_bit  j = 0U; j != 3U; ++j)
+            m_sight_image_render_data->img.data.at(index + j) = value;
+    }
+
+    gfx::update_sprite(m_sight_image_render_data->batch, m_sight_image_render_data->img);
+    if (gfx::make_current(m_sight_image_render_data->batch, render_config().draw_state, false))
+    {
+        gfx::render_sprite_batch(
+                m_sight_image_render_data->batch,
+                50U,
+                50U,
+                get_window_props().window_width(),
+                get_window_props().window_height(),
+                3.0f
+                );
+        render_config().draw_state = m_sight_image_render_data->batch.get_draw_state();
+    }
 }
 
 
