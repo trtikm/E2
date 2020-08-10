@@ -68,7 +68,7 @@ struct draw_state : public async::resource_accessor<detail::draw_state_data>
             natural_32_bit const  alpha_blending_src_function   // GL_SRC_ALPHA, GL_ONE, GL_ZERO, ...
                         = GL_SRC_ALPHA,
             natural_32_bit const  alpha_blending_dst_function   // GL_ONE_MINUS_SRC_ALPHA, GL_DST_ALPHA, GL_ONE, GL_ZERO, ...
-                        = GL_ONE_MINUS_CONSTANT_ALPHA,
+                        = GL_ONE_MINUS_SRC_ALPHA,
             natural_32_bit const  cull_face_mode   // GL_BACK, GL_FRONT, or GL_FRONT_AND_BACK
                         = GL_BACK
             )
