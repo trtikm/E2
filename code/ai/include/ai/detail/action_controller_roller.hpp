@@ -86,6 +86,9 @@ struct  action_controller_roller  final
     angeo::coordinate_system_explicit const&  get_skeleton_frame() const { return m_skeleton_frame; }
     angeo::coordinate_system_explicit const&  get_desire_frame() const { return m_skeleton_frame; }
 
+    com::object_guid  get_roller_collider_guid() const { return m_roller_collider_guid; }
+    com::object_guid  get_body_collider_guid() const { return m_body_collider_guid; }
+
     std::vector<com::collision_contact const*> const&  get_roller_contacts() const { return m_roller_contacts; }
     std::vector<com::collision_contact const*> const&  get_body_contacts() const { return m_body_contacts; }
     float_32_bit  get_seconds_since_last_contact() const { return m_seconds_since_last_contact; }

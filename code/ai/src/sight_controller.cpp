@@ -131,7 +131,10 @@ sight_controller::sight_controller(
 {}
 
 
-void  sight_controller::next_round(float_32_bit const  time_step_in_seconds)
+void  sight_controller::next_round(
+        float_32_bit const  time_step_in_seconds,
+        std::unordered_set<com::object_guid> const&  ignored_collider_guids
+        )
 {
     TMPROF_BLOCK();
 
@@ -149,6 +152,17 @@ void  sight_controller::next_round(float_32_bit const  time_step_in_seconds)
 
     matrix44  W;
     angeo::from_base_matrix(*get_camera()->coordinate_system(), W);
+
+    auto const  collision_class_filter = [](angeo::COLLISION_CLASS const  cc) -> bool {
+        switch (cc)
+        {
+        case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+        case angeo::COLLISION_CLASS::FIELD_AREA:
+            return false;
+        default:
+            return true;
+        }
+    };
 
     float_32_bit const  ray_cast_duration = 1.0f / (float_32_bit)m_ray_cast_config.num_raycasts_per_second;
     for (m_time_buffer += time_step_in_seconds; m_time_buffer >= ray_cast_duration; m_time_buffer -= ray_cast_duration)
@@ -184,7 +198,8 @@ void  sight_controller::next_round(float_32_bit const  time_step_in_seconds)
                 true,
                 true,
                 &parameter_to_nearest_collider,
-                nullptr
+                &ignored_collider_guids,
+                collision_class_filter
                 );
         if (nearest_collider_guid == com::invalid_object_guid())
             continue;

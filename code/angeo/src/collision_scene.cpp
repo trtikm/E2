@@ -894,10 +894,13 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         vector3 const&  ray_unit_direction_vector,
         float_32_bit const  ray_length,
         std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
-        std::unordered_set<collision_object_id> const* const  ignored_coids_ptr
+        std::unordered_set<collision_object_id> const* const  ignored_coids_ptr,
+        std::function<bool(COLLISION_CLASS)> const&  collision_class_filter
         ) const
 {
     if (ignored_coids_ptr != nullptr && ignored_coids_ptr->count(coid) != 0UL)
+        return true;
+    if (collision_class_filter(get_collision_class(coid)) == false)
         return true;
 
     float_32_bit const  DISTANCE_EPSILON = 0.0001f;
@@ -937,18 +940,20 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         {
             vector3 const&  E1 = get_capsule_end_point_1_in_world_space(coid);
             vector3 const&  E2 = get_capsule_end_point_2_in_world_space(coid);
+            float_32_bit const  rad = get_capsule_thickness_from_central_line(coid);
+            float_32_bit const  rad2 = rad * rad;
             float_32_bit  t_best = 1.0f;
             vector3  X, Y;
             float_32_bit  t;
         
             t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, E1, &X);
-            if (length_squared(X - E1) <= DISTANCE_EPSILON * DISTANCE_EPSILON && t < t_best)
+            if (length_squared(X - E1) <= rad2 && t < t_best)
                 t_best = t;
             t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, E2, &X);
-            if (length_squared(X - E2) <= DISTANCE_EPSILON * DISTANCE_EPSILON && t < t_best)
+            if (length_squared(X - E2) <= rad2 && t < t_best)
                 t_best = t;
             if (angeo::closest_points_of_two_lines(ray_origin, ray_end, E1, E2, &X, &t, &Y, nullptr, nullptr, nullptr, nullptr, nullptr) > 0U)
-                if (length_squared(X - Y) <= DISTANCE_EPSILON * DISTANCE_EPSILON && t < t_best)
+                if (length_squared(X - Y) <= rad2 && t < t_best)
                     t_best = t;
             if (t_best < 1.0f)
                 return acceptor(coid, t_best);
@@ -959,7 +964,8 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
             vector3 const&  S = get_sphere_center_in_world_space(coid);
             vector3  X;
             float_32_bit const  t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, S, &X);
-            if (length_squared(X - S) <= DISTANCE_EPSILON * DISTANCE_EPSILON)
+            float_32_bit const  rad = get_sphere_radius(coid);
+            if (length_squared(X - S) <= rad * rad)
                 return acceptor(coid, t);
         }
         break;
@@ -1003,7 +1009,8 @@ bool  collision_scene::ray_cast(
         bool const  search_dynamic,
         collision_object_id*  nearest_coid,
         float_32_bit*  ray_parameter_to_nearest_coid,
-        std::unordered_set<collision_object_id> const* const  ignored_coids_ptr // pass nullptr, if there is nothing to ignore.
+        std::unordered_set<collision_object_id> const* const  ignored_coids_ptr, // pass nullptr, if there is nothing to ignore.
+        std::function<bool(COLLISION_CLASS)> const&  collision_class_filter
         ) const
 {
     collision_object_id  tmp_nearest_coid;
@@ -1037,7 +1044,8 @@ bool  collision_scene::ray_cast(
                         }
                         return true;
                     },
-                ignored_coids_ptr
+                ignored_coids_ptr,
+                collision_class_filter
                 );
         }
     );

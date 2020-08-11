@@ -292,4 +292,10 @@ void  action_controller::next_round(
 }
 
 
+std::unordered_set<com::object_guid>  action_controller::get_motion_object_collider_guids() const
+{
+    return { m_roller.get_roller_collider_guid(), m_roller.get_body_collider_guid() };
+}
+
+
 }

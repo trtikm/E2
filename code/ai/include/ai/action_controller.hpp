@@ -26,6 +26,8 @@ struct  action_controller
 
     void  next_round(float_32_bit const  time_step_in_seconds, motion_desire_props const&  desire);
 
+    std::unordered_set<com::object_guid>  get_motion_object_collider_guids() const;
+
 private:
     skeletal_motion_templates  get_motion_templates() const { return m_interpolator.get_motion_templates(); }
 

@@ -9,6 +9,7 @@
 #   include <utility/random.hpp>
 #   include <unordered_map>
 #   include <functional>
+#   include <unordered_set>
 #   include <map>
 
 namespace ai {
@@ -95,7 +96,10 @@ struct  sight_controller
             scene_binding_ptr const  binding
             );
 
-    void  next_round(float_32_bit const  time_step_in_seconds);
+    void  next_round(
+            float_32_bit const  time_step_in_seconds,
+            std::unordered_set<com::object_guid> const&  ignored_collider_guids
+            );
 
     camera_config const&  get_camera_config() const { return m_camera_config; }
     // NOTE: Camera's coord. system is in the world space.

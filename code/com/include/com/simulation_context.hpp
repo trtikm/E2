@@ -352,7 +352,8 @@ struct  simulation_context
             bool const  search_static,
             bool const  search_dynamic,
             float_32_bit*  ray_parameter_to_nearest_collider = nullptr,
-            std::unordered_set<object_guid> const* const  ignored_collider_guids = nullptr
+            std::unordered_set<object_guid> const* const  ignored_collider_guids = nullptr,
+            std::function<bool(angeo::COLLISION_CLASS)> const&  collision_class_filter = [](angeo::COLLISION_CLASS) { return true; }
             ) const;
     void  request_enable_collider(object_guid const  collider_guid, bool const  state) const;
     void  request_enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state) const;
