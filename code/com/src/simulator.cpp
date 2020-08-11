@@ -863,7 +863,7 @@ void  simulator::render_sight_image()
                 (natural_32_bit)std::roundf(255.0f * (1.0f - it->second.parameter_to_coid_in_01))
                 ));
         for (natural_32_bit  j = 0U; j != 3U; ++j)
-            m_sight_image_render_data->img.data.at(index + j) = value;
+            m_sight_image_render_data->img.data.at(index + j) = std::max(value, m_sight_image_render_data->img.data.at(index + j));
     }
 
     gfx::update_sprite(m_sight_image_render_data->batch, m_sight_image_render_data->img);

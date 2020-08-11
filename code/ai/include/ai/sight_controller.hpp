@@ -3,6 +3,7 @@
 
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/scene_binding.hpp>
+#   include <angeo/collision_class.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <gfx/camera.hpp>
 #   include <com/object_guid.hpp>
@@ -53,6 +54,7 @@ struct  sight_controller
                                                     //      distribution_of_cells_in_camera_space(0.0f) == 0.0f
                                                     //      distribution_of_cells_in_camera_space(1.0f) == 1.0f
                                                     // It is typically desired the function being monotonic (increasing).
+        std::function<bool(com::object_guid, angeo::COLLISION_CLASS)>  collider_filter;
 
         ray_cast_config(
                 natural_32_bit const  num_raycasts_per_second_ = 600U,
@@ -60,7 +62,9 @@ struct  sight_controller
                 natural_16_bit const  num_cells_along_x_axis_ = 128U,   // Must be a power of 2.
                 natural_16_bit const  num_cells_along_y_axis_ = 64U,    // Must be a power of 2.
                 std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_ =
-                    [](float_32_bit const  x) -> float_32_bit { return x * x; } // This is a quadratic stretch of the cell's grid.
+                    [](float_32_bit const  x) -> float_32_bit { return x * x; }, // This is a quadratic stretch of the cell's grid.
+                std::function<bool(com::object_guid, angeo::COLLISION_CLASS)> const&  collider_filter_ =
+                    [](com::object_guid, angeo::COLLISION_CLASS) { return true; }
                 );
     };
 

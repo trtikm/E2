@@ -182,7 +182,8 @@ struct  collision_scene
             float_32_bit const  ray_length,
             std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
             std::unordered_set<collision_object_id> const* const  ignored_coids_ptr, // pass nullptr, if there is nothing to ignore.
-            std::function<bool(COLLISION_CLASS)> const&  collision_class_filter = [](COLLISION_CLASS) { return true; }
+            std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter =
+                    [](collision_object_id, COLLISION_CLASS) { return true; }
             ) const;
 
     bool  ray_cast(
@@ -194,7 +195,8 @@ struct  collision_scene
             collision_object_id*  nearest_coid,
             float_32_bit*  ray_parameter_to_nearest_coid,
             std::unordered_set<collision_object_id> const* const  ignored_coids_ptr, // pass nullptr, if there is nothing to ignore.
-            std::function<bool(COLLISION_CLASS)> const&  collision_class_filter = [](COLLISION_CLASS) { return true; }
+            std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter =
+                    [](collision_object_id, COLLISION_CLASS) { return true; }
             ) const;
 
     vector3  get_object_aabb_min_corner(collision_object_id const  coid) const;

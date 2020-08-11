@@ -1133,7 +1133,7 @@ object_guid  simulation_context::ray_cast_to_nearest_collider(
         bool const  search_dynamic,
         float_32_bit*  ray_parameter_to_nearest_collider,
         std::unordered_set<object_guid> const* const  ignored_collider_guids,
-        std::function<bool(angeo::COLLISION_CLASS)> const&  collision_class_filter
+        std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter
         ) const
 {
     angeo::collision_object_id  nearest_coid;
@@ -1153,7 +1153,9 @@ object_guid  simulation_context::ray_cast_to_nearest_collider(
             &nearest_coid,
             ray_parameter_to_nearest_collider,
             ignored_collider_guids == nullptr ? nullptr : &ignored_coids,
-            collision_class_filter
+            [this,&collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS cc) {
+                    return collider_filter(to_collider_guid(coid), cc);
+                    }
             ))
         return invalid_object_guid();
     return m_coids_to_guids.at(nearest_coid);

@@ -895,12 +895,12 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         float_32_bit const  ray_length,
         std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
         std::unordered_set<collision_object_id> const* const  ignored_coids_ptr,
-        std::function<bool(COLLISION_CLASS)> const&  collision_class_filter
+        std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
         ) const
 {
     if (ignored_coids_ptr != nullptr && ignored_coids_ptr->count(coid) != 0UL)
         return true;
-    if (collision_class_filter(get_collision_class(coid)) == false)
+    if (collider_filter(coid, get_collision_class(coid)) == false)
         return true;
 
     float_32_bit const  DISTANCE_EPSILON = 0.0001f;
@@ -1010,7 +1010,7 @@ bool  collision_scene::ray_cast(
         collision_object_id*  nearest_coid,
         float_32_bit*  ray_parameter_to_nearest_coid,
         std::unordered_set<collision_object_id> const* const  ignored_coids_ptr, // pass nullptr, if there is nothing to ignore.
-        std::function<bool(COLLISION_CLASS)> const&  collision_class_filter
+        std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
         ) const
 {
     collision_object_id  tmp_nearest_coid;
@@ -1045,7 +1045,7 @@ bool  collision_scene::ray_cast(
                         return true;
                     },
                 ignored_coids_ptr,
-                collision_class_filter
+                collider_filter
                 );
         }
     );

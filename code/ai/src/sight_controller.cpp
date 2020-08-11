@@ -12,28 +12,18 @@
 namespace ai { namespace detail { namespace {
 
 
-vector2  compute_ray_cast_camera_coordinates_from_cell_coordinates(
-        natural_32_bit const  cell_x,
-        natural_32_bit const  cell_y,
-        natural_16_bit const  num_cells_along_x_axis,
-        natural_16_bit const  num_cells_along_y_axis,
-        std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space
+vector2  generate_random_ray_cast_camera_coordinates(
+        std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space,
+        random_generator_for_natural_32_bit&  generator
         )
 {
-    ASSUMPTION(
-        num_cells_along_x_axis > 0U && cell_x < num_cells_along_x_axis &&
-        num_cells_along_y_axis > 0U && cell_y < num_cells_along_y_axis
-        );
-
-    auto const  from_01_to_m1p1 = [](natural_32_bit const  cell_coord, natural_32_bit const  num_cells_along_axis) {
-        return num_cells_along_axis < 2U ?
-                    0.0f :
-                    2.0f * ((float_32_bit)cell_coord / (float_32_bit)(num_cells_along_axis - 1U) - 0.5f);
-    };
     auto const  from_m1p1_to_01 = [](float_32_bit const  x) {
         return std::max(0.0f, std::min(1.0f, 0.5f * x + 0.5f));
     };
-    vector2 const  u(from_01_to_m1p1(cell_x, num_cells_along_x_axis), from_01_to_m1p1(cell_y, num_cells_along_y_axis));
+    vector2 const  u{
+            get_random_float_32_bit_in_range(-1.0f, 1.0f, generator),
+            get_random_float_32_bit_in_range(-1.0f, 1.0f, generator)
+            };
     vector2 const  abs_u(std::fabs(u(0)), std::fabs(u(1)));
     static int const  I0[3] = { 0, 1, 0 };
     int const* const  I = I0 + (abs_u(0) >= abs_u(1) ? 0 : 1);
@@ -75,13 +65,15 @@ sight_controller::ray_cast_config::ray_cast_config(
         float_32_bit const  max_ray_cast_info_life_time_in_seconds_,
         natural_16_bit const  num_cells_along_x_axis_,
         natural_16_bit const  num_cells_along_y_axis_,
-        std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_
+        std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_,
+        std::function<bool(com::object_guid, angeo::COLLISION_CLASS)> const&  collider_filter_
         )
     : num_raycasts_per_second(num_raycasts_per_second_)
     , max_ray_cast_info_life_time_in_seconds(max_ray_cast_info_life_time_in_seconds_)
     , num_cells_along_x_axis(num_cells_along_x_axis_)
     , num_cells_along_y_axis(num_cells_along_y_axis_)
     , distribution_of_cells_in_camera_space(distribution_of_cells_in_camera_space_)
+    , collider_filter(collider_filter_)
 {
     ASSUMPTION(
         max_ray_cast_info_life_time_in_seconds >= 0.0f &&
@@ -153,33 +145,19 @@ void  sight_controller::next_round(
     matrix44  W;
     angeo::from_base_matrix(*get_camera()->coordinate_system(), W);
 
-    auto const  collision_class_filter = [](angeo::COLLISION_CLASS const  cc) -> bool {
-        switch (cc)
-        {
-        case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
-        case angeo::COLLISION_CLASS::FIELD_AREA:
-            return false;
-        default:
-            return true;
-        }
-    };
-
     float_32_bit const  ray_cast_duration = 1.0f / (float_32_bit)m_ray_cast_config.num_raycasts_per_second;
     for (m_time_buffer += time_step_in_seconds; m_time_buffer >= ray_cast_duration; m_time_buffer -= ray_cast_duration)
     {
+        vector2 const  camera_coords = detail::generate_random_ray_cast_camera_coordinates(
+                m_ray_cast_config.distribution_of_cells_in_camera_space,
+                m_generator
+                );
         natural_32_bit const  cell_x =
-                get_random_natural_32_bit_in_range(0U, m_ray_cast_config.num_cells_along_x_axis - 1U, m_generator);
+                std::max(0U, std::min(m_ray_cast_config.num_cells_along_x_axis - 1U,
+                        (natural_32_bit)(camera_coords(0) * (m_ray_cast_config.num_cells_along_x_axis - 1U) + 0.5f)));
         natural_32_bit const  cell_y =
-                get_random_natural_32_bit_in_range(0U, m_ray_cast_config.num_cells_along_y_axis - 1U, m_generator);
-
-        vector2 const  camera_coords =
-                detail::compute_ray_cast_camera_coordinates_from_cell_coordinates(
-                        cell_x,
-                        cell_y,
-                        m_ray_cast_config.num_cells_along_x_axis,
-                        m_ray_cast_config.num_cells_along_y_axis,
-                        m_ray_cast_config.distribution_of_cells_in_camera_space
-                        );
+                std::max(0U, std::min(m_ray_cast_config.num_cells_along_y_axis - 1U,
+                        (natural_32_bit)(camera_coords(1) * (m_ray_cast_config.num_cells_along_y_axis - 1U) + 0.5f)));
 
         vector3 const  ray_direction_local{
                 (get_camera()->left() + camera_coords(0) * (get_camera()->right() - get_camera()->left())),
@@ -199,7 +177,7 @@ void  sight_controller::next_round(
                 true,
                 &parameter_to_nearest_collider,
                 &ignored_collider_guids,
-                collision_class_filter
+                m_ray_cast_config.collider_filter
                 );
         if (nearest_collider_guid == com::invalid_object_guid())
             continue;
