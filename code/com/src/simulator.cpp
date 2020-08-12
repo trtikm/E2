@@ -28,9 +28,16 @@ namespace com {
 
 
 simulator::simulation_configuration::simulation_configuration()
-    : paused(true)
-    , num_rounds_to_pause(0U)
+    : MAX_SIMULATION_TIME_DELTA(1.0f / 30.0f)
+    , MAX_NUM_SUB_SIMULATION_STEPS(3U)
+
+    , simulation_time_buffer(0.0f)
+    , last_time_step(0.0f)
+
     , commit_state_changes_in_the_same_round(false)
+
+    , paused(true)
+    , num_rounds_to_pause(0U)
 {}
 
 
@@ -251,16 +258,28 @@ void  simulator::simulate()
 {
     TMPROF_BLOCK();
 
-    if (!simulation_config().commit_state_changes_in_the_same_round)
-        commit_state_changes();
+    simulation_config().simulation_time_buffer =
+        std::min(simulation_config().simulation_time_buffer + round_seconds(),
+                 (float_32_bit)simulation_config().MAX_NUM_SUB_SIMULATION_STEPS * simulation_config().MAX_SIMULATION_TIME_DELTA);
 
-    update_collision_contacts_and_constraints();
+    do
+    {
+        if (!simulation_config().commit_state_changes_in_the_same_round)
+            commit_state_changes();
 
-    device_simulator()->next_round((simulation_context const&)*context(), round_seconds());
-    ai_simulator()->next_round(round_seconds(), get_keyboard_props(), get_mouse_props(), get_window_props());
+        simulation_config().last_time_step = std::min(simulation_config().simulation_time_buffer,
+                                                      simulation_config().MAX_SIMULATION_TIME_DELTA);
+        simulation_config().simulation_time_buffer -= simulation_config().last_time_step;
 
-    if (simulation_config().commit_state_changes_in_the_same_round)
-        commit_state_changes();
+        update_collision_contacts_and_constraints();
+
+        device_simulator()->next_round((simulation_context const&)*context(), simulation_config().last_time_step);
+        ai_simulator()->next_round(simulation_config().last_time_step, get_keyboard_props(), get_mouse_props(), get_window_props());
+
+        if (simulation_config().commit_state_changes_in_the_same_round)
+            commit_state_changes();
+    }
+    while (simulation_config().simulation_time_buffer >= simulation_config().MAX_SIMULATION_TIME_DELTA);
 }
 
 
@@ -341,8 +360,8 @@ void  simulator::commit_state_changes()
     ctx.process_rigid_bodies_with_invalidated_shape();
     ctx.process_pending_early_requests();
 
-    rigid_body_simulator()->solve_constraint_system(round_seconds(), round_seconds() * 0.75f);
-    rigid_body_simulator()->integrate_motion_of_rigid_bodies(round_seconds());
+    rigid_body_simulator()->solve_constraint_system(simulation_config().last_time_step, simulation_config().last_time_step * 0.75f);
+    rigid_body_simulator()->integrate_motion_of_rigid_bodies(simulation_config().last_time_step);
     rigid_body_simulator()->prepare_contact_cache_and_constraint_system_for_next_frame();
 
     for (auto  rb_it = ctx.moveable_rigid_bodies_begin(), rb_end = ctx.moveable_rigid_bodies_end(); rb_it != rb_end; ++rb_it)

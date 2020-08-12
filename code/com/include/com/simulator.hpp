@@ -24,9 +24,17 @@ struct  simulator : public osi::simulator
     struct  simulation_configuration
     {
         simulation_configuration();
+
+        float_32_bit  MAX_SIMULATION_TIME_DELTA;
+        natural_8_bit  MAX_NUM_SUB_SIMULATION_STEPS;
+
+        float_32_bit  simulation_time_buffer;
+        float_32_bit  last_time_step;
+
+        bool  commit_state_changes_in_the_same_round;
+
         bool  paused;
         natural_32_bit  num_rounds_to_pause;
-        bool  commit_state_changes_in_the_same_round;
     };
 
     struct  render_configuration
