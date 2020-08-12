@@ -70,6 +70,7 @@ struct  simulator : public osi::simulator
         bool  render_sight_frustums;
         bool  render_sight_contacts;
         bool  render_sight_image;
+        float_32_bit  sight_image_scale;
         vector4  colour_of_rigid_body_collider;
         vector4  colour_of_field_collider;
         vector4  colour_of_sensor_collider;

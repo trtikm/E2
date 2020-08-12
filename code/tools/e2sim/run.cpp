@@ -77,7 +77,22 @@ struct  simulator : public com::simulator
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_H()) != 0UL)
                 render_config().render_sight_contacts = !render_config().render_sight_contacts;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_I()) != 0UL)
-                render_config().render_sight_image = !render_config().render_sight_image;
+            {
+                if (shift)
+                {
+                    render_config().sight_image_scale -= 1.0f;
+                    if (render_config().sight_image_scale < 1.0f)
+                    {
+                        render_config().render_sight_image = false;
+                        render_config().sight_image_scale = 0.0f;
+                    }
+                }
+                else
+                {
+                    render_config().render_sight_image = true;
+                    render_config().sight_image_scale = std::min(10.0f, render_config().sight_image_scale + 1.0f);
+                }
+            }
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_W()) != 0UL)
                 render_config().render_in_wireframe = !render_config().render_in_wireframe;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_G()) != 0UL)
@@ -128,7 +143,8 @@ struct  simulator : public com::simulator
                 "\tALT+Y - colliders of ray cast targets\n"
                 "\tALT+U - sight perspective frustums\n"
                 "\tALT+H - sight ray-cast contacts\n"
-                "\tALT+I - sight image\n"
+                "\tALT+I - show/scale-up sight image\n"
+                "\tALT+I+SHIFT - hide/scale-down sight image\n"
                 "\tALT+K - collisions\n"
                 );
             SLOG(

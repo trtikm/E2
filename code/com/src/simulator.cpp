@@ -77,6 +77,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_sight_frustums(true)
     , render_sight_contacts(true)
     , render_sight_image(true)
+    , sight_image_scale(5.0f)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_field_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
     , colour_of_sensor_collider{ 0.0f, 0.85f, 0.85f, 1.0f }
@@ -869,11 +870,11 @@ void  simulator::render_sight_image()
     {
         gfx::render_sprite_batch(
                 m_sight_image_render_data->batch,
-                50U,
-                50U,
+                5U,
+                5U,
                 get_window_props().window_width(),
                 get_window_props().window_height(),
-                3.0f
+                std::max(0.01f, render_config().sight_image_scale)
                 );
         render_config().draw_state = m_sight_image_render_data->batch.get_draw_state();
     }
