@@ -851,19 +851,17 @@ void  simulator::render_sight_image()
         m_sight_image_render_data->batch = gfx::create_sprite(m_sight_image_render_data->img);
     }
 
-    natural_32_bit  n = m_sight_image_render_data->img.width * m_sight_image_render_data->img.height * 4U;
-    for (natural_32_bit  i = 0U; i < n; i += 4U)
-        for (natural_32_bit  j = 0U; j != 3U; ++j)
-            m_sight_image_render_data->img.data.at(i + j) = 0U;
-    for (auto  it = sight.get_ray_casts_in_time().begin(); it != sight.get_ray_casts_in_time().end(); ++it)
+    ai::sight_controller::ray_casts_image const&  depth_image = sight.get_depth_image();
+    for (natural_32_bit  i = 0U, j = 0U, n = (natural_32_bit)depth_image.size(); i != n; ++i, ++j)
     {
-        natural_32_bit const  index = (it->second.cell_x + it->second.cell_y * m_sight_image_render_data->img.width) * 4U;
-        ASSUMPTION(index + 3U < n);
-        natural_8_bit const  value = (natural_8_bit)std::max(0U, std::min(255U,
-                (natural_32_bit)std::roundf(255.0f * (1.0f - it->second.parameter_to_coid_in_01))
-                ));
-        for (natural_32_bit  j = 0U; j != 3U; ++j)
-            m_sight_image_render_data->img.data.at(index + j) = std::max(value, m_sight_image_render_data->img.data.at(index + j));
+        natural_8_bit const  value =
+                (natural_8_bit)std::max(0U, std::min(255U,(natural_32_bit)std::roundf(255.0f * depth_image.at(i))));
+        m_sight_image_render_data->img.data.at(j) = value;
+        ++j;
+        m_sight_image_render_data->img.data.at(j) = value;
+        ++j;
+        m_sight_image_render_data->img.data.at(j) = value;
+        ++j;
     }
 
     gfx::update_sprite(m_sight_image_render_data->batch, m_sight_image_render_data->img);

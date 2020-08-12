@@ -66,7 +66,8 @@ sight_controller::ray_cast_config::ray_cast_config(
         natural_16_bit const  num_cells_along_x_axis_,
         natural_16_bit const  num_cells_along_y_axis_,
         std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_,
-        std::function<bool(com::object_guid, angeo::COLLISION_CLASS)> const&  collider_filter_
+        std::function<bool(com::object_guid, angeo::COLLISION_CLASS)> const&  collider_filter_,
+        std::function<float_32_bit(float_32_bit)>  depth_image_func_
         )
     : num_raycasts_per_second(num_raycasts_per_second_)
     , max_ray_cast_info_life_time_in_seconds(max_ray_cast_info_life_time_in_seconds_)
@@ -74,12 +75,15 @@ sight_controller::ray_cast_config::ray_cast_config(
     , num_cells_along_y_axis(num_cells_along_y_axis_)
     , distribution_of_cells_in_camera_space(distribution_of_cells_in_camera_space_)
     , collider_filter(collider_filter_)
+    , depth_image_func(depth_image_func_)
 {
     ASSUMPTION(
         max_ray_cast_info_life_time_in_seconds >= 0.0f &&
         num_cells_along_x_axis > 0U &&
         num_cells_along_y_axis > 0U &&
-        distribution_of_cells_in_camera_space.operator bool()
+        distribution_of_cells_in_camera_space.operator bool() &&
+        collider_filter.operator bool() &&
+        depth_image_func.operator bool()
         );
 }
 
@@ -115,6 +119,7 @@ sight_controller::sight_controller(
     , m_camera()
     , m_ray_cast_config(ray_cast_config_)
     , m_ray_casts_in_time()
+    , m_depth_image(ray_cast_config_.num_cells_along_x_axis * ray_cast_config_.num_cells_along_y_axis, 0.0f)
     , m_current_time(0.0)
     , m_generator()
     , m_time_buffer(0.0f)
@@ -196,6 +201,8 @@ void  sight_controller::next_round(
                     }
                 });
     }
+
+    update_depth_image();
 }
 
 
@@ -294,6 +301,19 @@ void  sight_controller::update_camera(float_32_bit const  time_step_in_seconds)
     }
 
     m_camera->set_coordinate_system(camera_coord_system);
+}
+
+
+void  sight_controller::update_depth_image()
+{
+    std::fill(m_depth_image.begin(), m_depth_image.end(), 0.0f);
+    for (auto  it = m_ray_casts_in_time.begin(); it != m_ray_casts_in_time.end(); ++it)
+    {
+        natural_32_bit const  index = it->second.cell_x + it->second.cell_y * m_ray_cast_config.num_cells_along_x_axis;
+        float_32_bit const  value =
+                std::max(0.0f, std::min(1.0f, 1.0f - m_ray_cast_config.depth_image_func(it->second.parameter_to_coid_in_01)));
+        m_depth_image.at(index) = value;
+    }
 }
 
 

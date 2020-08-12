@@ -29,7 +29,7 @@ static sight_controller::ray_cast_config  make_ray_cast_config(AGENT_KIND const 
 {
     auto const  cell_distribution = [](float_32_bit const  x) -> float_32_bit {
         return x * x;
-        };
+    };
 
     auto const  collider_filter = [binding](com::object_guid const collider_guid, angeo::COLLISION_CLASS const  cc) -> bool {
         switch (cc)
@@ -48,6 +48,10 @@ static sight_controller::ray_cast_config  make_ray_cast_config(AGENT_KIND const 
         }
     };
 
+    auto const  depth_image_func = [](float_32_bit const  x) -> float_32_bit {
+        return -(x * x) + 2.0f * x;
+    }; 
+
     static natural_16_bit constexpr  num_cells_x = 32U;
     static natural_16_bit constexpr  num_cells_y = 32U;
     static natural_32_bit constexpr  num_raycasts = 2U * num_cells_x * num_cells_y;
@@ -63,7 +67,8 @@ static sight_controller::ray_cast_config  make_ray_cast_config(AGENT_KIND const 
                 num_cells_x,        // num_cells_along_x_axis; must be a power of 2.
                 num_cells_y,        // num_cells_along_y_axis; must be a power of 2.
                 cell_distribution,  // distribution_of_cells_in_camera_space
-                collider_filter     // collider_filter
+                collider_filter,    // collider_filter
+                depth_image_func    // depth_image_func
                 };
     case AGENT_KIND::STATIONARY:
     case AGENT_KIND::RANDOM:

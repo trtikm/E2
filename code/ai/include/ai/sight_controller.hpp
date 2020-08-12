@@ -55,6 +55,7 @@ struct  sight_controller
                                                     //      distribution_of_cells_in_camera_space(1.0f) == 1.0f
                                                     // It is typically desired the function being monotonic (increasing).
         std::function<bool(com::object_guid, angeo::COLLISION_CLASS)>  collider_filter;
+        std::function<float_32_bit(float_32_bit)>  depth_image_func;    // Mapping of ray cast params to depth values.
 
         ray_cast_config(
                 natural_32_bit const  num_raycasts_per_second_ = 600U,
@@ -64,7 +65,9 @@ struct  sight_controller
                 std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_ =
                     [](float_32_bit const  x) -> float_32_bit { return x * x; }, // This is a quadratic stretch of the cell's grid.
                 std::function<bool(com::object_guid, angeo::COLLISION_CLASS)> const&  collider_filter_ =
-                    [](com::object_guid, angeo::COLLISION_CLASS) { return true; }
+                    [](com::object_guid, angeo::COLLISION_CLASS) { return true; },
+                std::function<float_32_bit(float_32_bit)>  depth_image_func_ =
+                    [](float_32_bit const  x) -> float_32_bit { return x; } // Mapping of ray cast params to depth values.
                 );
     };
 
@@ -92,6 +95,7 @@ struct  sight_controller
     };
 
     using  ray_casts_in_time = std::multimap<float_64_bit, ray_cast_info>;
+    using  ray_casts_image = std::vector<float_32_bit>;
 
     sight_controller(
             camera_config const&  camera_config_,
@@ -111,6 +115,7 @@ struct  sight_controller
 
     ray_cast_config const&  get_ray_cast_config() const { return m_ray_cast_config; }
     ray_casts_in_time const&  get_ray_casts_in_time() const { return m_ray_casts_in_time; }
+    ray_casts_image const&  get_depth_image() const { return m_depth_image; }
 
     skeletal_motion_templates  get_motion_templates() const { return m_motion_templates; }
     scene_binding_ptr  get_binding() const { return m_binding; }
@@ -118,11 +123,13 @@ struct  sight_controller
 
 private:
     void  update_camera(float_32_bit const  time_step_in_seconds);
+    void  update_depth_image();
 
     camera_config  m_camera_config;
     camera_perspective_ptr  m_camera;
     ray_cast_config  m_ray_cast_config;
     ray_casts_in_time  m_ray_casts_in_time;
+    ray_casts_image  m_depth_image;
     float_64_bit  m_current_time;
     random_generator_for_natural_32_bit  m_generator;
     float_32_bit  m_time_buffer;
