@@ -26,12 +26,8 @@ def bool2str(state, precision=6):
     return "true" if state is True else "false"
 
 
-def list_of_name_of_scene_objects(self, context):
-    return [(obj.name, obj.name, "", i) for i, obj in enumerate(context.collection.all_objects)]
-
-
 def get_scene_object_of_name(object_name):
-    return bpy.context.collection.all_objects[object_name]
+    return bpy.context.scene.objects[object_name]
 
 
 def e2_custom_props_of(object_name):
@@ -40,6 +36,14 @@ def e2_custom_props_of(object_name):
 
 def is_root_folder(object):
     return object is not None and object.parent is None and object.name == "E2_ROOT"
+
+
+def object_depth(object):
+    depth=0
+    while object is not None:
+        object = object.parent
+        depth += 1
+    return depth
 
 
 def absolute_scene_path(object_name):
@@ -155,16 +159,16 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             default="TOUCH_BEGIN"
             )
 
-    folder_of_timer: bpy.props.EnumProperty(
+    folder_of_timer: bpy.props.PointerProperty(
             name="Timer's folder",
             description="A folder of the considered timer.",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
-    collider_of_sensor: bpy.props.EnumProperty(
+    collider_of_sensor: bpy.props.PointerProperty(
             name="Sensor's collider",
             description="A collider of the considered sensor.",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
     import_dir: bpy.props.StringProperty(
@@ -175,18 +179,18 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             subtype='DIR_PATH'
             )
 
-    import_under_folder: bpy.props.EnumProperty(
+    import_under_folder: bpy.props.PointerProperty(
             name="Under folder",
             description="A folder under which to import the scene.",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
-    import_relocation_frame_folder: bpy.props.EnumProperty(
+    import_relocation_frame_folder: bpy.props.PointerProperty(
             name="Relocation frame's folder",
             description="A folder containing a relocation frame for the imported scene.\n"
                         "A frame whose world space location will also be the location of\n"+
                         "imported root frames.",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
     cache_imported_scene: bpy.props.BoolProperty(
@@ -195,11 +199,11 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             default=True
             )
 
-    import_motion_frame: bpy.props.EnumProperty(
+    import_motion_frame: bpy.props.PointerProperty(
             name="Motion frame's folder",
             description="A folder containing a motion frame for the imported scene.\n"+
                         "It is a local frame of the linear and angular velocity.",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
     import_add_motion_frame_velocity: bpy.props.BoolProperty(
@@ -243,16 +247,16 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             step=0.001
             )
 
-    erase_folder: bpy.props.EnumProperty(
+    erase_folder: bpy.props.PointerProperty(
             name="Folder",
             description="A folder to be erased with all its content.",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
-    folder_of_rigid_body: bpy.props.EnumProperty(
+    folder_of_rigid_body: bpy.props.PointerProperty(
             name="Rigid body's folder",
             description="A folder of the considered rigid body.",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
     radial_force_field_multiplier: bpy.props.FloatProperty(
@@ -452,7 +456,7 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     batch_reguar_disk_path: bpy.props.StringProperty(
             name="Batch file",
             description="A disk path to a file 'batch.txt' defining the batch",
-            default="./batch.txt",
+            default=".",
             maxlen=1000,
             subtype='FILE_PATH'
             )
@@ -644,10 +648,10 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             description="Whether to trigger sensor only by a concrete collider or not",
             default=False
             )
-    sensor_trigger_collider: bpy.props.EnumProperty(
+    sensor_trigger_collider: bpy.props.PointerProperty(
             name="Trigger collider",
             description="A concrete and only collider which will trigger the sensor.",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
     #====================================================
@@ -854,6 +858,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row = box.row()
         row.prop(object_props, "sensor_use_exclusive_trigger_collider")
         if object_props.sensor_use_exclusive_trigger_collider is True:
+            self.warn_object_is_not_set(object_props.sensor_trigger_collider, box, "Trigger collider")
             self.warn_object_is_not_collider(object_props.sensor_trigger_collider, box, "Trigger collider")
             row = box.row()
             row.prop(object_props, "sensor_trigger_collider")
@@ -902,44 +907,52 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 raise Exception("ERROR: Unknown request info kind.")
 
     def draw_request_info_increment_enable_level_of_timer(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.folder_of_timer, layout, "Timer's folder")
         self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
+        self.warn_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
     def draw_request_info_decrement_enable_level_of_timer(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.folder_of_timer, layout, "Timer's folder")
         self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
+        self.warn_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
     def draw_request_info_reset_timer(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.folder_of_timer, layout, "Timer's folder")
         self.warn_object_is_not_folder_with_timer(request_info.folder_of_timer, layout, "Timer's folder")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
+        self.warn_not_under_root_folder(request_info.folder_of_timer, layout, "Timer's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_timer")
 
     def draw_request_info_increment_enable_level_of_sensor(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.collider_of_sensor, layout, "Sensor's collider")
         self.warn_object_is_not_collider_with_sensor(request_info.collider_of_sensor, layout, "Sensor's collider")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.collider_of_sensor, layout, "Sensor's collider")
+        self.warn_not_under_root_folder(request_info.collider_of_sensor, layout, "Sensor's collider")
         row = layout.row()
         row.prop(request_info, "collider_of_sensor")
 
     def draw_request_info_decrement_enable_level_of_sensor(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.collider_of_sensor, layout, "Sensor's collider")
         self.warn_object_is_not_collider_with_sensor(request_info.collider_of_sensor, layout, "Sensor's folder")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.collider_of_sensor, layout, "Sensor's collider")
+        self.warn_not_under_root_folder(request_info.collider_of_sensor, layout, "Sensor's collider")
         row = layout.row()
         row.prop(request_info, "collider_of_sensor")
 
     def draw_request_info_import_scene(self, layout, object, object_props, request_info):
         self.warn_not_valid_import_dir(request_info.import_dir, layout, "Import dir")
+        self.warn_object_is_not_set(request_info.import_under_folder, layout, "Under folder")
         self.warn_object_is_not_folder(request_info.import_under_folder, layout, "Under folder")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.import_under_folder, layout, "Under folder")
+        self.warn_not_under_root_folder(request_info.import_under_folder, layout, "Under folder")
+        self.warn_object_is_not_set(request_info.import_relocation_frame_folder, layout, "Relocation frame")
         self.warn_object_is_not_folder_with_frame(request_info.import_relocation_frame_folder, layout, "Relocation frame", True)
-        self.warn_object_of_name_is_not_under_root_folder(request_info.import_relocation_frame_folder, layout, "Relocation frame")
+        self.warn_not_under_root_folder(request_info.import_relocation_frame_folder, layout, "Relocation frame")
         if request_info.apply_linear_velocity is True or request_info.apply_angular_velocity is True:
+            self.warn_object_is_not_set(request_info.import_motion_frame, layout, "Motion frame")
             self.warn_object_is_not_folder_with_frame(request_info.import_motion_frame, layout, "Motion frame", True)
-            self.warn_object_of_name_is_not_under_root_folder(request_info.import_motion_frame, layout, "Motion frame")
+            self.warn_not_under_root_folder(request_info.import_motion_frame, layout, "Motion frame")
 
         row = layout.row()
         row.prop(request_info, "import_dir")
@@ -974,23 +987,26 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row.prop(request_info, "import_add_motion_frame_velocity")
 
     def draw_request_info_erase_folder(self, layout, object, object_props, request_info):
+        self.warn_object_is_not_set(request_info.erase_folder, layout, "Folder to erase")
         self.warn_object_is_not_folder(request_info.erase_folder, layout, "Folder to erase")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.erase_folder, layout, "Folder to erase")
+        self.warn_not_under_root_folder(request_info.erase_folder, layout, "Folder to erase")
         self.warn_is_root_folder(request_info.erase_folder, layout, "Folder to erase")
         row = layout.row()
         row.prop(request_info, "erase_folder")
 
     def draw_request_info_set_linear_velocity(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
         self.warn_folder_does_not_have_rigid_body(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        self.warn_not_under_root_folder(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_rigid_body")
         row = layout.row()
         row.prop(request_info, "linear_velocity")
 
     def draw_request_info_set_angular_velocity(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
         self.warn_folder_does_not_have_rigid_body(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
-        self.warn_object_of_name_is_not_under_root_folder(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        self.warn_not_under_root_folder(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
         row = layout.row()
         row.prop(request_info, "folder_of_rigid_body")
         row = layout.row()
@@ -1021,16 +1037,21 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
 
     # == warnings ======================================================================
     
+    def warn_object_is_not_set(self, object, layout, property_name):
+        if object is None:
+            row = layout.row()
+            row.label(text="!!! WARNING: " + property_name + " is not set !!!")
+            return True
+        return False
+
     def warn_not_under_root_folder(self, object, layout, property_name=None):
+        if object is None: return
         while object.parent is not None:
             object = object.parent
         if  object.name != "E2_ROOT":
             property_name = "object" if property_name is None else property_name
             row = layout.row()
             row.label(text="!!! WARNING: The " + property_name + " is not in the sub-tree the 'E2_ROOT' folder !!!")
-
-    def warn_object_of_name_is_not_under_root_folder(self, object_name, layout, property_name):
-        return self.warn_not_under_root_folder(get_scene_object_of_name(object_name), layout, property_name)
 
     def warn_root_folder_has_non_folder_content(self, object, object_props, layout):
         if  object.name == "E2_ROOT":
@@ -1162,39 +1183,45 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 row = layout.row()
                 row.label(text="!!! WARNING: In info #" + str(i) + ": Wrong event type for the sensor !!!")
 
-    def warn_object_is_not_folder(self, object_name, layout, property_name):
-        object_props = e2_custom_props_of(object_name)
+    def warn_object_is_not_folder(self, object, layout, property_name):
+        if object is None: return
+        object_props = object.e2_custom_props
         if object_props.object_kind != "FOLDER":
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a folder !!!")
 
-    def warn_object_is_not_folder_with_frame(self, object_name, layout, property_name, allow_root):
-        object_props = e2_custom_props_of(object_name)
+    def warn_object_is_not_folder_with_frame(self, object, layout, property_name, allow_root):
+        if object is None: return
+        object_props = object.e2_custom_props
         if object_props.object_kind != "FOLDER" or object_props.folder_defines_frame is False:
-            if allow_root is False or object_name != "E2_ROOT":
+            if allow_root is False or object.name != "E2_ROOT":
                 row = layout.row()
                 row.label(text="!!! WARNING: " + property_name + " is not a folder with a frame !!!")
 
-    def warn_object_is_not_folder_with_timer(self, object_name, layout, property_name):
-        object_props = e2_custom_props_of(object_name)
+    def warn_object_is_not_folder_with_timer(self, object, layout, property_name):
+        if object is None: return
+        object_props = object.e2_custom_props
         if object_props.object_kind != "FOLDER" or object_props.folder_defines_timer is False:
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a folder with a timer !!!")
 
-    def warn_object_is_not_collider(self, object_name, layout, property_name):
-        object_props = e2_custom_props_of(object_name)
+    def warn_object_is_not_collider(self, object, layout, property_name):
+        if object is None: return
+        object_props = object.e2_custom_props
         if object_props.object_kind != "COLLIDER":
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a collider !!!")
 
-    def warn_object_is_not_collider_with_sensor(self, object_name, layout, property_name):
-        object_props = e2_custom_props_of(object_name)
+    def warn_object_is_not_collider_with_sensor(self, object, layout, property_name):
+        if object is None: return
+        object_props = object.e2_custom_props
         if object_props.object_kind != "COLLIDER" or object_props.collider_defines_sensor is False:
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a collider with a sensor !!!")
 
-    def warn_folder_does_not_have_rigid_body(self, object_name, layout, property_name):
-        object_props = e2_custom_props_of(object_name)
+    def warn_folder_does_not_have_rigid_body(self, object, layout, property_name):
+        if object is None: return
+        object_props = object.e2_custom_props
         if object_props.object_kind != "FOLDER" or object_props.folder_defines_rigid_body is False:
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a folder with a rigid_body !!!")
@@ -1225,8 +1252,8 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not valid triangle mesh directory !!!")
 
-    def warn_is_root_folder(self, name, layout, property_name):
-        if is_root_folder(get_scene_object_of_name(name)):
+    def warn_is_root_folder(self, object, layout, property_name):
+        if object is not None and is_root_folder(object):
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is the E2_ROOT folder !!!")
 
@@ -1311,10 +1338,10 @@ class E2SceneProps(bpy.types.PropertyGroup):
             maxlen=1000,
             subtype='DIR_PATH'
             )
-    import_under_folder: bpy.props.EnumProperty(
+    import_under_folder: bpy.props.PointerProperty(
             name="Import uder",
             description="A folder in the current scene under which to import the scene",
-            items=list_of_name_of_scene_objects
+            type=bpy.types.Object
             )
 
 
@@ -1360,6 +1387,7 @@ class E2SceneExportOperator(bpy.types.Operator):
             json.dump(result, f, indent=4, sort_keys=True)
 
     def export_folder(self, folder, data_root_dir):
+        self.log(folder)
         result = { "content":{}, "folders":{}, "imports": {} }
         if folder.e2_custom_props.folder_defines_agent is True:
             result["content"]["AGENT"] = self.export_agent(folder, data_root_dir)
@@ -1387,6 +1415,17 @@ class E2SceneExportOperator(bpy.types.Operator):
                 result["content"]["TIMER"] = self.export_timer(folder, data_root_dir)
         return self.clean_result(result)
 
+    def log(self, object, kind=None):
+        return
+        if object is None:
+            print("ERROR: Exporting None!")
+        else:
+            print(
+                "    " * (max(1, object_depth(object) - 1) + (1 if kind is not None else 0)) +
+                (object.e2_custom_props.object_kind if kind is None else kind) +
+                " " + object.name
+                )
+
     def export_vector(self, v):
         return { "x": num2str(v.x), "y": num2str(v.y), "z": num2str(v.z) }
 
@@ -1397,6 +1436,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         return { "r": num2str(c[0]), "g": num2str(c[1]), "b": num2str(c[2]), "a": num2str(c[3]) }
 
     def export_frame(self, object):
+        self.log(object, "FRAME")
         old_rotation_mode = object.rotation_mode
         object.rotation_mode = "QUATERNION"
         result = {
@@ -1408,6 +1448,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
 
     def export_batch(self, object, data_root_dir):
+        self.log(object)
         result = {
             "object_kind": object.e2_custom_props.object_kind,
             "batch_kind": object.e2_custom_props.batch_kind
@@ -1441,6 +1482,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
 
     def export_collider(self, object, data_root_dir):
+        self.log(object)
         result = {
             "object_kind": object.e2_custom_props.object_kind,
             "collider_kind": object.e2_custom_props.collider_kind
@@ -1463,6 +1505,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
 
     def export_rigid_body(self, object):
+        self.log(object, "RIGID_BODY")
         object_props = object.e2_custom_props
         result = {
             "object_kind": "RIGID_BODY",
@@ -1476,6 +1519,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
     
     def export_timer(self, object, data_root_dir):
+        self.log(object, "TIMER")
         object_props = object.e2_custom_props
         result = {
             "object_kind": "TIMER",
@@ -1487,6 +1531,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
     
     def export_sensor(self, object, data_root_dir):
+        self.log(object, "SENSOR")
         object_props = object.e2_custom_props
         result = {
             "object_kind": "SENSOR",
@@ -1496,7 +1541,8 @@ class E2SceneExportOperator(bpy.types.Operator):
             "request_infos": self.export_request_infos(object_props.request_info_items, object.name, data_root_dir)
         }
         if object_props.sensor_use_exclusive_trigger_collider is True:
-            result["trigger_collider"] = relative_scene_path_to_content(object_props.sensor_trigger_collider, object.name)
+            result["trigger_collider"] = relative_scene_path_to_content(object_props.sensor_trigger_collider.name,
+                                                                        object.name)
         return result
 
     def export_request_infos(self, infos, name, data_root_dir):
@@ -1534,23 +1580,29 @@ class E2SceneExportOperator(bpy.types.Operator):
         return result
 
     def export_request_info_increment_enable_level_of_timer(self, info, name):
-        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer.name, name, "TIMER") }
         return result
 
     def export_request_info_decrement_enable_level_of_timer(self, info, name):
-        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer.name, name, "TIMER") }
         return result
 
     def export_request_info_reset_timer(self, info, name):
-        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer, name, "TIMER") }
+        result = { "timer": relative_scene_path_to_content_from_embedded(info.folder_of_timer.name, name, "TIMER") }
         return result
 
     def export_request_info_increment_enable_level_of_sensor(self, info, name):
-        result = { "sensor": relative_scene_path_to_embedded_content(info.collider_of_sensor, name, "SENSOR." + info.collider_of_sensor) }
+        result = {
+            "sensor": relative_scene_path_to_embedded_content(info.collider_of_sensor.name, name,
+                                                              "SENSOR." + info.collider_of_sensor.name)
+            }
         return result
 
     def export_request_info_decrement_enable_level_of_sensor(self, info, name):
-        result = { "sensor": relative_scene_path_to_embedded_content(info.collider_of_sensor, name, "SENSOR." + info.collider_of_sensor) }
+        result = {
+            "sensor": relative_scene_path_to_embedded_content(info.collider_of_sensor.name, name,
+                                                              "SENSOR." + info.collider_of_sensor.name)
+            }
         return result
 
     def export_request_info_import_scene(self, info, name, data_root_dir):
@@ -1559,34 +1611,35 @@ class E2SceneExportOperator(bpy.types.Operator):
             "cache_imported_scene": bool2str(info.cache_imported_scene)
         }
         if not is_root_folder(get_scene_object_of_name(info.import_under_folder)):
-            result["under_folder"] = relative_scene_path_to_folder(info.import_under_folder, name)
+            result["under_folder"] = relative_scene_path_to_folder(info.import_under_folder.name, name)
         if not is_root_folder(get_scene_object_of_name(info.import_relocation_frame_folder)):
             result["relocation_frame"] = relative_scene_path_to_content_from_embedded(
-                                                info.import_relocation_frame_folder, name, "FRAME")
+                                                info.import_relocation_frame_folder.name, name, "FRAME")
         if info.apply_linear_velocity is True:
             result["linear_velocity"] = self.export_vector(info.linear_velocity)
         if info.apply_angular_velocity is True:
             result["angular_velocity"] = self.export_vector(info.angular_velocity)
         if info.apply_linear_velocity is True or info.apply_angular_velocity is True:
             if not is_root_folder(get_scene_object_of_name(info.import_motion_frame)):
-                result["motion_frame"] = relative_scene_path_to_content_from_embedded(info.import_motion_frame, name, "FRAME")
+                result["motion_frame"] = relative_scene_path_to_content_from_embedded(info.import_motion_frame.name,
+                                                                                      name, "FRAME")
                 result["add_motion_frame_velocity"] = bool2str(info.import_add_motion_frame_velocity)
         return result
 
     def export_request_info_erase_folder(self, info, name):
-        result = { "erase_folder": relative_scene_path_to_folder_from_embedded(info.erase_folder, name) }
+        result = { "erase_folder": relative_scene_path_to_folder_from_embedded(info.erase_folder.name, name) }
         return result
 
     def export_request_info_set_linear_velocity(self, info, name):
         result = {
-            "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body, name, "RIGID_BODY"),
+            "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body.name, name, "RIGID_BODY"),
             "linear_velocity": self.export_vector(info.linear_velocity)
         }
         return result
 
     def export_request_info_set_angular_velocity(self, info, name):
         result = {
-            "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body, name, "RIGID_BODY"),
+            "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body.name, name, "RIGID_BODY"),
             "angular_velocity": self.export_vector(info.angular_velocity)
         }
         return result
@@ -1696,8 +1749,8 @@ class E2SceneIOPanel(bpy.types.Panel):
 
     # == warnings ======================================================================
 
-    def warn_object_is_not_folder(self, object_name, layout, property_name):
-        object_props = e2_custom_props_of(object_name)
+    def warn_object_is_not_folder(self, object, layout, property_name):
+        object_props = object.e2_custom_props
         if object_props.object_kind != "FOLDER":
             row = layout.row()
             row.label(text="!!! WARNING: " + property_name + " is not a folder !!!")
