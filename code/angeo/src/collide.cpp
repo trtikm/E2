@@ -1235,6 +1235,69 @@ bool  collision_ray_and_plane(
 }
 
 
+bool  clip_line_into_sphere(
+        vector3 const&  line_begin,
+        vector3 const&  line_end,
+        vector3 const&  sphere_origin,
+        float_32_bit const  sphere_radius,
+        vector3* const  clipped_line_begin,
+        vector3* const  clipped_line_end,
+        float_32_bit* const  parameter_of_line_begin,
+        float_32_bit* const  parameter_of_line_end
+        )
+{
+    vector3 const  AB = line_end - line_begin;
+    vector3 const  SA =  line_begin - sphere_origin;
+    float_32_bit const  AB_dot_AB = dot_product(AB, AB);
+    float_32_bit const  SA_dot_SA = dot_product(SA, SA);
+    if (AB_dot_AB < 1e-6f)
+    {
+        if (SA_dot_SA < sphere_radius * sphere_radius)
+            return false;
+        if (clipped_line_begin != nullptr)
+            *clipped_line_begin = line_begin;
+        if (clipped_line_end != nullptr)
+            *clipped_line_end = line_end;
+        if (parameter_of_line_begin != nullptr)
+            *parameter_of_line_begin = 0.0f;
+        if (parameter_of_line_end != nullptr)
+            *parameter_of_line_end = 1.0f;
+        return true;
+    }
+    float_32_bit const  AB_dot_SA = dot_product(AB, SA);
+    float_32_bit const  D = AB_dot_SA * AB_dot_SA - AB_dot_AB * (SA_dot_SA - sphere_radius * sphere_radius);
+    if (D < 0.0f)
+        return false;
+    bool const  p0 = clipped_line_begin != nullptr;
+    bool const  p1 = clipped_line_end != nullptr;
+    bool const  t0 = parameter_of_line_begin != nullptr;
+    bool const  t1 = parameter_of_line_end != nullptr;
+    if (!p0 && !p1 && !t0 && !t1)
+        return true;
+    float_32_bit const  D_sqrt = std::sqrtf(D);
+
+    if (p0 || t0)
+    {
+        float_32_bit const  t = (-AB_dot_SA - D_sqrt) / AB_dot_AB;
+        if (t0)
+            *parameter_of_line_begin = t;
+        if (p0)
+            *clipped_line_begin = line_begin + t * AB;
+    }
+
+    if (p1 || t1)
+    {
+        float_32_bit const  t = (-AB_dot_SA + D_sqrt) / AB_dot_AB;
+        if (t1)
+            *parameter_of_line_end = t;
+        if (p1)
+            *clipped_line_end = line_begin + t * AB;
+    }
+
+    return true;
+}
+
+
 bool  clip_line_into_bbox(
         vector3 const&  line_begin,
         vector3 const&  line_end,

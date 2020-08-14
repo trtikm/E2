@@ -961,11 +961,18 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         break;
     case angeo::COLLISION_SHAPE_TYPE::SPHERE:
         {
-            vector3 const&  S = get_sphere_center_in_world_space(coid);
-            vector3  X;
-            float_32_bit const  t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, S, &X);
-            float_32_bit const  rad = get_sphere_radius(coid);
-            if (length_squared(X - S) <= rad * rad)
+            sphere_geometry const&  geometry = m_spheres_geometry.at(get_instance_index(coid));
+            float_32_bit  t;
+            if (clip_line_into_sphere(
+                    ray_origin,
+                    ray_end,
+                    geometry.center_in_world_space,
+                    geometry.radius,
+                    nullptr,
+                    nullptr,
+                    &t,
+                    nullptr
+                    ))
                 return acceptor(coid, t);
         }
         break;
