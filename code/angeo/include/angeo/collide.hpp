@@ -390,6 +390,19 @@ bool  clip_line_into_sphere(
         );
 
 
+bool  clip_line_into_capsule(
+        vector3 const&  line_begin,
+        vector3 const&  line_end,
+        vector3 const&  capsule_central_line_end_point_1,
+        vector3 const&  capsule_central_line_end_point_2,
+        float_32_bit const  capsule_thickness,
+        vector3* const  clipped_line_begin = nullptr,
+        vector3* const  clipped_line_end = nullptr,
+        float_32_bit* const  parameter_of_line_begin = nullptr,
+        float_32_bit* const  parameter_of_line_end = nullptr
+        );
+
+
 /**
  * It checks whether the line has not empty intersection with the bounding box.
  * If yes, then there are computed corner points of the sub-line representing

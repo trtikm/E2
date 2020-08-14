@@ -938,25 +938,20 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         break;
     case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
         {
-            vector3 const&  E1 = get_capsule_end_point_1_in_world_space(coid);
-            vector3 const&  E2 = get_capsule_end_point_2_in_world_space(coid);
-            float_32_bit const  rad = get_capsule_thickness_from_central_line(coid);
-            float_32_bit const  rad2 = rad * rad;
-            float_32_bit  t_best = 1.0f;
-            vector3  X, Y;
+            capsule_geometry const&  geometry = m_capsules_geometry.at(get_instance_index(coid));
             float_32_bit  t;
-        
-            t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, E1, &X);
-            if (length_squared(X - E1) <= rad2 && t < t_best)
-                t_best = t;
-            t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, E2, &X);
-            if (length_squared(X - E2) <= rad2 && t < t_best)
-                t_best = t;
-            if (angeo::closest_points_of_two_lines(ray_origin, ray_end, E1, E2, &X, &t, &Y, nullptr, nullptr, nullptr, nullptr, nullptr) > 0U)
-                if (length_squared(X - Y) <= rad2 && t < t_best)
-                    t_best = t;
-            if (t_best < 1.0f)
-                return acceptor(coid, t_best);
+            if (clip_line_into_capsule(
+                    ray_origin,
+                    ray_end,
+                    geometry.end_point_1_in_world_space,
+                    geometry.end_point_2_in_world_space,
+                    geometry.thickness_from_central_line,
+                    nullptr,
+                    nullptr,
+                    &t,
+                    nullptr
+                    ))
+                return acceptor(coid, t);
         }
         break;
     case angeo::COLLISION_SHAPE_TYPE::SPHERE:

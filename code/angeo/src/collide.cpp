@@ -1280,12 +1280,216 @@ bool  clip_line_into_sphere(
     if (parameter_of_line_begin != nullptr)
         *parameter_of_line_begin = t0;
     if (clipped_line_end != nullptr)
-        *clipped_line_end = line_end + t0 * AB;
+        *clipped_line_end = line_end + t1 * AB;
     if (parameter_of_line_end != nullptr)
-        *parameter_of_line_end = t0;
+        *parameter_of_line_end = t1;
     return true;
 }
 
+
+bool  clip_line_into_capsule(
+        vector3 const&  line_begin,
+        vector3 const&  line_end,
+        vector3 const&  capsule_central_line_end_point_1,
+        vector3 const&  capsule_central_line_end_point_2,
+        float_32_bit const  capsule_thickness,
+        vector3* const  clipped_line_begin,
+        vector3* const  clipped_line_end,
+        float_32_bit* const  parameter_of_line_begin,
+        float_32_bit* const  parameter_of_line_end
+        )
+{
+    vector3 const  CD = capsule_central_line_end_point_2 - capsule_central_line_end_point_1;
+    float_32_bit const  CD_dot_CD = dot_product(CD, CD);
+    if (CD_dot_CD < 1e-6f)
+        return clip_line_into_sphere(
+                line_begin,
+                line_end,
+                capsule_central_line_end_point_1,
+                capsule_thickness,
+                clipped_line_begin,
+                clipped_line_end,
+                parameter_of_line_begin,
+                parameter_of_line_end
+                );
+
+    float_32_bit  t0, t1;
+    if (!clip_line_into_sphere(
+            subtract_projection_to_vector(line_begin - capsule_central_line_end_point_1, CD),
+            subtract_projection_to_vector(line_end - capsule_central_line_end_point_1, CD),            
+            vector3_zero(),
+            capsule_thickness,
+            nullptr,
+            nullptr,
+            &t0,
+            &t1
+            ))
+        return false;
+
+    vector3 const  AB = line_end - line_begin;
+    vector3 const  X = line_begin + t0 * AB;
+    vector3 const  Y = line_begin + t1 * AB;
+    float_32_bit const  eX = dot_product(CD, X - capsule_central_line_end_point_1) / CD_dot_CD;
+    float_32_bit const  eY = dot_product(CD, Y - capsule_central_line_end_point_1) / CD_dot_CD;
+
+    if (eX < 0.0f)
+    {
+        if (eY < 0.0f)
+            return clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_1,
+                    capsule_thickness,
+                    clipped_line_begin,
+                    clipped_line_end,
+                    parameter_of_line_begin,
+                    parameter_of_line_end
+                    );
+        else if (eY > 1.0f)
+        {
+            if (!clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_1,
+                    capsule_thickness,
+                    clipped_line_begin,
+                    nullptr,
+                    parameter_of_line_begin,
+                    nullptr
+                    )) { UNREACHABLE(); }
+            if (!clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_2,
+                    capsule_thickness,
+                    nullptr,
+                    clipped_line_end,
+                    nullptr,
+                    parameter_of_line_end
+                    )) { UNREACHABLE(); }
+        }
+        else
+        {
+            if (!clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_1,
+                    capsule_thickness,
+                    clipped_line_begin,
+                    nullptr,
+                    parameter_of_line_begin,
+                    nullptr
+                    )) { UNREACHABLE(); }
+            if (clipped_line_end != nullptr)
+                *clipped_line_end = Y;
+            if (parameter_of_line_end != nullptr)
+                *parameter_of_line_end = t1;
+        }
+    }
+    else if (eX > 1.0f)
+    {
+        if (eY < 0.0f)
+        {
+            if (!clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_2,
+                    capsule_thickness,
+                    clipped_line_begin,
+                    nullptr,
+                    parameter_of_line_begin,
+                    nullptr
+                    )) { UNREACHABLE(); }
+            if (!clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_1,
+                    capsule_thickness,
+                    nullptr,
+                    clipped_line_end,
+                    nullptr,
+                    parameter_of_line_end
+                    )) { UNREACHABLE(); }
+        }
+        else if (eY > 1.0f)
+            return clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_2,
+                    capsule_thickness,
+                    clipped_line_begin,
+                    clipped_line_end,
+                    parameter_of_line_begin,
+                    parameter_of_line_end
+                    );
+        else
+        {
+            if (!clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_2,
+                    capsule_thickness,
+                    clipped_line_begin,
+                    nullptr,
+                    parameter_of_line_begin,
+                    nullptr
+                    )) { UNREACHABLE(); }
+            if (clipped_line_end != nullptr)
+                *clipped_line_end = Y;
+            if (parameter_of_line_end != nullptr)
+                *parameter_of_line_end = t1;
+        }
+    }
+    else
+    {
+        if (eY < 0.0f)
+        {
+            if (clipped_line_begin != nullptr)
+                *clipped_line_begin = X;
+            if (parameter_of_line_begin != nullptr)
+                *parameter_of_line_begin = t0;
+            if (!clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_1,
+                    capsule_thickness,
+                    nullptr,
+                    clipped_line_end,
+                    nullptr,
+                    parameter_of_line_end
+                    )) { UNREACHABLE(); }
+        }
+        else if (eY > 1.0f)
+        {
+            if (clipped_line_begin != nullptr)
+                *clipped_line_begin = X;
+            if (parameter_of_line_begin != nullptr)
+                *parameter_of_line_begin = t0;
+            if (!clip_line_into_sphere(
+                    line_begin,
+                    line_end,
+                    capsule_central_line_end_point_2,
+                    capsule_thickness,
+                    nullptr,
+                    clipped_line_end,
+                    nullptr,
+                    parameter_of_line_end
+                    )) { UNREACHABLE(); }
+        }
+        else
+        {
+            if (clipped_line_begin != nullptr)
+                *clipped_line_begin = X;
+            if (parameter_of_line_begin != nullptr)
+                *parameter_of_line_begin = t0;
+            if (clipped_line_end != nullptr)
+                *clipped_line_end = Y;
+            if (parameter_of_line_end != nullptr)
+                *parameter_of_line_end = t1;
+        }
+    }
+    return true;
+}
 
 bool  clip_line_into_bbox(
         vector3 const&  line_begin,
