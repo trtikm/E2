@@ -1252,7 +1252,7 @@ bool  clip_line_into_sphere(
     float_32_bit const  SA_dot_SA = dot_product(SA, SA);
     if (AB_dot_AB < 1e-6f)
     {
-        if (SA_dot_SA < sphere_radius * sphere_radius)
+        if (SA_dot_SA > sphere_radius * sphere_radius)
             return false;
         if (clipped_line_begin != nullptr)
             *clipped_line_begin = line_begin;
@@ -1268,32 +1268,21 @@ bool  clip_line_into_sphere(
     float_32_bit const  D = AB_dot_SA * AB_dot_SA - AB_dot_AB * (SA_dot_SA - sphere_radius * sphere_radius);
     if (D < 0.0f)
         return false;
-    bool const  p0 = clipped_line_begin != nullptr;
-    bool const  p1 = clipped_line_end != nullptr;
-    bool const  t0 = parameter_of_line_begin != nullptr;
-    bool const  t1 = parameter_of_line_end != nullptr;
-    if (!p0 && !p1 && !t0 && !t1)
-        return true;
     float_32_bit const  D_sqrt = std::sqrtf(D);
-
-    if (p0 || t0)
-    {
-        float_32_bit const  t = (-AB_dot_SA - D_sqrt) / AB_dot_AB;
-        if (t0)
-            *parameter_of_line_begin = t;
-        if (p0)
-            *clipped_line_begin = line_begin + t * AB;
-    }
-
-    if (p1 || t1)
-    {
-        float_32_bit const  t = (-AB_dot_SA + D_sqrt) / AB_dot_AB;
-        if (t1)
-            *parameter_of_line_end = t;
-        if (p1)
-            *clipped_line_end = line_begin + t * AB;
-    }
-
+    float_32_bit const  t0 = (-AB_dot_SA - D_sqrt) / AB_dot_AB;
+    if (t0 > 1.0f)
+        return false;
+    float_32_bit const  t1 = (-AB_dot_SA + D_sqrt) / AB_dot_AB;
+    if (t1 < 0.0f)
+        return false;
+    if (clipped_line_begin != nullptr)
+        *clipped_line_begin = line_begin + t0 * AB;
+    if (parameter_of_line_begin != nullptr)
+        *parameter_of_line_begin = t0;
+    if (clipped_line_end != nullptr)
+        *clipped_line_end = line_end + t0 * AB;
+    if (parameter_of_line_end != nullptr)
+        *parameter_of_line_end = t0;
     return true;
 }
 
