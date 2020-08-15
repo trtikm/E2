@@ -1488,7 +1488,8 @@ class E2SceneExportOperator(bpy.types.Operator):
             "collider_kind": object.e2_custom_props.collider_kind
         }
         if object.e2_custom_props.collider_kind == "TRIANGLE_MESH":
-            result["path"] = normalise_disk_path(object.e2_custom_props.collider_triangle_mesh_dir, data_root_dir)
+            result["path"] = normalise_disk_path(object.e2_custom_props.collider_triangle_mesh_dir,
+                                                 os.path.join(data_root_dir, "mesh"))
         else:
             sizes = object.scale if object.type == 'EMPTY' else 0.5 * object.dimensions
             if object.e2_custom_props.collider_kind == "BOX":
@@ -1500,8 +1501,8 @@ class E2SceneExportOperator(bpy.types.Operator):
                 result["half_distance_between_end_points"] = num2str(distance)
             elif object.e2_custom_props.collider_kind == "SPHERE":
                 result["radius"] = num2str(max(0.001, min(sizes)))
-            result["collision_material"] = str(object.e2_custom_props.collider_material_type)
-            result["collision_class"] = str(object.e2_custom_props.collider_collision_class)
+        result["collision_material"] = str(object.e2_custom_props.collider_material_type)
+        result["collision_class"] = str(object.e2_custom_props.collider_collision_class)
         return result
 
     def export_rigid_body(self, object):
