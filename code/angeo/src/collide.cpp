@@ -1235,6 +1235,43 @@ bool  collision_ray_and_plane(
 }
 
 
+bool  collision_ray_and_triangle(
+        vector3 const&  triangle_vertex_1,
+        vector3 const&  triangle_vertex_2,
+        vector3 const&  triangle_vertex_3,
+        vector3 const&  triangle_unit_normal,
+        vector3 const&  ray_begin,
+        vector3 const&  ray_end,
+        vector3* const  intersection_point,
+        float_32_bit* const  parameter_of_line
+        )
+{
+    float_32_bit const  N_dot_AP = dot_product(triangle_unit_normal, ray_begin - triangle_vertex_1);
+    if (N_dot_AP <= 0.0001f)
+        return false;
+    float_32_bit const  N_dot_AQ = dot_product(triangle_unit_normal, ray_end - triangle_vertex_1);
+    if (N_dot_AQ >= -0.0001f)
+        return false;
+
+    float_32_bit const  t = N_dot_AP / (N_dot_AP - N_dot_AQ);
+    vector3 const  X = ray_begin + t * (ray_end - ray_begin);
+
+    if (dot_product(cross_product(triangle_vertex_2 - triangle_vertex_1, triangle_unit_normal), X - triangle_vertex_1) > 0.0f)
+        return false;
+    if (dot_product(cross_product(triangle_vertex_3 - triangle_vertex_3, triangle_unit_normal), X - triangle_vertex_2) > 0.0f)
+        return false;
+    if (dot_product(cross_product(triangle_vertex_1 - triangle_vertex_3, triangle_unit_normal), X - triangle_vertex_3) > 0.0f)
+        return false;
+
+    if (intersection_point != nullptr)
+        *intersection_point = X;
+    if (parameter_of_line != nullptr)
+        *parameter_of_line = t;
+
+    return true;
+}
+
+
 bool  clip_line_into_sphere(
         vector3 const&  line_begin,
         vector3 const&  line_end,

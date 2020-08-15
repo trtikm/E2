@@ -378,6 +378,18 @@ bool  collision_ray_and_plane(
         );
 
 
+bool  collision_ray_and_triangle(
+        vector3 const&  triangle_vertex_1,
+        vector3 const&  triangle_vertex_2,
+        vector3 const&  triangle_vertex_3,
+        vector3 const&  triangle_unit_normal,
+        vector3 const&  ray_begin,
+        vector3 const&  ray_end,
+        vector3* const  intersection_point = nullptr,
+        float_32_bit* const  parameter_of_line = nullptr
+        );
+
+
 bool  clip_line_into_sphere(
         vector3 const&  line_begin,
         vector3 const&  line_end,
