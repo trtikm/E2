@@ -77,20 +77,20 @@ struct  sight_controller
         natural_32_bit  cell_y;
         vector2  camera_coords_of_cell_coords;
         vector3  ray_origin_in_world_space;
-        vector3  ray_unit_direction_in_world_space;
-        float_32_bit  parameter_to_coid_in_01;
+        vector3  ray_direction_in_world_space;
         float_32_bit  parameter_to_coid;
         com::object_guid  collider_guid;
+        float_32_bit  depth_inverted;
 
         ray_cast_info(
                 natural_32_bit const  cell_x_,
                 natural_32_bit const  cell_y_,
                 vector2 const&  camera_coords_of_cell_coords_,
                 vector3 const&  ray_origin_in_world_space_,
-                vector3 const&  ray_unit_direction_in_world_space_,
-                float_32_bit const  parameter_to_coid_in_01_,
+                vector3 const&  ray_direction_in_world_space_,
                 float_32_bit const  parameter_to_coid_,
-                com::object_guid const  collider_guid_
+                com::object_guid const  collider_guid_,
+                float_32_bit const  depth_inverted_
                 );
     };
 

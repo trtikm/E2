@@ -347,8 +347,7 @@ struct  simulation_context
             ) const;
     object_guid  ray_cast_to_nearest_collider(
             vector3 const&  ray_origin,
-            vector3 const&  ray_unit_direction_vector,
-            float_32_bit const  ray_length,
+            vector3 const&  ray_end,
             bool const  search_static,
             bool const  search_dynamic,
             float_32_bit*  ray_parameter_to_nearest_collider = nullptr,

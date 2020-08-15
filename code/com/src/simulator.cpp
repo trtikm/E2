@@ -830,7 +830,7 @@ void  simulator::render_sight_contacts()
         {
             vector3 const  contact_point =
                     ray_it->second.ray_origin_in_world_space +
-                    ray_it->second.parameter_to_coid * ray_it->second.ray_unit_direction_in_world_space
+                    ray_it->second.parameter_to_coid * ray_it->second.ray_direction_in_world_space
                     ;
             matrix44  W;
             compose_from_base_matrix(contact_point, matrix33_identity(), W);

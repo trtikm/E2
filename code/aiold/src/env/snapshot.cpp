@@ -53,7 +53,7 @@ snapshot::snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr)
             ray_cast_events.push_back({
                     info.cell_x,
                     info.cell_y,
-                    transform_point(info.ray_origin_in_world_space + info.parameter_to_coid * info.ray_unit_direction_in_world_space,
+                    transform_point(info.ray_origin_in_world_space + info.parameter_to_coid * info.ray_direction_in_world_space,
                                     to_agent_space_matrix)
                     });
         }

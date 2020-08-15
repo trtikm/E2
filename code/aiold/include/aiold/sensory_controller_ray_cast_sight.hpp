@@ -49,7 +49,7 @@ struct  sensory_controller_ray_cast_sight : public sensory_controller_sight
         natural_32_bit  cell_y;
         vector2  camera_coords_of_cell_coords;
         vector3  ray_origin_in_world_space;
-        vector3  ray_unit_direction_in_world_space;
+        vector3  ray_direction_in_world_space;
         float_32_bit  parameter_to_coid;
         angeo::collision_object_id  coid;
 
@@ -58,7 +58,7 @@ struct  sensory_controller_ray_cast_sight : public sensory_controller_sight
                 natural_32_bit const  cell_y_,
                 vector2 const&  camera_coords_of_cell_coords_,
                 vector3 const&  ray_origin_in_world_space_,
-                vector3 const&  ray_unit_direction_in_world_space_,
+                vector3 const&  ray_direction_in_world_space_,
                 float_32_bit const  parameter_to_coid_,
                 angeo::collision_object_id const  coid_
                 );

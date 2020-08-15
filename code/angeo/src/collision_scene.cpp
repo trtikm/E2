@@ -891,8 +891,6 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         collision_object_id const  coid,
         vector3 const&  ray_origin,
         vector3 const&  ray_end,
-        vector3 const&  ray_unit_direction_vector,
-        float_32_bit const  ray_length,
         std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
         std::unordered_set<collision_object_id> const* const  ignored_coids_ptr,
         std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
@@ -902,8 +900,6 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         return true;
     if (collider_filter(coid, get_collision_class(coid)) == false)
         return true;
-
-    float_32_bit const  DISTANCE_EPSILON = 0.0001f;
 
     switch (angeo::get_shape_type(coid))
     {
@@ -974,28 +970,18 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
     case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
         {
             triangle_geometry const&  geometry = m_triangles_geometry.at(get_instance_index(coid));
-            if (dot_product(geometry.unit_normal_in_world_space, ray_unit_direction_vector) >= 0.0f)
-                return true;
-            vector3  X,Y;
-            if (angeo::closest_points_of_triangle_and_line(
+            float_32_bit  t;
+            if (collision_ray_and_triangle(
                     geometry.end_point_1_in_world_space,
                     geometry.end_point_2_in_world_space,
                     geometry.end_point_3_in_world_space,
                     geometry.unit_normal_in_world_space,
-                    geometry.edges_ignore_mask,
                     ray_origin,
                     ray_end,
-                    &Y,
                     nullptr,
-                    &X,
-                    nullptr,
-                    nullptr,
-                    nullptr,
-                    nullptr,
-                    nullptr) == 0U)
-                return true;
-            if (length_squared(X - Y) <= DISTANCE_EPSILON * DISTANCE_EPSILON)
-                return acceptor(coid, std::min(1.0f, std::max(-1.0f, length(X - ray_origin) / ray_length)));
+                    &t
+                    ))
+                return acceptor(coid, t);
         }
         break;
     }
@@ -1005,8 +991,7 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
 
 bool  collision_scene::ray_cast(
         vector3 const&  ray_origin,
-        vector3 const&  ray_unit_direction_vector,
-        float_32_bit const  ray_length,
+        vector3 const&  ray_end,
         bool const  search_static,
         bool const  search_dynamic,
         collision_object_id*  nearest_coid,
@@ -1025,7 +1010,6 @@ bool  collision_scene::ray_cast(
 
     *ray_parameter_to_nearest_coid = 1.0f;
 
-    vector3 const  ray_end = ray_origin + ray_length * ray_unit_direction_vector;
     find_objects_in_proximity_to_line(
         ray_origin,
         ray_end,
@@ -1036,8 +1020,6 @@ bool  collision_scene::ray_cast(
                 coid,
                 ray_origin,
                 ray_end,
-                ray_unit_direction_vector,
-                ray_length,
                 [nearest_coid, ray_parameter_to_nearest_coid](collision_object_id const  coid, float_32_bit const  ray_param) -> bool {
                         if (ray_param < *ray_parameter_to_nearest_coid)
                         {

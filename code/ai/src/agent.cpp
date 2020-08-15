@@ -49,7 +49,7 @@ static sight_controller::ray_cast_config  make_ray_cast_config(AGENT_KIND const 
     };
 
     auto const  depth_image_func = [](float_32_bit const  x) -> float_32_bit {
-        return -(x * x) + 2.0f * x;
+        return x;
     }; 
 
     static natural_16_bit constexpr  num_cells_x = 32U;

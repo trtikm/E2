@@ -74,7 +74,7 @@ sensory_controller_ray_cast_sight::ray_cast_info::ray_cast_info(
         natural_32_bit const  cell_y_,
         vector2 const&  camera_coords_of_cell_coords_,
         vector3 const&  ray_origin_in_world_space_,
-        vector3 const&  ray_unit_direction_in_world_space_,
+        vector3 const&  ray_direction_in_world_space_,
         float_32_bit const  parameter_to_coid_,
         angeo::collision_object_id const  coid_
         )
@@ -82,7 +82,7 @@ sensory_controller_ray_cast_sight::ray_cast_info::ray_cast_info(
     , cell_y(cell_y_)
     , camera_coords_of_cell_coords(camera_coords_of_cell_coords_)
     , ray_origin_in_world_space(ray_origin_in_world_space_)
-    , ray_unit_direction_in_world_space(ray_unit_direction_in_world_space_)
+    , ray_direction_in_world_space(ray_direction_in_world_space_)
     , parameter_to_coid(parameter_to_coid_)
     , coid(coid_)
 {}
@@ -127,37 +127,36 @@ void  sensory_controller_ray_cast_sight::next_round(float_32_bit const  time_ste
         natural_32_bit const  cell_y =
                 get_random_natural_32_bit_in_range(0U, m_ray_cast_config.num_cells_along_any_axis - 1U, m_generator);
 
-        vector2 const  camera_coords =
+        vector2 const  camera_coords_01 =
                 detail::compute_ray_cast_camera_coordinates_from_cell_coordinates(
                         cell_x,
                         cell_y,
                         m_ray_cast_config.num_cells_along_any_axis,
                         m_ray_cast_config.distribution_of_cells_in_camera_space
                         );
-
-        vector3 const  ray_direction_local{
-                (get_camera()->left() + camera_coords(0) * (get_camera()->right() - get_camera()->left())),
-                (get_camera()->bottom() + camera_coords(1) * (get_camera()->top() - get_camera()->bottom())),
+        vector3 const  camera_coords{
+                (get_camera()->left() + camera_coords_01(0) * (get_camera()->right() - get_camera()->left())),
+                (get_camera()->bottom() + camera_coords_01(1) * (get_camera()->top() - get_camera()->bottom())),
                 -get_camera()->near_plane()
                 };
+        float_32_bit const  scale_to_far_plane = get_camera()->far_plane() / get_camera()->near_plane();
 
         vector3 const&  ray_origin = get_camera()->coordinate_system()->origin();
-        vector3 const  ray_unit_direction = normalised(transform_vector(ray_direction_local, W));
-        float_32_bit const  ray_length = get_camera()->far_plane();
+        vector3 const  ray_end = transform_point(scale_to_far_plane * camera_coords, W);
         scene::collision_object_id  nearest_coid;
         float_32_bit  parameter_to_nearest_coid;
-        if (!get_blackboard()->m_scene->get_collision_scene().ray_cast(ray_origin, ray_unit_direction, ray_length, true, true, &nearest_coid, &parameter_to_nearest_coid, nullptr))
+        if (!get_blackboard()->m_scene->get_collision_scene().ray_cast(ray_origin, ray_end, true, true, &nearest_coid,
+                                                                       &parameter_to_nearest_coid, nullptr))
             continue;
-
         m_ray_casts_in_time.insert({
                 now,
                 {
                     cell_x,
                     cell_y,
-                    camera_coords,
+                    contract32(camera_coords),
                     ray_origin,
-                    ray_unit_direction,
-                    parameter_to_nearest_coid * ray_length,
+                    ray_end - ray_origin,
+                    parameter_to_nearest_coid,
                     nearest_coid
                     }
                 });

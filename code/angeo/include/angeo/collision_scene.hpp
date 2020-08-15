@@ -178,8 +178,6 @@ struct  collision_scene
             collision_object_id const  coid,
             vector3 const&  ray_origin,
             vector3 const&  ray_end,
-            vector3 const&  ray_unit_direction_vector,
-            float_32_bit const  ray_length,
             std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
             std::unordered_set<collision_object_id> const* const  ignored_coids_ptr, // pass nullptr, if there is nothing to ignore.
             std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter =
@@ -188,8 +186,7 @@ struct  collision_scene
 
     bool  ray_cast(
             vector3 const&  ray_origin,
-            vector3 const&  ray_unit_direction_vector,
-            float_32_bit const  ray_length,
+            vector3 const&  ray_end,
             bool const  search_static,
             bool const  search_dynamic,
             collision_object_id*  nearest_coid,
