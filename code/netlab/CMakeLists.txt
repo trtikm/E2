@@ -1,6 +1,9 @@
 set(THIS_TARGET_NAME netlab)
 
 add_library(${THIS_TARGET_NAME}
+    ./include/netlab/cortex.hpp
+    ./src/cortex.cpp
+
     ./include/netlab/initialiser_of_movement_area_centers.hpp
     ./include/netlab/initialiser_of_ships_in_movement_areas.hpp
     ./include/netlab/extra_data_for_spikers.hpp
