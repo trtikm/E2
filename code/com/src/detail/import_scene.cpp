@@ -178,7 +178,8 @@ static void  import_collider(
                 );
     else if (collider_kind == "TRIANGLE_MESH")
     {
-        boost::filesystem::path const  buffers_dir = hierarchy.get<std::string>("path");
+        boost::filesystem::path const  buffers_dir =
+                boost::filesystem::path(ctx.get_data_root_dir()) / "mesh" / hierarchy.get<std::string>("path");
         gfx::buffer  vertex_buffer(buffers_dir / "vertices.txt", std::numeric_limits<async::load_priority_type>::max());
         gfx::buffer  index_buffer(buffers_dir / "indices.txt", std::numeric_limits<async::load_priority_type>::max());
         if (!vertex_buffer.wait_till_load_is_finished())
