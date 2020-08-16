@@ -61,15 +61,15 @@ static sight_controller::ray_cast_config  make_ray_cast_config(AGENT_KIND const 
     {
     case AGENT_KIND::MOCK:
     case AGENT_KIND::ROBOT:
-        return sight_controller::ray_cast_config{
-                num_raycasts,       // num_raycasts_per_second
-                raycast_life_sec,   // max_ray_cast_info_life_time_in_seconds
-                num_cells_x,        // num_cells_along_x_axis; must be a power of 2.
-                num_cells_y,        // num_cells_along_y_axis; must be a power of 2.
-                cell_distribution,  // distribution_of_cells_in_camera_space
-                collider_filter,    // collider_filter
-                depth_image_func    // depth_image_func
-                };
+        //return sight_controller::ray_cast_config{
+        //        num_raycasts,       // num_raycasts_per_second
+        //        raycast_life_sec,   // max_ray_cast_info_life_time_in_seconds
+        //        num_cells_x,        // num_cells_along_x_axis; must be a power of 2.
+        //        num_cells_y,        // num_cells_along_y_axis; must be a power of 2.
+        //        cell_distribution,  // distribution_of_cells_in_camera_space
+        //        collider_filter,    // collider_filter
+        //        depth_image_func    // depth_image_func
+        //        };
     case AGENT_KIND::STATIONARY:
     case AGENT_KIND::RANDOM:
         return sight_controller::ray_cast_config{0U};
