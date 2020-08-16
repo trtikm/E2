@@ -375,6 +375,76 @@ class E2_UL_RequestInfosListDown(bpy.types.Operator):
         return{'FINISHED'}
 
 
+class E2MeshImporter(bpy.types.Operator):
+    """Imports the mesh."""
+    
+    bl_idname = "object.e2_import_mesh"
+    bl_label = "Import mesh"
+
+    @classmethod
+    def poll(cls, context):
+        if (context.object is None or context.object.type != "MESH" or context.object.e2_custom_props is None or
+            context.scene.e2_custom_props is None):
+            return False
+        return context.object.e2_custom_props.object_kind in ["BATCH", "COLLIDER"]
+
+    def execute(self, context):
+        object_props = context.object.e2_custom_props
+        scene_props = context.scene.e2_custom_props
+        if object_props.object_kind == "BATCH":
+            self.import_mesh_of_batch(context.object, scene_props.export_data_root_dir,
+                                      object_props.batch_reguar_disk_path)
+        elif object_props.object_kind == "COLLIDER":
+            self.import_mesh(context.object, object_props.collider_triangle_mesh_dir, True)
+        return{'FINISHED'}
+
+    def import_mesh_of_batch(self, object, data_root_dir, batch_path):
+        if not os.path.isfile(batch_path):
+            print("ERROR: Cannot access the batch file: " + batch_file)
+            return
+        with open(batch_path, "r") as f:
+            for line in f:
+                if line.strip().startswith("mesh "):
+                    rel_path = line.strip()[len("mesh "):].strip()
+                    abspath = os.path.join(data_root_dir, "mesh", rel_path)
+                    self.import_mesh(object, abspath, False)
+                    return
+        print("ERROR: Could not locate 'mesh' reference in the batch file: " + batch_file)
+
+    def import_mesh(self, object, mesh_dir, edges_only):
+        vertices_path = os.path.join(mesh_dir, "vertices.txt")
+        indices_path = os.path.join(mesh_dir, "indices.txt")
+        if not os.path.isdir(mesh_dir) or not os.path.isfile(vertices_path) or not os.path.isfile(indices_path):
+            print("ERROR: The invalid mesh directory : " + mesh_dir)
+            return
+        with open(vertices_path, "r") as f:
+            num_vertices = int(f.readline())
+            vertices = []
+            for _ in range(num_vertices):
+                vertices.append((float(f.readline()), float(f.readline()), float(f.readline())))
+        with open(indices_path, "r") as f:
+            num_indices_per_element = int(f.readline())
+            if num_indices_per_element != 3:
+                print("ERROR: Unsupported number of indices per element in index buffer: " + indices_path)
+                return
+            num_indices = int(f.readline())
+            indices = []
+            for _ in range(num_indices):
+                indices.append((int(f.readline()), int(f.readline()), int(f.readline())))
+        self.create_new_mesh(object, vertices, indices, object.name + ".mesh", edges_only)
+
+    def create_new_mesh(self, object, vertices, indices, name, edges_only):
+        old_mesh = object.data
+        mesh = bpy.data.meshes.new(name)        
+        mesh.from_pydata(vertices, [], indices)
+        if old_mesh.materials is not None and len(old_mesh.materials) > 0:
+            mesh.materials.append(old_mesh.materials[0])
+        mesh.update(calc_edges=True)
+        object.data = mesh
+        if old_mesh is not None and old_mesh.users == 0:
+            bpy.data.meshes.remove(old_mesh)
+
+
 class E2ObjectProps(bpy.types.PropertyGroup):
     OBJECT_KIND=[
         # Python ident, UI name, description, UID
@@ -764,9 +834,11 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if object_props.batch_kind == "REGULAR_GFX_BATCH":
             self.warn_not_valid_file(object_props.batch_reguar_disk_path, layout, "Batch file")
             row = layout.row()
+            row.prop(object_props, "batch_skin_name")
+            row = layout.row()
             row.prop(object_props, "batch_reguar_disk_path")
             row = layout.row()
-            row.prop(object_props, "batch_skin_name")
+            row.operator("object.e2_import_mesh")
         else:
             row = layout.row()
             row.prop(object, "scale")
@@ -801,20 +873,22 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(object_props, "collider_kind")
 
         row = layout.row()
+        row.prop(object_props, "collider_collision_class")
+
+        row = layout.row()
+        row.prop(object_props, "collider_material_type")
+    
+        row = layout.row()
         if object_props.collider_kind == "TRIANGLE_MESH":
             row.prop(object_props, "collider_triangle_mesh_dir")
+            row = layout.row()
+            row.operator("object.e2_import_mesh")
         else:
             if object.type == 'EMPTY':
                 row.prop(object, "scale")
             else:
                 row.prop(object, "dimensions")
 
-        row = layout.row()
-        row.prop(object_props, "collider_collision_class")
-
-        row = layout.row()
-        row.prop(object_props, "collider_material_type")
-    
         row = layout.row()
         row.prop(object_props, "collider_defines_sensor")
         if object_props.collider_defines_sensor is True:
@@ -1779,6 +1853,7 @@ def register():
     bpy.utils.register_class(E2_UL_RequestInfosListErase)
     bpy.utils.register_class(E2_UL_RequestInfosListUp)
     bpy.utils.register_class(E2_UL_RequestInfosListDown)
+    bpy.utils.register_class(E2MeshImporter)
     bpy.utils.register_class(E2ObjectProps)
     bpy.utils.register_class(E2ObjectPropertiesPanel)
     bpy.utils.register_class(E2SceneProps)
@@ -1798,6 +1873,7 @@ def unregister():
     bpy.utils.unregister_class(E2SceneProps)
     bpy.utils.unregister_class(E2ObjectPropertiesPanel)
     bpy.utils.unregister_class(E2ObjectProps)
+    bpy.utils.unregister_class(E2MeshImporter)
     bpy.utils.unregister_class(E2_UL_RequestInfosListDown)
     bpy.utils.unregister_class(E2_UL_RequestInfosListUp)
     bpy.utils.unregister_class(E2_UL_RequestInfosListErase)
