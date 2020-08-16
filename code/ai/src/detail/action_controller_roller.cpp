@@ -6,6 +6,7 @@
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
+#include <unordered_map>
 
 namespace ai { namespace detail {
 
@@ -34,7 +35,7 @@ action_controller_roller::action_controller_roller(
 
             0.825f,             // AGENT_FRAME_ORIGIN_Z_OFFSET_FROM_BOTTOM
 
-            10000.0f,           // JUMP_MAX_FORCE_MAGNITUDE
+            50000.0f,           // JUMP_MAX_FORCE_MAGNITUDE
 
             PI() / 9.0f,        // MAX_RUN_STRAIGHT_POSE_ANGLE
             PI() / 18.0f,       // MAX_JUMP_STRAIGHT_POSE_ANGLE
@@ -236,7 +237,6 @@ void  action_controller_roller::apply_desire(
 
     if (!m_roller_contacts.empty()
             && get_angle_to_straight_pose() <= m_config.MAX_JUMP_STRAIGHT_POSE_ANGLE
-            && length_squared(desired_jump_velocity_in_local_space) >= 1e-6f
             && std::fabs(m_angle_to_straight_pose - m_prev_angle_to_straight_pose) / time_step_in_seconds
                     <= m_config.MAX_JUMP_ANGULAR_SPEED
             )
@@ -383,18 +383,27 @@ void  action_controller_roller::insert_jump_constraints_between_roller_body_and_
         vector3 const&  desired_jump_velocity_in_world_space
         ) const
 {
-    std::unordered_set<com::object_guid>  floor_guids;
-    for (com::collision_contact const*  info : m_roller_contacts)
-        if (dot_product(info->unit_normal(m_roller_collider_guid), desired_jump_velocity_in_world_space) > 0.0f)
-            floor_guids.insert(info->other_collider(m_roller_collider_guid));
+    float_32_bit const  jump_velocity_magnitude = length(desired_jump_velocity_in_world_space);
+    if (jump_velocity_magnitude < 0.001f)
+        return;
 
-    float_32_bit const  bias = length(desired_jump_velocity_in_world_space);
-    vector3  unit_constraint_vector = (1.0f / bias) * desired_jump_velocity_in_world_space;
-    natural_32_bit  ccid_idx = 0U;
-    for (com::object_guid const  floor_guid : floor_guids)
+    std::unordered_map<com::object_guid, float_32_bit>  floor_guids;
+    for (com::collision_contact const*  info : m_roller_contacts)
     {
-        vector3 const  floor_mass_centre = ctx().frame_coord_system_in_world_space(ctx().frame_of_collider(floor_guid)).origin();
-        com::object_guid const  floor_rb_guid = ctx().rigid_body_of_collider(floor_guid);
+        float_32_bit const  cosangle =
+            dot_product(info->unit_normal(m_roller_collider_guid), desired_jump_velocity_in_world_space) / jump_velocity_magnitude;
+        if (cosangle > 0.5f) // 0.5 == cos(60deg)
+            floor_guids.insert({ info->other_collider(m_roller_collider_guid), cosangle });
+    }
+    if (floor_guids.empty())
+        return;
+
+    vector3  unit_constraint_vector = (1.0f / jump_velocity_magnitude) * desired_jump_velocity_in_world_space;
+    for (auto  it = floor_guids.begin(); it != floor_guids.end(); ++it)
+    {
+        vector3 const  floor_mass_centre = ctx().frame_coord_system_in_world_space(ctx().frame_of_collider(it->first)).origin();
+        com::object_guid const  floor_rb_guid = ctx().rigid_body_of_collider(it->first);
+        float_32_bit const  bias = jump_velocity_magnitude * it->second;
 
         ctx().request_early_insertion_of_instant_constraint_to_physics(
                 m_roller_rigid_body_guid,
