@@ -14,14 +14,8 @@ cortex::cortex()
 {}
 
 
-void cortex::set_connection_probability(layer_index const  from, layer_index const  to, float_32_bit const  value)
+void  cortex::recompute_accumulated_connection_probabilities(layer&  l)
 {
-    ASSUMPTION(value >= 0.0f);
-
-    layer&  l = layers.at(from);
-
-    l.connection_probabilities.at(to) = value;
-
     float_32_bit  sum = 0.0f;
     for (layer_index  i = 0U, n =(synapse_index)layers.size(); i != n; ++i, sum = l.accumulated_connection_probabilities.at(i))
         l.accumulated_connection_probabilities.at(i) = sum + l.connection_probabilities.at(i);
@@ -45,7 +39,8 @@ cortex::layer_index  cortex::add_layer(
         l.weight_resistances.push_back(1.0f);
         l.disconnection_weights.push_back(0.0f);
         l.initial_weights.push_back(1.0f);
-        l.accumulated_connection_probabilities.push_back(l.accumulated_connection_probabilities.back());
+        l.connection_probabilities.push_back(1.0f);
+        recompute_accumulated_connection_probabilities(l);
     }
 
     layers.push_back({});

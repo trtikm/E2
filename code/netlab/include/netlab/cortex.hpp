@@ -98,7 +98,8 @@ struct  cortex
     void  set_initial_weight(layer_index const  from, layer_index const  to, float_32_bit const  value)
     { layers.at(from).initial_weights.at(to) = value; }
 
-    void  set_connection_probability(layer_index const  from, layer_index const  to, float_32_bit const  value);
+    void  set_connection_probability(layer_index const  from, layer_index const  to, float_32_bit const  value)
+    { layer& l = layers.at(from); l.connection_probabilities.at(to) = value; recompute_accumulated_connection_probabilities(l); }
 
     void  build_new_synapses();
 
@@ -131,6 +132,8 @@ struct  cortex
 private:
     void  update_neurons(float_32_bit const  round_seconds);
     void  update_existing_synapses(float_32_bit const  round_seconds);
+
+    void  recompute_accumulated_connection_probabilities(layer&  l);
 
     std::vector<layer>  layers;
     std::vector<synapse>  synapses;
