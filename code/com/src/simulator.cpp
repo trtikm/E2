@@ -29,7 +29,7 @@ namespace com {
 
 simulator::simulation_configuration::simulation_configuration()
     : MAX_SIMULATION_TIME_DELTA(1.0f / 30.0f)
-    , MAX_NUM_SUB_SIMULATION_STEPS(3U)
+    , MAX_NUM_SUB_SIMULATION_STEPS(1U)
 
     , simulation_time_buffer(0.0f)
     , last_time_step(0.0f)
