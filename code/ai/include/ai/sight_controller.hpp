@@ -58,10 +58,10 @@ struct  sight_controller
         std::function<float_32_bit(float_32_bit)>  depth_image_func;    // Mapping of ray cast params to depth values.
 
         ray_cast_config(
-                natural_32_bit const  num_raycasts_per_second_ = 600U,
+                natural_32_bit const  num_raycasts_per_second_ = 2U * 32U * 32U,
                 float_32_bit const  max_ray_cast_info_life_time_in_seconds_ = 0.1f,
-                natural_16_bit const  num_cells_along_x_axis_ = 128U,   // Must be a power of 2.
-                natural_16_bit const  num_cells_along_y_axis_ = 64U,    // Must be a power of 2.
+                natural_16_bit const  num_cells_along_x_axis_ = 32U,    // Must be a power of 2.
+                natural_16_bit const  num_cells_along_y_axis_ = 32U,    // Must be a power of 2.
                 std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_ =
                     [](float_32_bit const  x) -> float_32_bit { return x * x; }, // This is a quadratic stretch of the cell's grid.
                 std::function<bool(com::object_guid, angeo::COLLISION_CLASS)> const&  collider_filter_ =
