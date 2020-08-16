@@ -83,7 +83,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_collision_contacts(true)
     , render_sight_frustums(true)
     , render_sight_contacts(true)
-    , render_sight_image(true)
+    , render_sight_image(false)
     , sight_image_scale(5.0f)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_field_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
