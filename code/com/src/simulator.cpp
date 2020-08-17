@@ -198,6 +198,17 @@ void  simulator::terminate()
 }
 
 
+void  simulator::change_camera_speed(float_32_bit const  multiplier)
+{
+    ASSUMPTION(multiplier > 0.0f);
+    for (gfx::free_fly_action&  action : render_config().free_fly_config)
+        if (action.do_rotation() == false
+                && std::fabs(action.action_value() * multiplier) > 0.001f
+                && std::fabs(action.action_value() * multiplier) < 1000.0f)
+            action.set_action_value(action.action_value() * multiplier);
+}
+
+
 void  simulator::clear(bool const  also_caches)
 {
     context()->clear(also_caches);
@@ -275,6 +286,7 @@ void  simulator::simulate()
 
         device_simulator()->next_round((simulation_context const&)*context(), simulation_config().last_time_step);
         ai_simulator()->next_round(simulation_config().last_time_step, get_keyboard_props(), get_mouse_props(), get_window_props());
+        custom_module_round();
 
         if (simulation_config().commit_state_changes_in_the_same_round)
             commit_state_changes();

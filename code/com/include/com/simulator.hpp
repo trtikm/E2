@@ -105,6 +105,8 @@ struct  simulator : public osi::simulator
     void  initialise() override;
     void  terminate() override;
 
+    void  change_camera_speed(float_32_bit const  multiplier);
+
     void  clear_cache_of_collider_batches() { m_collider_batches_cache.clear(); }
     void  clear_cache_of_agent_sight_batches() { m_agent_sight_frustum_batches_cache.clear(); }
     void  clear(bool const  also_caches);
@@ -114,6 +116,7 @@ struct  simulator : public osi::simulator
     virtual void  on_begin_round() {}
 
         virtual void  on_begin_simulation() {}
+        virtual void  custom_module_round() {}
         virtual void  on_end_simulation() {}
 
         virtual void  on_begin_camera_update() {}
