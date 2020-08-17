@@ -28,7 +28,7 @@ batch  create_grid(
 
     ASSUMPTION(max_x_coordinate > 0.0f);
     ASSUMPTION(max_y_coordinate > 0.0f);
-    ASSUMPTION(max_z_coordinate > 0.0f);
+    ASSUMPTION(max_z_coordinate >= 0.0f);
     ASSUMPTION(step_along_x_axis > 0.0f/* && step_along_x_axis < max_x_coordinate*/);
     ASSUMPTION(step_along_y_axis > 0.0f/* && step_along_y_axis < max_y_coordinate*/);
     ASSUMPTION(highlight_every > 0U);
@@ -82,10 +82,13 @@ batch  create_grid(
             }
         }
 
-        vertices.push_back({ 0.0f, 0.0f, -max_z_coordinate });
-        vertices.push_back({ 0.0f, 0.0f,  max_z_coordinate });
-        colours.push_back(colour_for_central_z_line);
-        colours.push_back(colour_for_central_z_line);
+        if (max_z_coordinate > 0.0f)
+        {
+            vertices.push_back({ 0.0f, 0.0f, -max_z_coordinate });
+            vertices.push_back({ 0.0f, 0.0f,  max_z_coordinate });
+            colours.push_back(colour_for_central_z_line);
+            colours.push_back(colour_for_central_z_line);
+        }
 
         if (main_exes_orientation_marker_type == GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE)
         {
@@ -94,15 +97,18 @@ batch  create_grid(
             colours.push_back(colour_for_central_x_line);
             colours.push_back(colour_for_central_y_line);
 
-            vertices.push_back({ 0.0f, 1.0f, 0.0f });
-            vertices.push_back({ 0.0f, 0.0f, 1.0f });
-            colours.push_back(colour_for_central_y_line);
-            colours.push_back(colour_for_central_z_line);
+            if (max_z_coordinate > 0.0f)
+            {
+                vertices.push_back({ 0.0f, 1.0f, 0.0f });
+                vertices.push_back({ 0.0f, 0.0f, 1.0f });
+                colours.push_back(colour_for_central_y_line);
+                colours.push_back(colour_for_central_z_line);
 
-            vertices.push_back({ 0.0f, 0.0f, 1.0f });
-            vertices.push_back({ 1.0f, 0.0f, 0.0f });
-            colours.push_back(colour_for_central_z_line);
-            colours.push_back(colour_for_central_x_line);
+                vertices.push_back({ 0.0f, 0.0f, 1.0f });
+                vertices.push_back({ 1.0f, 0.0f, 0.0f });
+                colours.push_back(colour_for_central_z_line);
+                colours.push_back(colour_for_central_x_line);
+            }
         }
         else if (main_exes_orientation_marker_type != GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::NONE)
         {
@@ -126,38 +132,41 @@ batch  create_grid(
                 colours.push_back(colour_for_central_y_line);
             }
 
-            std::array<float_32_bit, 4> const  colour_for_central_xz_line{
-                0.5f * (colour_for_central_x_line[0] + colour_for_central_z_line[0]),
-                0.5f * (colour_for_central_x_line[1] + colour_for_central_z_line[1]),
-                0.5f * (colour_for_central_x_line[2] + colour_for_central_z_line[2]),
-                0.5f * (colour_for_central_x_line[3] + colour_for_central_z_line[3]),
-            };
-            std::array<float_32_bit, 4> const  colour_for_central_yz_line{
-                0.5f * (colour_for_central_y_line[0] + colour_for_central_z_line[0]),
-                0.5f * (colour_for_central_y_line[1] + colour_for_central_z_line[1]),
-                0.5f * (colour_for_central_y_line[2] + colour_for_central_z_line[2]),
-                0.5f * (colour_for_central_y_line[3] + colour_for_central_z_line[3]),
-            };
+            if (max_z_coordinate > 0.0f)
+            {
+                std::array<float_32_bit, 4> const  colour_for_central_xz_line{
+                    0.5f * (colour_for_central_x_line[0] + colour_for_central_z_line[0]),
+                    0.5f * (colour_for_central_x_line[1] + colour_for_central_z_line[1]),
+                    0.5f * (colour_for_central_x_line[2] + colour_for_central_z_line[2]),
+                    0.5f * (colour_for_central_x_line[3] + colour_for_central_z_line[3]),
+                };
+                std::array<float_32_bit, 4> const  colour_for_central_yz_line{
+                    0.5f * (colour_for_central_y_line[0] + colour_for_central_z_line[0]),
+                    0.5f * (colour_for_central_y_line[1] + colour_for_central_z_line[1]),
+                    0.5f * (colour_for_central_y_line[2] + colour_for_central_z_line[2]),
+                    0.5f * (colour_for_central_y_line[3] + colour_for_central_z_line[3]),
+                };
 
-            vertices.push_back({ 1.0f, 0.0f, 0.0f });
-            vertices.push_back({ 1.0f, 0.0f, 1.0f });
-            colours.push_back(colour_for_central_x_line);
-            colours.push_back(colour_for_central_xz_line);
+                vertices.push_back({ 1.0f, 0.0f, 0.0f });
+                vertices.push_back({ 1.0f, 0.0f, 1.0f });
+                colours.push_back(colour_for_central_x_line);
+                colours.push_back(colour_for_central_xz_line);
 
-            vertices.push_back({ 1.0f, 0.0f, 1.0f });
-            vertices.push_back({ 0.0f, 0.0f, 1.0f });
-            colours.push_back(colour_for_central_xz_line);
-            colours.push_back(colour_for_central_z_line);
+                vertices.push_back({ 1.0f, 0.0f, 1.0f });
+                vertices.push_back({ 0.0f, 0.0f, 1.0f });
+                colours.push_back(colour_for_central_xz_line);
+                colours.push_back(colour_for_central_z_line);
 
-            vertices.push_back({ 0.0f, 1.0f, 0.0f });
-            vertices.push_back({ 0.0f, 1.0f, 1.0f });
-            colours.push_back(colour_for_central_y_line);
-            colours.push_back(colour_for_central_yz_line);
+                vertices.push_back({ 0.0f, 1.0f, 0.0f });
+                vertices.push_back({ 0.0f, 1.0f, 1.0f });
+                colours.push_back(colour_for_central_y_line);
+                colours.push_back(colour_for_central_yz_line);
 
-            vertices.push_back({ 0.0f, 1.0f, 1.0f });
-            vertices.push_back({ 0.0f, 0.0f, 1.0f });
-            colours.push_back(colour_for_central_yz_line);
-            colours.push_back(colour_for_central_z_line);
+                vertices.push_back({ 0.0f, 1.0f, 1.0f });
+                vertices.push_back({ 0.0f, 0.0f, 1.0f });
+                colours.push_back(colour_for_central_yz_line);
+                colours.push_back(colour_for_central_z_line);
+            }
         }
     }
 
@@ -182,6 +191,27 @@ batch  create_default_grid()
                 { 0.0f, 0.0f, 1.0f, 1.0f },
                 10U,
                 gfx::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE
+                );
+}
+
+
+batch  create_default_grid_2d(float_32_bit const  size)
+{
+    return create_grid(
+                size,
+                size,
+                0.0f,
+                1.0f,
+                1.0f,
+                { 0.4f, 0.4f, 0.4f, 1.0f },
+                { 0.4f, 0.4f, 0.4f, 1.0f },
+                { 0.5f, 0.5f, 0.5f, 1.0f },
+                { 0.5f, 0.5f, 0.5f, 1.0f },
+                { 1.0f, 0.0f, 0.0f, 1.0f },
+                { 0.0f, 1.0f, 0.0f, 1.0f },
+                { 0.0f, 0.0f, 1.0f, 1.0f },
+                10U,
+                gfx::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::NONE
                 );
 }
 

@@ -78,6 +78,7 @@ batch  create_grid(
         );
 
 batch  create_default_grid();
+batch  create_default_grid_2d(float_32_bit const  size = 100.0f);
 
 
 std::string  get_sketch_id_prefix();
