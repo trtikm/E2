@@ -112,6 +112,10 @@ struct  simulator : public com::simulator
                             });
                 simulation_config().paused = true;
             }
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_NUMERIC_PLUS()) != 0UL)
+                change_camera_speed(2.0f);
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_NUMERIC_MINUS()) != 0UL)
+                change_camera_speed(0.5f);
         }
     }
 
@@ -126,6 +130,10 @@ struct  simulator : public com::simulator
                 if (!action.help().empty())
                     SLOG("\t" << action.help() << "\n");
             SLOG(
+                "\tCTRL+'NUM+' - double speed\n"
+                "\tCTRL+'NUM-' - half speed\n"
+                );
+            SLOG(
                 "2. Simulation\n"
                 "\tPAUSE - toggle pause simulation\n"
                 "\tSPACE - single simulation round\n"
@@ -136,20 +144,15 @@ struct  simulator : public com::simulator
                 "\tALT+G - grid\n"
                 "\tALT+F - frames\n"
                 "\tALT+W - wireframe\n"
-                "\tALT+R - colliders of rigid bodies\n"
-                "\tALT+S - colliders of sensors\n"
-                "\tALT+A - colliders of agents\n"
-                "\tALT+L - colliders of fields\n"
-                "\tALT+Y - colliders of ray cast targets\n"
-                "\tALT+U - sight perspective frustums\n"
-                "\tALT+H - sight ray-cast contacts\n"
-                "\tALT+I - show/scale-up sight image\n"
-                "\tALT+I+SHIFT - hide/scale-down sight image\n"
+                "\tALT+R/S/A/L/Y - colliders of rigid bodies/\n"
+                "\t\t\tsensors/agents/fields/ray cast targets\n"
                 "\tALT+K - collisions\n"
+                "\tALT+U/H - sight frustums/contacts\n"
+                "\tALT+I(+SHIFT) - scale-up(down) sight image\n"
                 );
             SLOG(
                 "4. Scene\n"
-                "\tCTRL+R - fast reload (keep cached gfx)\n"
+                "\tCTRL+R - fast reload (use caches)\n"
                 "\tCTRL+SHIFT+R - full reload (clear caches)\n"
                 );
             SLOG("=== HELP END ===\n");
