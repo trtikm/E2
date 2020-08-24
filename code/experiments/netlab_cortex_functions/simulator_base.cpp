@@ -70,6 +70,7 @@ void  simulator_base::on_begin_round()
     {
         if (get_keyboard_props().keys_just_pressed().count(osi::KEY_R()) != 0UL)
         {
+            cortex.clear();
             on_restart();
             clear(true);
             network_setup();
