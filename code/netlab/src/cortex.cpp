@@ -225,22 +225,28 @@ void  cortex::update_neurons(float_32_bit const  round_seconds)
 {
     TMPROF_BLOCK();
 
-    //float_32_bit const  round_seconds = 1.0f / constants.simulation_fequency;
     for (layer&  l : layers)
+        update_neurons(round_seconds, l);
+}
+
+
+void  cortex::update_neurons(float_32_bit const  round_seconds, layer&  l)
+{
+    TMPROF_BLOCK();
+
+    //float_32_bit const  round_seconds = 1.0f / constants.simulation_fequency;
+    float_32_bit const  max_num_spikes_inv =
+            l.constants.num_dendrites_per_neuron == 0U ? 1.0f : 1.0f / l.constants.neuron.max_input_signal_magnitude;
+    //float_32_bit const  log_decay_coef = 1.0f + std::logf(l.constants.neuron.excitation_decay_coef) * round_seconds;
+    //float_32_bit const  log_decay_coef = std::logf(l.constants.neuron.excitation_decay_coef) * round_seconds;
+    float_32_bit const  log_decay_coef = l.constants.neuron.ln_of_excitation_decay_coef * round_seconds;
+    for (neuron&  n : l.neurons)
     {
-        float_32_bit const  max_num_spikes_inv =
-                l.constants.num_dendrites_per_neuron == 0U ? 1.0f : 1.0f / l.constants.neuron.max_input_signal_magnitude;
-        //float_32_bit const  log_decay_coef = 1.0f + std::logf(l.constants.neuron.excitation_decay_coef) * round_seconds;
-        //float_32_bit const  log_decay_coef = std::logf(l.constants.neuron.excitation_decay_coef) * round_seconds;
-        float_32_bit const  log_decay_coef = l.constants.neuron.ln_of_excitation_decay_coef * round_seconds;
-        for (neuron&  n : l.neurons)
-        {
-            if (n.excitation >= n.spiking_excitation)
-                n.excitation = l.constants.neuron.excitation_recovery;
-            n.input_signal *= max_num_spikes_inv;
-            n.excitation += n.input_signal;
-            n.excitation += n.excitation * log_decay_coef;
-        }
+        if (n.excitation >= n.spiking_excitation)
+            n.excitation = l.constants.neuron.excitation_recovery;
+        n.input_signal *= max_num_spikes_inv;
+        n.excitation += n.input_signal;
+        n.excitation += n.excitation * log_decay_coef;
     }
 }
 

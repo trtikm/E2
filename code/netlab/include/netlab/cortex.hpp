@@ -155,6 +155,7 @@ struct  cortex
     void  next_round(float_32_bit const  round_seconds);
 
     void  update_neurons(float_32_bit const  round_seconds);
+    void  update_neurons(float_32_bit const  round_seconds, layer&  l);
     void  clear_input_signal_of_neurons();
     void  update_existing_synapses(float_32_bit const  round_seconds);
     void  disconnect_weak_synapses();
