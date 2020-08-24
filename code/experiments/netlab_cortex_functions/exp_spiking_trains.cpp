@@ -82,7 +82,7 @@ void  exp_spiking_trains::network_update()
     cortex.update_neurons(time_step, cortex.layer_ref(input_layer_inhibitory_idx));
 
     spike_trains_excitatory.erase_obsolete_spikes(simulatied_time);
-    for (natural_32_bit  i = 0; i < NUM_DENDRITES_EXCITATORY; ++i)
+    for (natural_32_bit  i = 0; i < spike_trains_excitatory.size(); ++i)
         if (spike_trains_excitatory.at(i).read_spikes_till_time(simulatied_time) > 0U)
         {
             cortex.neuron_ref({input_layer_excitatory_idx, (natural_16_bit)i}).excitation = 1.0f;
@@ -90,7 +90,7 @@ void  exp_spiking_trains::network_update()
         }
 
     spike_trains_inhibitory.erase_obsolete_spikes(simulatied_time);
-    for (natural_32_bit  i = 0; i < NUM_DENDRITES_INHIBITORY; ++i)
+    for (natural_32_bit  i = 0; i < spike_trains_inhibitory.size(); ++i)
         if (spike_trains_inhibitory.at(i).read_spikes_till_time(simulatied_time) > 0U)
         {
             cortex.neuron_ref({input_layer_inhibitory_idx, (natural_16_bit)i}).excitation = 1.0f;
@@ -106,22 +106,45 @@ void  exp_spiking_trains::network_update()
     erase_obsolete_records(input_signal_history, HISTORY_TIME_WINDOW, simulatied_time);
     insert_to_history(input_signal_history, { simulatied_time, cortex.get_neuron(spiking_neuron_guid).input_signal });
 
-    if (get_keyboard_props().keys_just_pressed().count(osi::KEY_T()) != 0UL)
+    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_U()) != 0UL)
         NUM_DENDRITES_EXCITATORY = std::min(10000U, NUM_DENDRITES_EXCITATORY + 5U);
-    if (get_keyboard_props().keys_just_pressed().count(osi::KEY_Y()) != 0UL)
+    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_I()) != 0UL)
         NUM_DENDRITES_EXCITATORY = std::max(5U, NUM_DENDRITES_EXCITATORY - 5U);
-    if (get_keyboard_props().keys_just_pressed().count(osi::KEY_U()) != 0UL)
+    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_U()) != 0UL)
         NUM_DENDRITES_INHIBITORY = std::min(10000U, NUM_DENDRITES_INHIBITORY + 5U);
-    if (get_keyboard_props().keys_just_pressed().count(osi::KEY_I()) != 0UL)
+    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_I()) != 0UL)
         NUM_DENDRITES_INHIBITORY = std::max(0U, NUM_DENDRITES_INHIBITORY - 5U);
+
+    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_T()) != 0UL)
+        EXPECTED_SPIKING_FREQUENCY_EXCITATORY = std::min(10000.0f, EXPECTED_SPIKING_FREQUENCY_EXCITATORY + 5.0f);
+    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_Y()) != 0UL)
+        EXPECTED_SPIKING_FREQUENCY_EXCITATORY = std::max(10.0f, EXPECTED_SPIKING_FREQUENCY_EXCITATORY - 5.0f);
+    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_T()) != 0UL)
+        EXPECTED_SPIKING_FREQUENCY_INHIBITORY = std::min(10000.0f, EXPECTED_SPIKING_FREQUENCY_INHIBITORY + 5.0f);
+    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_Y()) != 0UL)
+        EXPECTED_SPIKING_FREQUENCY_INHIBITORY = std::max(10.0f, EXPECTED_SPIKING_FREQUENCY_INHIBITORY - 5.0f);
+
+    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_V()) != 0UL)
+        VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY = std::min(10000.0f, VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY + 1.0f);
+    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_B()) != 0UL)
+        VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY = std::max(0.0f, VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY - 1.0f);
+    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_V()) != 0UL)
+        VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY = std::min(10000.0f, VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY + 1.0f);
+    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_B()) != 0UL)
+        VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY = std::max(0.0f, VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY - 1.0f);
+    VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY = std::min(EXPECTED_SPIKING_FREQUENCY_EXCITATORY, VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY);
+    VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY = std::min(EXPECTED_SPIKING_FREQUENCY_INHIBITORY, VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY);
+
     if (get_keyboard_props().keys_just_pressed().count(osi::KEY_G()) != 0UL)
         SIMULATION_FREQUENCY = std::min(10000.0f, SIMULATION_FREQUENCY + 10.0f);
     if (get_keyboard_props().keys_just_pressed().count(osi::KEY_H()) != 0UL)
         SIMULATION_FREQUENCY = std::max(10.0f, SIMULATION_FREQUENCY - 10.0f);
+
     if (get_keyboard_props().keys_pressed().count(osi::KEY_O()) != 0UL)
         cortex.neuron_ref(spiking_neuron_guid).spiking_excitation += 0.1f * round_seconds();
     if (get_keyboard_props().keys_pressed().count(osi::KEY_P()) != 0UL)
         cortex.neuron_ref(spiking_neuron_guid).spiking_excitation -= 0.1f * round_seconds();
+
     if (get_keyboard_props().keys_pressed().count(osi::KEY_N()) != 0UL)
         cortex.set_constant_neuron_ln_of_excitation_decay_coef(
                 spiking_layer_idx, 
@@ -221,6 +244,8 @@ void  exp_spiking_trains::custom_render()
         "NUM_DENDRITES_INHIBITORY=" << NUM_DENDRITES_INHIBITORY << " (requires restart Ctrl+R)\n"
         "EXPECTED_SPIKING_FREQUENCY_EXCITATORY=" << EXPECTED_SPIKING_FREQUENCY_EXCITATORY << "\n"
         "EXPECTED_SPIKING_FREQUENCY_INHIBITORY=" << EXPECTED_SPIKING_FREQUENCY_INHIBITORY << "\n"
+        "VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY=" << VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY << "\n"
+        "VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY=" << VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY << "\n"
         "SIMULATION_FREQUENCY=" << SIMULATION_FREQUENCY << "\n"
         "spiking_excitation=" << cortex.get_neuron(spiking_neuron_guid).spiking_excitation << "\n"
         "ln_of_excitation_decay_coef=" << cortex.get_layer_constants(spiking_layer_idx).neuron.ln_of_excitation_decay_coef << "\n"
@@ -235,10 +260,15 @@ void  exp_spiking_trains::help()
         "\tRed sphere & curve - neuron's excitation\n"
         "\tGreen sphere & curve - input signal\n"
         "\tBlue line - neuron's spiking excitation\n"
-        "\tT/Y - increase/decrease number of excitatory dendrites (needs restart)\n"
-        "\tU/I - increase/decrease number of inhibitory dendrites (needs restart)\n"
         "\tG/H - increase/decrease simulation frequency\n"
         "\tO/P - increase/decrease neuron's spiking excitation\n"
         "\tN/M - increase/decrease ln of neuron's excitartion decay coef\n"
+        "\t### actions below will take effect after reset (Ctrl+R) ###\n"
+        "\tU/I - increase/decrease number of excitatory dendrites\n"
+        "\tShift+U/I - increase/decrease number of inhibitory dendrites\n"
+        "\tT/Y - increase/decrease excitatory spike trains frequency\n"
+        "\tShift+T/Y - increase/decrease inhibitory spike trains frequency\n"
+        "\tV/B - increase/decrease variation of excitatory spike trains frequency\n"
+        "\tShift+V/B - increase/decrease variation of inhibitory spike trains frequency\n"
         );
 }
