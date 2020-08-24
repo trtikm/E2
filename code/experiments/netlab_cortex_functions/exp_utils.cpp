@@ -93,7 +93,7 @@ spike_train::spike_train(
     ASSUMPTION(
             MEAN_SPIKING_FREQUENCY > 0.0f &&
             SPIKING_FREQUENCY_VARIATION >= 0.0f &&
-            SPIKING_FREQUENCY_VARIATION < MEAN_SPIKING_FREQUENCY
+            SPIKING_FREQUENCY_VARIATION <= MEAN_SPIKING_FREQUENCY
             );
 }
 
