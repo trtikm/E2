@@ -156,6 +156,7 @@ struct  simulation_context
     void  request_erase_non_root_folder(object_guid const  folder_guid) const;
     // Disabled (not const) for modules.
     void  erase_non_root_empty_folder(object_guid const  folder_guid);
+    void  erase_non_root_folder(object_guid const  folder_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // FRAMES API

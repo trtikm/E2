@@ -359,6 +359,55 @@ void  simulation_context::erase_non_root_empty_folder(object_guid const  folder_
 }
 
 
+void  simulation_context::erase_non_root_folder(object_guid const  folder_guid)
+{
+    folder_content_type const&  fct = folder_content(folder_guid);
+
+    while (!fct.child_folders.empty())
+        erase_non_root_folder(fct.child_folders.begin()->second);
+
+    object_guid  frame_guid = invalid_object_guid();
+    object_guid  agent_guid = invalid_object_guid();
+    for (auto  it = fct.content.begin(), itc = it; it != fct.content.end(); itc = it)
+    {
+        ++it;
+        switch (itc->second.kind)
+        {
+        case OBJECT_KIND::FRAME:
+            INVARIANT(frame_guid == invalid_object_guid());
+            frame_guid = itc->second;
+            break;
+        case OBJECT_KIND::BATCH:
+            erase_batch(itc->second);
+            break;
+        case OBJECT_KIND::COLLIDER:
+            erase_collider(itc->second);
+            break;
+        case OBJECT_KIND::RIGID_BODY:
+            erase_rigid_body(itc->second);
+            break;
+        case OBJECT_KIND::TIMER:
+            erase_timer(itc->second);
+            break;
+        case OBJECT_KIND::SENSOR:
+            erase_sensor(itc->second);
+            break;
+        case OBJECT_KIND::AGENT:
+            INVARIANT(agent_guid == invalid_object_guid());
+            agent_guid = itc->second;
+            break;
+        default: UNREACHABLE(); break;
+        }
+    }
+    if (agent_guid != invalid_object_guid())
+        erase_agent(agent_guid);
+    if (frame_guid != invalid_object_guid())
+        erase_frame(frame_guid);
+
+    erase_non_root_empty_folder(folder_guid);
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 // FRAMES API
 /////////////////////////////////////////////////////////////////////////////////////
