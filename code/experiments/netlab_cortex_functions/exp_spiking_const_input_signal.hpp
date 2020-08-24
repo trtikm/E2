@@ -2,6 +2,7 @@
 #   define E2_EXPERIMENTS_NETLAB_CORTEX_FUNCTIONS_EXP_SPIKING_CONST_INPUT_SIGNAL_HPP_INCLUDED
 
 #   include <netlab_cortex_functions/simulator_base.hpp>
+#   include <netlab_cortex_functions/exp_utils.hpp>
 #   include <netlab/cortex.hpp>
 #   include <com/simulator.hpp>
 #   include <deque>
@@ -18,13 +19,6 @@ struct  exp_spiking_const_input_signal : public simulator_base
     void  custom_render() override;
     void  on_restart() override;
     void  help() override;
-
-    struct  history_record
-    {
-        float_32_bit  time_point;
-        float_32_bit  value;
-    };
-    using  history_records = std::deque<history_record>;
 
 private:
     natural_32_bit  NUM_DENDRITES;

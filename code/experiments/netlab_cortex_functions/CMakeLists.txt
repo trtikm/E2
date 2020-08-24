@@ -15,11 +15,17 @@ add_executable(${THIS_TARGET_NAME}
     simulator_base.hpp
     simulator_base.cpp
 
+    exp_utils.hpp
+    exp_utils.cpp
+
     exp_inhibitory_weight.hpp
     exp_inhibitory_weight.cpp
 
     exp_spiking_const_input_signal.hpp
     exp_spiking_const_input_signal.cpp
+
+    exp_spiking_trains.hpp
+    exp_spiking_trains.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

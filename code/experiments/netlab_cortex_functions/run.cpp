@@ -2,6 +2,7 @@
 #include <netlab_cortex_functions/program_options.hpp>
 #include <netlab_cortex_functions/exp_inhibitory_weight.hpp>
 #include <netlab_cortex_functions/exp_spiking_const_input_signal.hpp>
+#include <netlab_cortex_functions/exp_spiking_trains.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/basic_numeric_types.hpp>
@@ -18,10 +19,13 @@ void run(int argc, char* argv[])
         osi::run(std::make_unique<exp_inhibitory_weight>());
     else if (experiment == "spiking_const_input_signal")
         osi::run(std::make_unique<exp_spiking_const_input_signal>());
+    else if (experiment == "spiking_trains")
+        osi::run(std::make_unique<exp_spiking_trains>());
     else
         std::cout << "ERROR: unknown experiment name: " << experiment << std::endl
                   << "Choose one of these (option --exp):" << std::endl
                   << "    " << "inhibitory_weight" << std::endl
                   << "    " << "spiking_const_input_signal" << std::endl
+                  << "    " << "spiking_trains" << std::endl
                   ;
 }

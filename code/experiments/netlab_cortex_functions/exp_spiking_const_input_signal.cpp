@@ -7,34 +7,6 @@
 #include <algorithm>
 
 
-static std::vector<std::pair<vector3, vector3> >&  history_to_lines(
-        exp_spiking_const_input_signal::history_records const&  records,
-        float_32_bit const  x0,
-        float_32_bit const  dt_to_dx,
-        float_32_bit const  value_scale,
-        std::vector<std::pair<vector3, vector3> >&  lines
-        )
-{
-    lines.clear();
-    float_32_bit  x = x0;
-    if (records.size() > 5UL)
-    {
-        int iii=0;
-    }
-
-    for (natural_32_bit  i = 0U, n = (natural_32_bit)records.size(); i + 1U < n; ++i)
-    {
-        float_32_bit const  dx = dt_to_dx * (records.at(i).time_point - records.at(i+1U).time_point);
-        lines.push_back({
-            vector3(x, value_scale * records.at(i).value, 0.0f),
-            vector3(x + dx, value_scale * records.at(i+1U).value, 0.0f)
-            });
-        x += dx;
-    }
-    return lines;
-}
-
-
 exp_spiking_const_input_signal::exp_spiking_const_input_signal()
     : simulator_base()
     , NUM_DENDRITES(50U)
@@ -66,13 +38,11 @@ void  exp_spiking_const_input_signal::network_update()
 
     simulatied_time += time_step;
 
-    while (!excitation_history.empty() && excitation_history.back().time_point + HISTORY_TIME_WINDOW < simulatied_time)
-        excitation_history.pop_back();
-    excitation_history.push_front({ simulatied_time, cortex.neuron_excitation(neuron_guid) });
+    erase_obsolete_records(excitation_history, HISTORY_TIME_WINDOW, simulatied_time);
+    insert_to_history(excitation_history, { simulatied_time, cortex.neuron_excitation(neuron_guid) });
 
-    while (!input_signal_history.empty() && input_signal_history.back().time_point + HISTORY_TIME_WINDOW < simulatied_time)
-        input_signal_history.pop_back();
-    input_signal_history.push_front({ simulatied_time, cortex.get_neuron(neuron_guid).input_signal });
+    erase_obsolete_records(input_signal_history, HISTORY_TIME_WINDOW, simulatied_time);
+    insert_to_history(input_signal_history, { simulatied_time, cortex.get_neuron(neuron_guid).input_signal });
 
     if (get_keyboard_props().keys_just_pressed().count(osi::KEY_Y()) != 0UL)
         NUM_DENDRITES = std::min(10000U, NUM_DENDRITES + 10U);
@@ -142,27 +112,28 @@ void  exp_spiking_const_input_signal::scene_update()
     ctx.frame_set_origin(input_signal_frame_guid, {0.0f, 10.0f * cortex.get_neuron(neuron_guid).input_signal, 0.0f });
     ctx.frame_set_origin(spiking_excitation_frame_guid, {0.0f, 10.0f * cortex.get_neuron(neuron_guid).spiking_excitation, 0.0f });
 
-    if (ctx.is_valid_batch_guid(excitation_curve_batch_guid))
-        ctx.erase_batch(excitation_curve_batch_guid);
-    std::vector<std::pair<vector3, vector3> >  lines;
-    history_to_lines(excitation_history, 0.0f, HISTORY_DT_TO_DX, VALUE_SCALE, lines);
-    if (!lines.empty())
-        excitation_curve_batch_guid = ctx.insert_batch_lines3d(
-                history_folder_guid,
-                "excitation_curve_batch",
-                lines,
-                vector4{1.0f, 0.0f, 0.8f, 1.0f}
-                );
-    if (ctx.is_valid_batch_guid(input_signal_batch_guid))
-        ctx.erase_batch(input_signal_batch_guid);
-    history_to_lines(input_signal_history, 0.0f, HISTORY_DT_TO_DX, VALUE_SCALE, lines);
-    if (!lines.empty())
-        input_signal_batch_guid = ctx.insert_batch_lines3d(
-                history_folder_guid,
-                "input_signal_batch",
-                lines,
-                vector4{0.0f, 1.0f, 0.8f, 1.0f}
-                );
+    rebuild_history_lines_batch(
+            ctx,
+            excitation_curve_batch_guid,
+            history_folder_guid,
+            "excitation_curve_batch",
+            vector4{1.0f, 0.0f, 0.8f, 1.0f},
+            excitation_history,
+            0.0f,
+            HISTORY_DT_TO_DX,
+            VALUE_SCALE
+            );
+    rebuild_history_lines_batch(
+            ctx,
+            input_signal_batch_guid,
+            history_folder_guid,
+            "input_signal_batch",
+            vector4{0.0f, 1.0f, 0.8f, 1.0f},
+            input_signal_history,
+            0.0f,
+            HISTORY_DT_TO_DX,
+            VALUE_SCALE
+            );
 }
 
 
