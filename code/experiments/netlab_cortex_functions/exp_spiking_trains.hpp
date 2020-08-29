@@ -32,9 +32,6 @@ private:
     float_32_bit  VALUE_SCALE;
     float_32_bit  HISTORY_TIME_WINDOW;
     float_32_bit  HISTORY_DT_TO_DX;
-    float_32_bit  SPIKES_MIN_Y;
-    float_32_bit  SPIKES_Y_DELTA;
-    float_32_bit  SPIKES_TIME_WINDOW;
 
     netlab::cortex::layer_index  input_layer_excitatory_idx;
     netlab::cortex::layer_index  input_layer_inhibitory_idx;
@@ -54,6 +51,11 @@ private:
 
     spike_trains_collection  spike_trains_excitatory;
     spike_trains_collection  spike_trains_inhibitory;
+    history_records  output_spikes_history;
+
+    history_records  input_sum_history;
+    com::object_guid  input_sum_folder_guid;
+    com::object_guid  input_sum_batch_guid;
 };
 
 
