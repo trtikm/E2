@@ -8,6 +8,8 @@
 #   include <vector>
 #   include <deque>
 #   include <string>
+#   include <unordered_map>
+#   include <functional>
 #   include <utility>
 
 
@@ -42,6 +44,35 @@ void  rebuild_history_lines_batch(
         float_32_bit const  x0,
         float_32_bit const  dt_to_dx,
         float_32_bit const  value_scale
+        );
+
+void  history_to_histogram(
+        history_records const&  records,
+        std::unordered_map<float_32_bit, natural_32_bit>&  hist,
+        std::function<float_32_bit(float_32_bit)> const&  value_to_bucket_fn =
+                [](float_32_bit const  x) { return std::roundf(x); }
+        );
+
+history_lines&  histogram_to_lines(
+        std::unordered_map<float_32_bit, natural_32_bit> const&  hist,
+        float_32_bit const  key_scale,
+        float_32_bit const  value_scale,
+        bool const  is_keys_axis_horizontal,
+        history_lines&  lines
+        );
+
+void  rebuild_histogram_lines_batch(
+        com::simulation_context&  ctx,
+        com::object_guid&  histogram_batch_guid,
+        com::object_guid const  under_folder_guid,
+        std::string const&  batch_name,
+        vector4 const&  batch_colour,
+        history_records const&  history,
+        float_32_bit const  key_scale,
+        float_32_bit const  value_scale,
+        bool const  is_keys_axis_horizontal,
+        std::function<float_32_bit(float_32_bit)> const&  value_to_bucket_fn =
+                [](float_32_bit const  x) { return std::roundf(x); }
         );
 
 
@@ -90,6 +121,7 @@ struct  spike_trains_collection
     void  set_min_train_y_to_be_after(spike_trains_collection const&  other);
     natural_32_bit  size() const { return (natural_32_bit)spike_trains.size(); }
     spike_train&  at(natural_32_bit const  index) { return spike_trains.at(index); }
+    spike_train const&  at(natural_32_bit const  index) const { return spike_trains.at(index); }
     void  insert_spike_train(spike_train const&  train) { spike_trains.push_back(train); }
     void  erase_obsolete_spikes(float_32_bit const  current_time);
     void  insert_spike(float_32_bit const  current_time, natural_32_bit const  train_index);

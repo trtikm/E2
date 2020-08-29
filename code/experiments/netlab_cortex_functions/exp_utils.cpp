@@ -9,6 +9,11 @@
 
 void  erase_obsolete_records(history_records&  history, float_32_bit const  time_window, float_32_bit const  current_time)
 {
+    if (time_window < 0.0f)
+    {
+        history.clear();
+        return;
+    }
     while (!history.empty() && history.back().time_point + time_window < current_time)
         history.pop_back();
 }
@@ -61,6 +66,72 @@ void  rebuild_history_lines_batch(
         ctx.erase_batch(history_batch_guid);
     history_batch_guid = lines.empty() ? com::invalid_object_guid() :
                                          ctx.insert_batch_lines3d(under_folder_guid, batch_name, lines, batch_colour);
+}
+
+
+void  history_to_histogram(
+        history_records const&  records,
+        std::unordered_map<float_32_bit, natural_32_bit>&  hist,
+        std::function<float_32_bit(float_32_bit)> const&  value_to_bucket_fn
+        )
+{
+    for (history_record const&  r : records)
+    {
+        float_32_bit const  b = value_to_bucket_fn(r.value);
+        auto  it = hist.find(b);
+        if (it == hist.end())
+            it = hist.insert({b, 0U}).first;
+        ++it->second;
+    }
+}
+
+
+history_lines&  histogram_to_lines(
+        std::unordered_map<float_32_bit, natural_32_bit> const&  hist,
+        float_32_bit const  key_scale,
+        float_32_bit const  value_scale,
+        bool const  is_keys_axis_horizontal,
+        history_lines&  lines
+        )
+{
+    lines.clear();
+    if (is_keys_axis_horizontal)
+        for (auto const&  key_and_value : hist)
+            lines.push_back({
+                vector3(key_scale * key_and_value.first, 0.0f, 0.0f),
+                vector3(key_scale * key_and_value.first, value_scale * key_and_value.second, 0.0f)
+                });
+    else
+        for (auto const&  key_and_value : hist)
+            lines.push_back({
+                vector3(0.0f, key_scale * key_and_value.first, 0.0f),
+                vector3(value_scale * key_and_value.second, key_scale * key_and_value.first, 0.0f)
+                });
+    return lines;
+}
+
+
+void  rebuild_histogram_lines_batch(
+        com::simulation_context&  ctx,
+        com::object_guid&  histogram_batch_guid,
+        com::object_guid const  under_folder_guid,
+        std::string const&  batch_name,
+        vector4 const&  batch_colour,
+        history_records const&  history,
+        float_32_bit const  key_scale,
+        float_32_bit const  value_scale,
+        bool const  is_keys_axis_horizontal,
+        std::function<float_32_bit(float_32_bit)> const&  value_to_bucket_fn
+        )
+{
+    std::unordered_map<float_32_bit, natural_32_bit>  hist;
+    history_to_histogram(history, hist, value_to_bucket_fn);
+    history_lines  lines;
+    histogram_to_lines(hist, key_scale, value_scale, is_keys_axis_horizontal, lines);
+    if (ctx.is_valid_batch_guid(histogram_batch_guid))
+        ctx.erase_batch(histogram_batch_guid);
+    histogram_batch_guid = lines.empty() ? com::invalid_object_guid() :
+                                           ctx.insert_batch_lines3d(under_folder_guid, batch_name, lines, batch_colour);
 }
 
 
@@ -154,7 +225,6 @@ spike_trains_collection::spike_trains_collection(
     ASSUMPTION(
         std::fabs(DT_TO_DX) > spike_radius() &&
         std::fabs(TRAINS_Y_DELTA) >= 2.0f * spike_radius() &&
-        TIME_WINDOW > 0.0f &&
         !folder_name.empty()
         );
 }
