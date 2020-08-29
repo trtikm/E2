@@ -147,6 +147,8 @@ struct  cortex
     { layers.at(guid.layer).neurons.at(guid.neuron).input_signal += input_signal_delta; }
 
     float_32_bit  neuron_excitation(neuron_guid const  guid) const { return get_neuron(guid).excitation; }
+    bool  is_neuron_spiking(neuron_guid const  guid) const
+    { neuron const&  n = get_neuron(guid); return n.excitation >=n.spiking_excitation ; }
 
     ////////////////////////////////////////////////////////////////////////////////////////
     // SIMULATION
