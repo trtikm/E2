@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 #include <fstream>
+#include <iomanip>
 
 
 exp_spiking_trains::exp_spiking_trains()
@@ -55,7 +56,7 @@ exp_spiking_trains::phase_manager::phase_info::phase_info(
     , NUM_DENDRITES_INHIBITORY(NUM_DENDRITES_EXCITATORY)
     , SIMULATION_FREQUENCY(SIMULATION_FREQUENCY_)
     , RECORD_TIME_WINDOW(1.0f)
-    , MAX_RECORDS(5U)
+    , MAX_RECORDS(30U)
     // data:
     , phase_time(0.0f)
     // results:
@@ -92,23 +93,57 @@ bool  exp_spiking_trains::move_to_next_phase()
         std::map<natural_32_bit, // NUM_DENDRITES_EXCITATORY
                  std::map<float_32_bit, // SIMULATION_FREQUENCY
                           float_32_bit // average r95
-                          > >  table;
+                          > >  table, model, errors;
         for (phase_manager::phase_info const&  info : phaser.phases)
+        {
             table[info.NUM_DENDRITES_EXCITATORY][info.SIMULATION_FREQUENCY] = info.r95_average;
+
+            float_32_bit const  model_r95 = 
+                    std::powf(info.NUM_DENDRITES_EXCITATORY / (info.SIMULATION_FREQUENCY * 0.0028f + 0.3f), 1.0f / 2.21f);
+            model[info.NUM_DENDRITES_EXCITATORY][info.SIMULATION_FREQUENCY] = model_r95;
+            errors[info.NUM_DENDRITES_EXCITATORY][info.SIMULATION_FREQUENCY] =
+                    100.0f * (model_r95 - info.r95_average) / info.r95_average;
+        }
 
         std::string const  out_dir = get_experiment_dir();
         boost::filesystem::create_directories(out_dir);
 
-        std::string const  out_file = out_dir + "/r95.dat";
-        std::ofstream  ofile(out_file.c_str(), std::ios_base::out);
-        for (auto const&  dendrites_and_data : table)
         {
-            ofile << dendrites_and_data.first << "\t";
-            for (auto const&  frequency_and_r95 : dendrites_and_data.second)
-                ofile << frequency_and_r95.second << "\t";
-            ofile << "\n";
+            std::string const  out_file = out_dir + "/r95.dat";
+            std::ofstream  ofile(out_file.c_str(), std::ios_base::out);
+            for (auto const&  dendrites_and_data : table)
+            {
+                ofile << dendrites_and_data.first << "\t";
+                for (auto const&  frequency_and_r95 : dendrites_and_data.second)
+                    ofile << std::fixed << std::setprecision(1) << frequency_and_r95.second << "\t";
+                ofile << "\n";
+            }
+            ofile.close();
         }
-        ofile.close();
+        {
+            std::string const  out_file = out_dir + "/r95_model.dat";
+            std::ofstream  ofile(out_file.c_str(), std::ios_base::out);
+            for (auto const&  dendrites_and_data : model)
+            {
+                ofile << dendrites_and_data.first << "\t";
+                for (auto const&  frequency_and_r95 : dendrites_and_data.second)
+                    ofile << std::fixed << std::setprecision(1)<< frequency_and_r95.second << "\t";
+                ofile << "\n";
+            }
+            ofile.close();
+        }
+        {
+            std::string const  out_file = out_dir + "/r95_model_err.dat";
+            std::ofstream  ofile(out_file.c_str(), std::ios_base::out);
+            for (auto const&  dendrites_and_data : errors)
+            {
+                ofile << dendrites_and_data.first << "\t";
+                for (auto const&  frequency_and_r95 : dendrites_and_data.second)
+                    ofile << std::fixed << std::setprecision(1) << frequency_and_r95.second << "\t";
+                ofile << "\n";
+            }
+            ofile.close();
+        }
     };
 
     if (!phaser.is_enabled)
