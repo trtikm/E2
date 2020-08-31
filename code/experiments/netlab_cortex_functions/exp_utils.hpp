@@ -53,6 +53,21 @@ void  history_to_histogram(
                 [](float_32_bit const  x) { return std::roundf(x); }
         );
 
+float_32_bit  histogram_radius_95(
+        std::unordered_map<float_32_bit, natural_32_bit> const&  hist
+        );
+
+inline float_32_bit  histogram_radius_95(
+        history_records const&  records,
+        std::function<float_32_bit(float_32_bit)> const&  value_to_bucket_fn =
+                [](float_32_bit const  x) { return std::roundf(x); }
+        )
+{
+    std::unordered_map<float_32_bit, natural_32_bit>  hist;
+    history_to_histogram(records, hist, value_to_bucket_fn);
+    return histogram_radius_95(hist);
+}
+
 history_lines&  histogram_to_lines(
         std::unordered_map<float_32_bit, natural_32_bit> const&  hist,
         float_32_bit const  key_scale,
@@ -119,6 +134,7 @@ struct  spike_trains_collection
     void  clear(com::simulation_context&  ctx);
     void  set_min_train_y(float_32_bit const  value) { MIN_TRAIN_Y = value;}
     void  set_min_train_y_to_be_after(spike_trains_collection const&  other);
+    void  set_time_window(float_32_bit const  value) { TIME_WINDOW = value;}
     natural_32_bit  size() const { return (natural_32_bit)spike_trains.size(); }
     spike_train&  at(natural_32_bit const  index) { return spike_trains.at(index); }
     spike_train const&  at(natural_32_bit const  index) const { return spike_trains.at(index); }

@@ -86,6 +86,23 @@ void  history_to_histogram(
 }
 
 
+float_32_bit  histogram_radius_95(
+        std::unordered_map<float_32_bit, natural_32_bit> const&  hist
+        )
+{
+    if (hist.empty())
+        return 0.0f;
+    std::vector<float_32_bit>  keys;
+    keys.reserve(hist.size());
+    for (auto const&  key_and_value : hist)
+        keys.push_back(std::fabs(key_and_value.first));
+    std::sort(keys.begin(), keys.end());
+    natural_32_bit const  j = (natural_32_bit)std::floor(0.95f * keys.size());
+    natural_32_bit const  i = j == 0U ? 0U : j - 1U;
+    return 0.5f * (keys.at(i) + keys.at(j));
+}
+
+
 history_lines&  histogram_to_lines(
         std::unordered_map<float_32_bit, natural_32_bit> const&  hist,
         float_32_bit const  key_scale,
@@ -128,10 +145,22 @@ void  rebuild_histogram_lines_batch(
     history_to_histogram(history, hist, value_to_bucket_fn);
     history_lines  lines;
     histogram_to_lines(hist, key_scale, value_scale, is_keys_axis_horizontal, lines);
+    std::vector<vector4>  colours_of_lines;
+    {
+        float_32_bit const  r95 = histogram_radius_95(hist);
+        vector4 const  outside_colour = expand34(0.6f * contract43(batch_colour), 1.0f);
+        colours_of_lines.reserve(lines.size());
+        for (auto const& AB : lines)
+            colours_of_lines.push_back(
+                    (is_keys_axis_horizontal && std::fabs(AB.first(0)) > key_scale * r95)
+                        || (!is_keys_axis_horizontal && std::fabs(AB.first(1)) > key_scale * r95)
+                    ? outside_colour : batch_colour
+                    );
+    }
     if (ctx.is_valid_batch_guid(histogram_batch_guid))
         ctx.erase_batch(histogram_batch_guid);
     histogram_batch_guid = lines.empty() ? com::invalid_object_guid() :
-                                           ctx.insert_batch_lines3d(under_folder_guid, batch_name, lines, batch_colour);
+                                           ctx.insert_batch_lines3d(under_folder_guid, batch_name, lines, colours_of_lines);
 }
 
 
