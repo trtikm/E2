@@ -3,7 +3,7 @@
 
 #   include <com/simulator.hpp>
 #   include <netlab/cortex.hpp>
-
+#   include <string>
 
 struct  simulator_base : public com::simulator
 {
@@ -17,8 +17,12 @@ struct  simulator_base : public com::simulator
     bool  is_shift_down() const;
     bool  is_ctrl_down() const;
     bool  is_alt_down() const;
+    bool  is_key_pressed(osi::keyboard_key_name const&  key) const;
     bool  is_key_just_pressed(osi::keyboard_key_name const&  key) const;
 
+    std::string  get_experiment_dir() const;
+
+    virtual bool  move_to_next_phase() { return false; }
     virtual void  network_setup() = 0;
     virtual void  network_update() = 0;
     virtual void  scene_setup() {}

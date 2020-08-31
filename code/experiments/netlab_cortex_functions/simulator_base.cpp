@@ -50,6 +50,20 @@ void  simulator_base::on_begin_round()
     //if (get_window_props().focus_just_lost())
     //    simulation_config().paused = true;
 
+    auto const  restart_func = [this]() -> void {
+        cortex.clear();
+        on_restart();
+        clear(true);
+        network_setup();
+        scene_setup();
+    };
+
+    if (move_to_next_phase())
+    {
+        restart_func();
+        return;
+    }
+
     if (!get_window_props().has_focus())
         return;
 
@@ -69,13 +83,7 @@ void  simulator_base::on_begin_round()
     else if (is_ctrl_down() && !is_alt_down())
     {
         if (get_keyboard_props().keys_just_pressed().count(osi::KEY_R()) != 0UL)
-        {
-            cortex.clear();
-            on_restart();
-            clear(true);
-            network_setup();
-            scene_setup();
-        }
+            restart_func();
         if (get_keyboard_props().keys_just_pressed().count(osi::KEY_K()) != 0UL)
             render_config().camera->coordinate_system()->set_orientation(quaternion_identity());
         if (get_keyboard_props().keys_just_pressed().count(osi::KEY_NUMERIC_PLUS()) != 0UL)
@@ -134,7 +142,18 @@ bool  simulator_base::is_alt_down() const
            get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL;
 }
 
+bool  simulator_base::is_key_pressed(osi::keyboard_key_name const&  key) const
+{
+    return get_keyboard_props().keys_pressed().count(key) != 0UL;
+}
+
 bool  simulator_base::is_key_just_pressed(osi::keyboard_key_name const&  key) const
 {
     return get_keyboard_props().keys_just_pressed().count(key) != 0UL;
+}
+
+
+std::string  simulator_base::get_experiment_dir() const
+{
+    return get_program_options()->data_root() + "/evaluation/experiments/" + get_program_options()->experiment();
 }
