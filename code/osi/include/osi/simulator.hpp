@@ -36,6 +36,8 @@ struct  simulator
     keyboard_props const&  get_keyboard_props() const;
     mouse_props const&  get_mouse_props() const;
 
+    void  send_close_request();
+
     std::string const&  error_text() const;
 
 private:

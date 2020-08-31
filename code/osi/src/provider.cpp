@@ -20,6 +20,7 @@ struct  round_state
         , has_focus(true)
         , focus_just_received(true)
         , focus_just_lost(false)
+        , close_requested(false)
         , width(1U)
         , height(1U)
         , text()
@@ -44,6 +45,7 @@ struct  round_state
     bool  has_focus;
     bool  focus_just_received;
     bool  focus_just_lost;
+    bool  close_requested;
     natural_16_bit  width;
     natural_16_bit  height;
     std::string  text;
@@ -77,6 +79,8 @@ void swap_states()
 
     current_state().focus_just_received = current_state().has_focus && !other_state().has_focus;
     current_state().focus_just_lost = !current_state().has_focus && other_state().has_focus;
+
+    current_state().close_requested = current_state().close_requested || other_state().close_requested;
 
     int  w, h;
     glfwGetWindowSize(window_ptr, &w, &h);
@@ -385,7 +389,13 @@ bool  is_open()
 
 bool  is_close_requested()
 {
-    return is_open() && glfwWindowShouldClose(window_ptr) != 0;
+    return is_open() && (current_state().close_requested || glfwWindowShouldClose(window_ptr) != 0);
+}
+
+
+void  send_close_request()
+{
+    current_state().close_requested = true;
 }
 
 

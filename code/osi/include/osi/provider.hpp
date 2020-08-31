@@ -17,6 +17,7 @@ void  close();
 
 bool  is_open();
 bool  is_close_requested();
+void  send_close_request();
 
 void  set_window_title(std::string const&  title);
 void  set_window_icon(natural_8_bit const  width, natural_8_bit const  height, std::vector<natural_8_bit> const&  pixels_rgba_8888);

@@ -29,6 +29,8 @@ window_props const&  simulator::get_window_props() const { return s_window_props
 keyboard_props const&  simulator::get_keyboard_props() const { return s_keyboard_props; }
 mouse_props const&  simulator::get_mouse_props() const { return s_mouse_props; }
 
+void  simulator::send_close_request() { osi::send_close_request(); }
+
 std::string const&  simulator::error_text() const { return osi::error_text(); }
 
 
