@@ -842,6 +842,16 @@ object_guid  simulation_context::insert_batch_lines3d(
 }
 
 
+object_guid  simulation_context::insert_batch_lines3d(
+        object_guid const  folder_guid, std::string const&  name,
+        std::vector<std::pair<vector3,vector3> > const&  lines,
+        std::vector< vector4 > const&  colours_of_lines
+        )
+{
+    return insert_batch(folder_guid, name, gfx::create_lines3d(lines, colours_of_lines, gfx::FOG_TYPE::NONE));
+}
+
+
 object_guid  simulation_context::insert_batch_wireframe_box(
         object_guid const  folder_guid, std::string const&  name,
         vector3 const&  half_sizes_along_axes,

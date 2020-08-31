@@ -234,6 +234,11 @@ struct  simulation_context
             std::vector<std::pair<vector3,vector3> > const&  lines,
             vector4 const&  common_colour
             );
+    object_guid  insert_batch_lines3d(
+            object_guid const  folder_guid, std::string const&  name,
+            std::vector<std::pair<vector3,vector3> > const&  lines,
+            std::vector< vector4 > const&  colours_of_lines
+            );
     object_guid  insert_batch_wireframe_box(
             object_guid const  folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
