@@ -1,31 +1,146 @@
 #include <netlab_cortex_functions/exp_spiking_trains.hpp>
 #include <angeo/tensor_math.hpp>
+#include <boost/filesystem.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <algorithm>
+#include <map>
+#include <fstream>
 
 
 exp_spiking_trains::exp_spiking_trains()
     : simulator_base()
-    , NUM_DENDRITES_EXCITATORY(50U)
-    , NUM_DENDRITES_INHIBITORY(50U)
+    , NUM_DENDRITES_EXCITATORY(100U)
+    , NUM_DENDRITES_INHIBITORY(100U)
     , EXPECTED_SPIKING_FREQUENCY_EXCITATORY(10.0f)
     , EXPECTED_SPIKING_FREQUENCY_INHIBITORY(10.0f)
     , VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY(0.0f)
     , VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY(0.0f)
     , SIMULATION_FREQUENCY(100.0f)
     , VALUE_SCALE(10.0f)
-    , HISTORY_TIME_WINDOW(3.0f)
+    , HISTORY_TIME_WINDOW(1.0f)
     , HISTORY_DT_TO_DX(-VALUE_SCALE)
-    , spike_trains_excitatory(HISTORY_DT_TO_DX, -1.0f, 1.0f, "spikes_excitatory", vector4{1.0f, 0.75f, 0.75f, 1.0f})
-    , spike_trains_inhibitory(HISTORY_DT_TO_DX, -1.0f, 1.0f, "spikes_inhibitory", vector4{0.75f, 0.75f, 1.0f, 1.0f})
+    , SPIKES_TIME_WINDOW(1.0f)
+    , spike_trains_excitatory(HISTORY_DT_TO_DX, -1.0f, SPIKES_TIME_WINDOW, "spikes_excitatory", vector4{1.0f, 0.75f, 0.75f, 1.0f})
+    , spike_trains_inhibitory(HISTORY_DT_TO_DX, -1.0f, SPIKES_TIME_WINDOW, "spikes_inhibitory", vector4{0.75f, 0.75f, 1.0f, 1.0f})
     , output_spikes_history()
     , input_sum_history()
     , input_sum_folder_guid(com::invalid_object_guid())
     , input_sum_batch_guid(com::invalid_object_guid())
+    , phaser()
 {}
+
+
+exp_spiking_trains::phase_manager::phase_manager()
+    : phases()
+    , phase_index(0U)
+    , is_enabled(false)
+{
+    std::vector<natural_32_bit> const  Ds = {25U, 50U, 100U, 150U, 200U, 300U, 500U, 1000U, 5000U, 10000U };
+    std::vector<float_32_bit> const  Fs = {100.0f, 150.0f, 200.0f, 250.0f, 500.0f, 1000.0f };
+
+    for (natural_32_bit  D : Ds)
+        for (float_32_bit  f : Fs)
+            phases.push_back({ D, f });
+}
+
+exp_spiking_trains::phase_manager::phase_info::phase_info(
+        natural_32_bit  NUM_DENDRITES_EXCITATORY_,
+        float_32_bit  SIMULATION_FREQUENCY_
+        )
+    // constsants:
+    : NUM_DENDRITES_EXCITATORY(NUM_DENDRITES_EXCITATORY_)
+    , NUM_DENDRITES_INHIBITORY(NUM_DENDRITES_EXCITATORY)
+    , SIMULATION_FREQUENCY(SIMULATION_FREQUENCY_)
+    , RECORD_TIME_WINDOW(1.0f)
+    , MAX_RECORDS(5U)
+    // data:
+    , phase_time(0.0f)
+    // results:
+    , r95s()
+    , r95_average(0.0f)
+{}
+
+
+bool  exp_spiking_trains::move_to_next_phase()
+{
+    auto const  setup_phase = [this]() -> bool {
+        if (phaser.phase_index >= (natural_32_bit)phaser.phases.size())
+            return false;
+        phase_manager::phase_info&  info = phaser.phases.at(phaser.phase_index);
+        NUM_DENDRITES_EXCITATORY = info.NUM_DENDRITES_EXCITATORY;
+        NUM_DENDRITES_INHIBITORY = info.NUM_DENDRITES_INHIBITORY;
+        SIMULATION_FREQUENCY = info.SIMULATION_FREQUENCY;
+        EXPECTED_SPIKING_FREQUENCY_EXCITATORY = 10.0f;
+        EXPECTED_SPIKING_FREQUENCY_INHIBITORY = 10.0f;
+        VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY = 0.0f;
+        VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY = 0.0f;
+        SPIKES_TIME_WINDOW = -1.0f;
+        return true;
+    };
+
+    auto const  finish_phase = [this]() -> void {
+        phase_manager::phase_info&  info = phaser.phases.at(phaser.phase_index);
+        for (float_32_bit  r95 : info.r95s)
+            info.r95_average += r95;
+        info.r95_average /= (float_32_bit)info.r95s.size();
+    };
+
+    auto const  save_results = [this]() -> void {
+        std::map<natural_32_bit, // NUM_DENDRITES_EXCITATORY
+                 std::map<float_32_bit, // SIMULATION_FREQUENCY
+                          float_32_bit // average r95
+                          > >  table;
+        for (phase_manager::phase_info const&  info : phaser.phases)
+            table[info.NUM_DENDRITES_EXCITATORY][info.SIMULATION_FREQUENCY] = info.r95_average;
+
+        std::string const  out_dir = get_experiment_dir();
+        boost::filesystem::create_directories(out_dir);
+
+        std::string const  out_file = out_dir + "/r95.dat";
+        std::ofstream  ofile(out_file.c_str(), std::ios_base::out);
+        for (auto const&  dendrites_and_data : table)
+        {
+            ofile << dendrites_and_data.first << "\t";
+            for (auto const&  frequency_and_r95 : dendrites_and_data.second)
+                ofile << frequency_and_r95.second << "\t";
+            ofile << "\n";
+        }
+        ofile.close();
+    };
+
+    if (!phaser.is_enabled)
+    {
+        if (is_ctrl_down() && is_alt_down() && is_key_just_pressed(osi::KEY_P()))
+            phaser.is_enabled = setup_phase();
+        return phaser.is_enabled;
+    }
+
+    if (phaser.phase_index >= (natural_32_bit)phaser.phases.size())
+    {
+        save_results();
+        send_close_request();
+        return false;
+    }
+
+    phase_manager::phase_info&  info = phaser.phases.at(phaser.phase_index);
+    info.phase_time += 1.0f / info.SIMULATION_FREQUENCY;
+    if (info.phase_time >= info.RECORD_TIME_WINDOW)
+    {
+        info.phase_time = 0.0f;
+        info.r95s.push_back(histogram_radius_95(input_sum_history));
+        if (info.r95s.size() >= info.MAX_RECORDS)
+        {
+            finish_phase();
+            ++phaser.phase_index;
+            return setup_phase();
+        }
+    }
+
+    return false;
+}
 
 
 void  exp_spiking_trains::network_setup()
@@ -69,7 +184,10 @@ void  exp_spiking_trains::network_setup()
                 ));
 
     spike_trains_excitatory.set_min_train_y(-spike_trains_collection::spike_radius());
+    spike_trains_excitatory.set_time_window(SPIKES_TIME_WINDOW);
+
     spike_trains_inhibitory.set_min_train_y_to_be_after(spike_trains_excitatory);
+    spike_trains_inhibitory.set_time_window(SPIKES_TIME_WINDOW);
 }
 
 
@@ -118,51 +236,54 @@ void  exp_spiking_trains::network_update()
         insert_to_history(output_spikes_history, { simulatied_time, 1.0f });
     erase_obsolete_records(output_spikes_history, 1.0f, simulatied_time);
 
-    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_U()) != 0UL)
+    if (phaser.is_enabled)
+        return;
+
+    if (!is_shift_down() && is_key_just_pressed(osi::KEY_U()) != 0UL)
         NUM_DENDRITES_EXCITATORY = std::min(10000U, NUM_DENDRITES_EXCITATORY + 5U);
-    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_I()) != 0UL)
+    if (!is_shift_down() && is_key_just_pressed(osi::KEY_I()) != 0UL)
         NUM_DENDRITES_EXCITATORY = std::max(5U, NUM_DENDRITES_EXCITATORY - 5U);
-    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_U()) != 0UL)
+    if (is_shift_down() && is_key_just_pressed(osi::KEY_U()) != 0UL)
         NUM_DENDRITES_INHIBITORY = std::min(10000U, NUM_DENDRITES_INHIBITORY + 5U);
-    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_I()) != 0UL)
+    if (is_shift_down() && is_key_just_pressed(osi::KEY_I()) != 0UL)
         NUM_DENDRITES_INHIBITORY = std::max(0U, NUM_DENDRITES_INHIBITORY - 5U);
 
-    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_T()) != 0UL)
+    if (!is_shift_down() && is_key_just_pressed(osi::KEY_T()) != 0UL)
         EXPECTED_SPIKING_FREQUENCY_EXCITATORY = std::min(10000.0f, EXPECTED_SPIKING_FREQUENCY_EXCITATORY + 5.0f);
-    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_Y()) != 0UL)
+    if (!is_shift_down() && is_key_just_pressed(osi::KEY_Y()) != 0UL)
         EXPECTED_SPIKING_FREQUENCY_EXCITATORY = std::max(10.0f, EXPECTED_SPIKING_FREQUENCY_EXCITATORY - 5.0f);
-    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_T()) != 0UL)
+    if (is_shift_down() && is_key_just_pressed(osi::KEY_T()) != 0UL)
         EXPECTED_SPIKING_FREQUENCY_INHIBITORY = std::min(10000.0f, EXPECTED_SPIKING_FREQUENCY_INHIBITORY + 5.0f);
-    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_Y()) != 0UL)
+    if (is_shift_down() && is_key_just_pressed(osi::KEY_Y()) != 0UL)
         EXPECTED_SPIKING_FREQUENCY_INHIBITORY = std::max(10.0f, EXPECTED_SPIKING_FREQUENCY_INHIBITORY - 5.0f);
 
-    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_V()) != 0UL)
+    if (!is_shift_down() && is_key_just_pressed(osi::KEY_V()) != 0UL)
         VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY = std::min(10000.0f, VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY + 1.0f);
-    if (!is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_B()) != 0UL)
+    if (!is_shift_down() && is_key_just_pressed(osi::KEY_B()) != 0UL)
         VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY = std::max(0.0f, VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY - 1.0f);
-    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_V()) != 0UL)
+    if (is_shift_down() && is_key_just_pressed(osi::KEY_V()) != 0UL)
         VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY = std::min(10000.0f, VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY + 1.0f);
-    if (is_shift_down() && get_keyboard_props().keys_just_pressed().count(osi::KEY_B()) != 0UL)
+    if (is_shift_down() && is_key_just_pressed(osi::KEY_B()) != 0UL)
         VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY = std::max(0.0f, VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY - 1.0f);
     VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY = std::min(EXPECTED_SPIKING_FREQUENCY_EXCITATORY, VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY);
     VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY = std::min(EXPECTED_SPIKING_FREQUENCY_INHIBITORY, VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY);
 
-    if (get_keyboard_props().keys_just_pressed().count(osi::KEY_G()) != 0UL)
+    if (is_key_just_pressed(osi::KEY_G()) != 0UL)
         SIMULATION_FREQUENCY = std::min(10000.0f, SIMULATION_FREQUENCY + 10.0f);
-    if (get_keyboard_props().keys_just_pressed().count(osi::KEY_H()) != 0UL)
+    if (is_key_just_pressed(osi::KEY_H()) != 0UL)
         SIMULATION_FREQUENCY = std::max(10.0f, SIMULATION_FREQUENCY - 10.0f);
 
-    if (get_keyboard_props().keys_pressed().count(osi::KEY_O()) != 0UL)
+    if (is_key_pressed(osi::KEY_O()) != 0UL)
         cortex.neuron_ref(spiking_neuron_guid).spiking_excitation += 0.1f * round_seconds();
-    if (get_keyboard_props().keys_pressed().count(osi::KEY_P()) != 0UL)
+    if (is_key_pressed(osi::KEY_P()) != 0UL)
         cortex.neuron_ref(spiking_neuron_guid).spiking_excitation -= 0.1f * round_seconds();
 
-    if (get_keyboard_props().keys_pressed().count(osi::KEY_N()) != 0UL)
+    if (is_key_pressed(osi::KEY_N()) != 0UL)
         cortex.set_constant_neuron_ln_of_excitation_decay_coef(
                 spiking_layer_idx, 
                 cortex.get_layer_constants(spiking_layer_idx).neuron.ln_of_excitation_decay_coef + 2.0f * round_seconds()
                 );
-    if (get_keyboard_props().keys_pressed().count(osi::KEY_M()) != 0UL)
+    if (is_key_pressed(osi::KEY_M()) != 0UL)
         cortex.set_constant_neuron_ln_of_excitation_decay_coef(
                 spiking_layer_idx, 
                 cortex.get_layer_constants(spiking_layer_idx).neuron.ln_of_excitation_decay_coef - 2.0f * round_seconds()
@@ -244,11 +365,13 @@ void  exp_spiking_trains::scene_update()
         input_sum_batch_guid,
         input_sum_folder_guid,
         "input_sum_batch",
-        vector4{0.75f, 0.75f, 0.5f, 1.0f},
+        vector4{0.95f, 0.95f, 0.75f, 1.0f},
         input_sum_history,
-        10.0f / std::max(cortex.get_layer(input_layer_excitatory_idx).neurons.size(),
-                         cortex.get_layer(input_layer_inhibitory_idx).neurons.size()),
-        10.0f / SIMULATION_FREQUENCY,
+        //10.0f / std::max(cortex.get_layer(input_layer_excitatory_idx).neurons.size(),
+        //                 cortex.get_layer(input_layer_inhibitory_idx).neurons.size()),
+        1.0f,
+        //10.0f / SIMULATION_FREQUENCY,
+        1.0f,
         false
         );
 }
@@ -270,6 +393,11 @@ void  exp_spiking_trains::on_restart()
 
 void  exp_spiking_trains::custom_render()
 {
+    if (phaser.is_enabled)
+        SLOG("MODE: PHASER (phase=" << (phaser.phase_index + 1U) << "/" << phaser.phases.size() << ")" << "\n");
+    else
+        SLOG("MODE: INTERACTIVE\n");
+
     SLOG(
         "NUM_DENDRITES_EXCITATORY=" << NUM_DENDRITES_EXCITATORY << " (requires restart Ctrl+R)\n"
         "NUM_DENDRITES_INHIBITORY=" << NUM_DENDRITES_INHIBITORY << " (requires restart Ctrl+R)\n"
@@ -281,6 +409,7 @@ void  exp_spiking_trains::custom_render()
         "spiking_excitation=" << cortex.get_neuron(spiking_neuron_guid).spiking_excitation << "\n"
         "ln_of_excitation_decay_coef=" << cortex.get_layer_constants(spiking_layer_idx).neuron.ln_of_excitation_decay_coef << "\n"
         "output_spiking_frequency=" << output_spikes_history.size() << "\n"
+        "radius95%=" << histogram_radius_95(input_sum_history) << "\n"
     );
 }
 
