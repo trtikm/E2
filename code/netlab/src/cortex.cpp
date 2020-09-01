@@ -10,8 +10,7 @@ namespace netlab {
 
 cortex::cortex()
     : constants{
-        //100.0f,     // simulation_fequency
-        //10.0f       // expected_spiking_frequency
+        100.0f,     // simulation_fequency
         }
     , layers()
     , synapses()
@@ -32,6 +31,56 @@ void  cortex::recompute_accumulated_connection_probabilities(layer&  l)
 }
 
 
+void  cortex::recompute_mean_input_spiking_frequency(layer_index const  layer_idx)
+{
+    layer&  l = layers.at(layer_idx);
+    if (l.constants.num_dendrites_per_neuron == 0U)
+    {
+        l.constants.neuron.mean_input_spiking_frequency = 0.0f;
+        return;
+    }
+
+    float_32_bit  f = 0.0f;
+    for (layer&  other : layers)
+        f += other.constants.neuron.mean_spiking_frequency *
+             other.constants.to_layer.at(layer_idx).connection_probability *
+             (float_32_bit)other.constants.num_axons_per_neuron *
+             (float_32_bit)other.neurons.size()                
+             ;
+
+    l.constants.neuron.mean_input_spiking_frequency =
+            f / ((float_32_bit)l.constants.num_dendrites_per_neuron * (float_32_bit)l.neurons.size());
+}
+
+
+void  cortex::recompute_mean_input_spiking_frequencies()
+{
+    for (layer_index  i = 0U, n =(layer_index)layers.size(); i != n; ++i)
+        recompute_mean_input_spiking_frequency(i);
+}
+
+
+void  cortex::recompute_max_input_signal_magnitude(layer_index const  layer_idx)
+{
+    float_32_bit  e = 0.0f, i = 0.0f;
+    for (layer&  other : layers)
+        *(other.constants.sign > 0.0f ? &e : &i) +=
+                other.constants.to_layer.at(layer_idx).connection_probability *
+                (float_32_bit)other.constants.num_axons_per_neuron *
+                (float_32_bit)other.neurons.size()                
+                ;
+    layer&  l = layers.at(layer_idx);
+    l.constants.neuron.max_input_signal_magnitude = std::max(e, i) / (float_32_bit)l.neurons.size();
+}
+
+
+void  cortex::recompute_max_input_signal_magnitudes()
+{
+    for (layer_index  i = 0U, n =(layer_index)layers.size(); i != n; ++i)
+        recompute_max_input_signal_magnitude(i);
+}
+
+
 void  cortex::clear()
 {
     layers.clear();
@@ -46,6 +95,8 @@ cortex::layer_index  cortex::add_layer(
         bool const  excitatory
         )
 {
+    ASSUMPTION(num_neurons > 0U && (natural_32_bit)num_axons_per_neuron + (natural_32_bit)num_dendrites_per_neuron > 0U);
+
     for (layer&  l : layers)
     {
         l.constants.to_layer.push_back({});
@@ -71,7 +122,9 @@ cortex::layer_index  cortex::add_layer(
     l.constants.neuron.spiking_excitation_initial = 0.9f;
     l.constants.neuron.excitation_recovery = 0.0f;
     l.constants.neuron.ln_of_excitation_decay_coef = -3.0f;
-    l.constants.neuron.max_input_signal_magnitude = (float_32_bit)l.constants.num_dendrites_per_neuron;
+    l.constants.neuron.mean_spiking_frequency = 10.0f;
+    l.constants.neuron.mean_input_spiking_frequency = 0.0f; // is recomputed below
+    l.constants.neuron.max_input_signal_magnitude = 0.0f; // is recomputed below
 
     l.constants.to_layer.reserve(layers.size());
     for (layer_index  i = 0U, n =(synapse_index)layers.size(); i != n; ++i)
@@ -96,6 +149,9 @@ cortex::layer_index  cortex::add_layer(
         n.input_signal = 0.0f;
     }
 
+    recompute_mean_input_spiking_frequencies();
+    recompute_max_input_signal_magnitudes();
+
     l.free_axons.reserve(num_neurons * l.constants.num_axons_per_neuron);
     for (neuron_index  i = 0U, n =(neuron_index)l.neurons.size(); i != n; ++i)
         for (axon_index  j = 0U; j != l.constants.num_axons_per_neuron; ++j)
@@ -110,11 +166,11 @@ cortex::layer_index  cortex::add_layer(
 }
 
 
-//void  cortex::set_constant_expected_spiking_frequency(float_32_bit const  value)
-//{
-//    ASSUMPTION(value >= 1.0f);
-//    constants.expected_spiking_frequency = value;
-//}
+void  cortex::set_constant_simulation_frequency(float_32_bit const  frequency)
+{
+    ASSUMPTION(frequency > 0.0f);
+    constants.simulation_fequency = frequency;
+}
 
 
 void  cortex::set_constant_connection_probability(
@@ -125,6 +181,8 @@ void  cortex::set_constant_connection_probability(
     layer&  l = layers.at(from);
     l.constants.to_layer.at(to).connection_probability = value;
     recompute_accumulated_connection_probabilities(l);
+    recompute_mean_input_spiking_frequencies();
+    recompute_max_input_signal_magnitudes();
 }
 
 
@@ -161,6 +219,21 @@ void  cortex::set_constant_neuron_ln_of_excitation_decay_coef(
 {
     ASSUMPTION(value <= 0.0f);
     layers.at(index).constants.neuron.ln_of_excitation_decay_coef = value;
+}
+
+
+void  cortex::set_constant_neuron_mean_spiking_frequency(layer_index const  index, float_32_bit const  value)
+{
+    ASSUMPTION(value > 0.0f);
+    layers.at(index).constants.neuron.mean_spiking_frequency = value;
+    recompute_mean_input_spiking_frequencies();
+}
+
+
+void  cortex::set_constant_neuron_mean_input_spiking_frequency(layer_index const  index, float_32_bit const  value)
+{
+    ASSUMPTION(value > 0.0f);
+    layers.at(index).constants.neuron.mean_input_spiking_frequency = value;
 }
 
 
@@ -209,44 +282,65 @@ void  cortex::set_constant_synapse_weight_decay_delta_per_second(
 }
 
 
-void  cortex::next_round(float_32_bit const  round_seconds)
+void  cortex::next_round()
 {
     TMPROF_BLOCK();
 
-    update_existing_synapses(round_seconds);
-    update_neurons(round_seconds);
+    update_existing_synapses();
+    update_neurons();
     clear_input_signal_of_neurons();
     disconnect_weak_synapses();
     build_new_synapses();
 }
 
 
-void  cortex::update_neurons(float_32_bit const  round_seconds)
+void  cortex::update_neurons()
 {
     TMPROF_BLOCK();
 
     for (layer&  l : layers)
-        update_neurons(round_seconds, l);
+        update_neurons(l);
 }
 
 
-void  cortex::update_neurons(float_32_bit const  round_seconds, layer&  l)
+void  cortex::update_neurons(layer&  l)
 {
     TMPROF_BLOCK();
 
-    //float_32_bit const  round_seconds = 1.0f / constants.simulation_fequency;
-    float_32_bit const  max_num_spikes_inv =
-            l.constants.num_dendrites_per_neuron == 0U ? 1.0f : 1.0f / l.constants.neuron.max_input_signal_magnitude;
+    float_32_bit const  D = std::max(1.0f, l.constants.neuron.max_input_signal_magnitude);
+    float_32_bit const  f_over_s =
+            constants.simulation_fequency / std::max(1.0f, l.constants.neuron.mean_input_spiking_frequency);
+    float_32_bit const  q = std::powf(D / (f_over_s * 0.028f + 0.3f), 1.0f / 2.21f);
+    float_32_bit const  w = 0.5f;
+    float_32_bit const  a = ( 1.0f / (D*D * q) ) * ( (w*D*D + q*(q - 2.0f*D)) / (D*D + q*(q - 2.0f*D)) );
+    float_32_bit const  log_decay_coef = l.constants.neuron.ln_of_excitation_decay_coef / constants.simulation_fequency;
     //float_32_bit const  log_decay_coef = 1.0f + std::logf(l.constants.neuron.excitation_decay_coef) * round_seconds;
     //float_32_bit const  log_decay_coef = std::logf(l.constants.neuron.excitation_decay_coef) * round_seconds;
-    float_32_bit const  log_decay_coef = l.constants.neuron.ln_of_excitation_decay_coef * round_seconds;
+    float_32_bit const  neg_mult = 0.1f;
+
     for (neuron&  n : l.neurons)
     {
+        float_32_bit  x, mult;
+        if (n.input_signal < 0.0f)
+        {
+            x = -n.input_signal;
+            mult = -neg_mult;
+        }
+        else
+        {
+            x = n.input_signal;
+            mult = 1.0f;
+        }
+        float_32_bit const  y = x*( ( a*(x - D)*(x - D) ) - ( (x - 2.0f*D) / (D*D) ) );
+        n.input_signal = mult * y;
+
         if (n.excitation >= n.spiking_excitation)
             n.excitation = l.constants.neuron.excitation_recovery;
-        n.input_signal *= max_num_spikes_inv;
-        n.excitation += n.input_signal;
-        n.excitation += n.excitation * log_decay_coef;
+        else
+        {
+            n.excitation += n.excitation * log_decay_coef;
+            n.excitation += n.input_signal;
+        }
     }
 }
 
@@ -261,11 +355,11 @@ void  cortex::clear_input_signal_of_neurons()
 }
 
 
-void  cortex::update_existing_synapses(float_32_bit const  round_seconds)
+void  cortex::update_existing_synapses()
 {
     TMPROF_BLOCK();
 
-    //float_32_bit const  round_seconds = 1.0f / constants.simulation_fequency;
+    float_32_bit const  round_seconds = 1.0f / constants.simulation_fequency;
     for (synapse&  s : synapses)
     {
         layer&  from_layer = layers.at(s.from.layer);

@@ -22,7 +22,9 @@ void  exp_inhibitory_weight::network_setup()
 
 void  exp_inhibitory_weight::network_update()
 {
-    cortex.update_existing_synapses(round_seconds());
+    cortex.set_constant_simulation_frequency(1.0f / std::max(0.0001f, round_seconds()));
+
+    cortex.update_existing_synapses();
 
     if (get_keyboard_props().keys_pressed().count(osi::KEY_UP()) != 0UL)
         cortex.layer_ref(dst_layer_idx).neurons.at(0U).excitation += 0.5f * round_seconds();

@@ -198,10 +198,27 @@ spike_train::spike_train(
 }
 
 
-natural_32_bit  spike_train::read_spikes_till_time(float_32_bit const  current_time_point)
+void  spike_train::set_mean_spiking_frequency(float_32_bit const  f)
+{
+    ASSUMPTION(f > 0.0f && SPIKING_FREQUENCY_VARIATION <= f);
+    MEAN_SPIKING_FREQUENCY = f;
+}
+
+
+void  spike_train::set_spiking_frequency_variation(float_32_bit const  v)
+{
+    ASSUMPTION(v >= 0.0f && v <= MEAN_SPIKING_FREQUENCY);
+    SPIKING_FREQUENCY_VARIATION = v;
+}
+
+
+natural_32_bit  spike_train::read_spikes_till_time(
+        float_32_bit const  current_time_point,
+        float_32_bit const  simulation_frequency
+        )
 {
     if (current_time_point >= train_end_time_point)
-        generate_spikes(current_time_point);
+        generate_spikes(current_time_point, simulation_frequency);
 
     natural_32_bit  num_spikes = 0U;
     while (!spike_time_points.empty() && current_time_point >= spike_time_points.front())
@@ -214,8 +231,10 @@ natural_32_bit  spike_train::read_spikes_till_time(float_32_bit const  current_t
 }
 
 
-void  spike_train::generate_spikes(float_32_bit const  current_time_point)
+void  spike_train::generate_spikes(float_32_bit const  current_time_point, float_32_bit const  simulation_frequency)
 {
+    ASSUMPTION(simulation_frequency > 0.0f);
+
     train_end_time_point += std::floorf(current_time_point - train_end_time_point);
 
     natural_32_bit const  NUM_SPIKES_TO_GENERATE = (natural_32_bit)(
@@ -224,10 +243,23 @@ void  spike_train::generate_spikes(float_32_bit const  current_time_point)
             0.5f
             );
     natural_32_bit  last_index = (natural_32_bit)spike_time_points.size();
-    for (natural_32_bit  i = 0U; i < NUM_SPIKES_TO_GENERATE; ++i)
-        spike_time_points.push_back(
-                get_random_float_32_bit_in_range(train_end_time_point, train_end_time_point + 1.0f, generator)
-                );
+    std::vector<float_32_bit>  spike_times;
+    spike_times.resize((natural_32_bit)(simulation_frequency + 0.5f));
+    float_32_bit const  dt = 1.0f / simulation_frequency;
+    for (natural_32_bit  i = 0U, n = (natural_32_bit)spike_times.size(); i < n; ++i)
+        spike_times.at(i) = train_end_time_point + i * dt;
+    for (natural_32_bit  i = 0U; i < NUM_SPIKES_TO_GENERATE && !spike_times.empty(); ++i)
+    {
+        natural_32_bit const  idx =
+                get_random_natural_32_bit_in_range(0U, (natural_32_bit)spike_times.size() - 1U, generator);
+        spike_time_points.push_back(spike_times.at(idx));
+        std::swap(spike_times.at(idx), spike_times.back());
+        spike_times.pop_back();
+    }
+    //for (natural_32_bit  i = 0U; i < NUM_SPIKES_TO_GENERATE; ++i)
+    //    spike_time_points.push_back(
+    //            get_random_float_32_bit_in_range(train_end_time_point, train_end_time_point + 1.0f, generator)
+    //            );
     std::sort(std::next(spike_time_points.begin(), last_index), spike_time_points.end());
 
     train_end_time_point += 1.0f;
@@ -272,6 +304,20 @@ void  spike_trains_collection::clear(com::simulation_context&  ctx)
 void  spike_trains_collection::set_min_train_y_to_be_after(spike_trains_collection const&  other)
 {
     MIN_TRAIN_Y = other.MIN_TRAIN_Y + other.size() * other.TRAINS_Y_DELTA;
+}
+
+
+void  spike_trains_collection::set_mean_spiking_frequency(float_32_bit const  f)
+{
+    for (spike_train&  t : spike_trains)
+        t.set_mean_spiking_frequency(f);
+}
+
+
+void  spike_trains_collection::set_spiking_frequency_variation(float_32_bit const  v)
+{
+    for (spike_train&  t : spike_trains)
+        t.set_spiking_frequency_variation(v);
 }
 
 

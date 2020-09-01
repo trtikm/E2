@@ -228,17 +228,20 @@ void  exp_spiking_trains::network_setup()
 
 void  exp_spiking_trains::network_update()
 {
-    float_32_bit const  time_step = 1.0f / SIMULATION_FREQUENCY; // round_seconds();
-    simulatied_time += time_step;
+    simulatied_time += 1.0f / SIMULATION_FREQUENCY;
+
+    cortex.set_constant_simulation_frequency(SIMULATION_FREQUENCY);
 
     cortex.clear_input_signal_of_neurons();
-    cortex.update_neurons(time_step, cortex.layer_ref(input_layer_excitatory_idx));
-    cortex.update_neurons(time_step, cortex.layer_ref(input_layer_inhibitory_idx));
+    cortex.update_neurons(cortex.layer_ref(input_layer_excitatory_idx));
+    cortex.update_neurons(cortex.layer_ref(input_layer_inhibitory_idx));
 
     float_32_bit  input_sum = 0.0f;
 
+    spike_trains_excitatory.set_mean_spiking_frequency(EXPECTED_SPIKING_FREQUENCY_EXCITATORY);
+    spike_trains_excitatory.set_spiking_frequency_variation(VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY);
     for (natural_32_bit  i = 0; i < spike_trains_excitatory.size(); ++i)
-        if (spike_trains_excitatory.at(i).read_spikes_till_time(simulatied_time) > 0U)
+        if (spike_trains_excitatory.at(i).read_spikes_till_time(simulatied_time, SIMULATION_FREQUENCY) > 0U)
         {
             cortex.neuron_ref({input_layer_excitatory_idx, (natural_16_bit)i}).excitation = 1.0f;
             spike_trains_excitatory.insert_spike(simulatied_time, i);
@@ -246,8 +249,10 @@ void  exp_spiking_trains::network_update()
         }
     spike_trains_excitatory.erase_obsolete_spikes(simulatied_time);
 
+    spike_trains_inhibitory.set_mean_spiking_frequency(EXPECTED_SPIKING_FREQUENCY_INHIBITORY);
+    spike_trains_inhibitory.set_spiking_frequency_variation(VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY);
     for (natural_32_bit  i = 0; i < spike_trains_inhibitory.size(); ++i)
-        if (spike_trains_inhibitory.at(i).read_spikes_till_time(simulatied_time) > 0U)
+        if (spike_trains_inhibitory.at(i).read_spikes_till_time(simulatied_time, SIMULATION_FREQUENCY) > 0U)
         {
             cortex.neuron_ref({input_layer_inhibitory_idx, (natural_16_bit)i}).excitation = 1.0f;
             spike_trains_inhibitory.insert_spike(simulatied_time, i);
@@ -258,8 +263,8 @@ void  exp_spiking_trains::network_update()
     insert_to_history(input_sum_history, { simulatied_time, input_sum });
     erase_obsolete_records(input_sum_history, HISTORY_TIME_WINDOW, simulatied_time);
 
-    cortex.update_existing_synapses(time_step);
-    cortex.update_neurons(time_step, cortex.layer_ref(spiking_layer_idx));
+    cortex.update_existing_synapses();
+    cortex.update_neurons(cortex.layer_ref(spiking_layer_idx));
 
     insert_to_history(excitation_history, { simulatied_time, cortex.neuron_excitation(spiking_neuron_guid) });
     erase_obsolete_records(excitation_history, HISTORY_TIME_WINDOW, simulatied_time);

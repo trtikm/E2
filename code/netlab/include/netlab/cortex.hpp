@@ -30,7 +30,9 @@ struct  cortex
             float_32_bit  spiking_excitation_initial; // in <-1,1>; default 0.9f
             float_32_bit  excitation_recovery; // in <-1,1>; default 0.0f
             float_32_bit  ln_of_excitation_decay_coef; // <=0; default -3.0f
-            float_32_bit  max_input_signal_magnitude; // >0; default is the number of dendrites.
+            float_32_bit  mean_spiking_frequency; // >0; default 10.0f
+            float_32_bit  mean_input_spiking_frequency; // >0; default is computed.
+            float_32_bit  max_input_signal_magnitude; // >0; default is computed.
         };
 
         float_32_bit  excitation; // in <-1, 1>
@@ -82,7 +84,7 @@ struct  cortex
 
     struct  constant_data
     {
-        //float_32_bit  simulation_fequency;
+        float_32_bit  simulation_fequency; // >0.0f default 100.0f
         //float_32_bit  expected_spiking_frequency;
     };
 
@@ -111,6 +113,8 @@ struct  cortex
     void  set_constant_neuron_spiking_excitation_initial(layer_index const  index, float_32_bit const  value);
     void  set_constant_neuron_excitation_recovery(layer_index const  index, float_32_bit const  value);
     void  set_constant_neuron_ln_of_excitation_decay_coef(layer_index const  index, float_32_bit const  value);
+    void  set_constant_neuron_mean_spiking_frequency(layer_index const  index, float_32_bit const  value);
+    void  set_constant_neuron_mean_input_spiking_frequency(layer_index const  index, float_32_bit const  value);
     void  set_constant_neuron_max_input_signal_magnitude(layer_index const  index, float_32_bit const  value);
 
     void  set_constant_synapse_weight_initial(layer_index const  from, layer_index const  to, float_32_bit const  value);
@@ -154,16 +158,22 @@ struct  cortex
     // SIMULATION
     ////////////////////////////////////////////////////////////////////////////////////////
 
-    void  next_round(float_32_bit const  round_seconds);
+    void  set_constant_simulation_frequency(float_32_bit const  frequency);
 
-    void  update_neurons(float_32_bit const  round_seconds);
-    void  update_neurons(float_32_bit const  round_seconds, layer&  l);
+    void  next_round();
+
+    void  update_neurons();
+    void  update_neurons(layer&  l);
     void  clear_input_signal_of_neurons();
-    void  update_existing_synapses(float_32_bit const  round_seconds);
+    void  update_existing_synapses();
     void  disconnect_weak_synapses();
 
 private:
     void  recompute_accumulated_connection_probabilities(layer&  l);
+    void  recompute_mean_input_spiking_frequency(layer_index const  layer_idx);
+    void  recompute_mean_input_spiking_frequencies();
+    void  recompute_max_input_signal_magnitude(layer_index const  layer_idx);
+    void  recompute_max_input_signal_magnitudes();
 
     constant_data  constants;
     std::vector<layer>  layers;

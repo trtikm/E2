@@ -21,7 +21,8 @@ exp_spiking_const_input_signal::exp_spiking_const_input_signal()
 void  exp_spiking_const_input_signal::network_setup()
 {
     layer_idx = cortex.add_layer(1U, 0U, NUM_DENDRITES, true);
-    cortex.set_constant_neuron_ln_of_excitation_decay_coef(layer_idx, -3.0f);
+    cortex.set_constant_neuron_ln_of_excitation_decay_coef(layer_idx, -8.0f);
+    cortex.set_constant_neuron_max_input_signal_magnitude(layer_idx, NUM_DENDRITES);
     neuron_guid = { layer_idx, 0U };
     num_input_spikes_per_second = NUM_DENDRITES * EXPECTED_SPIKING_FREQUENCY;
     simulatied_time = 0.0f;
@@ -30,13 +31,13 @@ void  exp_spiking_const_input_signal::network_setup()
 
 void  exp_spiking_const_input_signal::network_update()
 {
-    float_32_bit const  time_step = 1.0f / EXPECTED_SIMULATION_FREQUENCY; // round_seconds(); // 1.0f / cortex.get_constants().simulation_fequency;
+    simulatied_time += 1.0f / EXPECTED_SIMULATION_FREQUENCY;
+
+    cortex.set_constant_simulation_frequency(EXPECTED_SIMULATION_FREQUENCY);
 
     cortex.clear_input_signal_of_neurons();
-    cortex.add_to_input_signal(neuron_guid, num_input_spikes_per_second * time_step);
-    cortex.update_neurons(time_step);
-
-    simulatied_time += time_step;
+    cortex.add_to_input_signal(neuron_guid, 0.1f * num_input_spikes_per_second / EXPECTED_SIMULATION_FREQUENCY);
+    cortex.update_neurons();
 
     erase_obsolete_records(excitation_history, HISTORY_TIME_WINDOW, simulatied_time);
     insert_to_history(excitation_history, { simulatied_time, cortex.neuron_excitation(neuron_guid) });

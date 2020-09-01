@@ -109,9 +109,11 @@ struct  spike_train
             natural_32_bit const  seed_,
             float_32_bit const  current_time_point_ = 0.0f
             );
-    natural_32_bit  read_spikes_till_time(float_32_bit const  current_time_point);
+    natural_32_bit  read_spikes_till_time(float_32_bit const  current_time_point, float_32_bit const  simulation_frequency);
+    void  set_mean_spiking_frequency(float_32_bit const  f);
+    void  set_spiking_frequency_variation(float_32_bit const  v);
 private:
-    void  generate_spikes(float_32_bit const  current_time_point);
+    void  generate_spikes(float_32_bit const  current_time_point, float_32_bit const  simulation_frequency);
 
     float_32_bit  MEAN_SPIKING_FREQUENCY;
     float_32_bit  SPIKING_FREQUENCY_VARIATION;
@@ -135,6 +137,8 @@ struct  spike_trains_collection
     void  set_min_train_y(float_32_bit const  value) { MIN_TRAIN_Y = value;}
     void  set_min_train_y_to_be_after(spike_trains_collection const&  other);
     void  set_time_window(float_32_bit const  value) { TIME_WINDOW = value;}
+    void  set_mean_spiking_frequency(float_32_bit const  f);
+    void  set_spiking_frequency_variation(float_32_bit const  v);
     natural_32_bit  size() const { return (natural_32_bit)spike_trains.size(); }
     spike_train&  at(natural_32_bit const  index) { return spike_trains.at(index); }
     spike_train const&  at(natural_32_bit const  index) const { return spike_trains.at(index); }
