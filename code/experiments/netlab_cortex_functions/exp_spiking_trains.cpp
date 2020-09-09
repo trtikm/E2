@@ -20,14 +20,16 @@ exp_spiking_trains::exp_spiking_trains()
     , VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY(0.0f)
     , VARIATION_OF_SPIKING_FREQUENCY_INHIBITORY(0.0f)
     , SIMULATION_FREQUENCY(100.0f)
-    , VALUE_SCALE(10.0f)
-    , HISTORY_TIME_WINDOW(1.0f)
-    , HISTORY_DT_TO_DX(-VALUE_SCALE)
-    , SPIKES_TIME_WINDOW(1.0f)
+    , VALUE_SCALE(1.0f)
+    , HISTORY_TIME_WINDOW(10.0f)
+    , HISTORY_DT_TO_DX(-10.0f)
+    , SPIKES_TIME_WINDOW(-1.0f)
     , spike_trains_excitatory(HISTORY_DT_TO_DX, -1.0f, SPIKES_TIME_WINDOW, "spikes_excitatory", vector4{1.0f, 0.75f, 0.75f, 1.0f})
     , spike_trains_inhibitory(HISTORY_DT_TO_DX, -1.0f, SPIKES_TIME_WINDOW, "spikes_inhibitory", vector4{0.75f, 0.75f, 1.0f, 1.0f})
     , output_spikes_history()
     , input_sum_history()
+    , input_sum_excitatory_history()
+    , input_sum_inhibitory_history()
     , input_sum_folder_guid(com::invalid_object_guid())
     , input_sum_batch_guid(com::invalid_object_guid())
     , phaser()
@@ -197,9 +199,11 @@ void  exp_spiking_trains::network_setup()
 
     cortex.build_new_synapses();
 
-    cortex.set_constant_neuron_ln_of_excitation_decay_coef(spiking_layer_idx, -10.0f);
+    cortex.set_constant_neuron_ln_of_excitation_decay_coef(spiking_layer_idx, -1.0f);
 
     spiking_neuron_guid = { spiking_layer_idx, 0U };
+
+    cortex.neuron_ref(spiking_neuron_guid).spiking_excitation = 20.0f;
 
     simulatied_time = 0.0f;
 
@@ -237,6 +241,8 @@ void  exp_spiking_trains::network_update()
     cortex.update_neurons(cortex.layer_ref(input_layer_inhibitory_idx));
 
     float_32_bit  input_sum = 0.0f;
+    float_32_bit  input_sum_ex = 0.0f;
+    float_32_bit  input_sum_in = 0.0f;
 
     spike_trains_excitatory.set_mean_spiking_frequency(EXPECTED_SPIKING_FREQUENCY_EXCITATORY);
     spike_trains_excitatory.set_spiking_frequency_variation(VARIATION_OF_SPIKING_FREQUENCY_EXCITATORY);
@@ -246,6 +252,7 @@ void  exp_spiking_trains::network_update()
             cortex.neuron_ref({input_layer_excitatory_idx, (natural_16_bit)i}).excitation = 1.0f;
             spike_trains_excitatory.insert_spike(simulatied_time, i);
             input_sum += 1.0f;
+            input_sum_ex += 1.0f;
         }
     spike_trains_excitatory.erase_obsolete_spikes(simulatied_time);
 
@@ -257,11 +264,18 @@ void  exp_spiking_trains::network_update()
             cortex.neuron_ref({input_layer_inhibitory_idx, (natural_16_bit)i}).excitation = 1.0f;
             spike_trains_inhibitory.insert_spike(simulatied_time, i);
             input_sum -= 1.0f;
+            input_sum_in += 1.0f;
         }
     spike_trains_inhibitory.erase_obsolete_spikes(simulatied_time);
 
     insert_to_history(input_sum_history, { simulatied_time, input_sum });
     erase_obsolete_records(input_sum_history, HISTORY_TIME_WINDOW, simulatied_time);
+
+    insert_to_history(input_sum_excitatory_history, { simulatied_time, input_sum_ex });
+    erase_obsolete_records(input_sum_excitatory_history, HISTORY_TIME_WINDOW, simulatied_time);
+
+    insert_to_history(input_sum_inhibitory_history, { simulatied_time, input_sum_in });
+    erase_obsolete_records(input_sum_inhibitory_history, HISTORY_TIME_WINDOW, simulatied_time);
 
     cortex.update_existing_synapses();
     cortex.update_neurons(cortex.layer_ref(spiking_layer_idx));
@@ -274,7 +288,7 @@ void  exp_spiking_trains::network_update()
 
     if (cortex.is_neuron_spiking(spiking_neuron_guid))
         insert_to_history(output_spikes_history, { simulatied_time, 1.0f });
-    erase_obsolete_records(output_spikes_history, 1.0f, simulatied_time);
+    erase_obsolete_records(output_spikes_history, HISTORY_TIME_WINDOW, simulatied_time);
 
     if (phaser.is_enabled)
         return;
@@ -314,14 +328,17 @@ void  exp_spiking_trains::network_update()
         SIMULATION_FREQUENCY = std::max(10.0f, SIMULATION_FREQUENCY - 10.0f);
 
     if (is_key_pressed(osi::KEY_O()) != 0UL)
-        cortex.neuron_ref(spiking_neuron_guid).spiking_excitation += 0.1f * round_seconds();
+        cortex.neuron_ref(spiking_neuron_guid).spiking_excitation += 1.0f * round_seconds();
     if (is_key_pressed(osi::KEY_P()) != 0UL)
-        cortex.neuron_ref(spiking_neuron_guid).spiking_excitation -= 0.1f * round_seconds();
+        cortex.neuron_ref(spiking_neuron_guid).spiking_excitation -= 1.0f * round_seconds();
 
     if (is_key_pressed(osi::KEY_N()) != 0UL)
         cortex.set_constant_neuron_ln_of_excitation_decay_coef(
-                spiking_layer_idx, 
-                cortex.get_layer_constants(spiking_layer_idx).neuron.ln_of_excitation_decay_coef + 2.0f * round_seconds()
+                spiking_layer_idx,
+                std::min(
+                    -0.1f,
+                    cortex.get_layer_constants(spiking_layer_idx).neuron.ln_of_excitation_decay_coef + 2.0f * round_seconds()
+                    )
                 );
     if (is_key_pressed(osi::KEY_M()) != 0UL)
         cortex.set_constant_neuron_ln_of_excitation_decay_coef(
@@ -369,10 +386,10 @@ void  exp_spiking_trains::scene_update()
 {
     com::simulation_context&  ctx = *context();
 
-    ctx.frame_set_origin(excitation_frame_guid, {0.0f, 10.0f * cortex.neuron_excitation(spiking_neuron_guid), 0.0f });
-    ctx.frame_set_origin(input_signal_frame_guid, {0.0f, 10.0f * cortex.get_neuron(spiking_neuron_guid).input_signal, 0.0f });
+    ctx.frame_set_origin(excitation_frame_guid, {0.0f, VALUE_SCALE * cortex.neuron_excitation(spiking_neuron_guid), 0.0f });
+    ctx.frame_set_origin(input_signal_frame_guid, {0.0f, VALUE_SCALE * cortex.get_neuron(spiking_neuron_guid).input_signal, 0.0f });
     ctx.frame_set_origin(spiking_excitation_frame_guid,
-                         {0.0f, 10.0f * cortex.get_neuron(spiking_neuron_guid).spiking_excitation, 0.0f });
+                         {0.0f, VALUE_SCALE * cortex.get_neuron(spiking_neuron_guid).spiking_excitation, 0.0f });
 
     rebuild_history_lines_batch(
             ctx,
@@ -428,6 +445,8 @@ void  exp_spiking_trains::on_restart()
     output_spikes_history.clear();
     input_sum_history.clear();
     input_sum_batch_guid = com::invalid_object_guid();
+    input_sum_excitatory_history.clear();
+    input_sum_inhibitory_history.clear();
 }
 
 
@@ -448,9 +467,29 @@ void  exp_spiking_trains::custom_render()
         "SIMULATION_FREQUENCY=" << SIMULATION_FREQUENCY << "\n"
         "spiking_excitation=" << cortex.get_neuron(spiking_neuron_guid).spiking_excitation << "\n"
         "ln_of_excitation_decay_coef=" << cortex.get_layer_constants(spiking_layer_idx).neuron.ln_of_excitation_decay_coef << "\n"
-        "output_spiking_frequency=" << output_spikes_history.size() << "\n"
+        "output_spiking_frequency=" << output_spikes_history.size() / HISTORY_TIME_WINDOW << "\n"
         "radius95%=" << histogram_radius_95(input_sum_history) << "\n"
     );
+
+    if (HISTORY_TIME_WINDOW > 0.001f)
+    {
+        float_32_bit  s = 0.0f;
+        for (history_record const&  r : input_signal_history)
+            s += r.value;
+        SLOG("SUM(input_signal_history)=" << s << "\n");
+        {
+            float_32_bit  s = 0.0f;
+            for (history_record const&  r : input_sum_excitatory_history)
+                s += r.value;
+            SLOG("SUM(EX)=" << s/HISTORY_TIME_WINDOW << "\n");
+        }
+        {
+            float_32_bit  s = 0.0f;
+            for (history_record const&  r : input_sum_inhibitory_history)
+                s += r.value;
+            SLOG("SUM(IN)=" << s/HISTORY_TIME_WINDOW << "\n");
+        }
+    }
 }
 
 

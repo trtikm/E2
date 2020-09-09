@@ -83,6 +83,8 @@ private:
     history_records  output_spikes_history;
 
     history_records  input_sum_history;
+    history_records  input_sum_excitatory_history;
+    history_records  input_sum_inhibitory_history;
     com::object_guid  input_sum_folder_guid;
     com::object_guid  input_sum_batch_guid;
 
