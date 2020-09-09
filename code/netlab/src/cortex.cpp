@@ -307,35 +307,16 @@ void  cortex::update_neurons(layer&  l)
 {
     TMPROF_BLOCK();
 
-    float_32_bit const  D = std::max(1.0f, l.constants.neuron.max_input_signal_magnitude);
-    float_32_bit const  f_over_s =
-            constants.simulation_fequency / std::max(1.0f, l.constants.neuron.mean_input_spiking_frequency);
-    float_32_bit const  q = std::powf(D / (f_over_s * 0.028f + 0.3f), 1.0f / 2.21f);
-    float_32_bit const  w = 0.5f;
-    float_32_bit const  a = ( 1.0f / (D*D * q) ) * ( (w*D*D + q*(q - 2.0f*D)) / (D*D + q*(q - 2.0f*D)) );
     float_32_bit const  log_decay_coef = l.constants.neuron.ln_of_excitation_decay_coef / constants.simulation_fequency;
-    //float_32_bit const  log_decay_coef = 1.0f + std::logf(l.constants.neuron.excitation_decay_coef) * round_seconds;
-    //float_32_bit const  log_decay_coef = std::logf(l.constants.neuron.excitation_decay_coef) * round_seconds;
-    float_32_bit const  neg_mult = 0.1f;
-
     for (neuron&  n : l.neurons)
     {
-        float_32_bit  x, mult;
-        if (n.input_signal < 0.0f)
-        {
-            x = -n.input_signal;
-            mult = -neg_mult;
-        }
-        else
-        {
-            x = n.input_signal;
-            mult = 1.0f;
-        }
-        float_32_bit const  y = x*( ( a*(x - D)*(x - D) ) - ( (x - 2.0f*D) / (D*D) ) );
-        n.input_signal = mult * y;
-
         if (n.excitation >= n.spiking_excitation)
             n.excitation = l.constants.neuron.excitation_recovery;
+        else if (n.excitation < 0.0f)
+        {
+            n.excitation += n.excitation * 10.0f * log_decay_coef;
+            n.excitation += (n.input_signal < 0.0f ? 0.1f : 1.0f) * n.input_signal;
+        }
         else
         {
             n.excitation += n.excitation * log_decay_coef;
