@@ -21,9 +21,7 @@ struct  exp_spiking_const_input_signal : public simulator_base
     void  help() override;
 
 private:
-    natural_32_bit  NUM_DENDRITES;
-    float_32_bit  EXPECTED_SPIKING_FREQUENCY;
-    float_32_bit  EXPECTED_SIMULATION_FREQUENCY;
+    float_32_bit  SIMULATION_FREQUENCY;
 
     float_32_bit  VALUE_SCALE;
     float_32_bit  HISTORY_TIME_WINDOW;
@@ -36,13 +34,14 @@ private:
     com::object_guid  input_signal_frame_guid;
     com::object_guid  spiking_excitation_frame_guid;
 
-    float_32_bit  num_input_spikes_per_second;
+    float_32_bit  input_signal;
 
     com::object_guid  history_folder_guid;
     com::object_guid  excitation_curve_batch_guid;
     history_records  excitation_history;
     com::object_guid  input_signal_batch_guid;
     history_records  input_signal_history;
+    history_records  output_spikes_history;
     float_32_bit  simulatied_time;
 };
 
