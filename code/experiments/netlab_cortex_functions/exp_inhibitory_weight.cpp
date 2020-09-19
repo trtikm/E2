@@ -16,6 +16,7 @@ void  exp_inhibitory_weight::network_setup()
     //cortex.set_constant_synapse_weight_disconnection(src_layer_idx, dst_layer_idx, -10000.0f);
     //cortex.set_constant_synapse_weight_delta_per_second(src_layer_idx, dst_layer_idx, 0.25f);
     //cortex.set_constant_synapse_weight_decay_delta_per_second(src_layer_idx, dst_layer_idx, 0.01f);
+    cortex.update_dependent_constants();
     cortex.build_new_synapses();
 }
 

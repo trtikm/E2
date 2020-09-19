@@ -26,18 +26,23 @@ struct  cortex
     {
         struct constant_data
         {
-            float_32_bit  excitation_initial; // in <-1,1>; default 0.0f
-            float_32_bit  spiking_excitation_initial; // in <-1,1>; default 0.9f
+            float_32_bit  excitation_spike_percentage; // in <0, 1>; default 0.95
             float_32_bit  excitation_recovery; // in <-1,1>; default 0.0f
-            float_32_bit  ln_of_excitation_decay_coef; // <=0; default -3.0f
             float_32_bit  mean_spiking_frequency; // >0; default 10.0f
-            float_32_bit  mean_input_spiking_frequency; // >0; default is computed.
-            float_32_bit  max_input_signal_magnitude; // >0; default is computed.
+            float_32_bit  inhibition_decay_mult; // >=1; default 10.0f
+            float_32_bit  inhibition_input_mult; // in <0, 1>; default 0.1f
+
+            // Dependent constants (they are computed from others) in update_dependent_constants().
+            // It means, these do not have to be specified in the network setup.
+            float_32_bit  mean_input_spiking_frequency;
+            float_32_bit  max_input_signal_magnitude;
+            float_32_bit  excitation_decay_coef;
+            float_32_bit  input_signal;
+            float_32_bit  excitation_spike;
         };
 
-        float_32_bit  excitation; // in <-1, 1>
-        float_32_bit  spiking_excitation; // in <0, 1>
-        float_32_bit  input_signal; // in <-D,D>, where D is number of dendrites of the neuron
+        float_32_bit  excitation;
+        float_32_bit  input_signal;
     };
 
     struct  synapse // Hebbian pasticity model; weight treashold used for disconnection
@@ -59,21 +64,22 @@ struct  cortex
     {
         struct  constant_data
         {
-            neuron::constant_data  neuron;
-
-            float_32_bit  sign; // Sign of the output action potential: 1.0f - excitatory, -1.0f - inhibitory.
-            natural_16_bit  num_axons_per_neuron;
-            natural_16_bit  num_dendrites_per_neuron;
-
             struct  to_layer_data
             {
                 float_32_bit  connection_probability; // in <0,1>
-                float_32_bit  accumulated_connection_probability; // >= 0
+                float_32_bit  accumulated_connection_probability; // >= 0 This is a dependent constants (it will
+                                        // be computed from others) in update_dependent_constants().
+                                        // It means, it does not have to be specified in the network setup.
 
                 synapse::constant_data  synapse;
 
             };
+
+            float_32_bit  sign; // Sign of the output action potential: 1.0f - excitatory, -1.0f - inhibitory.
+            natural_16_bit  num_axons_per_neuron;
+            natural_16_bit  num_dendrites_per_neuron;
             std::vector<to_layer_data>  to_layer;
+            neuron::constant_data  neuron;
 
         } constants;
 
@@ -105,23 +111,32 @@ struct  cortex
                 bool const  excitatory
                 );
 
-    //void  set_constant_expected_spiking_frequency(float_32_bit const  value);
-
+    // Network constants
+    void  set_constant_simulation_frequency(float_32_bit const  frequency);
     void  set_constant_connection_probability(layer_index const  from, layer_index const  to, float_32_bit const  value);
 
-    void  set_constant_neuron_excitation_initial(layer_index const  index, float_32_bit const  value);
-    void  set_constant_neuron_spiking_excitation_initial(layer_index const  index, float_32_bit const  value);
+    // Neuron constants
+    void  set_constant_neuron_excitation_spike_percentage(layer_index const  index, float_32_bit const  value);
     void  set_constant_neuron_excitation_recovery(layer_index const  index, float_32_bit const  value);
-    void  set_constant_neuron_ln_of_excitation_decay_coef(layer_index const  index, float_32_bit const  value);
     void  set_constant_neuron_mean_spiking_frequency(layer_index const  index, float_32_bit const  value);
+    void  set_constant_neuron_inhibition_decay_mult(layer_index const  index, float_32_bit const  value);
+    void  set_constant_neuron_inhibition_input_mult(layer_index const  index, float_32_bit const  value);
+
+    // Explicitly specify values of dependent (computed constants)
     void  set_constant_neuron_mean_input_spiking_frequency(layer_index const  index, float_32_bit const  value);
     void  set_constant_neuron_max_input_signal_magnitude(layer_index const  index, float_32_bit const  value);
+    void  set_constant_neuron_excitation_decay_coef(layer_index const  index, float_32_bit const  value);
+    void  set_constant_neuron_input_signal(layer_index const  index, float_32_bit const  value);
+    void  set_constant_neuron_excitation_spike(layer_index const  index, float_32_bit const  value);
 
+    // Synapse constants
     void  set_constant_synapse_weight_initial(layer_index const  from, layer_index const  to, float_32_bit const  value);
     void  set_constant_synapse_weight_disconnection(layer_index const  from, layer_index const  to, float_32_bit const  value);
     void  set_constant_synapse_weight_delta_per_second(layer_index const  from, layer_index const  to, float_32_bit const  value);
     void  set_constant_synapse_weight_decay_delta_per_second(layer_index const  from, layer_index const  to, float_32_bit const  value);
     
+    // Setup finalisers
+    void  update_dependent_constants();
     void  build_new_synapses();
 
     ////////////////////////////////////////////////////////////////////////////////////////
@@ -151,14 +166,16 @@ struct  cortex
     { layers.at(guid.layer).neurons.at(guid.neuron).input_signal += input_signal_delta; }
 
     float_32_bit  neuron_excitation(neuron_guid const  guid) const { return get_neuron(guid).excitation; }
+
     bool  is_neuron_spiking(neuron_guid const  guid) const
-    { neuron const&  n = get_neuron(guid); return n.excitation >=n.spiking_excitation ; }
+    {
+        layer const&  l = layers.at(guid.layer);
+        return l.neurons.at(guid.neuron).excitation >= l.constants.neuron.excitation_spike ;
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////
     // SIMULATION
     ////////////////////////////////////////////////////////////////////////////////////////
-
-    void  set_constant_simulation_frequency(float_32_bit const  frequency);
 
     void  next_round();
 

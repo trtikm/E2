@@ -103,7 +103,7 @@ cortex::layer_index  cortex::add_layer(
         layer::constant_data::to_layer_data&  data = l.constants.to_layer.back();
 
         data.connection_probability = 1.0f;
-        recompute_accumulated_connection_probabilities(l);
+        data.accumulated_connection_probability = 1.0f; // this will be computed in update_dependent_constants().
 
         data.synapse.weight_initial = 0.5f;
         data.synapse.weight_disconnection = 0.1f;
@@ -116,15 +116,9 @@ cortex::layer_index  cortex::add_layer(
     layer&  l = layers.back();
 
     l.constants.sign = excitatory ? 1.0f : -1.0f;
+
     l.constants.num_axons_per_neuron = num_axons_per_neuron;
     l.constants.num_dendrites_per_neuron = num_dendrites_per_neuron;
-    l.constants.neuron.excitation_initial = 0.0f;
-    l.constants.neuron.spiking_excitation_initial = 0.9f;
-    l.constants.neuron.excitation_recovery = 0.0f;
-    l.constants.neuron.ln_of_excitation_decay_coef = -3.0f;
-    l.constants.neuron.mean_spiking_frequency = 10.0f;
-    l.constants.neuron.mean_input_spiking_frequency = 0.0f; // is recomputed below
-    l.constants.neuron.max_input_signal_magnitude = 0.0f; // is recomputed below
 
     l.constants.to_layer.reserve(layers.size());
     for (layer_index  i = 0U, n =(synapse_index)layers.size(); i != n; ++i)
@@ -133,24 +127,33 @@ cortex::layer_index  cortex::add_layer(
         layer::constant_data::to_layer_data&  data = l.constants.to_layer.back();
 
         data.connection_probability = 1.0f;
+        data.accumulated_connection_probability = 1.0f; // this will be computed in update_dependent_constants().
 
         data.synapse.weight_initial = 0.5f;
         data.synapse.weight_disconnection = 0.1f;
         data.synapse.weight_delta_per_second = 0.25f;
         data.synapse.weight_decay_delta_per_second = 0.01f;
     }
-    recompute_accumulated_connection_probabilities(l);
+
+    l.constants.neuron.excitation_spike_percentage = 0.95f;
+    l.constants.neuron.excitation_recovery = 0.0f;
+    l.constants.neuron.mean_spiking_frequency = 10.0f;
+    l.constants.neuron.inhibition_decay_mult = 10.0f;
+    l.constants.neuron.inhibition_input_mult = 0.1f;
+    l.constants.neuron.excitation_decay_coef = 0.0f;
+
+    l.constants.neuron.mean_input_spiking_frequency = 10.0f; // this will be computed in update_dependent_constants();
+    l.constants.neuron.max_input_signal_magnitude = 1.0f; // this will be computed in update_dependent_constants();
+    l.constants.neuron.excitation_decay_coef = -3.0f; // this will be computed in update_dependent_constants();
+    l.constants.neuron.input_signal = 0.0f; // this will be computed in update_dependent_constants();
+    l.constants.neuron.excitation_spike =1.0f; // this will be computed in update_dependent_constants();
 
     l.neurons.resize(num_neurons);
     for (neuron&  n : l.neurons)
     {
-        n.excitation = l.constants.neuron.excitation_initial;
-        n.spiking_excitation = l.constants.neuron.spiking_excitation_initial;
+        n.excitation = 0.0f;
         n.input_signal = 0.0f;
     }
-
-    recompute_mean_input_spiking_frequencies();
-    recompute_max_input_signal_magnitudes();
 
     l.free_axons.reserve(num_neurons * l.constants.num_axons_per_neuron);
     for (neuron_index  i = 0U, n =(neuron_index)l.neurons.size(); i != n; ++i)
@@ -180,53 +183,41 @@ void  cortex::set_constant_connection_probability(
     ASSUMPTION(value >= 0.0f);
     layer&  l = layers.at(from);
     l.constants.to_layer.at(to).connection_probability = value;
-    recompute_accumulated_connection_probabilities(l);
-    recompute_mean_input_spiking_frequencies();
-    recompute_max_input_signal_magnitudes();
 }
 
 
-void  cortex::set_constant_neuron_excitation_initial(
-        layer_index const  index, float_32_bit const  value
-        )
+void  cortex::set_constant_neuron_excitation_spike_percentage(layer_index const  index, float_32_bit const  value)
 {
-    ASSUMPTION(-1.0f <= value && value <= 1.0f);
-    layers.at(index).constants.neuron.excitation_initial = value;
+    ASSUMPTION(0.0f <= value && value <= 1.0f);
+    layers.at(index).constants.neuron.excitation_spike_percentage = value;
 }
 
 
-void  cortex::set_constant_neuron_spiking_excitation_initial(
-        layer_index const  index, float_32_bit const  value
-        )
-{
-    ASSUMPTION(-1.0f <= value && value <= 1.0f);
-    layers.at(index).constants.neuron.spiking_excitation_initial = value;
-}
-
-
-void  cortex::set_constant_neuron_excitation_recovery(
-        layer_index const  index, float_32_bit const  value
-        )
+void  cortex::set_constant_neuron_excitation_recovery(layer_index const  index, float_32_bit const  value)
 {
     ASSUMPTION(-1.0f <= value && value <= 1.0f);
     layers.at(index).constants.neuron.excitation_recovery = value;
 }
 
 
-void  cortex::set_constant_neuron_ln_of_excitation_decay_coef(
-        layer_index const  index, float_32_bit const  value
-        )
+void  cortex::set_constant_neuron_mean_spiking_frequency(layer_index const  index, float_32_bit const  value)
 {
-    ASSUMPTION(value <= 0.0f);
-    layers.at(index).constants.neuron.ln_of_excitation_decay_coef = value;
+    ASSUMPTION(0.0f < value);
+    layers.at(index).constants.neuron.mean_input_spiking_frequency = value;
 }
 
 
-void  cortex::set_constant_neuron_mean_spiking_frequency(layer_index const  index, float_32_bit const  value)
+void  cortex::set_constant_neuron_inhibition_decay_mult(layer_index const  index, float_32_bit const  value)
 {
-    ASSUMPTION(value > 0.0f);
-    layers.at(index).constants.neuron.mean_spiking_frequency = value;
-    recompute_mean_input_spiking_frequencies();
+    ASSUMPTION(1.0f <= value);
+    layers.at(index).constants.neuron.inhibition_decay_mult = value;
+}
+
+
+void  cortex::set_constant_neuron_inhibition_input_mult(layer_index const  index, float_32_bit const  value)
+{
+    ASSUMPTION(0.0f <= value && value <= 1.0f);
+    layers.at(index).constants.neuron.inhibition_input_mult = value;
 }
 
 
@@ -237,12 +228,29 @@ void  cortex::set_constant_neuron_mean_input_spiking_frequency(layer_index const
 }
 
 
-void  cortex::set_constant_neuron_max_input_signal_magnitude(
-        layer_index const  index, float_32_bit const  value
-        )
+void  cortex::set_constant_neuron_max_input_signal_magnitude(layer_index const  index, float_32_bit const  value)
 {
     ASSUMPTION(0.0001f < value);
     layers.at(index).constants.neuron.max_input_signal_magnitude = value;
+}
+
+
+void  cortex::set_constant_neuron_excitation_decay_coef(layer_index const  index, float_32_bit const  value)
+{
+    ASSUMPTION(value <= 0.0f);
+    layers.at(index).constants.neuron.excitation_decay_coef = value;
+}
+
+
+void  cortex::set_constant_neuron_input_signal(layer_index const  index, float_32_bit const  value)
+{
+    layers.at(index).constants.neuron.input_signal = value;
+}
+
+
+void  cortex::set_constant_neuron_excitation_spike(layer_index const  index, float_32_bit const  value)
+{
+    layers.at(index).constants.neuron.excitation_spike = value;
 }
 
 
@@ -282,6 +290,30 @@ void  cortex::set_constant_synapse_weight_decay_delta_per_second(
 }
 
 
+void  cortex::update_dependent_constants()
+{
+    for (layer&  l : layers)
+        recompute_accumulated_connection_probabilities(l);
+    recompute_mean_input_spiking_frequencies();
+    recompute_max_input_signal_magnitudes();
+    for (layer&  l : layers)
+    {
+        l.constants.neuron.excitation_decay_coef =
+                l.constants.neuron.mean_spiking_frequency * std::logf(1.0f - l.constants.neuron.excitation_spike_percentage);
+        l.constants.neuron.input_signal =
+                constants.simulation_fequency *
+                std::powf(l.constants.neuron.max_input_signal_magnitude /
+                            (0.028f * (constants.simulation_fequency / l.constants.neuron.mean_spiking_frequency) + 0.3f),
+                          1.0f / 2.21f);
+        l.constants.neuron.excitation_spike =
+                l.constants.neuron.input_signal < 0.0001f ?
+                        1.0f :
+                        l.constants.neuron.excitation_spike_percentage *
+                        -(l.constants.neuron.input_signal / l.constants.neuron.excitation_decay_coef);
+    }
+}
+
+
 void  cortex::next_round()
 {
     TMPROF_BLOCK();
@@ -307,19 +339,20 @@ void  cortex::update_neurons(layer&  l)
 {
     TMPROF_BLOCK();
 
-    float_32_bit const  log_decay_coef = l.constants.neuron.ln_of_excitation_decay_coef / constants.simulation_fequency;
+    float_32_bit const  excit_log_decay_coef = l.constants.neuron.excitation_decay_coef / constants.simulation_fequency;
+    float_32_bit const  inhib_log_decay_coef = l.constants.neuron.inhibition_decay_mult * excit_log_decay_coef;
     for (neuron&  n : l.neurons)
     {
-        if (n.excitation >= n.spiking_excitation)
+        if (n.excitation >= l.constants.neuron.excitation_spike)
             n.excitation = l.constants.neuron.excitation_recovery;
         else if (n.excitation < 0.0f)
         {
-            n.excitation += n.excitation * 10.0f * log_decay_coef;
-            n.excitation += (n.input_signal < 0.0f ? 0.1f : 1.0f) * n.input_signal;
+            n.excitation += n.excitation * inhib_log_decay_coef;
+            n.excitation += (n.input_signal < 0.0f ? l.constants.neuron.inhibition_input_mult : 1.0f) * n.input_signal;
         }
         else
         {
-            n.excitation += n.excitation * log_decay_coef;
+            n.excitation += n.excitation * excit_log_decay_coef;
             n.excitation += n.input_signal;
         }
     }
@@ -331,8 +364,11 @@ void  cortex::clear_input_signal_of_neurons()
     TMPROF_BLOCK();
 
     for (layer&  l : layers)
+    {
+        float_32_bit const  reset_input_signal = l.constants.neuron.input_signal / constants.simulation_fequency;
         for (neuron&  n : l.neurons)
-            n.input_signal = 0.0f;
+            n.input_signal = reset_input_signal;
+    }
 }
 
 
@@ -349,9 +385,9 @@ void  cortex::update_existing_synapses()
         layer&  to_layer = layers.at(s.to.layer);
         neuron&  to_neuron = to_layer.neurons.at(s.to.neuron);
 
-        // Update input signal of 'from' neuron, if 'to' neuron is spiking.
+        // Update input signal of 'to' neuron, if 'from' neuron is spiking.
 
-        bool const  is_from_neuron_spiking = from_neuron.excitation >= from_neuron.spiking_excitation;
+        bool const  is_from_neuron_spiking = from_neuron.excitation >= from_layer.constants.neuron.excitation_spike;
         if (is_from_neuron_spiking)
             to_neuron.input_signal += from_layer.constants.sign * s.weight;
 

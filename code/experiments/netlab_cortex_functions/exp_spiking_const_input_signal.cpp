@@ -19,11 +19,15 @@ exp_spiking_const_input_signal::exp_spiking_const_input_signal()
 void  exp_spiking_const_input_signal::network_setup()
 {
     layer_idx = cortex.add_layer(1U, 0U, 1U, true);
-    cortex.set_constant_neuron_ln_of_excitation_decay_coef(layer_idx, -1.0f);
+
     neuron_guid = { layer_idx, 0U };
-    cortex.neuron_ref(neuron_guid).spiking_excitation = 9.0f;
     input_signal = 10.0f;
     simulatied_time = 0.0f;
+
+    cortex.update_dependent_constants();
+    cortex.set_constant_neuron_excitation_decay_coef(layer_idx, -1.0f);
+    cortex.set_constant_neuron_excitation_spike(layer_idx, 9.0f);
+    cortex.set_constant_neuron_input_signal(layer_idx, input_signal);
 }
 
 
@@ -31,11 +35,7 @@ void  exp_spiking_const_input_signal::network_update()
 {
     simulatied_time += 1.0f / SIMULATION_FREQUENCY;
 
-
-    cortex.set_constant_simulation_frequency(SIMULATION_FREQUENCY);
-
     cortex.clear_input_signal_of_neurons();
-    cortex.add_to_input_signal(neuron_guid, input_signal / SIMULATION_FREQUENCY);
     cortex.update_neurons();
 
     erase_obsolete_records(excitation_history, HISTORY_TIME_WINDOW, simulatied_time);
@@ -49,33 +49,49 @@ void  exp_spiking_const_input_signal::network_update()
     erase_obsolete_records(output_spikes_history, HISTORY_TIME_WINDOW, simulatied_time);
 
     if (is_key_just_pressed(osi::KEY_G()) != 0UL)
+    {
         SIMULATION_FREQUENCY = std::min(10000.0f, SIMULATION_FREQUENCY + 10.0f);
+        cortex.set_constant_simulation_frequency(SIMULATION_FREQUENCY);
+        cortex.update_dependent_constants();
+    }
     if (is_key_just_pressed(osi::KEY_H()) != 0UL)
+    {
         SIMULATION_FREQUENCY = std::max(10.0f, SIMULATION_FREQUENCY - 10.0f);
-    if (is_key_pressed(osi::KEY_O()) != 0UL)
-        cortex.neuron_ref(neuron_guid).spiking_excitation += 1.0f * round_seconds();
-    if (is_key_pressed(osi::KEY_P()) != 0UL)
-        cortex.neuron_ref(neuron_guid).spiking_excitation -= 1.0f * round_seconds();
+        cortex.set_constant_simulation_frequency(SIMULATION_FREQUENCY);
+        cortex.update_dependent_constants();
+    }
+    if (is_key_just_pressed(osi::KEY_O()) != 0UL)
+        cortex.set_constant_neuron_excitation_spike(layer_idx,
+                cortex.get_layer_constants(layer_idx).neuron.excitation_spike + 0.1f);
+    if (is_key_just_pressed(osi::KEY_P()) != 0UL)
+        cortex.set_constant_neuron_excitation_spike(layer_idx,
+                cortex.get_layer_constants(layer_idx).neuron.excitation_spike - 0.1f);
     if (is_key_just_pressed(osi::KEY_K()) != 0UL)
+    {
         input_signal += 1.0f;
+        cortex.set_constant_neuron_input_signal(layer_idx, input_signal);
+    }
     if (is_key_just_pressed(osi::KEY_L()) != 0UL)
+    {
         input_signal -= 1.0f;
+        cortex.set_constant_neuron_input_signal(layer_idx, input_signal);
+    }
     if (is_key_just_pressed(osi::KEY_N()) != 0UL)
-        cortex.set_constant_neuron_ln_of_excitation_decay_coef(
+        cortex.set_constant_neuron_excitation_decay_coef(
                 layer_idx, 
                 std::min(
                     -0.1f,
-                    cortex.get_layer_constants(layer_idx).neuron.ln_of_excitation_decay_coef + 0.1f
+                    cortex.get_layer_constants(layer_idx).neuron.excitation_decay_coef + 0.1f
                     )
                 );
     if (is_key_just_pressed(osi::KEY_M()) != 0UL)
-        cortex.set_constant_neuron_ln_of_excitation_decay_coef(
+        cortex.set_constant_neuron_excitation_decay_coef(
                 layer_idx, 
-                cortex.get_layer_constants(layer_idx).neuron.ln_of_excitation_decay_coef - 0.1f
+                cortex.get_layer_constants(layer_idx).neuron.excitation_decay_coef - 0.1f
                 );
     if (is_key_just_pressed(osi::KEY_Z()) != 0UL)
-        cortex.neuron_ref(neuron_guid).spiking_excitation =
-                0.95f * -input_signal / cortex.get_layer_constants(layer_idx).neuron.ln_of_excitation_decay_coef;
+        cortex.set_constant_neuron_excitation_spike(layer_idx,
+                0.95f * -input_signal / cortex.get_layer_constants(layer_idx).neuron.excitation_decay_coef);
 
 }
 
@@ -117,7 +133,7 @@ void  exp_spiking_const_input_signal::scene_update()
 
     ctx.frame_set_origin(excitation_frame_guid, {0.0f, VALUE_SCALE * cortex.neuron_excitation(neuron_guid), 0.0f });
     ctx.frame_set_origin(input_signal_frame_guid, {0.0f, VALUE_SCALE * cortex.get_neuron(neuron_guid).input_signal, 0.0f });
-    ctx.frame_set_origin(spiking_excitation_frame_guid, {0.0f, VALUE_SCALE * cortex.get_neuron(neuron_guid).spiking_excitation, 0.0f });
+    ctx.frame_set_origin(spiking_excitation_frame_guid, {0.0f, VALUE_SCALE * cortex.get_layer_constants(layer_idx).neuron.excitation_spike, 0.0f });
 
     rebuild_history_lines_batch(
             ctx,
@@ -158,9 +174,9 @@ void  exp_spiking_const_input_signal::custom_render()
 {
     SLOG(
         "SIMULATION_FREQUENCY=" << SIMULATION_FREQUENCY << "\n"
-        "spiking_excitation=" << cortex.get_neuron(neuron_guid).spiking_excitation << "\n"
+        "excitation_spike=" << cortex.get_layer_constants(layer_idx).neuron.excitation_spike << "\n"
         "input_signal=" << input_signal << "\n"    
-        "ln_of_excitation_decay_coef=" << cortex.get_layer_constants(layer_idx).neuron.ln_of_excitation_decay_coef << "\n"
+        "excitation_decay_coef=" << cortex.get_layer_constants(layer_idx).neuron.excitation_decay_coef << "\n"
         "output_spiking_frequency=" << output_spikes_history.size() / HISTORY_TIME_WINDOW << "\n"
     );
 }
@@ -174,7 +190,7 @@ void  exp_spiking_const_input_signal::help()
         "\tGreen sphere & curve - input signal\n"
         "\tBlue line - neuron's spiking excitation\n"
         "\tG/H - increase/decrease simulation frequency\n"
-        "\tO/P - increase/decrease neuron's spiking excitation\n"
+        "\tO/P - increase/decrease neuron's excitation_spike\n"
         "\tK/L - increase/decrease input signal\n"
         "\tN/M - increase/decrease ln of neuron's excitartion decay coef\n"
         "\tZ - set spiking excitation to 95% of max. neuron excitation\n"
