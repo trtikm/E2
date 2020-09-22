@@ -214,7 +214,7 @@ def from_base_matrix(
     :return: An instance of 'mathutils.Matrix' (4x4 matrix) representing a transformation from this
              coordinate system to a parent coordinate system (like world coordinate system)
     """
-    return mathutils.Matrix.Translation(position) * orientation.to_matrix().to_4x4()
+    return mathutils.Matrix.Translation(position) @ orientation.to_matrix().to_4x4()
 
 
 def to_base_matrix(
@@ -228,7 +228,7 @@ def to_base_matrix(
              coordinate system (like world coordinate system) into this coordinate system.
     """
     with TimeProf.instance().start("to_base_matrix"):
-        return orientation.to_matrix().transposed().to_4x4() * mathutils.Matrix.Translation(-position)
+        return orientation.to_matrix().transposed().to_4x4() @ mathutils.Matrix.Translation(-position)
 
 
 def compute_tangent_vector_of_textured_triangle(A, B, C, uvA, uvB, uvC):
@@ -1075,22 +1075,19 @@ def save_hierarchy_of_bones(
 
         export_info["bone_names"] = os.path.join(
             export_info["root_dir"],
-            "animations",
-            "skeletal",
+            "animation",
             remove_ignored_part_of_name(armature.name, "SKELETAL"),
             "names.txt"
             )
         export_info["bone_lengths"] = os.path.join(
             export_info["root_dir"],
-            "animations",
-            "skeletal",
+            "animation",
             remove_ignored_part_of_name(armature.name, "SKELETAL"),
             "lengths.txt"
             )
         export_info["bone_parents"] = os.path.join(
             export_info["root_dir"],
-            "animations",
-            "skeletal",
+            "animation",
             remove_ignored_part_of_name(armature.name, "SKELETAL"),
             "parents.txt"
             )
@@ -1157,8 +1154,8 @@ def save_coord_systems_of_bones(
             parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
             for xbone in bones_list:
                 bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head, xbone.matrix.to_quaternion())
-                transform_matrix = bone_to_base_matrix * transform_matrix
-                parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
+                transform_matrix = bone_to_base_matrix @ transform_matrix
+                parent_tail = bone_to_base_matrix @ (parent_tail + xbone.tail).to_4d()
                 parent_tail.resize_3d()
 
             matrices_from_bone_spaces_to_world_space.append(transform_matrix.inverted())
@@ -1170,9 +1167,9 @@ def save_coord_systems_of_bones(
                 continue
 
             from_bone_space_to_parent_bone_space_matrix = matrices_from_bone_spaces_to_world_space[bone_idx] if parents[bone_idx] == -1 else (
-                    matrices_from_bone_spaces_to_world_space[parents[bone_idx]].inverted() * matrices_from_bone_spaces_to_world_space[bone_idx]
+                    matrices_from_bone_spaces_to_world_space[parents[bone_idx]].inverted() @ matrices_from_bone_spaces_to_world_space[bone_idx]
                     )
-            pos = from_bone_space_to_parent_bone_space_matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+            pos = from_bone_space_to_parent_bone_space_matrix @ mathutils.Vector((0.0, 0.0, 0.0, 1.0))
             pos.resize_3d()
             rot = from_bone_space_to_parent_bone_space_matrix.to_3x3().to_quaternion().normalized()
 
@@ -1182,8 +1179,7 @@ def save_coord_systems_of_bones(
 
         export_info["pose"] = os.path.join(
             export_info["root_dir"],
-            "animations",
-            "skeletal",
+            "animation",
             remove_ignored_part_of_name(armature.name, "SKELETAL"),
             "pose.txt"
             )
@@ -1300,8 +1296,7 @@ def save_keyframe_coord_systems_of_bones(
 
             keyframes_output_dir = os.path.join(
                 export_info["root_dir"],
-                "animations",
-                "skeletal",
+                "animation",
                 remove_ignored_part_of_name(armature.name, "SKELETAL"),
                 remove_ignored_part_of_name(action_name, "SKELETAL")
                 )
@@ -1435,7 +1430,7 @@ def save_skeleton_template_files(
         export_info     # A dictionary holding properties of the export. Both keys and values are strings.
         ):
     with TimeProf.instance().start("save_template_files_for_skeleton_extension"):
-        output_dir = os.path.join(export_info["root_dir"], "animations", "skeletal", remove_ignored_part_of_name(armature.name, "SKELETAL"))
+        output_dir = os.path.join(export_info["root_dir"], "animation", remove_ignored_part_of_name(armature.name, "SKELETAL"))
 
         export_info["joints"] = os.path.join(output_dir, "joints.txt")
         print("Saving joints of bones: " + os.path.relpath(export_info["joints"], export_info["root_dir"]))
@@ -1500,11 +1495,11 @@ def save_skeleton_template_files(
                             u = axis_vectors[idx]
                             if transform_to_parent_space is True:
                                 W = from_base_matrix(current_cs["position"], current_cs["orientation"])
-                                u = W * mathutils.Vector((u[0], u[1], u[2], 0.0))
+                                u = W @ mathutils.Vector((u[0], u[1], u[2], 0.0))
                             return u
 
                         def rotate_vector(vec, axis, angle):
-                            return mathutils.Matrix.Rotation(angle, 3, mathutils.Vector(axis)) * mathutils.Vector(vec)
+                            return mathutils.Matrix.Rotation(angle, 3, mathutils.Vector(axis)) @ mathutils.Vector(vec)
 
                         def write_coords(u):
                             f.write(3*shift + "{\n")
