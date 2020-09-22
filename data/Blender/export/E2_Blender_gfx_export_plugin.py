@@ -1,10 +1,10 @@
 # This is module registration info for Blender.
 bl_info = {
-    "name": "E2 gfx exporter",
+    "name": "E2 model exporter",
     "author": "E2",
     "version": (1, 0, 0),
-    "blender": (2, 76, 0),
-    "location": "File > Import-Export",
+    "blender": (2, 80, 0),
+    "location": "File > Import-Export > E2 model exporter",
     "description": "Exports gfx data of a selected objects, like mesh or armature, in E2 gfx format - a hierarchy of "
                    "directories and files under a given root output directory. Names of created "
                    "files and directories define semantics of the exported data.",
@@ -76,12 +76,14 @@ def get_number_precision_string():
     return ".6f"
 
 
-def disk_path_to_string(disk_path):
+def disk_path_to_string(disk_path, ignore_prefix=None):
     parts = []
     while len(disk_path) > 0:
         disk_path, part = os.path.split(disk_path)
         if len(part) > 0:
             parts.append(part)
+    if ignore_prefix is not None and len(parts) > 0 and parts[-1] == ignore_prefix:
+        parts.pop()
     parts.reverse()
     result = "/".join(parts)
     if " " in result:
@@ -683,13 +685,13 @@ def build_render_buffers(
                         mesh.materials[mtl_index].diffuse_color[0],
                         mesh.materials[mtl_index].diffuse_color[1],
                         mesh.materials[mtl_index].diffuse_color[2],
-                        mesh.materials[mtl_index].alpha
+                        mesh.materials[mtl_index].diffuse_color[3]
                         )
                     specular_colour = (
                         mesh.materials[mtl_index].specular_color[0],
                         mesh.materials[mtl_index].specular_color[1],
                         mesh.materials[mtl_index].specular_color[2],
-                        mesh.materials[mtl_index].specular_alpha
+                        mesh.materials[mtl_index].specular_intensity
                         )
                 else:
                     if len(mesh.materials) <= mtl_index:
@@ -735,9 +737,9 @@ def build_render_buffers(
             if mtl_index < len(mesh.materials) and mesh.materials[mtl_index] is not None:
                 material = mesh.materials[mtl_index]
                 has_normal_map = False
-                for slot_idx in range(len(material.texture_slots)):
-                    slot = material.texture_slots[slot_idx]
-                    if slot is not None and slot.use_map_normal:
+                for node in material.node_tree.nodes:
+                    if node.type == "TEX_IMAGE" and node.texture_mapping.vector_type == "NORMAL":
+                        texture_kind_name = "normal"
                         has_normal_map = True
                         break
                 if has_normal_map is True:
@@ -767,7 +769,7 @@ def save_render_buffers(
     with TimeProf.instance().start("save_render_buffers"):
         mesh_root_dir = os.path.join(
             export_info["root_dir"],
-            "meshes",
+            "mesh",
             remove_ignored_part_of_name(export_info["mesh_name"], "BUFFERS"),
             material_name if material_name is not None else ""
             )
@@ -941,11 +943,11 @@ def compute_mesh_links_to_textures(
     buffers_export_info["texture_links"] = {}
     for tex_idx in range(len(texture_file_name)):
         key = (mtl_index, texture_file_name[tex_idx])
-        if key not in export_info["textures"]:
+        if key not in export_info["texture"]:
             continue
         buffers_export_info["texture_links"][texture_file_name[tex_idx]] = [
                 tex_idx if tex_idx < len(buffers_export_info["texcoord_buffers"]) else 0,
-                os.path.relpath(export_info["textures"][key], export_info["root_dir"])
+                os.path.relpath(export_info["texture"][key], export_info["root_dir"])
                 ]
 
 
@@ -961,38 +963,31 @@ def save_textures(
     """
 
     with TimeProf.instance().start("save_textures"):
-        textures_root_dir = os.path.join(export_info["root_dir"], "textures")
+        textures_root_dir = os.path.join(export_info["root_dir"], "texture")
 
-        export_info["textures"] = {}
+        export_info["texture"] = {}
         for mat_idx in range(len(materials)):
             if materials[mat_idx] is None:
                 continue
-            for slot_idx in range(len(materials[mat_idx].texture_slots)):
-                slot = materials[mat_idx].texture_slots[slot_idx]
-                if slot is None:
+            for node in materials[mat_idx].node_tree.nodes:
+                if node.type != "TEX_IMAGE":
                     continue
 
-                if slot.use_map_color_diffuse:
+                if node.texture_mapping.vector_type == "POINT":
                     texture_kind_name = "diffuse"
-                elif slot.use_map_color_spec:
-                    texture_kind_name = "specular"
-                elif slot.use_map_normal:
+                elif node.texture_mapping.vector_type == "NORMAL":
                     texture_kind_name = "normal"
                 else:
-                    print("WARNING: Unsupported texture kind in slot " + str(slot_idx) +
-                          " in material " + str(mat_idx) + " called " + materials[mat_idx].name +
-                          ". Skipping the texture.")
+                    print("WARNING: Unsupported texture kind in node '" + str(node.name) +
+                          "' in material '" + materials[mat_idx].name + "'. Skipping the texture.")
                     continue
-
-                texture = slot.texture
-                if not hasattr(texture, "image"):
-                    continue
-                image = texture.image
+                    
+                image = node.image
 
                 texture_output_dir = os.path.join(
                     textures_root_dir,
-                    remove_ignored_part_of_name(export_info["mesh_name"], "TEXTURES"),
-                    remove_ignored_part_of_name(materials[mat_idx].name, "TEXTURES")
+                    remove_ignored_part_of_name(export_info["mesh_name"], "TEXTURE"),
+                    remove_ignored_part_of_name(materials[mat_idx].name, "TEXTURE")
                     )
                 if os.path.basename(os.path.dirname(texture_output_dir)) == os.path.basename(texture_output_dir):
                     texture_output_dir = os.path.dirname(texture_output_dir)
@@ -1003,7 +998,7 @@ def save_textures(
                     ximage = img.copy()
                     if len(ximage.filepath_raw) == 0:
                         ximage.filepath_raw = "E2_tmp_image.png"
-                    ximage.pack(as_png=True)
+                    ximage.pack()
                     ximage.unpack(method="USE_LOCAL")
                     pathname = bpy.path.abspath(ximage.filepath_raw)
                     bpy.data.images.remove(bpy.data.images[ximage.name])
@@ -1011,13 +1006,13 @@ def save_textures(
 
                 src_image_pathname = export_image(image)  # Get the saved image disc location
 
-                dst_image_name = os.path.splitext(os.path.basename(texture.name))[0]
+                dst_image_name = os.path.splitext(os.path.basename(node.name))[0]
                 if len(dst_image_name) == 0:
                     dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
                 dst_image_extension = ".png"  # The final image is always PNG, see 'image.pack(as_png=True)' above
                 dst_image_pathname = os.path.join(texture_output_dir, dst_image_name + dst_image_extension)
 
-                print("Copying image in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name + ": " +
+                print("Copying image in node " + str(node.name) + " of material " + materials[mat_idx].name + ": " +
                       os.path.relpath(dst_image_pathname, export_info["root_dir"]))
                 shutil.copyfile(src_image_pathname, dst_image_pathname)
 
@@ -1026,15 +1021,15 @@ def save_textures(
 
                 dst_texture_pathname = os.path.join(texture_output_dir, dst_image_name + ".txt")
                 with open(dst_texture_pathname, "w") as f:
-                    print("Saving texture in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name +
+                    print("Saving texture in node " + str(node.name) + " of material " + materials[mat_idx].name +
                           ": " + os.path.relpath(dst_texture_pathname, export_info["root_dir"]))
                     f.write("./" + dst_image_name + dst_image_extension + "\n")
-                    f.write("RGB" + ("A" if image.use_alpha else "") + "\n")
+                    f.write("RGB" + ("A" if image.alpha_mode != "NONE" else "") + "\n")
                     f.write("REPEAT\n")
                     f.write("REPEAT\n")
                     f.write("LINEAR_MIPMAP_LINEAR\n")
                     f.write("LINEAR\n")
-                export_info["textures"][(mat_idx, texture_kind_name)] = dst_texture_pathname
+                export_info["texture"][(mat_idx, texture_kind_name)] = dst_texture_pathname
 
 
 def save_hierarchy_of_bones(
@@ -1548,15 +1543,15 @@ def save_batch(
     with TimeProf.instance().start("save_batch"):
         buffers_export_info = export_info["render_buffers"][mtl_index]
         if material_name is None:
-            batch_pathname = os.path.join(export_info["root_dir"], "batches", remove_ignored_part_of_name(export_info["mesh_name"], "BATCHES") + ".txt")
+            batch_pathname = os.path.join(export_info["root_dir"], "batch", remove_ignored_part_of_name(export_info["mesh_name"], "BATCH") + ".txt")
         else:
-            batch_pathname = os.path.join(export_info["root_dir"], "batches", remove_ignored_part_of_name(export_info["mesh_name"], "BATCHES"), material_name + ".txt")
+            batch_pathname = os.path.join(export_info["root_dir"], "batch", remove_ignored_part_of_name(export_info["mesh_name"], "BATCH"), material_name + ".txt")
         print("Saving batch file: " + os.path.relpath(batch_pathname, export_info["root_dir"]))
         os.makedirs(os.path.dirname(batch_pathname), exist_ok=True)
         with open(batch_pathname, "w") as ofile:
-            ofile.write("mesh " + disk_path_to_string(os.path.relpath(buffers_export_info["mesh_root_dir"], export_info["root_dir"])) + "\n")
+            ofile.write("mesh " + disk_path_to_string(os.path.relpath(buffers_export_info["mesh_root_dir"], export_info["root_dir"]), "mesh") + "\n")
             if armature_name is not None:
-                ofile.write("skeleton " + armature_name + "\n")
+                ofile.write("skeleton " + disk_path_to_string(armature_name, "animation") + "\n")
             ofile.write("skins\n{\n    default\n    {\n")
             if "texture_links" in buffers_export_info:
                 ofile.write("        textures\n        {\n")
@@ -1566,7 +1561,7 @@ def save_batch(
                         "            " + texture_type + "\n"
                         "            {\n"
                         "                texcoord_index " + str(texture_info[0]) + "\n"
-                        "                pathname " + disk_path_to_string(texture_info[1]) + "\n"
+                        "                pathname " + disk_path_to_string(texture_info[1], "texture") + "\n"
                         "            }\n"
                         )
                 ofile.write("        }\n")
@@ -1635,7 +1630,7 @@ def export_object_mesh(
         }
 
         save_textures(mesh.materials, export_info)
-        # if len(mesh.uv_layers) > len(export_info["textures"]):
+        # if len(mesh.uv_layers) > len(export_info["texture"]):
         #     print("ERROR: len(mesh.uv_layers) > texture slots in materials.")
         #     return
 
@@ -1697,7 +1692,7 @@ def export_object(
 
     assert obj.type in ["MESH", "ARMATURE"]
     with TimeProf.instance().start("export_selected_object"):
-        print("*** E2 gfx exporter started ***")
+        print("*** E2 model exporter started ***")
         if obj.type == "MESH":
             export_object_mesh(obj, export_dir)
         elif obj.type == "ARMATURE":
@@ -1705,15 +1700,15 @@ def export_object(
         else:
             print("ERROR: Unsupported object type: " + str(obj.type) + " not in [MESH, ARMATURE]")
             return False
-        print("*** E2 gfx exporter terminated ***")
+        print("*** E2 model exporter terminated ***")
         return True
 
 
-class E2_gfx_exporter(bpy.types.Operator):
+class E2_model_exporter(bpy.types.Operator):
     """Save gfx data in E2 gfx format (hierarchy of directories and files; path-names define meaning of data)."""
-    bl_idname = "export.e2_gfx_exporter"
-    bl_label = "E2 gfx exporter"
-    directory = bpy.props.StringProperty(
+    bl_idname = "export.e2_model_exporter"
+    bl_label = "E2 model exporter"
+    directory: bpy.props.StringProperty(
                     name="Output root directory",
                     description="A root directory under which all gfx data will be saved.",
                     subtype="DIR_PATH",
@@ -1751,18 +1746,23 @@ class E2_gfx_exporter(bpy.types.Operator):
 
 
 def menu_func_export(self, context):
-    self.layout.operator(E2_gfx_exporter.bl_idname, text="E2 gfx exporter")
+    self.layout.operator(E2_model_exporter.bl_idname, text="E2 model exporter")
 
 
 def register():
-    bpy.utils.register_class(E2_gfx_exporter)
-    bpy.types.INFO_MT_file_export.append(menu_func_export)
+    bpy.utils.register_class(E2_model_exporter)
+    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
 
 def unregister():
-    bpy.utils.unregister_class(E2_gfx_exporter)
-    bpy.types.INFO_MT_file_export.remove(menu_func_export)
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    bpy.utils.unregister_class(E2_model_exporter)
 
 
 if __name__ == "__main__":
     register()
+    #unregister()
+    # === DEBUGGING CODE ===
+    #print("========================================================================================")
+    #print("Exporing under: " + os.path.join(os.getcwd(), "E2_export"))
+    #export_object(bpy.context.object, os.path.join(os.getcwd(), "E2_export"))
