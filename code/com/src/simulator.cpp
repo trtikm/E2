@@ -537,39 +537,47 @@ void  simulator::render_task(render_task_info const&  task)
     }
     else if (task.batch.is_attached_to_skeleton())
     {
+        std::vector<matrix44> const&  to_bone_matrices = ctx.matrices_to_pose_bones_of_batch(ctx.to_batch_guid(task.batch));
+        INVARIANT(
+                !to_bone_matrices.empty() &&
+                task.frame_guids.empty() != task.world_matrices.empty() &&
+                task.frame_guids.size() + task.world_matrices.size() >= to_bone_matrices.size() &&
+                (task.frame_guids.size() + task.world_matrices.size()) % to_bone_matrices.size() == 0U
+                );
         std::vector<matrix44>  frames_of_bones;
+        frames_of_bones.reserve(to_bone_matrices.size());
+        for (natural_32_bit  i = 0U,
+                      const  n = (natural_32_bit)task.frame_guids.size(),
+                      const  m = (natural_32_bit)to_bone_matrices.size();
+                i != n; )
         {
-            std::vector<matrix44> const&  to_bone_matrices = ctx.matrices_to_pose_bones_of_batch(ctx.to_batch_guid(task.batch));
-            INVARIANT(task.frame_guids.size() + task.world_matrices.size() == to_bone_matrices.size());
-            frames_of_bones.reserve(task.frame_guids.size() + task.world_matrices.size());
-            for (natural_32_bit  i = 0U, n = (natural_32_bit)task.frame_guids.size(); i != n; ++i)
+            frames_of_bones.clear();
+            for (natural_32_bit  j = 0U; j != m; ++j, ++i)
                 frames_of_bones.push_back(
                         cfg.matrix_from_world_to_camera *
-                        ctx.frame_world_matrix(task.frame_guids.at(i)) *
-                        to_bone_matrices.at(i)
+                        (task.frame_guids.empty() ? task.world_matrices.at(i) :
+                                                    ctx.frame_world_matrix(task.frame_guids.at(i))) *
+                        to_bone_matrices.at(j)
                         );
-            for (natural_32_bit  i = 0U, j = (natural_32_bit)task.frame_guids.size(), n = (natural_32_bit)task.world_matrices.size();
-                    i != n; ++i)
-                frames_of_bones.push_back(cfg.matrix_from_world_to_camera * task.world_matrices.at(i) * to_bone_matrices.at(i+j));
+            gfx::render_batch(
+                    task.batch,
+                    gfx::vertex_shader_uniform_data_provider(
+                            task.batch,
+                            frames_of_bones,
+                            cfg.matrix_from_camera_to_clipspace,
+                            cfg.diffuse_colour,
+                            cfg.ambient_colour,
+                            cfg.specular_colour,
+                            cfg.directional_light_direction_in_camera_space,
+                            cfg.directional_light_colour,
+                            cfg.fog_colour,
+                            cfg.fog_near,
+                            cfg.fog_far
+                            ),
+                    fs_uniform_data_provider
+                    );
+            cfg.draw_state = task.batch.get_draw_state();
         }
-        gfx::render_batch(
-                task.batch,
-                gfx::vertex_shader_uniform_data_provider(
-                        task.batch,
-                        frames_of_bones,
-                        cfg.matrix_from_camera_to_clipspace,
-                        cfg.diffuse_colour,
-                        cfg.ambient_colour,
-                        cfg.specular_colour,
-                        cfg.directional_light_direction_in_camera_space,
-                        cfg.directional_light_colour,
-                        cfg.fog_colour,
-                        cfg.fog_near,
-                        cfg.fog_far
-                        ),
-                fs_uniform_data_provider
-                );
-        cfg.draw_state = task.batch.get_draw_state();
     }
     else
     {
