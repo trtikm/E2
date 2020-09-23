@@ -1269,12 +1269,12 @@ def save_keyframe_coord_systems_of_bones(
                         continue
                     bone = armature.pose.bones[armature_bone.name]
                     if parents[bone_idx] == -1:
-                        pos = bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+                        pos = bone.matrix @ mathutils.Vector((0.0, 0.0, 0.0, 1.0))
                         pos.resize_3d()
                         rot = bone.matrix.to_quaternion()
                     else:
-                        from_bone_space_to_parent_bone_space_matrix = world_matrices[parents[bone_idx]].inverted() * bone.matrix
-                        pos = from_bone_space_to_parent_bone_space_matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+                        from_bone_space_to_parent_bone_space_matrix = world_matrices[parents[bone_idx]].inverted() @ bone.matrix
+                        pos = from_bone_space_to_parent_bone_space_matrix @ mathutils.Vector((0.0, 0.0, 0.0, 1.0))
                         pos.resize_3d()
                         rot = from_bone_space_to_parent_bone_space_matrix.to_3x3().to_quaternion().normalized()
 
