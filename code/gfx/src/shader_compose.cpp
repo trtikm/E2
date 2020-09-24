@@ -24,7 +24,7 @@
         "        const vec3  ambient_colour,",\
         "        const vec3  light_colour",\
         "        ) {",\
-        "    const float  mult = min(1.0f, max(-dot(normal, light_dir), 0.0f));",\
+        "    const float  mult = min(1.0f, max(0.5f - 0.5f * dot(normal, light_dir), 0.0f));",\
         "    return vec4((1.0f - mult) * ambient_colour  + mult * light_colour, 1.0f);",\
         "}"
 
