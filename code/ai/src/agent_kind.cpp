@@ -10,6 +10,7 @@ static std::unordered_map<natural_8_bit, std::pair<std::string, std::string> > c
     { as_number(AGENT_KIND::MOCK), { "MOCK", "An agent controlled by a human operator via keyboard (see file transitions.mock.json)." } },
     { as_number(AGENT_KIND::STATIONARY), { "STATIONARY", "An agent controlled by a cortex choosing most stationary actions." } },
     { as_number(AGENT_KIND::RANDOM), { "RANDOM", "An agent controlled by a cortex choosing actions randomly." } },
+    { as_number(AGENT_KIND::DEFAULT), { "DEFAULT", "An agent controlled user-defined data." } },
     { as_number(AGENT_KIND::ROBOT), { "ROBOT", "An agent controlled by an experimental (prototyped) cortex." } },
 };
 

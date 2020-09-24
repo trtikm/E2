@@ -12,6 +12,7 @@ enum struct  AGENT_KIND : natural_8_bit
     MOCK,
     STATIONARY,
     RANDOM,
+    DEFAULT,
     ROBOT,
 };
 

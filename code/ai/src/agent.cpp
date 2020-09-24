@@ -1,6 +1,7 @@
 #include <ai/agent.hpp>
 #include <ai/cortex_mock.hpp>
 #include <ai/cortex_random.hpp>
+#include <ai/cortex_default.hpp>
 #include <ai/cortex_robot.hpp>
 #include <angeo/collision_class.hpp>
 #include <com/simulation_context.hpp>
@@ -60,6 +61,7 @@ static sight_controller::ray_cast_config  make_ray_cast_config(AGENT_KIND const 
     switch (agent_kind)
     {
     case AGENT_KIND::MOCK:
+    case AGENT_KIND::DEFAULT:
     case AGENT_KIND::ROBOT:
         //return sight_controller::ray_cast_config{
         //        num_raycasts,       // num_raycasts_per_second
@@ -88,6 +90,8 @@ std::shared_ptr<cortex>  make_cortex(AGENT_KIND const  agent_kind)
         return std::make_shared<cortex>();
     case AGENT_KIND::RANDOM:
         return std::make_shared<cortex_random>();
+    case AGENT_KIND::DEFAULT:
+        return std::make_shared<cortex_default>();
     case AGENT_KIND::ROBOT:
         return std::make_shared<cortex_robot>();
     default: { UNREACHABLE(); break; }
