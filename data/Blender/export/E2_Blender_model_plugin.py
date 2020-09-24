@@ -1241,7 +1241,8 @@ def save_keyframe_coord_systems_of_bones(
 
             used_bones = set()
             for grp in action.groups:
-                used_bones.add(grp.name)
+                if grp.name in armature.data.bones and armature.data.bones[grp.name].use_deform:
+                    used_bones.add(grp.name)
 
             armature.animation_data.action = action
 
