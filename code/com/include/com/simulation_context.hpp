@@ -183,8 +183,10 @@ struct  simulation_context
     void  request_erase_frame(object_guid const  frame_guid) const;
     void  request_relocate_frame(object_guid const  frame_guid, vector3 const&  new_origin,
                                  quaternion const&  new_orientation) const;
+    void  request_relocate_frame(object_guid const  frame_guid, angeo::coordinate_system const&  frame) const;
     void  request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
                                                     quaternion const&  new_orientation) const;
+    void  request_relocate_frame_relative_to_parent(object_guid const  frame_guid, angeo::coordinate_system const&  frame) const;
     void  request_set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid) const;
     // Disabled (not const) for modules.
     void  set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid);

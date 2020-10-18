@@ -555,12 +555,26 @@ void  simulation_context::request_relocate_frame(object_guid const  frame_guid, 
 }
 
 
+void  simulation_context::request_relocate_frame(object_guid const  frame_guid,
+                                                 angeo::coordinate_system const&  frame) const
+{
+    request_relocate_frame(frame_guid, frame.origin(), frame.orientation());
+}
+
+
 void  simulation_context::request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
                                                                     quaternion const&  new_orientation) const
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
     m_requests_relocate_frame_relative_to_parent.push_back({ frame_guid, new_origin, new_orientation });
     m_pending_requests.push_back(REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT);
+}
+
+
+void  simulation_context::request_relocate_frame_relative_to_parent(object_guid const  frame_guid,
+                                                                    angeo::coordinate_system const&  frame) const
+{
+    request_relocate_frame_relative_to_parent(frame_guid, frame.origin(), frame.orientation());
 }
 
 
