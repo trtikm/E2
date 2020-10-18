@@ -64,6 +64,7 @@ agent_action::agent_action(
     , m_context(context_)
     , m_start_time(0.0f)
     , m_end_time(0.0f)
+    , m_end_ghost_time(0.0f)
     , m_current_time(0.0f)
     , m_ghost_object_start_coord_system()
     , m_animation{0.0f, 0U, 0U}
@@ -85,7 +86,7 @@ agent_action::agent_action(
                     boost::property_tree::ptree() : defaults_.find("MOTION_OBJECT_CONFIG")->second
             );
     for (auto const&  item : ptree_.find("TRANSITIONS")->second)
-        TRANSITIONS.push_back(item.second.get_value<std::string>());
+        TRANSITIONS.push_back(item.first);
 }
 
 
@@ -196,11 +197,24 @@ bool  agent_action::is_complete() const
 }
 
 
-bool  agent_action::interpolation_parameter() const
+bool  agent_action::is_ghost_complete() const
 {
-    return  (m_current_time - m_end_time) / (m_start_time - m_end_time);
+    return  m_current_time >= m_end_ghost_time;
 }
 
+
+float_32_bit  agent_action::interpolation_parameter() const
+{
+    return  m_end_time - m_start_time < 0.0001f ?
+                1.0f : (m_current_time - m_start_time) / (m_end_time - m_start_time);
+}
+
+
+float_32_bit  agent_action::interpolation_parameter_ghost() const
+{
+    return  m_end_ghost_time - m_start_time < 0.0001f ?
+                1.0f : (m_current_time - m_start_time) / (m_end_ghost_time - m_start_time);
+}
 
 com::object_guid  agent_action::get_frame_guid_of_skeleton_location() const
 {
@@ -233,16 +247,27 @@ void  agent_action::update_time(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  agent_action::update_ghost_object_frame()
+void  agent_action::update_ghost()
 {
+    angeo::coordinate_system  cs_motion = ctx().frame_coord_system(binding().frame_guid_of_motion_object);
+    angeo::coordinate_system  cs_ghost = ctx().frame_coord_system(binding().frame_guid_of_ghost_object);
+    float_32_bit  param_ghost = interpolation_parameter_ghost();
+
+    if (is_ghost_complete())
+    {
+        if (ctx().parent_frame(binding().frame_guid_of_skeleton) != binding().frame_guid_of_motion_object)
+            ctx().request_set_parent_frame(binding().frame_guid_of_skeleton, binding().frame_guid_of_motion_object);
+        return;
+    }
+
     angeo::coordinate_system  result;
     angeo::interpolate_spherical(
             m_ghost_object_start_coord_system,
             ctx().frame_coord_system(binding().frame_guid_of_motion_object),
-            interpolation_parameter(),
+            interpolation_parameter_ghost(),
             result
             );
-    ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, result.origin(), result.orientation());
+    ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, result);
 }
 
 
@@ -298,6 +323,95 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr)
 
     ASSUMPTION(this != from_action_ptr || is_complete());
 
+    skeletal_motion_templates::keyframes const  keyframes = motion_templates().at(MOTION_TEMPLATE_NAME).keyframes;
+
+    if (from_action_ptr == nullptr)
+    {
+        m_start_time = keyframes.start_time_point();
+        m_end_time = keyframes.end_time_point();
+        m_end_ghost_time = m_start_time;
+        m_current_time = m_start_time;
+
+        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
+        m_animation.last_keyframe_completion_time = m_start_time;
+        m_animation.target_keyframe_index = 1U;
+
+        m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+    }
+    else if (ONLY_INTERPOLATE_TO_MOTION_TEMPLATE)
+    {
+        std::pair<natural_32_bit, float_32_bit> const  transition_props =
+                get_motion_template_transition_props(
+                            motion_templates().transitions(),
+                            { from_action_ptr->MOTION_TEMPLATE_NAME, from_action_ptr->m_animation.target_keyframe_index },
+                            MOTION_TEMPLATE_NAME,
+                            motion_templates().default_transition_props()
+                            );
+
+        m_start_time = keyframes.time_point_at(transition_props.first) - transition_props.second;
+        m_end_time = keyframes.time_point_at(transition_props.first);
+        m_end_ghost_time = m_end_time;
+        m_current_time = m_start_time;
+
+        m_animation.end_keyframe_index = transition_props.first;
+        m_animation.last_keyframe_completion_time = m_start_time;
+        m_animation.target_keyframe_index = transition_props.first;
+
+        m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+    }
+    else if (MOTION_TEMPLATE_NAME == from_action_ptr->MOTION_TEMPLATE_NAME && !from_action_ptr->is_complete())
+    {
+        m_start_time = from_action_ptr->m_current_time;
+        m_end_time = keyframes.end_time_point();
+        m_end_ghost_time = m_start_time;
+        m_current_time = m_start_time;
+
+        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
+        m_animation.last_keyframe_completion_time = from_action_ptr->m_animation.last_keyframe_completion_time;
+        m_animation.target_keyframe_index = from_action_ptr->m_animation.target_keyframe_index;
+    }
+    else if (MOTION_TEMPLATE_NAME == from_action_ptr->MOTION_TEMPLATE_NAME && IS_CYCLIC)
+    {
+        m_start_time = keyframes.start_time_point();
+        m_end_time = keyframes.end_time_point();
+        m_end_ghost_time = m_start_time;
+        m_current_time = m_start_time;
+
+        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
+        m_animation.last_keyframe_completion_time = m_start_time;
+        m_animation.target_keyframe_index = 1U;
+
+        m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+    }
+    else
+    {
+        std::pair<natural_32_bit, float_32_bit> const  transition_props =
+                get_motion_template_transition_props(
+                            motion_templates().transitions(),
+                            { from_action_ptr->MOTION_TEMPLATE_NAME, from_action_ptr->m_animation.target_keyframe_index },
+                            MOTION_TEMPLATE_NAME,
+                            motion_templates().default_transition_props()
+                            );
+
+        m_start_time = keyframes.time_point_at(transition_props.first) - transition_props.second;
+        m_end_time = keyframes.end_time_point();
+        m_end_ghost_time = m_start_time + transition_props.second;
+        m_current_time = m_start_time;
+
+        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
+        m_animation.last_keyframe_completion_time = m_start_time;
+        m_animation.target_keyframe_index = transition_props.first;
+
+        m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+    }
+
+    INVARIANT(m_current_time >= m_start_time && m_current_time <= m_end_time);
+    INVARIANT(m_animation.last_keyframe_completion_time >= m_start_time && m_animation.last_keyframe_completion_time <= m_end_time);
+    INVARIANT(m_current_time >= m_animation.last_keyframe_completion_time);
+    INVARIANT(m_end_time > m_start_time);
+    INVARIANT(m_end_ghost_time >= m_start_time && m_end_ghost_time <= m_end_time);
+    INVARIANT(m_animation.target_keyframe_index < keyframes.num_keyframes());
+
     if (from_action_ptr == nullptr)
     {
         matrix44  W = ctx().frame_world_matrix(binding().frame_guid_of_motion_object);
@@ -306,27 +420,28 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr)
         vector3  pos;
         matrix33  rot;
         decompose_matrix44(W * F, pos, rot);
-        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, pos, rotation_matrix_to_quaternion(rot));
+        quaternion const  ori = rotation_matrix_to_quaternion(rot);
+        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, pos, ori);
+        ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, pos, ori);
     }
 
     {
         com::object_guid const  skeleton_parent_frame_guid = ctx().parent_frame(binding().frame_guid_of_skeleton);
-        if (USE_GHOST_OBJECT_FOR_SKELETON_LOCATION)
+        INVARIANT(
+            ctx().is_valid_frame_guid(skeleton_parent_frame_guid) &&
+            (skeleton_parent_frame_guid == binding().frame_guid_of_ghost_object ||
+                skeleton_parent_frame_guid == binding().frame_guid_of_motion_object)
+            );
+        m_ghost_object_start_coord_system = ctx().frame_coord_system(skeleton_parent_frame_guid);
+        ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, m_ghost_object_start_coord_system);
+
+        if (is_ghost_complete())
         {
-            if (from_action_ptr != nullptr)
-            {
-                INVARIANT(
-                    ctx().is_valid_frame_guid(skeleton_parent_frame_guid) &&
-                    (skeleton_parent_frame_guid == binding().frame_guid_of_ghost_object ||
-                     skeleton_parent_frame_guid == binding().frame_guid_of_motion_object)
-                    );
-                m_ghost_object_start_coord_system = ctx().frame_coord_system(skeleton_parent_frame_guid);
-            }
-            if (skeleton_parent_frame_guid != binding().frame_guid_of_ghost_object)
-                ctx().request_set_parent_frame(binding().frame_guid_of_skeleton, binding().frame_guid_of_ghost_object);
+            if (skeleton_parent_frame_guid != binding().frame_guid_of_motion_object)
+                ctx().request_set_parent_frame(binding().frame_guid_of_skeleton, binding().frame_guid_of_motion_object);
         }
-        else if (skeleton_parent_frame_guid != binding().frame_guid_of_motion_object)
-            ctx().request_set_parent_frame(binding().frame_guid_of_skeleton, binding().frame_guid_of_motion_object);
+        else if (skeleton_parent_frame_guid != binding().frame_guid_of_ghost_object)
+            ctx().request_set_parent_frame(binding().frame_guid_of_skeleton, binding().frame_guid_of_ghost_object);
     }
 
     if (from_action_ptr == nullptr || from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
@@ -398,89 +513,6 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr)
         default: { UNREACHABLE(); break; }
         }
     }
-
-    skeletal_motion_templates::keyframes const  keyframes = motion_templates().at(MOTION_TEMPLATE_NAME).keyframes;
-
-    if (from_action_ptr == nullptr)
-    {
-        m_start_time = keyframes.start_time_point();
-        m_end_time = keyframes.end_time_point();
-        m_current_time = m_start_time;
-
-        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
-        m_animation.last_keyframe_completion_time = m_start_time;
-        m_animation.target_keyframe_index = 1U;
-
-        m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
-    }
-    else if (ONLY_INTERPOLATE_TO_MOTION_TEMPLATE)
-    {
-        std::pair<natural_32_bit, float_32_bit> const  transition_props =
-                get_motion_template_transition_props(
-                            motion_templates().transitions(),
-                            { from_action_ptr->MOTION_TEMPLATE_NAME, from_action_ptr->m_animation.target_keyframe_index },
-                            MOTION_TEMPLATE_NAME,
-                            motion_templates().default_transition_props()
-                            );
-
-        m_start_time = keyframes.time_point_at(transition_props.first) - transition_props.second;
-        m_end_time = keyframes.time_point_at(transition_props.first);
-        m_current_time = m_start_time;
-
-        m_animation.end_keyframe_index = transition_props.first;
-        m_animation.last_keyframe_completion_time = m_start_time;
-        m_animation.target_keyframe_index = transition_props.first;
-
-        m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
-    }
-    else if (MOTION_TEMPLATE_NAME == from_action_ptr->MOTION_TEMPLATE_NAME && !from_action_ptr->is_complete())
-    {
-        m_start_time = from_action_ptr->m_current_time;
-        m_end_time = keyframes.end_time_point();
-        m_current_time = m_start_time;
-
-        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
-        m_animation.last_keyframe_completion_time = from_action_ptr->m_animation.last_keyframe_completion_time;
-        m_animation.target_keyframe_index = from_action_ptr->m_animation.target_keyframe_index;
-    }
-    else if (MOTION_TEMPLATE_NAME == from_action_ptr->MOTION_TEMPLATE_NAME && IS_CYCLIC)
-    {
-        m_start_time = keyframes.start_time_point();
-        m_end_time = keyframes.end_time_point();
-        m_current_time = m_start_time;
-
-        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
-        m_animation.last_keyframe_completion_time = m_start_time;
-        m_animation.target_keyframe_index = 1U;
-
-        m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
-    }
-    else
-    {
-        std::pair<natural_32_bit, float_32_bit> const  transition_props =
-                get_motion_template_transition_props(
-                            motion_templates().transitions(),
-                            { from_action_ptr->MOTION_TEMPLATE_NAME, from_action_ptr->m_animation.target_keyframe_index },
-                            MOTION_TEMPLATE_NAME,
-                            motion_templates().default_transition_props()
-                            );
-
-        m_start_time = keyframes.time_point_at(transition_props.first) - transition_props.second;
-        m_end_time = keyframes.end_time_point();
-        m_current_time = m_start_time;
-
-        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
-        m_animation.last_keyframe_completion_time = m_start_time;
-        m_animation.target_keyframe_index = transition_props.first;
-
-        m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
-    }
-
-    INVARIANT(m_current_time >= m_start_time && m_current_time <= m_end_time);
-    INVARIANT(m_animation.last_keyframe_completion_time >= m_start_time && m_animation.last_keyframe_completion_time <= m_end_time);
-    INVARIANT(m_current_time >= m_animation.last_keyframe_completion_time);
-    INVARIANT(m_end_time > m_start_time);
-    INVARIANT(m_animation.target_keyframe_index < keyframes.num_keyframes());
 }
 
 
@@ -490,8 +522,7 @@ void  agent_action::next_round(float_32_bit const  time_step_in_seconds)
 
     apply_effects(time_step_in_seconds);
     update_time(time_step_in_seconds);
-    if (USE_GHOST_OBJECT_FOR_SKELETON_LOCATION)
-        update_ghost_object_frame();
+    update_ghost();
     update_animation(time_step_in_seconds);
 }
 
@@ -539,7 +570,7 @@ std::unordered_set<com::object_guid>  action_guesture::get_motion_object_collide
 //            interpolation_parameter(),
 //            result
 //            );
-//    ctx().request_relocate_frame(binding().frame_guid_of_skeleton, result.origin(), result.orientation());
+//    ctx().request_relocate_frame(binding().frame_guid_of_skeleton, result);
 //    agent_action::next_round(time_step_in_seconds);
 //}
 

@@ -109,9 +109,11 @@ struct  agent_action
 
     bool  is_cyclic() const { return IS_CYCLIC; }
     bool  is_complete() const;
+    bool  is_ghost_complete() const;
     bool  use_ghost_object_for_skeleton_location() const { return USE_GHOST_OBJECT_FOR_SKELETON_LOCATION; }
 
-    bool  interpolation_parameter() const;
+    float_32_bit  interpolation_parameter() const;
+    float_32_bit  interpolation_parameter_ghost() const;
 
     std::vector<std::string> const&  get_successor_action_names() const { return TRANSITIONS; };
     motion_object_config const&  get_motion_object_config() const { return MOTION_OBJECT_CONFIG; }
@@ -120,7 +122,7 @@ struct  agent_action
 
     void  apply_effects(float_32_bit const  time_step_in_seconds);
     void  update_time(float_32_bit const  time_step_in_seconds);
-    void  update_ghost_object_frame();
+    void  update_ghost();
     void  update_animation(float_32_bit const  time_step_in_seconds);
 
     virtual void  on_transition(agent_action* const  from_action_ptr);
@@ -153,6 +155,7 @@ private:
 
     float_32_bit  m_start_time;
     float_32_bit  m_end_time;
+    float_32_bit  m_end_ghost_time;
     float_32_bit  m_current_time;
 
     angeo::coordinate_system  m_ghost_object_start_coord_system;
