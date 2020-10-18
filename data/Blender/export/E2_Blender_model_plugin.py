@@ -1273,17 +1273,16 @@ def save_keyframe_coord_systems_of_bones(
                         pos = bone.matrix @ mathutils.Vector((0.0, 0.0, 0.0, 1.0))
                         pos.resize_3d()
                         rot = bone.matrix.to_quaternion()
+                        shift_vector = pos
                     else:
                         from_bone_space_to_parent_bone_space_matrix = world_matrices[parents[bone_idx]].inverted() @ bone.matrix
                         pos = from_bone_space_to_parent_bone_space_matrix @ mathutils.Vector((0.0, 0.0, 0.0, 1.0))
                         pos.resize_3d()
                         rot = from_bone_space_to_parent_bone_space_matrix.to_3x3().to_quaternion().normalized()
+                        shift_vector = pos - local_coord_systems[bone_idx]["position"]
+                        if vector3_length(shift_vector) < 0.001:
+                            shift_vector = vector3_zero()
 
-                    # we store absolute rotation of the bone in parent space, BUT instead of absolute position
-                    # in parent space we rather store a SHIFT from 'pose' absolute position in parent space.
-                    shift_vector = pos - local_coord_systems[bone_idx]["position"]
-                    if vector3_length(shift_vector) < 0.001:
-                        shift_vector = vector3_zero()
                     if armature_bone.name in used_bones:
                         coord_systems.append({
                             "position": shift_vector,
