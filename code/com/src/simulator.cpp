@@ -1,6 +1,7 @@
 #include <com/simulator.hpp>
 #include <gfx/draw.hpp>
 #include <gfx/image.hpp>
+#include <ai/cortex_mock.hpp>
 #include <ai/sight_controller.hpp>
 #include <osi/opengl.hpp>
 #include <angeo/utility.hpp>
@@ -369,6 +370,8 @@ void  simulator::commit_state_changes()
 
     simulation_context&  ctx = *context();
 
+    ctx.clear_invalidated_guids();
+
     ctx.process_rigid_bodies_with_invalidated_shape();
     ctx.process_pending_early_requests();
 
@@ -546,10 +549,9 @@ void  simulator::render_task(render_task_info const&  task)
                 );
         std::vector<matrix44>  frames_of_bones;
         frames_of_bones.reserve(to_bone_matrices.size());
-        for (natural_32_bit  i = 0U,
-                      const  n = (natural_32_bit)task.frame_guids.size(),
-                      const  m = (natural_32_bit)to_bone_matrices.size();
-                i != n; )
+        natural_32_bit const  n = (natural_32_bit)task.frame_guids.size();
+        natural_32_bit const  m = (natural_32_bit)to_bone_matrices.size();
+        for (natural_32_bit  i = 0U; i != n; )
         {
             frames_of_bones.clear();
             for (natural_32_bit  j = 0U; j != m; ++j, ++i)
@@ -694,8 +696,18 @@ void  simulator::render_colliders()
         std::unordered_map<object_guid, cached_collider_batch_state>::iterator  batch_it;
         {
             batch_it = m_collider_batches_cache.find(collider_guid);
-            batch_it = (batch_it != m_collider_batches_cache.end()) ? collider_batches_cache.insert(*batch_it).first :
-                                                                      collider_batches_cache.end();
+            if (batch_it == m_collider_batches_cache.end())
+                batch_it = collider_batches_cache.end();
+            else
+            {
+                if (ctx.invalidated_guids().count(collider_guid) != 0UL)
+                {
+                    m_collider_batches_cache.erase(batch_it);
+                    batch_it = collider_batches_cache.end();
+                }
+                else
+                    batch_it = collider_batches_cache.insert(*batch_it).first;
+            }
         }
 
         switch (ctx.collision_class_of(collider_guid))
@@ -869,7 +881,7 @@ void  simulator::render_sight_image()
     for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
     {
         ai::agent const&  agent = m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it));
-        if (agent.get_kind() == ai::AGENT_KIND::MOCK)
+        if (dynamic_cast<ai::cortex_mock const*>(&agent.get_cortex()) != nullptr)
         {
             mocked_agent = &agent;
             break;

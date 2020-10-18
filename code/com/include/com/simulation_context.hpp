@@ -17,7 +17,7 @@
 #   include <angeo/rigid_body.hpp>
 #   include <angeo/custom_constraint_id.hpp>
 #   include <ai/agent_id.hpp>
-#   include <ai/agent_kind.hpp>
+#   include <ai/agent_config.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/dynamic_array.hpp>
@@ -179,7 +179,7 @@ struct  simulation_context
     angeo::coordinate_system_explicit const&  frame_explicit_coord_system_in_world_space(object_guid const  frame_guid) const;
     matrix44 const&  frame_world_matrix(object_guid const  frame_guid) const;
     object_guid  insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
-                              vector3 const&  origin, quaternion const&  orientation) const;
+                              vector3 const  origin, quaternion const  orientation) const;
     void  request_erase_frame(object_guid const  frame_guid) const;
     void  request_relocate_frame(object_guid const  frame_guid, vector3 const&  new_origin,
                                  quaternion const&  new_orientation) const;
@@ -363,6 +363,25 @@ struct  simulation_context
             ) const;
     void  request_enable_collider(object_guid const  collider_guid, bool const  state) const;
     void  request_enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state) const;
+    void  request_insert_collider_box(
+            object_guid const  under_folder_guid, std::string const&  name,
+            vector3 const&  half_sizes_along_axes,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class
+            ) const;
+    void  request_insert_collider_capsule(
+            object_guid const  under_folder_guid, std::string const&  name,
+            float_32_bit const  half_distance_between_end_points,
+            float_32_bit const  thickness_from_central_line,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class
+            ) const;
+    void  request_insert_collider_sphere(
+            object_guid const  under_folder_guid, std::string const&  name,
+            float_32_bit const  radius,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class
+            ) const;
     void  request_erase_collider(object_guid const  collider_guid) const;
     // Disabled (not const) for modules.
     void  enable_collider(object_guid const  collider_guid, bool const  state);
@@ -403,6 +422,16 @@ struct  simulation_context
     void  release_acquired_custom_constraint_id_back_to_physics(angeo::custom_constraint_id const  ccid) const;
     vector3  compute_velocity_of_point_of_rigid_body(object_guid const  rigid_body_guid, vector3 const&  point_in_world_space) const;
     object_guid  insert_rigid_body(
+            object_guid const  under_folder_guid,
+            bool const  is_moveable,
+            vector3 const&  linear_velocity = vector3_zero(),
+            vector3 const&  angular_velocity = vector3_zero(),
+            vector3 const&  linear_acceleration = vector3_zero(),
+            vector3 const&  angular_acceleration = vector3_zero(),
+            float_32_bit const  inverted_mass = 0.0f,
+            matrix33 const&  inverted_inertia_tensor = matrix33_zero()
+            ) const;
+    void  request_insert_rigid_body(
             object_guid const  under_folder_guid,
             bool const  is_moveable,
             vector3 const&  linear_velocity = vector3_zero(),
@@ -569,9 +598,9 @@ struct  simulation_context
     agent_guid_iterator  agents_end() const;
     void  request_late_insert_agent(
             object_guid const  under_folder_guid,
-            ai::AGENT_KIND const  kind,
-            vector3 const&  skeleton_frame_origin,
-            quaternion const&  skeleton_frame_orientation,
+            ai::agent_config const  config,
+            vector3 const&  origin,
+            quaternion const&  orientation,
             gfx::batch const  skeleton_attached_batch
             ) const;
     void  request_erase_agent(object_guid const  agent_guid) const;
@@ -579,10 +608,10 @@ struct  simulation_context
     ai::agent_id  from_agent_guid(object_guid const  agent_guid);
     object_guid  insert_agent(
             object_guid const  under_folder_guid,
-            ai::AGENT_KIND const  kind,
+            ai::agent_config const  config,
             ai::skeletal_motion_templates const  motion_templates,
-            vector3 const&  skeleton_frame_origin,
-            quaternion const&  skeleton_frame_orientation,
+            vector3 const&  origin,
+            quaternion const&  orientation,
             gfx::batch const  skeleton_attached_batch
             );
     void  erase_agent(object_guid const  agent_guid);
@@ -647,6 +676,9 @@ struct  simulation_context
 
     void  process_pending_late_requests();
     void  clear_pending_late_requests();
+
+    std::unordered_set<object_guid> const&  invalidated_guids() const { return m_invalidated_guids; }
+    void  clear_invalidated_guids();
 
     /////////////////////////////////////////////////////////////////////////////////////
     // SCENE CLEAR API
@@ -787,6 +819,8 @@ private:
 
     std::string  m_data_root_dir;
 
+    std::unordered_set<object_guid>  m_invalidated_guids;
+
     /////////////////////////////////////////////////////////////////////////////////////
     // CACHES
     /////////////////////////////////////////////////////////////////////////////////////
@@ -794,6 +828,7 @@ private:
     std::unordered_map<async::key_type, detail::imported_scene>  m_cache_of_imported_scenes;
     std::unordered_map<async::key_type, gfx::batch>  m_cache_of_imported_batches;
     std::unordered_map<async::key_type, ai::skeletal_motion_templates>  m_cache_of_imported_motion_templates;
+    std::unordered_map<async::key_type, ai::agent_config>  m_cache_of_imported_agent_configs;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // EARLY REQUESTS HANDLING
@@ -842,17 +877,21 @@ private:
         REQUEST_ERASE_BATCH                         = 5,
         REQUEST_ENABLE_COLLIDER                     = 6,
         REQUEST_ENABLE_COLLIDING                    = 7,
-        REQUEST_ERASE_COLLIDER                      = 8,
-        REQUEST_ERASE_RIGID_BODY                    = 9,
-        REQUEST_SET_LINEAR_VELOCITY                 = 10,
-        REQUEST_SET_ANGULAR_VELOCITY                = 11,
-        REQUEST_SET_LINEAR_ACCEL                    = 12,
-        REQUEST_SET_ANGULAR_ACCEL                   = 13,
-        REQUEST_DEL_LINEAR_ACCEL                    = 14,
-        REQUEST_DEL_ANGULAR_ACCEL                   = 15,
-        REQUEST_ERASE_TIMER                         = 16,
-        REQUEST_ERASE_SENSOR                        = 17,
-        REQUEST_ERASE_AGENT                         = 18,
+        REQUEST_INSERT_COLLIDER_BOX                 = 8,
+        REQUEST_INSERT_COLLIDER_CAPSULE             = 9,
+        REQUEST_INSERT_COLLIDER_SPHERE              = 10,
+        REQUEST_ERASE_COLLIDER                      = 11,
+        REQUEST_INSERT_RIGID_BODY                   = 12,
+        REQUEST_ERASE_RIGID_BODY                    = 13,
+        REQUEST_SET_LINEAR_VELOCITY                 = 14,
+        REQUEST_SET_ANGULAR_VELOCITY                = 15,
+        REQUEST_SET_LINEAR_ACCEL                    = 16,
+        REQUEST_SET_ANGULAR_ACCEL                   = 17,
+        REQUEST_DEL_LINEAR_ACCEL                    = 18,
+        REQUEST_DEL_ANGULAR_ACCEL                   = 19,
+        REQUEST_ERASE_TIMER                         = 20,
+        REQUEST_ERASE_SENSOR                        = 21,
+        REQUEST_ERASE_AGENT                         = 22,
     };
 
     struct  request_data_relocate_frame { object_guid  frame_guid; vector3  position; quaternion  orientation; };
@@ -862,6 +901,30 @@ private:
     struct  request_data_set_velocity { object_guid  rb_guid; vector3  velocity; };
     struct  request_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
     struct  request_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
+    struct  request_data_insert_collider_base
+    {
+        object_guid  under_folder_guid;
+        std::string  name;
+        angeo::COLLISION_MATERIAL_TYPE  material;
+        angeo::COLLISION_CLASS  collision_class;
+    };
+    struct  request_data_insert_collider_box : public request_data_insert_collider_base
+    { vector3  half_sizes_along_axes; };
+    struct  request_data_insert_collider_capsule : public request_data_insert_collider_base
+    { float_32_bit  half_distance_between_end_points; float_32_bit  thickness_from_central_line; };
+    struct  request_data_insert_collider_sphere : public request_data_insert_collider_base
+    { float_32_bit  radius; };
+    struct  request_data_insert_rigid_body
+    {
+        object_guid  under_folder_guid;
+        bool  is_moveable;
+        vector3  linear_velocity;
+        vector3  angular_velocity;
+        vector3  linear_acceleration;
+        vector3  angular_acceleration;
+        float_32_bit  inverted_mass;
+        matrix33  inverted_inertia_tensor;
+    };
 
     mutable std::list<REQUEST_KIND>  m_pending_requests;
     mutable std::list<object_guid>  m_requests_erase_folder;
@@ -872,7 +935,11 @@ private:
     mutable std::list<object_guid>  m_requests_erase_batch;
     mutable std::list<request_data_enable_collider>  m_requests_enable_collider;
     mutable std::list<request_data_enable_colliding>  m_requests_enable_colliding;
+    mutable std::list<request_data_insert_collider_box>  m_requests_insert_collider_box;
+    mutable std::list<request_data_insert_collider_capsule>  m_requests_insert_collider_capsule;
+    mutable std::list<request_data_insert_collider_sphere>  m_requests_insert_collider_sphere;
     mutable std::list<object_guid>  m_requests_erase_collider;
+    mutable std::list<request_data_insert_rigid_body>  m_requests_insert_rigid_body;
     mutable std::list<object_guid>  m_requests_erase_rigid_body;
     mutable std::list<request_data_set_velocity>  m_requests_set_linear_velocity;
     mutable std::list<request_data_set_velocity>  m_requests_set_angular_velocity;
@@ -924,9 +991,9 @@ private:
     struct  request_data_insert_agent
     {
         object_guid  under_folder_guid;
-        ai::AGENT_KIND  kind;
-        vector3  skeleton_frame_origin;
-        quaternion  skeleton_frame_orientation;
+        ai::agent_config  config;
+        vector3  origin;
+        quaternion  orientation;
         gfx::batch  skeleton_attached_batch;
         ai::skeletal_motion_templates  motion_templates;
     };

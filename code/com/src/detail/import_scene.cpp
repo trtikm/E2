@@ -432,9 +432,13 @@ static void  import_agent(
 
     ctx.request_late_insert_agent(
             folder_guid,
-            ai::as_agent_kind(hierarchy.get<std::string>("kind")),
-            import_vector3(hierarchy.get_child("skeleton_frame_origin")),
-            import_quaternion(hierarchy.get_child("skeleton_frame_orientation")),
+            ai::agent_config(
+                    boost::filesystem::path(ctx.get_data_root_dir()) / "ai" / hierarchy.get<std::string>("kind"),
+                    1U,
+                    nullptr
+                    ),
+            import_vector3(hierarchy.get_child("origin")),
+            import_quaternion(hierarchy.get_child("orientation")),
             agent_batch
             );
 }

@@ -12,12 +12,12 @@ simulator::simulator()
 
 
 agent_id  simulator::insert_agent(
-        AGENT_KIND const  agent_kind,
+        agent_config const  config,
         skeletal_motion_templates const  motion_templates,
         scene_binding_ptr const  binding
         )
 {
-    return m_agents.insert(std::make_shared<agent>(agent_kind, motion_templates, binding));
+    return m_agents.insert(std::make_shared<agent>(config, motion_templates, binding));
 }
 
 

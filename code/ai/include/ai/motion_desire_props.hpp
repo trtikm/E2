@@ -2,6 +2,8 @@
 #   define AI_MOTION_DESIRE_PROPS_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
+#   include <boost/property_tree/ptree.hpp>
+#   include <vector>
 
 namespace ai {
 
@@ -61,6 +63,14 @@ struct  motion_desire_props
     target_props  aim_at;
 };
 
+
+void  as_vector(motion_desire_props const&  props, std::vector<float_32_bit>&  output);
+
+void  load(
+        motion_desire_props&  props,
+        boost::property_tree::ptree const&  ptree_,
+        boost::property_tree::ptree const&  defaults_
+        );
 
 }
 

@@ -71,6 +71,8 @@ inline void  normalise_2d(vector2& u) { u.normalize(); }
 inline vector2  orthogonal_2d(vector2 const&  u) { return { -u(1), u(0) }; }
 scalar  cos_angle_2d(vector2 const& u, vector2 const& v);
 inline scalar  angle_2d(vector2 const& u, vector2 const& v) { return std::acosf(cos_angle_2d(u, v)); }
+inline scalar  min_coord_2d(vector2 const&  u) { return u.minCoeff(); }
+inline scalar  max_coord_2d(vector2 const&  u) { return u.maxCoeff(); }
 
 inline vector3  expand23(vector2 const& u, scalar h=scalar(1.0)) { return { u(0), u(1), h }; }
 inline vector2  contract32(vector3 const& u) { return { u(0), u(1) }; }
@@ -102,6 +104,8 @@ inline vector3  subtract_projection_to_unit_vector(vector3 const&  u, vector3 co
 inline vector3  subtract_projection_to_vector(vector3 const&  u, vector3 const&  target) { return u - project_to_vector(u, target); }
 scalar  cos_angle(vector3 const& u, vector3 const& v);
 inline scalar  angle(vector3 const& u, vector3 const& v) { return std::acosf(cos_angle(u,v)); }
+inline scalar  min_coord(vector3 const&  u) { return u.minCoeff(); }
+inline scalar  max_coord(vector3 const&  u) { return u.maxCoeff(); }
 
 inline vector4  expand34(vector3 const& u, scalar h=scalar(1.0)) { return { u(0), u(1), u(2), h }; }
 inline vector3  contract43(vector4 const& u) { return { u(0), u(1), u(2) }; }
@@ -161,6 +165,8 @@ inline void  normalise(quaternion& q) { q.normalize(); }
 inline scalar  dot_product(quaternion const& u, quaternion const& v) { return u.dot(v); }
 inline vector4  quaternion_coefficients_wxyz(quaternion const& q) { return { q.coeffs()(3), q.coeffs()(0), q.coeffs()(1), q.coeffs()(2) }; }
 inline vector4  quaternion_coefficients_xyzw(quaternion const& q) { return q.coeffs(); }
+inline scalar  min_coord_4d(vector4 const&  u) { return u.minCoeff(); }
+inline scalar  max_coord_4d(vector4 const&  u) { return u.maxCoeff(); }
 
 quaternion  transform(quaternion const&  orientation, matrix44 const&  transformation);
 
@@ -178,6 +184,13 @@ inline matrix32 matrix32_zero() { return matrix32::Zero(); }
 inline matrix33 matrix33_zero() { return matrix33::Zero(); }
 inline matrix43 matrix43_zero() { return matrix43::Zero(); }
 inline matrix44 matrix44_zero() { return matrix44::Zero(); }
+
+inline scalar  min_element22(matrix22 const&  M) { return M.minCoeff(); }
+inline scalar  max_element22(matrix22 const&  M) { return M.maxCoeff(); }
+inline scalar  min_element33(matrix33 const&  M) { return M.minCoeff(); }
+inline scalar  max_element33(matrix33 const&  M) { return M.maxCoeff(); }
+inline scalar  min_element44(matrix44 const&  M) { return M.minCoeff(); }
+inline scalar  max_element44(matrix44 const&  M) { return M.maxCoeff(); }
 
 matrix33  row_vectors_to_matrix(vector3 const&  row_0, vector3 const&  row_1, vector3 const&  row_2);
 matrix33  column_vectors_to_matrix(vector3 const&  col_0, vector3 const&  col_1, vector3 const&  col_2);

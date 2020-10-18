@@ -26,7 +26,7 @@ static sight_controller::camera_config  make_camera_config()
 }
 
 
-static sight_controller::ray_cast_config  make_ray_cast_config(AGENT_KIND const  agent_kind, scene_binding_ptr const  binding)
+static sight_controller::ray_cast_config  make_ray_cast_config(agent_config const  config, scene_binding_ptr const  binding)
 {
     auto const  cell_distribution = [](float_32_bit const  x) -> float_32_bit {
         return x * x;
@@ -58,63 +58,43 @@ static sight_controller::ray_cast_config  make_ray_cast_config(AGENT_KIND const 
     static natural_32_bit constexpr  num_raycasts = 2U * num_cells_x * num_cells_y;
     static float_32_bit constexpr  raycast_life_sec = 0.1f;
 
-    switch (agent_kind)
-    {
-    case AGENT_KIND::MOCK:
-    case AGENT_KIND::DEFAULT:
-    case AGENT_KIND::ROBOT:
-        //return sight_controller::ray_cast_config{
-        //        num_raycasts,       // num_raycasts_per_second
-        //        raycast_life_sec,   // max_ray_cast_info_life_time_in_seconds
-        //        num_cells_x,        // num_cells_along_x_axis; must be a power of 2.
-        //        num_cells_y,        // num_cells_along_y_axis; must be a power of 2.
-        //        cell_distribution,  // distribution_of_cells_in_camera_space
-        //        collider_filter,    // collider_filter
-        //        depth_image_func    // depth_image_func
-        //        };
-    case AGENT_KIND::STATIONARY:
-    case AGENT_KIND::RANDOM:
-        return sight_controller::ray_cast_config{0U};
-    default: { UNREACHABLE(); return sight_controller::ray_cast_config(); }
-    }
+    //return sight_controller::ray_cast_config{
+    //        num_raycasts,       // num_raycasts_per_second
+    //        raycast_life_sec,   // max_ray_cast_info_life_time_in_seconds
+    //        num_cells_x,        // num_cells_along_x_axis; must be a power of 2.
+    //        num_cells_y,        // num_cells_along_y_axis; must be a power of 2.
+    //        cell_distribution,  // distribution_of_cells_in_camera_space
+    //        collider_filter,    // collider_filter
+    //        depth_image_func    // depth_image_func
+    //        };
+    return sight_controller::ray_cast_config{0U};
 }
 
 
-std::shared_ptr<cortex>  make_cortex(AGENT_KIND const  agent_kind)
+std::shared_ptr<cortex>  make_cortex(agent_config const  config)
 {
-    switch (agent_kind)
-    {
-    case AGENT_KIND::MOCK:
+    if (config.use_cortex_mock())
         return std::make_shared<cortex_mock>();
-    case AGENT_KIND::STATIONARY:
-        return std::make_shared<cortex>();
-    case AGENT_KIND::RANDOM:
-        return std::make_shared<cortex_random>();
-    case AGENT_KIND::DEFAULT:
-        return std::make_shared<cortex_default>();
-    case AGENT_KIND::ROBOT:
-        return std::make_shared<cortex_robot>();
-    default: { UNREACHABLE(); break; }
-    }
+    return std::make_shared<cortex>();
 }
 
 
 agent::agent(
-        AGENT_KIND const  agent_kind,
+        agent_config const  config,
         skeletal_motion_templates const  motion_templates,
         scene_binding_ptr const  binding
         )
-    : m_agent_kind(agent_kind)
+    : m_state_variables(load_agent_state_variables(config))
     , m_motion_templates(motion_templates)
     , m_binding(binding)
-    , m_action_controller(motion_templates, binding)
+    , m_action_controller(config, m_state_variables, motion_templates, binding)
     , m_sight_controller(
             make_camera_config(),
-            make_ray_cast_config(agent_kind, binding),
+            make_ray_cast_config(config, binding),
             m_motion_templates,
             m_binding
             )
-    , m_cortex(make_cortex(agent_kind))
+    , m_cortex(make_cortex(config))
 {}
 
 

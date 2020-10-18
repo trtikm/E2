@@ -24,23 +24,32 @@ struct  scene_binding
             com::simulation_context const*  context_,
             com::object_guid  folder_guid_of_agent_,
             skeletal_motion_templates const&  motion_templates,
-            vector3 const&  skeleton_frame_origin = vector3_zero(),
-            quaternion const&  skeleton_frame_orientation = quaternion_identity()
+            vector3 const&  origin = vector3_zero(),
+            quaternion const&  orientation = quaternion_identity()
             );
     ~scene_binding();
 
     com::simulation_context const*  context;
+
     com::object_guid  folder_guid_of_agent;
-    com::object_guid  frame_guid_of_skeleton;
+
+    com::object_guid  folder_guid_of_skeleton; // always has a parent frame: either ghost or motion object frame (see below).
+    com::object_guid  frame_guid_of_skeleton; // always has a parent frame: either ghost or motion object frame (see below).
     std::vector<com::object_guid>  frame_guids_of_bones;
+
+    com::object_guid  folder_guid_of_ghost_object;
+    com::object_guid  frame_guid_of_ghost_object;
+
+    com::object_guid  folder_guid_of_motion_object;
+    com::object_guid  frame_guid_of_motion_object;
 
 private:
     scene_binding(
             com::simulation_context const*  context_,
             com::object_guid  folder_guid_of_agent_,
             skeletal_motion_templates const&  motion_templates,
-            vector3 const&  skeleton_frame_origin,
-            quaternion const&  skeleton_frame_orientation
+            vector3 const&  origin,
+            quaternion const&  orientation
             );
 };
 

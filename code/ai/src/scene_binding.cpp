@@ -14,16 +14,16 @@ scene_binding_ptr  scene_binding::create(
         com::simulation_context const*  context_,
         com::object_guid  folder_guid_of_agent_,
         skeletal_motion_templates const&  motion_templates,
-        vector3 const&  skeleton_frame_origin,
-        quaternion const&  skeleton_frame_orientation
+        vector3 const&  origin,
+        quaternion const&  orientation
         )
 {
     return std::shared_ptr<scene_binding>(new scene_binding(
             context_,
             folder_guid_of_agent_,
             motion_templates,
-            skeleton_frame_origin,
-            skeleton_frame_orientation
+            origin,
+            orientation
             ));
 }
 
@@ -32,29 +32,55 @@ scene_binding::scene_binding(
         com::simulation_context const*  context_,
         com::object_guid  folder_guid_of_agent_,
         skeletal_motion_templates const&  motion_templates,
-        vector3 const&  skeleton_frame_origin,
-        quaternion const&  skeleton_frame_orientation
+        vector3 const&  origin,
+        quaternion const&  orientation
         )
     : context(context_)
+
     , folder_guid_of_agent(folder_guid_of_agent_)
+
+    , folder_guid_of_skeleton(com::invalid_object_guid())
     , frame_guid_of_skeleton(com::invalid_object_guid())
     , frame_guids_of_bones()
+
+    , folder_guid_of_ghost_object(com::invalid_object_guid())
+    , frame_guid_of_ghost_object(com::invalid_object_guid())
+
+    , folder_guid_of_motion_object(com::invalid_object_guid())
+    , frame_guid_of_motion_object(com::invalid_object_guid())
 {
     ASSUMPTION(
             context != nullptr &&
             context->is_valid_folder_guid(folder_guid_of_agent) &&
             context->folder_content(folder_guid_of_agent).content.count("FRAME") == 0UL &&
             context->folder_content(folder_guid_of_agent).child_folders.count("skeleton") == 0UL &&
-            context->folder_content(folder_guid_of_agent).child_folders.count("roller") == 0UL &&
+            context->folder_content(folder_guid_of_agent).child_folders.count("ghost_object") == 0UL &&
+            context->folder_content(folder_guid_of_agent).child_folders.count("motion_object") == 0UL &&
             motion_templates.loaded_successfully()
             );
 
-    com::object_guid const  skeleton_folder_guid = context->insert_folder(folder_guid_of_agent, "skeleton", false);
-    frame_guid_of_skeleton = context->insert_frame(
-            skeleton_folder_guid,
+    folder_guid_of_ghost_object = context->insert_folder(folder_guid_of_agent, "ghost_object", false);
+    frame_guid_of_ghost_object = context->insert_frame(
+            folder_guid_of_ghost_object,
             com::invalid_object_guid(),
-            skeleton_frame_origin,
-            skeleton_frame_orientation
+            origin,
+            orientation
+            );
+
+    folder_guid_of_motion_object = context->insert_folder(folder_guid_of_agent, "motion_object", false);
+    frame_guid_of_motion_object = context->insert_frame(
+            folder_guid_of_motion_object,
+            com::invalid_object_guid(),
+            origin,
+            orientation
+            );
+
+    folder_guid_of_skeleton = context->insert_folder(folder_guid_of_agent, "skeleton", false);
+    frame_guid_of_skeleton = context->insert_frame(
+            folder_guid_of_skeleton,
+            frame_guid_of_ghost_object,
+            vector3_zero(),
+            quaternion_identity()
             );
 
     frame_guids_of_bones.resize(motion_templates.pose_frames().size(), com::invalid_object_guid());
@@ -65,7 +91,7 @@ scene_binding::scene_binding(
             integer_32_bit const  parent_bone = motion_templates.parents().at(bone);
             if (parent_bone < 0)
             {
-                parent_folder_guid = skeleton_folder_guid;
+                parent_folder_guid = folder_guid_of_skeleton;
                 parent_frame_guid = frame_guid_of_skeleton;
             }
             else
@@ -93,6 +119,10 @@ scene_binding::~scene_binding()
 {
     if (context->is_valid_frame_guid(frame_guid_of_skeleton))
         context->request_erase_non_root_folder(context->folder_of_frame(frame_guid_of_skeleton));
+    if (context->is_valid_folder_guid(folder_guid_of_ghost_object))
+        context->request_erase_non_root_folder(folder_guid_of_ghost_object);
+    if (context->is_valid_folder_guid(folder_guid_of_motion_object))
+        context->request_erase_non_root_folder(folder_guid_of_motion_object);
 }
 
 

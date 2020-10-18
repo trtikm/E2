@@ -6,8 +6,11 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/agent_id.hpp
 
-    ./include/ai/agent_kind.hpp
-    ./src/agent_kind.cpp
+    ./include/ai/agent_state_variables.hpp
+    ./src/agent_state_variables.cpp
+
+    ./include/ai/agent_config.hpp
+    ./src/agent_config.cpp
 
     ./include/ai/agent.hpp
     ./src/agent.cpp
@@ -33,25 +36,14 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/sight_controller.hpp
     ./src/sight_controller.cpp
 
-    ./include/ai/detail/action_controller_interpolator.hpp
-    ./src/detail/action_controller_interpolator.cpp
-    ./include/ai/detail/action_controller_interpolator_composed.hpp
-    ./src/detail/action_controller_interpolator_composed.cpp
-    ./include/ai/detail/action_controller_interpolator_animation.hpp
-    ./src/detail/action_controller_interpolator_animation.cpp
-    ./include/ai/detail/action_controller_interpolator_look_at.hpp
-    ./src/detail/action_controller_interpolator_look_at.cpp
-    ./include/ai/detail/action_controller_interpolator_aim_at.hpp
-    ./src/detail/action_controller_interpolator_aim_at.cpp
-
     ./include/ai/detail/action_controller_roller.hpp
     ./src/detail/action_controller_roller.cpp
 
-    ./include/ai/detail/interpolation_speed_solver.hpp
-    ./src/detail/interpolation_speed_solver.cpp
-
     ./include/ai/skeletal_motion_templates.hpp
     ./src/skeletal_motion_templates.cpp
+    
+    ./include/ai/skeleton_interpolators.hpp
+    ./src/skeleton_interpolators.cpp
     
     ./include/ai/scene_binding.hpp
     ./src/scene_binding.cpp

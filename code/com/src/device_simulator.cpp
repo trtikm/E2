@@ -697,11 +697,19 @@ void  device_simulator::next_round_of_timers(float_32_bit const  time_step_in_se
 
 void  device_simulator::next_round_of_sensors(simulation_context const&  ctx)
 {
+    std::vector<object_guid>  invalidated;
+    invalidated.reserve(ctx.invalidated_guids().size());
+    for (object_guid  guid : ctx.invalidated_guids())
+        if (guid.kind == OBJECT_KIND::COLLIDER)
+            invalidated.push_back(guid);
+
     for (auto const&  guid_and_idx : m_enabled_sensors)
     {
         sensor&  s = m_sensors.at(guid_and_idx.second);
 
         s.touching.swap(s.old_touching);
+        for (object_guid  guid : invalidated)
+            s.old_touching.erase(guid);
 
         s.touching.clear();
         for (natural_32_bit  contact_idx : ctx.collision_contacts_of_collider(s.collider))

@@ -72,10 +72,12 @@ simulation_context::simulation_context(
     , m_collision_contacts()
     , m_from_colliders_to_contacts()
     , m_data_root_dir(canonical_path(data_root_dir_.empty() ? "." : data_root_dir_).string())
+    , m_invalidated_guids()
     // CACHES
     , m_cache_of_imported_scenes()
     , m_cache_of_imported_batches()
     , m_cache_of_imported_motion_templates()
+    , m_cache_of_imported_agent_configs()
     // EARLY REQUESTS HANDLING
     , m_rigid_bodies_with_invalidated_shape()
     , m_pending_requests_early()
@@ -91,7 +93,11 @@ simulation_context::simulation_context(
     , m_requests_erase_batch()
     , m_requests_enable_collider()
     , m_requests_enable_colliding()
+    , m_requests_insert_collider_box()
+    , m_requests_insert_collider_sphere()
+    , m_requests_insert_collider_capsule()
     , m_requests_erase_collider()
+    , m_requests_insert_rigid_body()
     , m_requests_erase_rigid_body()
     , m_requests_set_linear_velocity()
     , m_requests_set_angular_velocity()
@@ -350,6 +356,7 @@ void  simulation_context::request_erase_non_root_folder(object_guid const  folde
 void  simulation_context::erase_non_root_empty_folder(object_guid const  folder_guid)
 {
     ASSUMPTION(is_folder_empty(folder_guid));
+    m_invalidated_guids.insert(folder_guid);
     if (folder_guid != root_folder())
     {
         folder_content_type const&  erased_folder = m_folders.at(folder_guid.index);
@@ -362,6 +369,8 @@ void  simulation_context::erase_non_root_empty_folder(object_guid const  folder_
 void  simulation_context::erase_non_root_folder(object_guid const  folder_guid)
 {
     folder_content_type const&  fct = folder_content(folder_guid);
+
+    m_invalidated_guids.insert(folder_guid);
 
     while (!fct.child_folders.empty())
         erase_non_root_folder(fct.child_folders.begin()->second);
@@ -519,7 +528,7 @@ matrix44 const&  simulation_context::frame_world_matrix(object_guid const  frame
 
 
 object_guid  simulation_context::insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
-                                              vector3 const&  origin, quaternion const&  orientation) const
+                                              vector3 const  origin, quaternion const  orientation) const
 {
     simulation_context* const  self = const_cast<simulation_context*>(this);
     object_guid const  frame_guid = self->insert_frame(under_folder_guid);
@@ -619,6 +628,7 @@ void  simulation_context::erase_frame(object_guid const  frame_guid)
         folder_content(folder_of_frame(frame_guid)).content.size() == 1UL &&
         folder_content(folder_of_frame(frame_guid)).content.begin()->second == frame_guid
         );
+    m_invalidated_guids.insert(frame_guid);
     auto const&  elem = m_frames.at(frame_guid.index);
     m_frames_provider.erase(elem.id);
     m_folders.at(elem.folder_index).content.erase(elem.element_name);
@@ -799,6 +809,7 @@ object_guid  simulation_context::insert_batch(object_guid const  folder_guid, st
 void  simulation_context::erase_batch(object_guid const  batch_guid)
 {
     ASSUMPTION(is_valid_batch_guid(batch_guid));
+    m_invalidated_guids.insert(batch_guid);
 
     auto const&  elem = m_batches.at(batch_guid.index);
 
@@ -1236,6 +1247,62 @@ void  simulation_context::request_enable_colliding(
 }
 
 
+void  simulation_context::request_insert_collider_box(
+        object_guid const  under_folder_guid, std::string const&  name,
+        vector3 const&  half_sizes_along_axes,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class
+        ) const
+{
+    request_data_insert_collider_box  box;
+    box.under_folder_guid = under_folder_guid;
+    box.name = name;
+    box.half_sizes_along_axes = half_sizes_along_axes;
+    box.material = material;
+    box.collision_class = collision_class;
+    m_requests_insert_collider_box.push_back(box);
+    m_pending_requests.push_back(REQUEST_INSERT_COLLIDER_BOX);
+}
+
+
+void  simulation_context::request_insert_collider_capsule(
+        object_guid const  under_folder_guid, std::string const&  name,
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class
+        ) const
+{
+    request_data_insert_collider_capsule  capsule;
+    capsule.under_folder_guid = under_folder_guid;
+    capsule.name = name;
+    capsule.half_distance_between_end_points = half_distance_between_end_points;
+    capsule.thickness_from_central_line = thickness_from_central_line;
+    capsule.material = material;
+    capsule.collision_class = collision_class;
+    m_requests_insert_collider_capsule.push_back(capsule);
+    m_pending_requests.push_back(REQUEST_INSERT_COLLIDER_CAPSULE);
+}
+
+
+void  simulation_context::request_insert_collider_sphere(
+        object_guid const  under_folder_guid, std::string const&  name,
+        float_32_bit const  radius,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class
+        ) const
+{
+    request_data_insert_collider_sphere  sphere;
+    sphere.under_folder_guid = under_folder_guid;
+    sphere.name = name;
+    sphere.radius = radius;
+    sphere.material = material;
+    sphere.collision_class = collision_class;
+    m_requests_insert_collider_sphere.push_back(sphere);
+    m_pending_requests.push_back(REQUEST_INSERT_COLLIDER_SPHERE);
+}
+
+
 void  simulation_context::request_erase_collider(object_guid const  collider_guid) const
 {
     m_requests_erase_collider.push_back(collider_guid);
@@ -1312,12 +1379,12 @@ object_guid  simulation_context::insert_collider(
                 owner_guid = it->second;
                 return rigid_body_guid == invalid_object_guid();
             }
-            it = fct.content.find(to_string(OBJECT_KIND::AGENT));
-            if (it != fct.content.end())
-            {
-                owner_guid = it->second;
-                return rigid_body_guid == invalid_object_guid();
-            }
+            //it = fct.content.find(to_string(OBJECT_KIND::AGENT));
+            //if (it != fct.content.end())
+            //{
+            //    owner_guid = it->second;
+            //    return rigid_body_guid == invalid_object_guid();
+            //}
             return true;
         });
     //ASSUMPTION(owner_guid != invalid_object_guid());
@@ -1367,6 +1434,7 @@ void  simulation_context::erase_collider(object_guid const  collider_guid)
         is_valid_collider_guid(collider_guid) &&
         folder_content(folder_of_collider(collider_guid)).content.count(m_colliders.at(collider_guid.index).element_name) != 0UL
         );
+    m_invalidated_guids.insert(collider_guid);
 
     auto const&  elem = m_colliders.at(collider_guid.index);
     if (elem.owner != invalid_object_guid())
@@ -1623,6 +1691,31 @@ object_guid  simulation_context::insert_rigid_body(
 }
 
 
+void  simulation_context::request_insert_rigid_body(
+        object_guid const  under_folder_guid,
+        bool const  is_moveable,
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity,
+        vector3 const&  linear_acceleration,
+        vector3 const&  angular_acceleration,
+        float_32_bit const  inverted_mass,
+        matrix33 const&  inverted_inertia_tensor
+        ) const
+{
+    request_data_insert_rigid_body  rigid_body;
+    rigid_body.under_folder_guid = under_folder_guid;
+    rigid_body.is_moveable = is_moveable;
+    rigid_body.linear_velocity = linear_velocity;
+    rigid_body.angular_velocity = angular_velocity;
+    rigid_body.linear_acceleration = linear_acceleration;
+    rigid_body.angular_acceleration = angular_acceleration;
+    rigid_body.inverted_mass = inverted_mass;
+    rigid_body.inverted_inertia_tensor = inverted_inertia_tensor;
+    m_requests_insert_rigid_body.push_back(rigid_body);
+    m_pending_requests.push_back(REQUEST_INSERT_RIGID_BODY);
+}
+
+
 void  simulation_context::request_erase_rigid_body(object_guid const  rigid_body_guid) const
 {
     m_requests_erase_rigid_body.push_back(rigid_body_guid);
@@ -1732,6 +1825,7 @@ void  simulation_context::erase_rigid_body(object_guid const  rigid_body_guid)
         is_valid_rigid_body_guid(rigid_body_guid) &&
         folder_content(folder_of_rigid_body(rigid_body_guid)).content.count(m_rigid_bodies.at(rigid_body_guid.index).element_name) != 0UL
         );
+    m_invalidated_guids.insert(rigid_body_guid);
 
     auto const&  elem = m_rigid_bodies.at(rigid_body_guid.index);
     for (object_guid  collider_guid : elem.colliders)
@@ -1944,6 +2038,7 @@ object_guid  simulation_context::insert_timer(
 void  simulation_context::erase_timer(object_guid const  timer_guid)
 {
     ASSUMPTION(is_valid_timer_guid(timer_guid));
+    m_invalidated_guids.insert(timer_guid);
     auto const&  elem = m_timers.at(timer_guid.index);
     {
         auto const&  infos = m_device_simulator_ptr->request_infos_of_timer(elem.id);
@@ -2049,6 +2144,7 @@ object_guid  simulation_context::insert_sensor(
 void  simulation_context::erase_sensor(object_guid const  sensor_guid)
 {
     ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    m_invalidated_guids.insert(sensor_guid);
     auto const&  elem = m_sensors.at(sensor_guid.index);
     if (is_valid_collider_guid(elem.collider))
         m_colliders.at(elem.collider.index).owner = invalid_object_guid();
@@ -2279,9 +2375,9 @@ simulation_context::agent_guid_iterator  simulation_context::agents_end() const
 
 void  simulation_context::request_late_insert_agent(
         object_guid const  under_folder_guid,
-        ai::AGENT_KIND const  kind,
-        vector3 const&  skeleton_frame_origin,
-        quaternion const&  skeleton_frame_orientation,
+        ai::agent_config const  config,
+        vector3 const&  origin,
+        quaternion const&  orientation,
         gfx::batch const  skeleton_attached_batch
         ) const
 {
@@ -2289,9 +2385,9 @@ void  simulation_context::request_late_insert_agent(
 
     m_requests_late_insert_agent.push_back({ 
             under_folder_guid,
-            kind,
-            skeleton_frame_origin,
-            skeleton_frame_orientation,
+            config,
+            origin,
+            orientation,
             skeleton_attached_batch,
             ai::skeletal_motion_templates()
             });
@@ -2317,10 +2413,10 @@ ai::agent_id  simulation_context::from_agent_guid(object_guid const  agent_guid)
 
 object_guid  simulation_context::insert_agent(
         object_guid const  under_folder_guid,
-        ai::AGENT_KIND const  kind,
+        ai::agent_config const  config,
         ai::skeletal_motion_templates const  motion_templates,
-        vector3 const&  skeleton_frame_origin,
-        quaternion const&  skeleton_frame_orientation,
+        vector3 const&  origin,
+        quaternion const&  orientation,
         gfx::batch const  skeleton_attached_batch
         )
 {
@@ -2336,11 +2432,11 @@ object_guid  simulation_context::insert_agent(
             this,
             under_folder_guid,
             motion_templates,
-            skeleton_frame_origin,
-            skeleton_frame_orientation
+            origin,
+            orientation
             );
 
-    ai::agent_id const  id = m_ai_simulator_ptr->insert_agent(kind, motion_templates, binding);
+    ai::agent_id const  id = m_ai_simulator_ptr->insert_agent(config, motion_templates, binding);
 
     {
         std::vector<matrix44>  to_bone_matrices;
@@ -2377,6 +2473,7 @@ object_guid  simulation_context::insert_agent(
 void  simulation_context::erase_agent(object_guid const  agent_guid)
 {
     ASSUMPTION(is_valid_agent_guid(agent_guid));
+    m_invalidated_guids.insert(agent_guid);
 
     auto const&  elem = m_agents.at(agent_guid.index);
 
@@ -2680,7 +2777,7 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
             //case angeo::COLLISION_CLASS::STATIC_OBJECT:
             case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
             //case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
-            case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+            //case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
                 break;
             default: continue;
             }
@@ -2849,9 +2946,30 @@ void  simulation_context::process_pending_requests()
             auto  cursor = make_request_cursor_to(m_requests_enable_colliding);
             enable_colliding(cursor->collider_1, cursor->collider_2, cursor->state);
             } break;
+        case REQUEST_INSERT_COLLIDER_BOX: {
+            auto  cursor = make_request_cursor_to(m_requests_insert_collider_box);
+            insert_collider_box(cursor->under_folder_guid, cursor->name, cursor->half_sizes_along_axes,
+                                cursor->material, cursor->collision_class);
+            } break;
+        case REQUEST_INSERT_COLLIDER_CAPSULE: {
+            auto  cursor = make_request_cursor_to(m_requests_insert_collider_capsule);
+            insert_collider_capsule(cursor->under_folder_guid, cursor->name, cursor->half_distance_between_end_points,
+                                    cursor->thickness_from_central_line, cursor->material, cursor->collision_class);
+            } break;
+        case REQUEST_INSERT_COLLIDER_SPHERE: {
+            auto  cursor = make_request_cursor_to(m_requests_insert_collider_sphere);
+            insert_collider_sphere(cursor->under_folder_guid, cursor->name, cursor->radius, cursor->material,
+                                   cursor->collision_class);
+            } break;
         case REQUEST_ERASE_COLLIDER:
             erase_collider(*make_request_cursor_to(m_requests_erase_collider));
             break;
+        case REQUEST_INSERT_RIGID_BODY: {
+            auto  cursor = make_request_cursor_to(m_requests_insert_rigid_body);
+            insert_rigid_body(cursor->under_folder_guid, cursor->is_moveable, cursor->linear_velocity,
+                              cursor->angular_velocity, cursor->linear_acceleration, cursor->angular_acceleration,
+                              cursor->inverted_mass, cursor->inverted_inertia_tensor);
+            } break;
         case REQUEST_ERASE_RIGID_BODY:
             erase_rigid_body(*make_request_cursor_to(m_requests_erase_rigid_body));
             break;
@@ -2904,7 +3022,11 @@ void  simulation_context::clear_pending_requests()
     m_requests_erase_batch.clear();
     m_requests_enable_collider.clear();
     m_requests_enable_colliding.clear();
+    m_requests_insert_collider_box.clear();
+    m_requests_insert_collider_capsule.clear();
+    m_requests_insert_collider_sphere.clear();
     m_requests_erase_collider.clear();
+    m_requests_insert_rigid_body.clear();
     m_requests_erase_rigid_body.clear();
     m_requests_set_linear_velocity.clear();
     m_requests_set_angular_velocity.clear();
@@ -2956,11 +3078,16 @@ void  simulation_context::process_pending_late_requests()
                             1U,
                             nullptr
                             );
-                    return false;
                 }
-                return request.motion_templates.is_load_finished();
+                return request.config.is_load_finished() && request.motion_templates.is_load_finished();
             },
             [this](request_data_insert_agent&  request) {
+                if (!request.config.loaded_successfully())
+                {
+                    LOG(error, "Failed to import agent config '" << request.config.key().get_unique_id() << "' " <<
+                               "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
+                    return;
+                }
                 if (!request.motion_templates.loaded_successfully())
                 {
                     LOG(error, "Failed to import motion templates '" << request.motion_templates.key().get_unique_id() << "' " <<
@@ -2974,14 +3101,16 @@ void  simulation_context::process_pending_late_requests()
                                "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
                     return;
                 }
+                if (!request.config.empty())
+                    m_cache_of_imported_agent_configs.insert({ request.config.key(), request.config });
                 if (!request.motion_templates.empty())
                     m_cache_of_imported_motion_templates.insert({ request.motion_templates.key(), request.motion_templates });
                 insert_agent(
                         request.under_folder_guid,
-                        request.kind,
+                        request.config,
                         request.motion_templates,
-                        request.skeleton_frame_origin,
-                        request.skeleton_frame_orientation,
+                        request.origin,
+                        request.orientation,
                         request.skeleton_attached_batch
                         );
             });
@@ -2992,6 +3121,12 @@ void  simulation_context::clear_pending_late_requests()
 {
     m_requests_late_scene_import.clear();
     m_requests_late_insert_agent.clear();
+}
+
+
+void  simulation_context::clear_invalidated_guids()
+{
+    m_invalidated_guids.clear();
 }
 
 
@@ -3016,6 +3151,7 @@ void  simulation_context::clear(bool const  also_caches)
         m_cache_of_imported_scenes.clear();
         m_cache_of_imported_batches.clear();
         m_cache_of_imported_motion_templates.clear();
+        m_cache_of_imported_agent_configs.clear();
     }
 
     folder_content_type const&  fct = folder_content(root_folder());
@@ -3033,6 +3169,8 @@ void  simulation_context::clear(bool const  also_caches)
         m_requests_late_scene_import.empty() &&
         m_requests_late_insert_agent.empty()
         );
+
+    clear_invalidated_guids();
 }
 
 

@@ -2,7 +2,7 @@
 #   define AI_SIMULATOR_HPP_INCLUDED
 
 #   include <ai/agent_id.hpp>
-#   include <ai/agent_kind.hpp>
+#   include <ai/agent_config.hpp>
 #   include <ai/agent.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/scene_binding.hpp>
@@ -19,7 +19,7 @@ struct simulator
     simulator();
 
     agent_id  insert_agent(
-            AGENT_KIND const  agent_kind,
+            agent_config const  config,
             skeletal_motion_templates const  motion_templates,
             scene_binding_ptr const  binding
             );

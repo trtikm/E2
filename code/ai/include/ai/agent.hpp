@@ -2,7 +2,8 @@
 #   define AI_AGENT_HPP_INCLUDED
 
 #   include <ai/agent_id.hpp>
-#   include <ai/agent_kind.hpp>
+#   include <ai/agent_config.hpp>
+#   include <ai/agent_state_variables.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/scene_binding.hpp>
 #   include <ai/action_controller.hpp>
@@ -22,12 +23,13 @@ namespace ai {
 struct agent
 {
     agent(
-        AGENT_KIND const  agent_kind,
+        agent_config const  config,
         skeletal_motion_templates const  motion_templates,
         scene_binding_ptr const  binding
         );
 
-    AGENT_KIND  get_kind() const { return m_agent_kind; }
+    agent_state_variables const&  get_state_variables() const { return *m_state_variables; }
+    agent_state_variables&  state_variables_ref() { return *m_state_variables; }
 
     skeletal_motion_templates  get_motion_templates() const { return m_motion_templates; }
     scene_binding_ptr  get_binding() const { return m_binding; }
@@ -45,7 +47,7 @@ struct agent
             );
 
 private:
-    AGENT_KIND  m_agent_kind;
+    agent_state_variables_ptr  m_state_variables;
     skeletal_motion_templates  m_motion_templates;
     scene_binding_ptr  m_binding;
 

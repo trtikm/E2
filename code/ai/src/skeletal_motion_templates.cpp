@@ -45,17 +45,20 @@ std::size_t  motion_template_cursor::hasher::operator()(motion_template_cursor c
 
 skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : pose_frames()
+    , from_pose_matrices()
+    , to_pose_matrices()
     , names()
     , hierarchy()
     , lengths()
     , joints()
+    , look_at()
+    , aim_at()
+    , look_at_origin_bone(0U)
+    , aim_at_origin_bone(0U)
 
     , motions_map()
-    , loop_targets()
-    , initial_motion_template()
     , transitions()
-    , default_transition_props()
-    , motion_object_bindings()
+    , default_transition_props({ 0U, 0.0f })
 {
     TMPROF_BLOCK();
 
@@ -75,13 +78,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         to_pose_matrices.at(bone) = to_pose_matrices.at(bone) * to_pose_matrices.at(hierarchy.parents.at(bone));
                         from_pose_matrices.at(bone) = from_pose_matrices.at(hierarchy.parents.at(bone)) * from_pose_matrices.at(bone);
                     }
-                }
-
-                for (auto&  entry : motions_map)
-                {
-                    motion_template&  record = entry.second;
-                    if ((natural_32_bit)record.aim_at.size() < record.keyframes.num_keyframes())
-                        record.aim_at.resize(record.keyframes.num_keyframes());
                 }
 
                 // And now let's check for consistency of loaded data.
@@ -126,8 +122,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'reference_frames' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.bboxes.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'bboxes' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.aim_at.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'aim_at' differ in 'motions_map[" << entry.first << "]'.");
                 }
             },
             finaliser
@@ -316,28 +310,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (boost::filesystem::is_regular_file(pathname / "loop_targets.txt"))
-        {
-            std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "loop_targets.txt");
-            for (boost::property_tree::ptree::value_type const&  name_and_props : *ptree)
-            {
-                auto const  it = loop_targets.find(name_and_props.first);
-                if (it != loop_targets.cend())
-                    continue;
-                auto&  props = loop_targets[name_and_props.first];
-                props.index = name_and_props.second.get<natural_32_bit>("index");
-                props.seconds_to_interpolate = name_and_props.second.get<float_32_bit>("seconds_to_interpolate");
-            }
-        }
-        if (initial_motion_template.motion_name.empty() && boost::filesystem::is_regular_file(pathname / "initial_motion_template.txt"))
-        {
-            std::ifstream  istr;
-            angeo::open_file_stream_for_reading(istr, pathname / "initial_motion_template.txt");
-            initial_motion_template.motion_name = read_line(istr);
-            std::string const index_string = read_line(istr);
-            initial_motion_template.keyframe_index = std::atoi(index_string.c_str());
-            istr.close();
-        }
         if (boost::filesystem::is_regular_file(pathname / "transitions.txt"))
         {
             std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "transitions.txt");
@@ -372,209 +344,32 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
 
             boost::filesystem::path const  entry_pathname = canonical_path(entry.path());
             std::string const  dir_name = entry_pathname.filename().string();
-            if (dir_name == "!meta")
+
+            motion_template&  record = motions_map[dir_name];
+
+            if (boost::filesystem::is_regular_file(entry_pathname / "keyframe0.txt"))
+                record.keyframes = motion_template::keyframes_type(entry_pathname, 1U, ultimate_finaliser);
+
+            if (boost::filesystem::is_directory(entry_pathname / "!meta"))
             {
-                if (boost::filesystem::is_directory(entry_pathname / "motion_object_bindings"))
+                boost::filesystem::path const  meta_pathname = entry_pathname / "!meta";
+
+                if (record.reference_frames.empty() && boost::filesystem::is_regular_file(meta_pathname / "reference_frames.txt"))
+                    record.reference_frames = motion_template::reference_frames_type(meta_pathname / "reference_frames.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::reference_frames");
+
+                if (record.bboxes.empty() && boost::filesystem::is_regular_file(meta_pathname / "bboxes.txt"))
                 {
-                    for (boost::filesystem::directory_entry&  mob_entry :
-                         boost::filesystem::directory_iterator(entry_pathname / "motion_object_bindings"))
+                    boost::filesystem::path const  bboxes_pathname = meta_pathname / "bboxes.txt";
+                    std::ifstream  istr;
+                    angeo::open_file_stream_for_reading(istr, bboxes_pathname);
+                    natural_32_bit  num_bboxes = angeo::read_num_records(istr, bboxes_pathname);
+                    for (natural_32_bit i = 0U, line_number = 0U; i != num_bboxes; ++i)
                     {
-                        if (!boost::filesystem::is_directory(mob_entry.path()))
-                            continue;
-                        boost::filesystem::path const  mob_pathname = canonical_path(mob_entry.path());
-                        std::string const  motion_object_name = mob_pathname.filename().string();
-
-                        auto const  it = motion_object_bindings.find(motion_object_name);
-                        if (it != motion_object_bindings.cend())
-                            continue;
-                        auto& binding = motion_object_bindings[motion_object_name];
-
-                        if (boost::filesystem::is_directory(mob_pathname / "binding_infos"))
-                            for (boost::filesystem::directory_entry&  bi_entry :
-                                 boost::filesystem::directory_iterator(mob_pathname / "binding_infos"))
-                            {
-                                if (!boost::filesystem::is_regular_file(bi_entry.path()))
-                                    continue;
-                                boost::filesystem::path const  bi_pathname = canonical_path(bi_entry.path());
-                                std::string const  bi_file_name = bi_pathname.filename().string();
-                                if (bi_file_name.size() < 5U || !boost::ends_with(bi_file_name, ".txt"))
-                                    throw std::runtime_error(msgstream() << "Wrong binding_info file name: " << bi_pathname);
-                                std::unique_ptr<boost::property_tree::ptree> const  bi_ptree = load_ptree(bi_pathname);
-                                binding.binding_infos.push_back({ bi_file_name.substr(0, bi_file_name.size() - 4U), {} });
-                                motion_object_binding::binding_info&  info = binding.binding_infos.back().second;
-                                info.speedup_sensitivity.linear = bi_ptree->get<float_32_bit>("speedup_sensitivity.linear");
-                                info.speedup_sensitivity.angular = bi_ptree->get<float_32_bit>("speedup_sensitivity.angular");
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("motion_matcher.seconds_since_last_contact"),
-                                        info.motion_matcher.seconds_since_last_contact.points
-                                        );
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("motion_matcher.angle_to_straight_pose"),
-                                        info.motion_matcher.angle_to_straight_pose.points
-                                        );
-                                info.motion_matcher.ideal_linear_velocity_dir = {
-                                        bi_ptree->get<float_32_bit>("motion_matcher.ideal_linear_velocity_dir.x"),
-                                        bi_ptree->get<float_32_bit>("motion_matcher.ideal_linear_velocity_dir.y"),
-                                        bi_ptree->get<float_32_bit>("motion_matcher.ideal_linear_velocity_dir.z")
-                                        };
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("motion_matcher.linear_velocity_dir"),
-                                        info.motion_matcher.linear_velocity_dir.points
-                                        );
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("motion_matcher.linear_velocity_mag"),
-                                        info.motion_matcher.linear_velocity_mag.points
-                                        );
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("motion_matcher.angular_speed"),
-                                        info.motion_matcher.angular_speed.points
-                                        );
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("desire_matcher.speed_forward"),
-                                        info.desire_matcher.speed_forward.points
-                                        );
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("desire_matcher.speed_left"),
-                                        info.desire_matcher.speed_left.points
-                                        );
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("desire_matcher.speed_up"),
-                                        info.desire_matcher.speed_up.points
-                                        );
-                                load_linear_segment_function(
-                                        bi_ptree->get_child("desire_matcher.speed_turn_ccw"),
-                                        info.desire_matcher.speed_turn_ccw.points
-                                        );
-                                info.disable_upper_joint = bi_ptree->get<bool>("disable_upper_joint");
-                            }
-                        if (boost::filesystem::is_regular_file(mob_pathname / "desire_values_interpreters.txt"))
-                        {
-                            std::unique_ptr<boost::property_tree::ptree> const  desire_values_interpreters_ptree =
-                                    load_ptree(mob_pathname / "desire_values_interpreters.txt");
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("move.forward"),
-                                    binding.desire_values_interpreters.move.forward.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("move.left"),
-                                    binding.desire_values_interpreters.move.left.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("move.up"),
-                                    binding.desire_values_interpreters.move.up.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("move.turn_ccw"),
-                                    binding.desire_values_interpreters.move.turn_ccw.points
-                                    );
-
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("guesture.subject.head"),
-                                    binding.desire_values_interpreters.guesture.subject.head.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("guesture.subject.tail"),
-                                    binding.desire_values_interpreters.guesture.subject.tail.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("guesture.sign.head"),
-                                    binding.desire_values_interpreters.guesture.sign.head.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("guesture.sign.tail"),
-                                    binding.desire_values_interpreters.guesture.sign.tail.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("guesture.sign.intensity"),
-                                    binding.desire_values_interpreters.guesture.sign.intensity.points
-                                    );
-
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("look_at.longitude"),
-                                    binding.desire_values_interpreters.look_at.longitude.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("look_at.altitude"),
-                                    binding.desire_values_interpreters.look_at.altitude.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("look_at.magnitude"),
-                                    binding.desire_values_interpreters.look_at.magnitude.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("aim_at.longitude"),
-                                    binding.desire_values_interpreters.aim_at.longitude.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("aim_at.altitude"),
-                                    binding.desire_values_interpreters.aim_at.altitude.points
-                                    );
-                            load_linear_segment_function(
-                                    desire_values_interpreters_ptree->get_child("aim_at.magnitude"),
-                                    binding.desire_values_interpreters.aim_at.magnitude.points
-                                    );
-                        }
-                        if (boost::filesystem::is_regular_file(mob_pathname / "transition_penalties.txt"))
-                        {
-                            std::unique_ptr<boost::property_tree::ptree> const  transition_penalties_ptree =
-                                    load_ptree(mob_pathname / "transition_penalties.txt");
-                            for (boost::property_tree::ptree::value_type const&  void_and_props : *transition_penalties_ptree)
-                                binding.transition_penalties.insert({
-                                    {
-                                        void_and_props.second.get<std::string>("from"),
-                                        void_and_props.second.get<std::string>("to")
-                                    },
-                                    void_and_props.second.get<float_32_bit>("penalty")
-                                    });
-                        }
+                        vector3  sizes;
+                        line_number = angeo::read_vector3(sizes, istr, line_number, pathname);
+                        record.bboxes.push_back(sizes);
                     }
-                }
-            }
-            else
-            {
-                motion_template&  record = motions_map[dir_name];
-
-                if (boost::filesystem::is_regular_file(entry_pathname / "keyframe0.txt"))
-                    record.keyframes = motion_template::keyframes_type(entry_pathname, 1U, ultimate_finaliser);
-
-                if (boost::filesystem::is_directory(entry_pathname / "!meta"))
-                {
-                    boost::filesystem::path const  meta_pathname = entry_pathname / "!meta";
-
-                    if (record.reference_frames.empty() && boost::filesystem::is_regular_file(meta_pathname / "reference_frames.txt"))
-                        record.reference_frames = motion_template::reference_frames_type(meta_pathname / "reference_frames.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::reference_frames");
-
-                    if (record.bboxes.empty() && boost::filesystem::is_regular_file(meta_pathname / "bboxes.txt"))
-                    {
-                        boost::filesystem::path const  bboxes_pathname = meta_pathname / "bboxes.txt";
-                        std::ifstream  istr;
-                        angeo::open_file_stream_for_reading(istr, bboxes_pathname);
-                        natural_32_bit  num_bboxes = angeo::read_num_records(istr, bboxes_pathname);
-                        for (natural_32_bit i = 0U, line_number = 0U; i != num_bboxes; ++i)
-                        {
-                            vector3  sizes;
-                            line_number = angeo::read_vector3(sizes, istr, line_number, pathname);
-                            record.bboxes.push_back(sizes);
-                        }
-                        istr.close();
-                    }
-
-                    if (boost::filesystem::is_regular_file(meta_pathname / "aim_at.txt"))
-                    {
-                        std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(meta_pathname / "aim_at.txt");
-                        for (boost::property_tree::ptree::value_type const&  void_and_data : *ptree)
-                        {
-                            std::string const  name = void_and_data.second.get<std::string>("name");
-                            for (boost::property_tree::ptree::value_type const& void_and_range : void_and_data.second.get_child("keyframe_ranges"))
-                            {
-                                natural_32_bit const  n = void_and_range.second.get<natural_32_bit>("last");
-                                if (n >= (natural_32_bit)record.aim_at.size())
-                                    record.aim_at.resize(n + 1U);
-                                for (natural_32_bit  i = void_and_range.second.get<natural_32_bit>("first"); i <= n; ++i)
-                                    record.aim_at.at(i).insert(name);
-                            }
-                        }
-                    }
+                    istr.close();
                 }
             }
         }
