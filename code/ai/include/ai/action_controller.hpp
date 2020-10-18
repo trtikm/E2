@@ -84,6 +84,13 @@ struct  agent_action
         bool  is_moveable;
     };
 
+    struct  transition_config
+    {
+        enum struct AABB_ALIGNMENT : natural_8_bit { CENTER, X_LO, X_HI, Y_LO, Y_HI, Z_LO, Z_HI };
+
+        AABB_ALIGNMENT  aabb_alignment;
+    };
+
     struct  skeletal_animation_info
     {
         float_32_bit  last_keyframe_completion_time;
@@ -115,7 +122,7 @@ struct  agent_action
     float_32_bit  interpolation_parameter() const;
     float_32_bit  interpolation_parameter_ghost() const;
 
-    std::vector<std::string> const&  get_successor_action_names() const { return TRANSITIONS; };
+    std::unordered_map<std::string, transition_config> const&  get_successor_action_names() const { return TRANSITIONS; };
     motion_object_config const&  get_motion_object_config() const { return MOTION_OBJECT_CONFIG; }
 
     com::object_guid  get_frame_guid_of_skeleton_location() const;
@@ -134,6 +141,7 @@ private:
     void  load_desire(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
     void  load_effects(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
     void  load_motion_object_config(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults_);
+    void  load_transitions(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
 
     // CONSTANTS
 
@@ -146,7 +154,7 @@ private:
     bool  IS_LOOK_AT_ENABLED;
     bool  IS_AIM_AT_ENABLED;
     bool  USE_GHOST_OBJECT_FOR_SKELETON_LOCATION;
-    std::vector<std::string>  TRANSITIONS;
+    std::unordered_map<std::string, transition_config>  TRANSITIONS;
     motion_object_config  MOTION_OBJECT_CONFIG;
 
     // MUTABLE DATA

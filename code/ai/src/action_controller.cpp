@@ -85,8 +85,11 @@ agent_action::agent_action(
             defaults_.count("MOTION_OBJECT_CONFIG") == 0UL ?
                     boost::property_tree::ptree() : defaults_.find("MOTION_OBJECT_CONFIG")->second
             );
-    for (auto const&  item : ptree_.find("TRANSITIONS")->second)
-        TRANSITIONS.push_back(item.first);
+    load_transitions(
+            ptree_.find("TRANSITIONS")->second,
+            defaults_.count("TRANSITIONS") == 0UL ?
+                    boost::property_tree::ptree() : defaults_.find("TRANSITIONS")->second
+            );
 }
 
 
@@ -163,6 +166,38 @@ void  agent_action::load_motion_object_config(
     }
 
     MOTION_OBJECT_CONFIG.is_moveable = get_ptree("is_moveable")->get_value<bool>();
+}
+
+
+void  agent_action::load_transitions(
+        boost::property_tree::ptree const&  ptree,
+        boost::property_tree::ptree const&  defaults
+        )
+{
+    auto get = [&defaults](boost::property_tree::ptree const&  ptree, std::string const&  property_name) -> std::string {
+        auto  it = ptree.find(property_name);
+        if (it == ptree.not_found())
+            it = defaults.find(property_name);
+        return it->second.get_value<std::string>();
+    };
+
+    for (auto const&  name_and_props : ptree)
+    {
+        transition_config  tc;
+        {
+            static std::unordered_map<std::string, transition_config::AABB_ALIGNMENT>  alignments {
+                { "CENTER", transition_config::AABB_ALIGNMENT::CENTER },
+                { "X_LO", transition_config::AABB_ALIGNMENT::X_LO },
+                { "X_HI", transition_config::AABB_ALIGNMENT::X_HI },
+                { "Y_LO", transition_config::AABB_ALIGNMENT::Y_LO },
+                { "Y_HI", transition_config::AABB_ALIGNMENT::Y_HI },
+                { "Z_LO", transition_config::AABB_ALIGNMENT::Z_LO },
+                { "Z_HI", transition_config::AABB_ALIGNMENT::Z_HI }
+            };
+            tc.aabb_alignment = alignments.at(get(name_and_props.second, "aabb_alignment"));
+        }
+        TRANSITIONS.insert({ name_and_props.first, tc });
+    }
 }
 
 
@@ -435,6 +470,35 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr)
         m_ghost_object_start_coord_system = ctx().frame_coord_system(skeleton_parent_frame_guid);
         ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, m_ghost_object_start_coord_system);
 
+        if (from_action_ptr != nullptr && from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
+        {
+            angeo::coordinate_system const  frame = skeleton_parent_frame_guid == binding().frame_guid_of_motion_object ?
+                    m_ghost_object_start_coord_system : ctx().frame_coord_system(binding().frame_guid_of_motion_object);
+
+            vector3  shift;
+            {
+                natural_32_bit  coord_idx;
+                float_32_bit  sign;
+                switch (from_action_ptr->TRANSITIONS.at(NAME).aabb_alignment)
+                {
+                case transition_config::AABB_ALIGNMENT::CENTER: coord_idx = 0U; sign = 0.0f; break;
+                case transition_config::AABB_ALIGNMENT::X_LO: coord_idx = 0U; sign = -1.0f; break;
+                case transition_config::AABB_ALIGNMENT::X_HI: coord_idx = 0U; sign = 1.0f; break;
+                case transition_config::AABB_ALIGNMENT::Y_LO: coord_idx = 1U; sign = -1.0f; break;
+                case transition_config::AABB_ALIGNMENT::Y_HI: coord_idx = 1U; sign = 1.0f; break;
+                case transition_config::AABB_ALIGNMENT::Z_LO: coord_idx = 2U; sign = -1.0f; break;
+                case transition_config::AABB_ALIGNMENT::Z_HI: coord_idx = 2U; sign = 1.0f; break;
+                default: { UNREACHABLE(); } break;
+                }
+
+                float_32_bit const  delta = from_action_ptr->MOTION_OBJECT_CONFIG.aabb_half_size(coord_idx) -
+                                            MOTION_OBJECT_CONFIG.aabb_half_size(coord_idx);
+            
+                shift = (sign * delta) * vector3_unit(coord_idx);
+            }
+            ctx().request_relocate_frame(binding().frame_guid_of_motion_object, frame.origin() + shift, frame.orientation());
+        }
+
         if (is_ghost_complete())
         {
             if (skeleton_parent_frame_guid != binding().frame_guid_of_motion_object)
@@ -596,10 +660,10 @@ action_controller::action_controller(
         ASSUMPTION(m_available_actions.count(name_and_ptree.first) == 0UL);
         if (it->first == "agent_action")
             m_available_actions[name_and_ptree.first] =
-                    std::make_shared<agent_action>(it->first, it->second, config.defaults(), m_context);
+                    std::make_shared<agent_action>(name_and_ptree.first, it->second, config.defaults(), m_context);
         else if (it->first == "action_guesture")
             m_available_actions[name_and_ptree.first] =
-                    std::make_shared<action_guesture>(it->first, it->second, config.defaults(), m_context);        
+                    std::make_shared<action_guesture>(name_and_ptree.first, it->second, config.defaults(), m_context);        
         else { UNREACHABLE(); }
     }
     ASSUMPTION(
@@ -608,11 +672,11 @@ action_controller::action_controller(
             {
                 if (!name_and_action.second->is_cyclic() && name_and_action.second->get_successor_action_names().empty())
                     return false;
-                for (std::string const&  action_name : name_and_action.second->get_successor_action_names())
+                for (auto const&  action_name_and_props : name_and_action.second->get_successor_action_names())
                 {
-                    if (action_name == name_and_action.first)
+                    if (action_name_and_props.first == name_and_action.first)
                         return false;
-                    if (m_available_actions.count(action_name) == 0UL)
+                    if (m_available_actions.count(action_name_and_props.first) == 0UL)
                         return false;
                 }
             }
@@ -648,9 +712,9 @@ void  action_controller::next_round(
             best_action = m_current_action;
             best_penalty = m_current_action->compute_desire_penalty(desire);
         }
-        for (std::string const&  name : m_current_action->get_successor_action_names())
+        for (auto const&  name_and_props : m_current_action->get_successor_action_names())
         {
-            std::shared_ptr<agent_action> const  action_ptr = m_available_actions.at(name);
+            std::shared_ptr<agent_action> const  action_ptr = m_available_actions.at(name_and_props.first);
             if (!action_ptr->is_guard_valid())
                 continue;
             float_32_bit const  penalty = action_ptr->compute_desire_penalty(desire);
