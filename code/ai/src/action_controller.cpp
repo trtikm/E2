@@ -527,6 +527,14 @@ void  agent_action::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
+std::unordered_set<com::object_guid>  agent_action::get_motion_object_collider_guids() const
+{
+    return {
+        ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::COLLIDER))
+        };
+}
+
+
 action_guesture::action_guesture(
         std::string const&  name_,
         boost::property_tree::ptree const&  ptree_,
@@ -551,13 +559,6 @@ void  action_guesture::next_round(float_32_bit const  time_step_in_seconds)
     agent_action::next_round(time_step_in_seconds);
 
     // TODO
-}
-
-
-std::unordered_set<com::object_guid>  action_guesture::get_motion_object_collider_guids() const
-{
-    // TODO
-    return {};
 }
 
 

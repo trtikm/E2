@@ -128,7 +128,7 @@ struct  agent_action
     virtual void  on_transition(agent_action* const  from_action_ptr);
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
-    virtual std::unordered_set<com::object_guid>  get_motion_object_collider_guids() const { return {}; }
+    virtual std::unordered_set<com::object_guid>  get_motion_object_collider_guids() const;
 
 private:
     void  load_desire(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
@@ -174,7 +174,6 @@ struct  action_guesture : public  agent_action
             );
     void  on_transition(agent_action* const  from_action_ptr) override;
     void  next_round(float_32_bit const  time_step_in_seconds) override;
-    std::unordered_set<com::object_guid>  get_motion_object_collider_guids() const override;
 };
 
 
