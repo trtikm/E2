@@ -1742,8 +1742,8 @@ class E2SceneExportOperator(bpy.types.Operator):
             "kind": object_props.agent_kind
         }
         frame_props = self.export_frame(object)
-        result["skeleton_frame_origin"] = frame_props["origin"]
-        result["skeleton_frame_orientation"] = frame_props["orientation"]
+        result["origin"] = frame_props["origin"]
+        result["orientation"] = frame_props["orientation"]
         batch_props = self.export_batch(object.children[0], data_root_dir)
         result["skeleton_batch_disk_path"] = batch_props["path"]
         result["skeleton_batch_skin"] = batch_props["skin"]
