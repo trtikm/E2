@@ -22,7 +22,6 @@ struct  agent_config_data
     std::string  m_initial_action;
     std::unordered_map<std::string, std::shared_ptr<boost::property_tree::ptree> >  m_actions;
     bool  m_use_cortex_mock;
-    boost::property_tree::ptree  m_cortex_mock;
 
 private:
     void  load_data_from_dir(boost::filesystem::path const&  root_dir);
@@ -60,7 +59,6 @@ struct  agent_config : public async::resource_accessor<detail::agent_config_data
     std::string const&  initial_action() const { return resource().m_initial_action; }
     std::unordered_map<std::string, std::shared_ptr<boost::property_tree::ptree> > const&  actions() const { return resource().m_actions; }
     bool  use_cortex_mock() const { return resource().m_use_cortex_mock; }
-    boost::property_tree::ptree const&  cortex_mock() const { return resource().m_cortex_mock; }
 };
 
 

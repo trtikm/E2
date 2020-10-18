@@ -39,7 +39,6 @@ agent_config_data::agent_config_data(async::finalise_load_on_destroy_ptr const f
     , m_initial_action()
     , m_actions()
     , m_use_cortex_mock()
-    , m_cortex_mock()
 {
     TMPROF_BLOCK();
 
@@ -127,13 +126,6 @@ void  agent_config_data::load_cortex_from_dir(boost::filesystem::path const&  ro
         if (boost::filesystem::is_regular_file(entry.path()) && entry.path().filename().extension().string() == ".json")
         {
             std::string const  name = entry.path().filename().replace_extension("").string();
-            if (name == "mock")
-            {
-                if (m_use_cortex_mock && m_cortex_mock.empty())
-                    load_ptree(m_cortex_mock, entry.path());
-                continue;
-            }
-
         }
 }
 
