@@ -61,6 +61,8 @@ agent_config_data::agent_config_data(async::finalise_load_on_destroy_ptr const f
 
     for (boost::filesystem::path const&  load_dir : root_load_dirs)
         load_data_from_dir(load_dir);
+
+    ASSUMPTION(m_actions.count(m_initial_action) != 0UL);
 }
 
 
@@ -101,6 +103,8 @@ void  agent_config_data::load_actions_from_dir(boost::filesystem::path const&  r
         {
             if (entry.path().filename().string() == "initial_action.txt")
             {
+                if (!m_initial_action.empty())
+                    continue;
                 std::ifstream  istr;
                 istr.open(entry.path().string(), std::ios_base::binary);
                 if (!istr.good())
@@ -116,7 +120,6 @@ void  agent_config_data::load_actions_from_dir(boost::filesystem::path const&  r
                     m_actions[name] = load_ptree(entry.path());
             }
         }
-    ASSUMPTION(m_actions.count(m_initial_action) != 0UL);
 }
 
 
