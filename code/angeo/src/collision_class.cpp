@@ -59,12 +59,12 @@ bool  are_colliding(COLLISION_CLASS const  cc1, COLLISION_CLASS const  cc2)
         { false, true,  false, true,  false, false, false, false, false }, // STATIC_OBJECT
         { true,  true,  true,  true,  true,  false, true,  false, false }, // COMMON_MOVEABLE_OBJECT
         { false, true,  false, true,  false, true,  true,  false, false }, // HEAVY_MOVEABLE_OBJECT
-        { true,  true,  true,  true,  true,  false, true,  true,  false }, // AGENT_MOTION_OBJECT
+        { true,  true,  true,  true,  true,  false, true,  false, false }, // AGENT_MOTION_OBJECT
         { false, true,  false, true,  false, false, false, false, false }, // FIELD_AREA
         { false, false, true,  false, false, true,  false, false, false }, // SENSOR_DEDICATED
         { false, true,  true,  true,  false, false, true,  true,  true  }, // SENSOR_WIDE_RANGE
-        { false, false, false, true,  false, false, true,  true,  false }, // SENSOR_NARROW_RANGE
-        { false, false, false, false, false, false, true,  false, false }, // RAY_CAST_TARGET
+        { false, false, false, false, false, false, true,  true,  true  }, // SENSOR_NARROW_RANGE
+        { false, false, false, false, false, false, true,  true,  false }, // RAY_CAST_TARGET
     };
     static bool const  is_symetric = [](const bool  table[get_num_collision_classes()][get_num_collision_classes()]) {
         for (natural_8_bit i = 0U; i != get_num_collision_classes(); ++i)
