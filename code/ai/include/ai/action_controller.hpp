@@ -84,6 +84,16 @@ struct  agent_action
         bool  is_moveable;
     };
 
+    struct  sensor_config
+    {
+        std::string  name;
+        std::string  under_folder;
+        angeo::COLLISION_SHAPE_TYPE  shape_type;
+        angeo::COLLISION_CLASS  collision_class;
+        vector3  aabb_half_size;
+        angeo::coordinate_system  frame;
+    };
+
     struct  transition_config
     {
         enum struct AABB_ALIGNMENT : natural_8_bit { CENTER, X_LO, X_HI, Y_LO, Y_HI, Z_LO, Z_HI };
@@ -141,6 +151,7 @@ private:
     void  load_desire(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
     void  load_effects(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
     void  load_motion_object_config(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults_);
+    void  load_sensors(boost::property_tree::ptree const&  ptree);
     void  load_transitions(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
 
     // CONSTANTS
@@ -154,6 +165,7 @@ private:
     bool  IS_LOOK_AT_ENABLED;
     bool  IS_AIM_AT_ENABLED;
     bool  USE_GHOST_OBJECT_FOR_SKELETON_LOCATION;
+    std::unordered_map<std::string, sensor_config>  SENSORS;
     std::unordered_map<std::string, transition_config>  TRANSITIONS;
     motion_object_config  MOTION_OBJECT_CONFIG;
 

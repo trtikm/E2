@@ -12,6 +12,62 @@
 #include <functional>
 #include <algorithm>
 
+namespace ai { namespace {
+
+
+vector3  read_vector3(boost::property_tree::ptree const&  ptree)
+{
+    return { ptree.get<float_32_bit>("x"), ptree.get<float_32_bit>("y"), ptree.get<float_32_bit>("z") };
+}
+
+
+void  insert_collider_to_context(
+        com::simulation_context const&  ctx,
+        com::object_guid const  under_folder_guid,
+        angeo::COLLISION_SHAPE_TYPE const  shape_type,
+        vector3 const&  aabb_half_size,
+        angeo::COLLISION_MATERIAL_TYPE const  collision_material,
+        angeo::COLLISION_CLASS const  collision_class
+        )
+{
+    switch (shape_type)
+    {
+    case angeo::COLLISION_SHAPE_TYPE::BOX:
+        ctx.request_insert_collider_box(
+                under_folder_guid,
+                com::to_string(com::OBJECT_KIND::COLLIDER),
+                aabb_half_size,
+                collision_material,
+                collision_class
+                );
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+        ctx.request_insert_collider_capsule(
+                under_folder_guid,
+                com::to_string(com::OBJECT_KIND::COLLIDER),
+                max_coord(aabb_half_size) - min_coord(aabb_half_size),
+                min_coord(aabb_half_size),
+                collision_material,
+                collision_class
+                );
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+        ctx.request_insert_collider_sphere(
+                under_folder_guid,
+                com::to_string(com::OBJECT_KIND::COLLIDER),
+                min_coord(aabb_half_size),
+                collision_material,
+                collision_class
+                );
+        break;
+    default: { UNREACHABLE(); break; }
+    }
+}
+
+
+}}
+
+
 namespace ai {
 
 
@@ -58,6 +114,7 @@ agent_action::agent_action(
     , IS_LOOK_AT_ENABLED(ptree_.get<bool>("IS_LOOK_AT_ENABLED"))
     , IS_AIM_AT_ENABLED(ptree_.get<bool>("IS_AIM_AT_ENABLED"))
     , USE_GHOST_OBJECT_FOR_SKELETON_LOCATION(ptree_.get<bool>("USE_GHOST_OBJECT_FOR_SKELETON_LOCATION"))
+    , SENSORS() // loaded below
     , TRANSITIONS() // loaded below
     , MOTION_OBJECT_CONFIG() // loaded below
     // MUTABLE DATA
@@ -85,6 +142,7 @@ agent_action::agent_action(
             defaults_.count("MOTION_OBJECT_CONFIG") == 0UL ?
                     boost::property_tree::ptree() : defaults_.find("MOTION_OBJECT_CONFIG")->second
             );
+    load_sensors(ptree_.find("SENSORS")->second);
     load_transitions(
             ptree_.find("TRANSITIONS")->second,
             defaults_.count("TRANSITIONS") == 0UL ?
@@ -140,11 +198,7 @@ void  agent_action::load_motion_object_config(
         if (p == nullptr)
             MOTION_OBJECT_CONFIG.aabb_half_size = motion_templates().at(MOTION_TEMPLATE_NAME).bboxes.front();
         else
-        {
-            MOTION_OBJECT_CONFIG.aabb_half_size(0) = p->get<float_32_bit>("x");
-            MOTION_OBJECT_CONFIG.aabb_half_size(1) = p->get<float_32_bit>("y");
-            MOTION_OBJECT_CONFIG.aabb_half_size(2) = p->get<float_32_bit>("z");
-        }
+            MOTION_OBJECT_CONFIG.aabb_half_size = read_vector3(*p);
     }
 
     MOTION_OBJECT_CONFIG.collision_material =
@@ -166,6 +220,25 @@ void  agent_action::load_motion_object_config(
     }
 
     MOTION_OBJECT_CONFIG.is_moveable = get_ptree("is_moveable")->get_value<bool>();
+}
+
+
+void  agent_action::load_sensors(boost::property_tree::ptree const&  ptree)
+{
+    for (auto const&  name_and_props : ptree)
+    {
+        sensor_config  sc;
+        sc.name = name_and_props.first;
+        sc.under_folder = name_and_props.second.get<std::string>("under_folder");
+        ASSUMPTION(ctx().is_valid_folder_guid(ctx().from_relative_path(binding().folder_guid_of_agent, sc.under_folder)));
+        sc.shape_type = angeo::as_collision_shape_type(name_and_props.second.get<std::string>("shape_type"));
+        sc.collision_class = angeo::read_collison_class_from_string(name_and_props.second.get<std::string>("collision_class"));
+        sc.aabb_half_size = read_vector3(name_and_props.second.find("aabb_half_size")->second);
+        ASSUMPTION(sc.aabb_half_size(0) > 0.0f && sc.aabb_half_size(1) > 0.0f && sc.aabb_half_size(2) > 0.0f);
+        sc.frame.set_origin(read_vector3(name_and_props.second.find("origin")->second));
+        sc.frame.set_orientation(quaternion_identity()); // TODO!
+        SENSORS.insert({ name_and_props.first, sc });
+    }
 }
 
 
@@ -543,40 +616,46 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr)
                 MOTION_OBJECT_CONFIG.mass_inverted,
                 MOTION_OBJECT_CONFIG.inertia_tensor_inverted
                 );
-
-        switch (MOTION_OBJECT_CONFIG.shape_type)
-        {
-        case angeo::COLLISION_SHAPE_TYPE::BOX:
-            ctx().request_insert_collider_box(
-                    binding().folder_guid_of_motion_object,
-                    com::to_string(com::OBJECT_KIND::COLLIDER),
-                    MOTION_OBJECT_CONFIG.aabb_half_size,
-                    MOTION_OBJECT_CONFIG.collision_material,
-                    angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
-                    );
-            break;
-        case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
-            ctx().request_insert_collider_capsule(
-                    binding().folder_guid_of_motion_object,
-                    com::to_string(com::OBJECT_KIND::COLLIDER),
-                    max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) - min_coord(MOTION_OBJECT_CONFIG.aabb_half_size),
-                    min_coord(MOTION_OBJECT_CONFIG.aabb_half_size),
-                    MOTION_OBJECT_CONFIG.collision_material,
-                    angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
-                    );
-            break;
-        case angeo::COLLISION_SHAPE_TYPE::SPHERE:
-            ctx().request_insert_collider_sphere(
-                    binding().folder_guid_of_motion_object,
-                    com::to_string(com::OBJECT_KIND::COLLIDER),
-                    min_coord(MOTION_OBJECT_CONFIG.aabb_half_size),
-                    MOTION_OBJECT_CONFIG.collision_material,
-                    angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
-                    );
-            break;
-        default: { UNREACHABLE(); break; }
-        }
+        insert_collider_to_context(
+                ctx(),
+                binding().folder_guid_of_motion_object,
+                MOTION_OBJECT_CONFIG.shape_type,
+                MOTION_OBJECT_CONFIG.aabb_half_size,
+                MOTION_OBJECT_CONFIG.collision_material,
+                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
+                );
     }
+
+    for (auto const&  name_and_props : SENSORS)
+        if (from_action_ptr == nullptr || from_action_ptr->SENSORS.count(name_and_props.first) == 0UL)
+        {
+            com::object_guid const  under_folder_guid =
+                    ctx().from_relative_path(binding().folder_guid_of_agent, name_and_props.second.under_folder);
+            com::object_guid const  folder_guid = ctx().insert_folder(under_folder_guid, name_and_props.first, false);
+            com::object_guid const  frame_guid = ctx().insert_frame(
+                    folder_guid,
+                    ctx().find_closest_frame(under_folder_guid, true),
+                    name_and_props.second.frame.origin(),
+                    name_and_props.second.frame.orientation()
+                    );
+            insert_collider_to_context(
+                    ctx(),
+                    folder_guid,
+                    name_and_props.second.shape_type,
+                    name_and_props.second.aabb_half_size,
+                    angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,
+                    name_and_props.second.collision_class
+                    );
+        }
+    if (from_action_ptr != nullptr)
+        for (auto const&  name_and_props : from_action_ptr->SENSORS)
+            if (SENSORS.count(name_and_props.first) == 0UL)
+                ctx().request_erase_non_root_folder(
+                        ctx().from_relative_path(
+                                binding().folder_guid_of_agent,
+                                name_and_props.second.under_folder + name_and_props.first + "/"
+                                )
+                        );
 }
 
 
