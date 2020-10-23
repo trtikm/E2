@@ -61,7 +61,8 @@ sight_controller::camera_config::camera_config(
 
 
 sight_controller::ray_cast_config::ray_cast_config(
-        natural_32_bit const  num_raycasts_per_second_,
+        bool const  do_directed_ray_casts_,
+        natural_32_bit const  num_random_ray_casts_per_second_,
         float_32_bit const  max_ray_cast_info_life_time_in_seconds_,
         natural_16_bit const  num_cells_along_x_axis_,
         natural_16_bit const  num_cells_along_y_axis_,
@@ -69,7 +70,8 @@ sight_controller::ray_cast_config::ray_cast_config(
         std::function<bool(com::object_guid, angeo::COLLISION_CLASS)> const&  collider_filter_,
         std::function<float_32_bit(float_32_bit)>  depth_image_func_
         )
-    : num_raycasts_per_second(num_raycasts_per_second_)
+    : do_directed_ray_casts(do_directed_ray_casts_)
+    , num_random_ray_casts_per_second(num_random_ray_casts_per_second_)
     , max_ray_cast_info_life_time_in_seconds(max_ray_cast_info_life_time_in_seconds_)
     , num_cells_along_x_axis(num_cells_along_x_axis_)
     , num_cells_along_y_axis(num_cells_along_y_axis_)
@@ -118,94 +120,50 @@ sight_controller::sight_controller(
     : m_camera_config(camera_config_)
     , m_camera()
     , m_ray_cast_config(ray_cast_config_)
-    , m_ray_casts_in_time()
+    , m_directed_ray_casts_in_time()
+    , m_random_ray_casts_in_time()
     , m_depth_image(ray_cast_config_.num_cells_along_x_axis * ray_cast_config_.num_cells_along_y_axis, 0.0f)
     , m_current_time(0.0)
     , m_generator()
-    , m_time_buffer(0.0f)
+    , m_random_ray_casts_time_buffer(0.0f)
     , m_motion_templates(motion_templates)
     , m_binding(binding)
 {}
 
 
-void  sight_controller::next_round(
-        float_32_bit const  time_step_in_seconds,
-        std::unordered_set<com::object_guid> const&  ignored_collider_guids
-        )
+void  sight_controller::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    if (m_ray_cast_config.num_raycasts_per_second == 0U)
+    if (!m_ray_cast_config.do_directed_ray_casts && m_ray_cast_config.num_random_ray_casts_per_second == 0U)
         return;
 
     m_current_time += time_step_in_seconds;
-    while (!m_ray_casts_in_time.empty() && (float_32_bit)(m_current_time - m_ray_casts_in_time.begin()->first) >=
-                                           m_ray_cast_config.max_ray_cast_info_life_time_in_seconds)
-        m_ray_casts_in_time.erase(m_ray_casts_in_time.begin());
+
+    erase_obsolete_ray_casts(m_directed_ray_casts_in_time);
+    erase_obsolete_ray_casts(m_random_ray_casts_in_time);
 
     update_camera(time_step_in_seconds);
     if (get_camera() == nullptr)
         return;
 
-    matrix44  W;
-    angeo::from_base_matrix(*get_camera()->coordinate_system(), W);
-
-    float_32_bit const  ray_cast_duration = 1.0f / (float_32_bit)m_ray_cast_config.num_raycasts_per_second;
-    for (m_time_buffer += time_step_in_seconds; m_time_buffer >= ray_cast_duration; m_time_buffer -= ray_cast_duration)
     {
-        vector2 const  camera_coords_01 = detail::generate_random_ray_cast_camera_coordinates(
-                m_ray_cast_config.distribution_of_cells_in_camera_space,
-                m_generator
-                );
-        natural_32_bit const  cell_x =
-                std::max(0U, std::min(m_ray_cast_config.num_cells_along_x_axis - 1U,
-                        (natural_32_bit)(camera_coords_01(0) * (m_ray_cast_config.num_cells_along_x_axis - 1U) + 0.5f)));
-        natural_32_bit const  cell_y =
-                std::max(0U, std::min(m_ray_cast_config.num_cells_along_y_axis - 1U,
-                        (natural_32_bit)(camera_coords_01(1) * (m_ray_cast_config.num_cells_along_y_axis - 1U) + 0.5f)));
-
-        vector3 const  camera_coords{
-                (get_camera()->left() + camera_coords_01(0) * (get_camera()->right() - get_camera()->left())),
-                (get_camera()->bottom() + camera_coords_01(1) * (get_camera()->top() - get_camera()->bottom())),
-                -get_camera()->near_plane()
-                };
-        float_32_bit const  scale_to_far_plane = get_camera()->far_plane() / get_camera()->near_plane();
-
-        vector3 const&  ray_origin = get_camera()->coordinate_system()->origin();
-        vector3 const  ray_end = transform_point(scale_to_far_plane * camera_coords, W);
-        float_32_bit  parameter_to_nearest_collider;
-        com::object_guid const  nearest_collider_guid = ctx().ray_cast_to_nearest_collider(
-                ray_origin,
-                ray_end,
-                true,
-                true,
-                &parameter_to_nearest_collider,
-                &ignored_collider_guids,
-                m_ray_cast_config.collider_filter
-                );
-        if (nearest_collider_guid == com::invalid_object_guid())
-            continue;
-
-        auto const  to01 = [](float_32_bit const  x, float_32_bit const  lo, float_32_bit const  hi) {
-            return (x - lo) / (hi - lo);
-        };
-
-        m_ray_casts_in_time.insert({
-                m_current_time,
-                {
-                    cell_x,
-                    cell_y,
-                    contract32(camera_coords),
-                    ray_origin,
-                    ray_end - ray_origin,
-                    parameter_to_nearest_collider,
-                    nearest_collider_guid,
-                    to01(1.0f / parameter_to_nearest_collider, 1.0f / get_camera()->far_plane(), 1.0f / get_camera()->near_plane())
-                    }
-                });
+        matrix44  from_camera_matrix;
+        angeo::from_base_matrix(*get_camera()->coordinate_system(), from_camera_matrix);
+        perform_random_ray_casts(time_step_in_seconds, from_camera_matrix);
     }
 
-    update_depth_image();
+    std::fill(m_depth_image.begin(), m_depth_image.end(), 0.0f);
+    update_depth_image(m_directed_ray_casts_in_time);
+    update_depth_image(m_random_ray_casts_in_time);
+}
+
+
+void  sight_controller::erase_obsolete_ray_casts(ray_casts_in_time&  ray_casts)
+{
+    while (!ray_casts.empty() && (float_32_bit)(m_current_time - ray_casts.begin()->first) >=
+                                           m_ray_cast_config.max_ray_cast_info_life_time_in_seconds)
+        ray_casts.erase(ray_casts.begin());
 }
 
 
@@ -307,10 +265,75 @@ void  sight_controller::update_camera(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  sight_controller::update_depth_image()
+void  sight_controller::perform_random_ray_casts(float_32_bit const  time_step_in_seconds, matrix44 const&  from_camera_matrix)
 {
-    std::fill(m_depth_image.begin(), m_depth_image.end(), 0.0f);
-    for (auto  it = m_ray_casts_in_time.begin(); it != m_ray_casts_in_time.end(); ++it)
+    float_32_bit const  ray_cast_duration = 1.0f / (float_32_bit)m_ray_cast_config.num_random_ray_casts_per_second;
+    for (m_random_ray_casts_time_buffer += time_step_in_seconds;
+         m_random_ray_casts_time_buffer >= ray_cast_duration;
+         m_random_ray_casts_time_buffer -= ray_cast_duration)
+    {
+        ray_cast_info  info;
+        if (perform_ray_cast(
+                    detail::generate_random_ray_cast_camera_coordinates(
+                            m_ray_cast_config.distribution_of_cells_in_camera_space,
+                            m_generator
+                            ),
+                    from_camera_matrix,
+                    info))
+            m_random_ray_casts_in_time.insert({ m_current_time, info });
+
+    }
+}
+
+
+bool  sight_controller::perform_ray_cast(
+        vector2 const  camera_coords_01,
+        matrix44 const&  from_camera_matrix,
+        ray_cast_info&  result
+        ) const
+{
+    result.cell_x = std::max(0U, std::min(m_ray_cast_config.num_cells_along_x_axis - 1U,
+                        (natural_32_bit)(camera_coords_01(0) * (m_ray_cast_config.num_cells_along_x_axis - 1U) + 0.5f)));
+    result.cell_y = std::max(0U, std::min(m_ray_cast_config.num_cells_along_y_axis - 1U,
+                        (natural_32_bit)(camera_coords_01(1) * (m_ray_cast_config.num_cells_along_y_axis - 1U) + 0.5f)));
+
+    vector3 const  camera_coords{
+            (get_camera()->left() + camera_coords_01(0) * (get_camera()->right() - get_camera()->left())),
+            (get_camera()->bottom() + camera_coords_01(1) * (get_camera()->top() - get_camera()->bottom())),
+            -get_camera()->near_plane()
+            };
+    float_32_bit const  scale_to_far_plane = get_camera()->far_plane() / get_camera()->near_plane();
+
+    result.ray_origin_in_world_space = get_camera()->coordinate_system()->origin();
+    vector3 const  ray_end = transform_point(scale_to_far_plane * camera_coords, from_camera_matrix);
+    result.collider_guid = ctx().ray_cast_to_nearest_collider(
+            result.ray_origin_in_world_space,
+            ray_end,
+            true,
+            true,
+            &result.parameter_to_coid,
+            m_ray_cast_config.collider_filter
+            );
+    if (result.collider_guid == com::invalid_object_guid())
+        return false;
+
+    result.camera_coords_of_cell_coords = contract32(camera_coords);
+    result.ray_direction_in_world_space = ray_end - result.ray_origin_in_world_space;
+
+    auto const  to01 = [](float_32_bit const  x, float_32_bit const  lo, float_32_bit const  hi) {
+        return (x - lo) / (hi - lo);
+    };
+
+    result.depth_inverted =
+            to01(1.0f / result.parameter_to_coid, 1.0f / get_camera()->far_plane(), 1.0f / get_camera()->near_plane());
+
+    return true;
+}
+
+
+void  sight_controller::update_depth_image(ray_casts_in_time const&  ray_casts)
+{
+    for (auto  it = ray_casts.begin(); it != ray_casts.end(); ++it)
     {
         natural_32_bit const  index = it->second.cell_x + it->second.cell_y * m_ray_cast_config.num_cells_along_x_axis;
         float_32_bit const  value =

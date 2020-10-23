@@ -59,7 +59,8 @@ static sight_controller::ray_cast_config  make_ray_cast_config(agent_config cons
     static float_32_bit constexpr  raycast_life_sec = 0.1f;
 
     //return sight_controller::ray_cast_config{
-    //        num_raycasts,       // num_raycasts_per_second
+    //        true,               // do_directed_ray_casts
+    //        num_raycasts,       // num_random_ray_casts_per_second
     //        raycast_life_sec,   // max_ray_cast_info_life_time_in_seconds
     //        num_cells_x,        // num_cells_along_x_axis; must be a power of 2.
     //        num_cells_y,        // num_cells_along_y_axis; must be a power of 2.
@@ -67,7 +68,7 @@ static sight_controller::ray_cast_config  make_ray_cast_config(agent_config cons
     //        collider_filter,    // collider_filter
     //        depth_image_func    // depth_image_func
     //        };
-    return sight_controller::ray_cast_config{0U};
+    return sight_controller::ray_cast_config(false, 0U);
 }
 
 
@@ -107,7 +108,7 @@ void  agent::next_round(
 {
     TMPROF_BLOCK();
 
-    m_sight_controller.next_round(time_step_in_seconds, m_action_controller.get_motion_object_collider_guids());
+    m_sight_controller.next_round(time_step_in_seconds);
     m_cortex->next_round(time_step_in_seconds, keyboard, mouse, window);
     m_action_controller.next_round(time_step_in_seconds, m_cortex->get_motion_desire_props());
 }

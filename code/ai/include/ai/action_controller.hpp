@@ -97,8 +97,39 @@ struct  agent_action
     struct  transition_config
     {
         enum struct AABB_ALIGNMENT : natural_8_bit { CENTER, X_LO, X_HI, Y_LO, Y_HI, Z_LO, Z_HI };
+        enum struct PERCEPTION_KIND : natural_8_bit { SIGHT, TOUCH };
 
+        struct  location_constraint_config
+        {
+            angeo::COLLISION_SHAPE_TYPE  shape_type;
+            vector3  origin;
+            vector3  aabb_half_size;
+        };
+
+        struct  perception_guard_config
+        {
+            PERCEPTION_KIND  perception_kind;
+            std::string  sensor_folder_name;
+            com::OBJECT_KIND  sensor_owner_kind; // Only AGENT or SENSOR.
+            location_constraint_config  location_constraint;
+
+        };
+
+        struct  motion_object_position_config
+        {
+            bool  is_self_frame;
+            std::string  frame_folder;
+            vector3  origin;
+        };
+
+        std::shared_ptr<perception_guard_config>  perception_guard;
+        std::shared_ptr<motion_object_position_config>  motion_object_position;
         AABB_ALIGNMENT  aabb_alignment;
+    };
+
+    struct  transition_info
+    {
+        com::object_guid  other_entiry_folder_guid;
     };
 
     struct  skeletal_animation_info
@@ -121,7 +152,6 @@ struct  agent_action
     scene_binding const&  binding() const { return *m_context->binding; }
     com::simulation_context const&  ctx() const { return *m_context->binding->context; }
 
-    bool  is_guard_valid() const;
     float_32_bit  compute_desire_penalty(motion_desire_props const&  props) const;
 
     bool  is_cyclic() const { return IS_CYCLIC; }
@@ -132,7 +162,7 @@ struct  agent_action
     float_32_bit  interpolation_parameter() const;
     float_32_bit  interpolation_parameter_ghost() const;
 
-    std::unordered_map<std::string, transition_config> const&  get_successor_action_names() const { return TRANSITIONS; };
+    std::unordered_map<std::string, transition_config> const&  get_transitions() const { return TRANSITIONS; };
     motion_object_config const&  get_motion_object_config() const { return MOTION_OBJECT_CONFIG; }
 
     com::object_guid  get_frame_guid_of_skeleton_location() const;
@@ -142,7 +172,11 @@ struct  agent_action
     void  update_ghost();
     void  update_animation(float_32_bit const  time_step_in_seconds);
 
-    virtual void  on_transition(agent_action* const  from_action_ptr);
+    bool  is_guard_valid() const;
+
+    bool  collect_transition_info(agent_action const&  from_action, transition_info&  info) const;
+
+    virtual void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info);
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
     virtual std::unordered_set<com::object_guid>  get_motion_object_collider_guids() const;
@@ -192,7 +226,7 @@ struct  action_guesture : public  agent_action
             boost::property_tree::ptree const&  defaults_,
             action_execution_context_ptr const  context_
             );
-    void  on_transition(agent_action* const  from_action_ptr) override;
+    void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info) override;
     void  next_round(float_32_bit const  time_step_in_seconds) override;
 };
 
@@ -205,7 +239,7 @@ struct  action_guesture : public  agent_action
 //            boost::property_tree::ptree const&  defaults_,
 //            action_execution_context_ptr const  context_
 //            );
-//    //void  on_transition(agent_action* const  from_action_ptr) override {}
+//    //void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info) override {}
 //    void  next_round(float_32_bit const  time_step_in_seconds) override;
 //    angeo::coordinate_system  target;
 //};
@@ -219,7 +253,7 @@ struct  action_guesture : public  agent_action
 //            boost::property_tree::ptree const&  defaults_,
 //            action_execution_context_ptr const  context_
 //            );
-//    //void  on_transition(agent_action* const  from_action_ptr) override {}
+//    //void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info) override {}
 //    //void  next_round(float_32_bit const  time_step_in_seconds) override {}
 //};
 
@@ -238,9 +272,6 @@ struct  action_controller
             float_32_bit const  time_step_in_seconds,
             motion_desire_props const&  desire
             );
-
-    std::unordered_set<com::object_guid>  get_motion_object_collider_guids() const
-    { return m_current_action->get_motion_object_collider_guids(); }
 
 private:
     action_execution_context_ptr  m_context;

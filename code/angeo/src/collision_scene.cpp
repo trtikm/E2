@@ -892,12 +892,9 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         vector3 const&  ray_origin,
         vector3 const&  ray_end,
         std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
-        std::unordered_set<collision_object_id> const* const  ignored_coids_ptr,
         std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
         ) const
 {
-    if (ignored_coids_ptr != nullptr && ignored_coids_ptr->count(coid) != 0UL)
-        return true;
     if (collider_filter(coid, get_collision_class(coid)) == false)
         return true;
 
@@ -996,7 +993,6 @@ bool  collision_scene::ray_cast(
         bool const  search_dynamic,
         collision_object_id*  nearest_coid,
         float_32_bit*  ray_parameter_to_nearest_coid,
-        std::unordered_set<collision_object_id> const* const  ignored_coids_ptr, // pass nullptr, if there is nothing to ignore.
         std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
         ) const
 {
@@ -1013,8 +1009,8 @@ bool  collision_scene::ray_cast(
     find_objects_in_proximity_to_line(
         ray_origin,
         ray_end,
-        true,
-        true,
+        search_static,
+        search_dynamic,
         [&](angeo::collision_object_id const  coid) -> bool {
             return ray_cast_precise_collision_object_acceptor(
                 coid,
@@ -1028,7 +1024,6 @@ bool  collision_scene::ray_cast(
                         }
                         return true;
                     },
-                ignored_coids_ptr,
                 collider_filter
                 );
         }

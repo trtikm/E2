@@ -1214,19 +1214,11 @@ object_guid  simulation_context::ray_cast_to_nearest_collider(
         vector3 const&  ray_end,
         bool const  search_static,
         bool const  search_dynamic,
-        float_32_bit*  ray_parameter_to_nearest_collider,
-        std::unordered_set<object_guid> const* const  ignored_collider_guids,
+        float_32_bit* const  ray_parameter_to_nearest_collider,
         std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter
         ) const
 {
     angeo::collision_object_id  nearest_coid;
-    std::unordered_set<angeo::collision_object_id>  ignored_coids;
-    if (ignored_collider_guids != nullptr)
-        for (object_guid  collider_guid : *ignored_collider_guids)
-        {
-            ASSUMPTION(is_valid_collider_guid(collider_guid));
-            ignored_coids.insert(m_colliders.at(collider_guid.index).id.front());
-        }
     if (!m_collision_scene_ptr->ray_cast(
             ray_origin,
             ray_end,
@@ -1234,8 +1226,7 @@ object_guid  simulation_context::ray_cast_to_nearest_collider(
             search_dynamic,
             &nearest_coid,
             ray_parameter_to_nearest_collider,
-            ignored_collider_guids == nullptr ? nullptr : &ignored_coids,
-            [this,&collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS cc) {
+            [this,&collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
                     return collider_filter(to_collider_guid(coid), cc);
                     }
             ))

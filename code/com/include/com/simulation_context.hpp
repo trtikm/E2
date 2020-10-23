@@ -358,8 +358,7 @@ struct  simulation_context
             vector3 const&  ray_end,
             bool const  search_static,
             bool const  search_dynamic,
-            float_32_bit*  ray_parameter_to_nearest_collider = nullptr,
-            std::unordered_set<object_guid> const* const  ignored_collider_guids = nullptr,
+            float_32_bit* const  ray_parameter_to_nearest_collider = nullptr,
             std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
                     [](object_guid, angeo::COLLISION_CLASS) { return true; }
             ) const;

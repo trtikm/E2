@@ -21,6 +21,14 @@ vector3  read_vector3(boost::property_tree::ptree const&  ptree)
 }
 
 
+vector3  read_aabb_half_size(boost::property_tree::ptree const&  ptree)
+{
+    vector3  u = read_vector3(ptree);
+    ASSUMPTION(u(0) > 0.0f && u(1) > 0.0f && u(2) > 0.0f);
+    return u;
+}
+
+
 void  insert_collider_to_context(
         com::simulation_context const&  ctx,
         com::object_guid const  under_folder_guid,
@@ -233,8 +241,7 @@ void  agent_action::load_sensors(boost::property_tree::ptree const&  ptree)
         ASSUMPTION(ctx().is_valid_folder_guid(ctx().from_relative_path(binding().folder_guid_of_agent, sc.under_folder)));
         sc.shape_type = angeo::as_collision_shape_type(name_and_props.second.get<std::string>("shape_type"));
         sc.collision_class = angeo::read_collison_class_from_string(name_and_props.second.get<std::string>("collision_class"));
-        sc.aabb_half_size = read_vector3(name_and_props.second.find("aabb_half_size")->second);
-        ASSUMPTION(sc.aabb_half_size(0) > 0.0f && sc.aabb_half_size(1) > 0.0f && sc.aabb_half_size(2) > 0.0f);
+        sc.aabb_half_size = read_aabb_half_size(name_and_props.second.find("aabb_half_size")->second);
         sc.frame.set_origin(read_vector3(name_and_props.second.find("origin")->second));
         sc.frame.set_orientation(quaternion_identity()); // TODO!
         SENSORS.insert({ name_and_props.first, sc });
@@ -257,7 +264,45 @@ void  agent_action::load_transitions(
     for (auto const&  name_and_props : ptree)
     {
         transition_config  tc;
+        if (name_and_props.second.count("perception_guard") != 0UL)
         {
+            boost::property_tree::ptree const&  guard = name_and_props.second.find("perception_guard")->second;
+            tc.perception_guard = std::make_shared<agent_action::transition_config::perception_guard_config>();
+            tc.perception_guard->perception_kind =
+                    guard.get<std::string>("perception_kind") == "SIGHT" ?
+                            transition_config::PERCEPTION_KIND::SIGHT :
+                            transition_config::PERCEPTION_KIND::TOUCH ;
+            tc.perception_guard->sensor_folder_name = guard.get<std::string>("sensor_folder_name");
+            ASSUMPTION(!tc.perception_guard->sensor_folder_name.empty() &&
+                       tc.perception_guard->sensor_folder_name.back() != '/');
+            tc.perception_guard->sensor_owner_kind =
+                    com::read_object_kind_from_string(guard.get<std::string>("sensor_owner_kind"));
+            ASSUMPTION(tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::AGENT ||
+                       tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::SENSOR);
+            boost::property_tree::ptree const&  location = guard.find("location_constraint")->second;
+            tc.perception_guard->location_constraint.shape_type =
+                    angeo::as_collision_shape_type(location.get<std::string>("shape_type"));
+            tc.perception_guard->location_constraint.origin = read_vector3(location.find("origin")->second);
+            tc.perception_guard->location_constraint.aabb_half_size = read_aabb_half_size(location.find("aabb_half_size")->second);
+        }
+        else
+            tc.perception_guard = nullptr;
+
+        if (name_and_props.second.count("motion_object_position") != 0UL)
+        {
+            boost::property_tree::ptree const&  position = name_and_props.second.find("motion_object_position")->second;
+            tc.motion_object_position = std::make_shared<agent_action::transition_config::motion_object_position_config>();
+            tc.motion_object_position->is_self_frame = position.get<std::string>("frame_owner") == "SELF";
+            tc.motion_object_position->frame_folder = position.get<std::string>("frame_folder");
+            ASSUMPTION(!tc.motion_object_position->frame_folder.empty() &&
+                       tc.motion_object_position->frame_folder.back() == '/');
+            tc.motion_object_position->origin = read_vector3(position.find("origin")->second);
+
+            tc.aabb_alignment = transition_config::AABB_ALIGNMENT::CENTER;
+        }
+        else
+        {
+            tc.motion_object_position = nullptr;
             static std::unordered_map<std::string, transition_config::AABB_ALIGNMENT>  alignments {
                 { "CENTER", transition_config::AABB_ALIGNMENT::CENTER },
                 { "X_LO", transition_config::AABB_ALIGNMENT::X_LO },
@@ -271,13 +316,6 @@ void  agent_action::load_transitions(
         }
         TRANSITIONS.insert({ name_and_props.first, tc });
     }
-}
-
-
-bool  agent_action::is_guard_valid() const
-{
-    // TODO!
-    return true;
 }
 
 
@@ -425,7 +463,31 @@ void  agent_action::update_animation(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  agent_action::on_transition(agent_action* const  from_action_ptr)
+bool  agent_action::is_guard_valid() const
+{
+    // TODO!
+    return true;
+}
+
+
+bool  agent_action::collect_transition_info(agent_action const&  from_action, transition_info&  info) const
+{
+    ASSUMPTION(&from_action != this);
+
+    info.other_entiry_folder_guid = com::invalid_object_guid();
+
+    transition_config const&  config = from_action.TRANSITIONS.at(NAME);
+    if (config.perception_guard == nullptr)
+        return true;
+    transition_config::perception_guard_config const  percept = *config.perception_guard;
+
+    // TODO!
+
+    return false;
+}
+
+
+void  agent_action::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
 {
     TMPROF_BLOCK();
 
@@ -543,12 +605,31 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr)
         m_ghost_object_start_coord_system = ctx().frame_coord_system(skeleton_parent_frame_guid);
         ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, m_ghost_object_start_coord_system);
 
-        if (from_action_ptr != nullptr && from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
+        if (from_action_ptr != nullptr && from_action_ptr != this)
         {
-            angeo::coordinate_system const  frame = skeleton_parent_frame_guid == binding().frame_guid_of_motion_object ?
-                    m_ghost_object_start_coord_system : ctx().frame_coord_system(binding().frame_guid_of_motion_object);
+            angeo::coordinate_system const  frame =
+                    skeleton_parent_frame_guid == binding().frame_guid_of_motion_object ?
+                            m_ghost_object_start_coord_system :
+                            ctx().frame_coord_system(binding().frame_guid_of_motion_object);
 
-            vector3  shift;
+            vector3  origin;
+
+            std::shared_ptr<transition_config::motion_object_position_config> const  pos_cfg =
+                    TRANSITIONS.at(from_action_ptr->NAME).motion_object_position;
+            if (pos_cfg != nullptr)
+            {
+                com::object_guid const  folder_guid = ctx().from_relative_path(
+                        pos_cfg->is_self_frame ? binding().folder_guid_of_agent : info.other_entiry_folder_guid,
+                        pos_cfg->frame_folder
+                        );
+                INVARIANT(ctx().is_valid_folder_guid(folder_guid));
+                com::object_guid const  frame_guid =
+                        ctx().folder_content(folder_guid).content.at(com::to_string(com::OBJECT_KIND::FRAME));
+                INVARIANT(ctx().is_valid_frame_guid(frame_guid));
+
+                origin = transform_point(pos_cfg->origin, ctx().frame_world_matrix(frame_guid));                
+            }
+            else if (from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
             {
                 natural_32_bit  coord_idx;
                 float_32_bit  sign;
@@ -567,9 +648,10 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr)
                 float_32_bit const  delta = from_action_ptr->MOTION_OBJECT_CONFIG.aabb_half_size(coord_idx) -
                                             MOTION_OBJECT_CONFIG.aabb_half_size(coord_idx);
             
-                shift = (sign * delta) * vector3_unit(coord_idx);
+                origin = frame.origin() + (sign * delta) * vector3_unit(coord_idx);
             }
-            ctx().request_relocate_frame(binding().frame_guid_of_motion_object, frame.origin() + shift, frame.orientation());
+
+            ctx().request_relocate_frame(binding().frame_guid_of_motion_object, origin, frame.orientation());
         }
 
         if (is_ghost_complete())
@@ -689,9 +771,9 @@ action_guesture::action_guesture(
 }
 
 
-void  action_guesture::on_transition(agent_action* const  from_action_ptr)
+void  action_guesture::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
 {
-    agent_action::on_transition(from_action_ptr);
+    agent_action::on_transition(from_action_ptr, info);
 
     // TODO
 }
@@ -749,9 +831,9 @@ action_controller::action_controller(
         [this]() -> bool {
             for (auto const&  name_and_action : m_available_actions)
             {
-                if (!name_and_action.second->is_cyclic() && name_and_action.second->get_successor_action_names().empty())
+                if (!name_and_action.second->is_cyclic() && name_and_action.second->get_transitions().empty())
                     return false;
-                for (auto const&  action_name_and_props : name_and_action.second->get_successor_action_names())
+                for (auto const&  action_name_and_props : name_and_action.second->get_transitions())
                 {
                     if (action_name_and_props.first == name_and_action.first)
                         return false;
@@ -763,7 +845,7 @@ action_controller::action_controller(
         }()
     );
     m_current_action = m_available_actions.at(config.initial_action());
-    m_current_action->on_transition(nullptr);
+    m_current_action->on_transition(nullptr, agent_action::transition_info());
     m_context->animate.move_to_target();
     m_context->animate.commit(m_context->motion_templates, m_context->binding);
 }
@@ -783,6 +865,7 @@ void  action_controller::next_round(
     m_current_action->next_round(time_step_in_seconds);
 
     std::shared_ptr<agent_action>  best_action;
+    agent_action::transition_info  best_info;
     {
         best_action = nullptr;
         float_32_bit  best_penalty = 0.0f;
@@ -791,16 +874,18 @@ void  action_controller::next_round(
             best_action = m_current_action;
             best_penalty = m_current_action->compute_desire_penalty(desire);
         }
-        for (auto const&  name_and_props : m_current_action->get_successor_action_names())
+        for (auto const&  name_and_props : m_current_action->get_transitions())
         {
             std::shared_ptr<agent_action> const  action_ptr = m_available_actions.at(name_and_props.first);
-            if (!action_ptr->is_guard_valid())
+            agent_action::transition_info  info;
+            if (!action_ptr->collect_transition_info(*m_current_action, info))
                 continue;
             float_32_bit const  penalty = action_ptr->compute_desire_penalty(desire);
             if (best_action == nullptr || penalty < best_penalty)
             {
                 best_action = action_ptr;
                 best_penalty = penalty;
+                best_info = info;
             }
         }
     }
@@ -808,7 +893,7 @@ void  action_controller::next_round(
 
     if (m_current_action != best_action || m_current_action->is_complete())
     {
-        best_action->on_transition(&*m_current_action);
+        best_action->on_transition(&*m_current_action, best_info);
         m_current_action = best_action;
     }
 }

@@ -856,7 +856,7 @@ void  simulator::render_sight_contacts()
         if (camera == nullptr)
             continue;
 
-        ai::sight_controller::ray_casts_in_time const&  ray_casts = sight.get_ray_casts_in_time();
+        ai::sight_controller::ray_casts_in_time const&  ray_casts = sight.get_random_ray_casts_in_time();
         task_sight_contacts.world_matrices.reserve(task_sight_contacts.world_matrices.size() + ray_casts.size());
         for (auto  ray_it = ray_casts.begin(), end = ray_casts.end(); ray_it != end; ++ray_it)
         {

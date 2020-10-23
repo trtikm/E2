@@ -40,7 +40,8 @@ struct  sight_controller
 
     struct  ray_cast_config
     {
-        natural_32_bit  num_raycasts_per_second;
+        bool  do_directed_ray_casts;
+        natural_32_bit  num_random_ray_casts_per_second;
         float_32_bit  max_ray_cast_info_life_time_in_seconds;
         natural_16_bit  num_cells_along_x_axis;     // Must be a power of 2.
         natural_16_bit  num_cells_along_y_axis;     // Must be a power of 2.
@@ -58,14 +59,18 @@ struct  sight_controller
         std::function<float_32_bit(float_32_bit)>  depth_image_func;    // Mapping of ray cast params to depth values.
 
         ray_cast_config(
-                natural_32_bit const  num_raycasts_per_second_ = 2U * 32U * 32U,
+                bool const  do_directed_ray_casts_ = true,
+                natural_32_bit const  num_random_ray_casts_per_second_ = 2U * 32U * 32U,
                 float_32_bit const  max_ray_cast_info_life_time_in_seconds_ = 0.1f,
                 natural_16_bit const  num_cells_along_x_axis_ = 32U,    // Must be a power of 2.
                 natural_16_bit const  num_cells_along_y_axis_ = 32U,    // Must be a power of 2.
                 std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_ =
                     [](float_32_bit const  x) -> float_32_bit { return x * x; }, // This is a quadratic stretch of the cell's grid.
                 std::function<bool(com::object_guid, angeo::COLLISION_CLASS)> const&  collider_filter_ =
-                    [](com::object_guid, angeo::COLLISION_CLASS) { return true; },
+                    [](com::object_guid, angeo::COLLISION_CLASS const  cc) {
+                            return cc != angeo::COLLISION_CLASS::FIELD_AREA &&
+                                   cc != angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT;
+                            },
                 std::function<float_32_bit(float_32_bit)>  depth_image_func_ =
                     [](float_32_bit const  x) -> float_32_bit { return x; } // Mapping of ray cast params to depth values.
                 );
@@ -82,6 +87,7 @@ struct  sight_controller
         com::object_guid  collider_guid;
         float_32_bit  depth_inverted;
 
+        ray_cast_info() {}
         ray_cast_info(
                 natural_32_bit const  cell_x_,
                 natural_32_bit const  cell_y_,
@@ -104,17 +110,15 @@ struct  sight_controller
             scene_binding_ptr const  binding
             );
 
-    void  next_round(
-            float_32_bit const  time_step_in_seconds,
-            std::unordered_set<com::object_guid> const&  ignored_collider_guids
-            );
+    void  next_round(float_32_bit const  time_step_in_seconds);
 
     camera_config const&  get_camera_config() const { return m_camera_config; }
     // NOTE: Camera's coord. system is in the world space.
     camera_perspective_ptr  get_camera() const { return m_camera; }
 
     ray_cast_config const&  get_ray_cast_config() const { return m_ray_cast_config; }
-    ray_casts_in_time const&  get_ray_casts_in_time() const { return m_ray_casts_in_time; }
+    ray_casts_in_time const&  get_directed_ray_casts_in_time() const { return m_directed_ray_casts_in_time; }
+    ray_casts_in_time const&  get_random_ray_casts_in_time() const { return m_random_ray_casts_in_time; }
     ray_casts_image const&  get_depth_image() const { return m_depth_image; }
 
     skeletal_motion_templates  get_motion_templates() const { return m_motion_templates; }
@@ -122,17 +126,21 @@ struct  sight_controller
     com::simulation_context const&  ctx() const { return *m_binding->context; }
 
 private:
+    void  erase_obsolete_ray_casts(ray_casts_in_time&  ray_casts);
     void  update_camera(float_32_bit const  time_step_in_seconds);
-    void  update_depth_image();
+    void  perform_random_ray_casts(float_32_bit const  time_step_in_seconds, matrix44 const&  from_camera_matrix);
+    bool  perform_ray_cast(vector2 const  camera_coords_01, matrix44 const&  from_camera_matrix, ray_cast_info&  result) const;
+    void  update_depth_image(ray_casts_in_time const&  ray_casts);
 
     camera_config  m_camera_config;
     camera_perspective_ptr  m_camera;
     ray_cast_config  m_ray_cast_config;
-    ray_casts_in_time  m_ray_casts_in_time;
+    ray_casts_in_time  m_directed_ray_casts_in_time;
+    ray_casts_in_time  m_random_ray_casts_in_time;
     ray_casts_image  m_depth_image;
     float_64_bit  m_current_time;
     random_generator_for_natural_32_bit  m_generator;
-    float_32_bit  m_time_buffer;
+    float_32_bit  m_random_ray_casts_time_buffer;
     skeletal_motion_templates  m_motion_templates;
     scene_binding_ptr  m_binding;
 };
