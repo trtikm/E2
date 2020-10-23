@@ -125,16 +125,23 @@ struct  simulation_context
     struct  folder_content_type
     {
         using  names_to_guids_map = std::unordered_map<std::string, object_guid>;
+        using  kinds_to_names_map = std::unordered_map<OBJECT_KIND, std::unordered_set<std::string> >;
         folder_content_type();
         folder_content_type(std::string const&  folder_name, object_guid const  parent_folder_guid);
+        void  insert_content(OBJECT_KIND const  kind, object_guid const  guid);
+        void  insert_content(OBJECT_KIND const  kind, object_guid const  guid, std::string const&  name);
+        void  erase_content(OBJECT_KIND const  kind);
+        void  erase_content(std::string const&  name, OBJECT_KIND const  kind);
         std::string  folder_name;
         object_guid  parent_folder;
         names_to_guids_map  child_folders;    // Only folder guids.
         names_to_guids_map  content;          // All other guids.
+        kinds_to_names_map  content_index;    // The 'content' split by object kinds.
     };
 
     using  folder_visitor_type = std::function<bool(object_guid, folder_content_type const&)>;
     using  folder_guid_iterator = object_guid_iterator<OBJECT_KIND::FOLDER>;
+    using  folder_content_visitor_type = std::function<bool(object_guid)>;
 
     bool  is_valid_folder_guid(object_guid const  folder_guid) const;
     object_guid  root_folder() const;
@@ -150,6 +157,8 @@ struct  simulation_context
                                  folder_visitor_type const&  visitor) const;
     void  for_each_child_folder(object_guid const  folder_guid, bool const  recursively, bool const  including_passed_folder,
                                 folder_visitor_type const&  visitor) const;
+    void  for_each_object_of_kind_under_folder(object_guid const  folder_guid, bool const  recursively,
+                                               OBJECT_KIND const  kind, folder_content_visitor_type const&  visitor) const;
     object_guid  insert_folder(object_guid const  under_folder_guid, std::string  folder_name,
                                bool const  resolve_name_collision = true) const;
     void  request_erase_non_root_empty_folder(object_guid const  folder_guid) const;
@@ -313,9 +322,6 @@ struct  simulation_context
     object_guid  to_collider_guid(angeo::collision_object_id const  coid) const;
     collider_guid_iterator  colliders_begin() const;
     collider_guid_iterator  colliders_end() const;
-    bool  is_collider_moveable(object_guid const  collider_guid) const;
-    collider_guid_iterator  moveable_colliders_begin() const;
-    collider_guid_iterator  moveable_colliders_end() const;
     object_guid  frame_of_collider(object_guid const  collider_guid) const;
     object_guid  owner_of_collider(object_guid const  collider_guid) const;
     object_guid  rigid_body_of_collider(object_guid const  collider_guid) const;
@@ -681,6 +687,9 @@ struct  simulation_context
     std::unordered_set<object_guid> const&  invalidated_guids() const { return m_invalidated_guids; }
     void  clear_invalidated_guids();
 
+    std::unordered_set<object_guid> const&  relocated_frame_guids() const { return m_relocated_frame_guids; }
+    void  clear_relocated_frame_guids();
+
     /////////////////////////////////////////////////////////////////////////////////////
     // SCENE CLEAR API
     /////////////////////////////////////////////////////////////////////////////////////
@@ -812,7 +821,6 @@ private:
     std::unordered_map<com::device_simulator::sensor_id, object_guid>  m_seids_to_guids;
     std::unordered_map<ai::agent_id, object_guid>  m_agids_to_guids;
 
-    std::unordered_set<index_type>  m_moveable_colliders;
     std::unordered_set<index_type>  m_moveable_rigid_bodies;
 
     dynamic_array<collision_contact, natural_32_bit>  m_collision_contacts;
@@ -821,6 +829,7 @@ private:
     std::string  m_data_root_dir;
 
     std::unordered_set<object_guid>  m_invalidated_guids;
+    std::unordered_set<object_guid>  m_relocated_frame_guids;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // CACHES

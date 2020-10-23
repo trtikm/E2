@@ -67,12 +67,12 @@ simulation_context::simulation_context(
     , m_tmids_to_guids()
     , m_seids_to_guids()
     , m_agids_to_guids()
-    , m_moveable_colliders()
     , m_moveable_rigid_bodies()
     , m_collision_contacts()
     , m_from_colliders_to_contacts()
     , m_data_root_dir(canonical_path(data_root_dir_.empty() ? "." : data_root_dir_).string())
     , m_invalidated_guids()
+    , m_relocated_frame_guids()
     // CACHES
     , m_cache_of_imported_scenes()
     , m_cache_of_imported_batches()
@@ -138,6 +138,7 @@ simulation_context::folder_content_type::folder_content_type()
     , parent_folder(invalid_object_guid())
     , child_folders()
     , content()
+    , content_index()
 {}
 
 
@@ -149,8 +150,42 @@ simulation_context::folder_content_type::folder_content_type(
     , parent_folder(parent_folder_guid)
     , child_folders()
     , content()
+    , content_index()
 {
     ASSUMPTION(!folder_name.empty() && parent_folder == invalid_object_guid() || parent_folder.kind == OBJECT_KIND::FOLDER);
+}
+
+
+void  simulation_context::folder_content_type::insert_content(OBJECT_KIND const  kind, object_guid const  guid)
+{
+    insert_content(kind, guid, to_string(kind));
+}
+
+
+void  simulation_context::folder_content_type::insert_content(
+        OBJECT_KIND const  kind,
+        object_guid const  guid,
+        std::string const&  name
+        )
+{
+    content.insert({ name, guid });
+    content_index[kind].insert(name);
+}
+
+
+void  simulation_context::folder_content_type::erase_content(OBJECT_KIND const  kind)
+{
+    erase_content(to_string(kind), kind);
+}
+
+
+void  simulation_context::folder_content_type::erase_content(std::string const&  name, OBJECT_KIND const  kind)
+{
+    content.erase(name);
+    auto const  it = content_index.find(kind);
+    it->second.erase(name);
+    if (it->second.empty())
+        content_index.erase(it);
 }
 
 
@@ -264,6 +299,22 @@ void  simulation_context::for_each_child_folder(object_guid const  folder_guid, 
                                                                 fct.child_folders)
         if (visitor(name_and_guid.second, folder_content(name_and_guid.second)) && recursively)
             for_each_child_folder(name_and_guid.second, recursively, false, visitor);
+}
+
+
+void  simulation_context::for_each_object_of_kind_under_folder(object_guid const  folder_guid, bool const  recursively,
+                                                               OBJECT_KIND const  kind,
+                                                               folder_content_visitor_type const&  visitor) const
+{
+    folder_content_type const&  fct = folder_content(folder_guid);
+    auto const  content_it = fct.content_index.find(kind);
+    if (content_it != fct.content_index.end())
+        for (std::string const&  name : content_it->second)
+            if (!visitor(fct.content.at(name)))
+                return;
+    if (recursively)
+        for (auto const&  name_and_guid : fct.child_folders)
+            for_each_object_of_kind_under_folder(name_and_guid.second, recursively, kind, visitor);
 }
 
 
@@ -480,7 +531,8 @@ object_guid  simulation_context::find_closest_frame(object_guid const  folder_gu
 object_guid  simulation_context::parent_frame(object_guid const  frame_guid) const
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    return to_frame_guid(m_frames_provider.parent(m_frames.at(frame_guid.index).id));
+    frame_id const  frid = m_frames_provider.parent(m_frames.at(frame_guid.index).id);
+    return frid == invalid_frame_id() ? invalid_object_guid() : to_frame_guid(frid);
 }
 
 
@@ -608,6 +660,7 @@ void  simulation_context::set_parent_frame(object_guid const  frame_guid, object
             m_frames.at(frame_guid.index).id,
             parent_frame_guid == invalid_object_guid() ? invalid_frame_id() : m_frames.at(parent_frame_guid.index).id
             );
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
@@ -624,7 +677,7 @@ object_guid  simulation_context::insert_frame(object_guid const  under_folder_gu
 
     m_frids_to_guids.insert({ frid, frame_guid });
 
-    m_folders.at(under_folder_guid.index).content.insert({ to_string(OBJECT_KIND::FRAME), frame_guid });
+    m_folders.at(under_folder_guid.index).insert_content(OBJECT_KIND::FRAME, frame_guid);
 
     object_guid const  parent_frame_guid = find_closest_frame(under_folder_guid, false);
     if (parent_frame_guid != invalid_object_guid())
@@ -643,9 +696,15 @@ void  simulation_context::erase_frame(object_guid const  frame_guid)
         folder_content(folder_of_frame(frame_guid)).content.begin()->second == frame_guid
         );
     m_invalidated_guids.insert(frame_guid);
+    {
+        std::vector<object_guid>  direct_children;
+        direct_children_frames(frame_guid, direct_children);
+        for (object_guid const  child_frame_guid : direct_children)
+            m_relocated_frame_guids.insert(child_frame_guid);
+    }
     auto const&  elem = m_frames.at(frame_guid.index);
     m_frames_provider.erase(elem.id);
-    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_folders.at(elem.folder_index).erase_content(OBJECT_KIND::FRAME);
     m_frids_to_guids.erase(elem.id);
     m_frames.erase(frame_guid.index);
 }
@@ -654,42 +713,48 @@ void  simulation_context::erase_frame(object_guid const  frame_guid)
 void  simulation_context::frame_translate(object_guid const  frame_guid, vector3 const&  shift)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    return m_frames_provider.translate(m_frames.at(frame_guid.index).id, shift);
+    m_frames_provider.translate(m_frames.at(frame_guid.index).id, shift);
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
 void  simulation_context::frame_rotate(object_guid const  frame_guid, quaternion const&  rotation)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    return m_frames_provider.rotate(m_frames.at(frame_guid.index).id, rotation);
+    m_frames_provider.rotate(m_frames.at(frame_guid.index).id, rotation);
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
 void  simulation_context::frame_set_origin(object_guid const  frame_guid, vector3 const&  new_origin)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    return m_frames_provider.set_origin(m_frames.at(frame_guid.index).id, new_origin);
+    m_frames_provider.set_origin(m_frames.at(frame_guid.index).id, new_origin);
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
 void  simulation_context::frame_set_orientation(object_guid const  frame_guid, quaternion const&  new_orientation)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    return m_frames_provider.set_orientation(m_frames.at(frame_guid.index).id, new_orientation);
+    m_frames_provider.set_orientation(m_frames.at(frame_guid.index).id, new_orientation);
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
 void  simulation_context::frame_relocate(object_guid const  frame_guid, angeo::coordinate_system const& new_coord_system)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    return m_frames_provider.relocate(m_frames.at(frame_guid.index).id, new_coord_system);
+    m_frames_provider.relocate(m_frames.at(frame_guid.index).id, new_coord_system);
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
 void  simulation_context::frame_relocate(object_guid const  frame_guid, vector3 const&  new_origin, quaternion const&  new_orientation)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    return m_frames_provider.relocate(m_frames.at(frame_guid.index).id, new_origin, new_orientation);
+    m_frames_provider.relocate(m_frames.at(frame_guid.index).id, new_origin, new_orientation);
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
@@ -697,17 +762,19 @@ void  simulation_context::frame_relocate_relative_to_parent(object_guid const  f
                                                             quaternion const&  new_orientation)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    return m_frames_provider.relocate_relative_to_parent(m_frames.at(frame_guid.index).id, new_origin, new_orientation);
+    m_frames_provider.relocate_relative_to_parent(m_frames.at(frame_guid.index).id, new_origin, new_orientation);
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
 void  simulation_context::frame_relocate_relative_to_parent(object_guid const  frame_guid, object_guid const  relocation_frame_guid)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid) && is_valid_frame_guid(relocation_frame_guid));
-    return m_frames_provider.relocate_relative_to_parent(
-                m_frames.at(frame_guid.index).id,
-                m_frames.at(relocation_frame_guid.index).id
-                );
+    m_frames_provider.relocate_relative_to_parent(
+            m_frames.at(frame_guid.index).id,
+            m_frames.at(relocation_frame_guid.index).id
+            );
+    m_relocated_frame_guids.insert(frame_guid);
 }
 
 
@@ -802,7 +869,7 @@ object_guid  simulation_context::insert_batch(object_guid const  folder_guid, st
 
     m_batches_to_guids.insert({ batch.uid(), batch_guid });
 
-    m_folders.at(folder_guid.index).content.insert({ name, batch_guid });
+    m_folders.at(folder_guid.index).insert_content(OBJECT_KIND::BATCH, batch_guid, name);
 
     if (frame_guids.empty())
     {
@@ -832,7 +899,7 @@ void  simulation_context::erase_batch(object_guid const  batch_guid)
         folder_content(folder_of_batch(batch_guid)).content.find(elem.element_name)->second == batch_guid
         );
 
-    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_folders.at(elem.folder_index).erase_content(elem.element_name, OBJECT_KIND::BATCH);
     m_batches_to_guids.erase(elem.id);
     m_batches.erase(batch_guid.index);
 }
@@ -1046,25 +1113,6 @@ simulation_context::collider_guid_iterator  simulation_context::colliders_begin(
 simulation_context::collider_guid_iterator  simulation_context::colliders_end() const
 {
     return collider_guid_iterator(m_colliders.valid_indices().end());
-}
-
-
-bool  simulation_context::is_collider_moveable(object_guid const  collider_guid) const
-{
-    ASSUMPTION(is_valid_collider_guid(collider_guid));
-    return m_moveable_colliders.count(collider_guid.index) != 0UL;
-}
-
-
-simulation_context::collider_guid_iterator  simulation_context::moveable_colliders_begin() const
-{
-    return collider_guid_iterator(m_moveable_colliders.begin());
-}
-
-
-simulation_context::collider_guid_iterator  simulation_context::moveable_colliders_end() const
-{
-    return collider_guid_iterator(m_moveable_colliders.end());
 }
 
 
@@ -1408,7 +1456,7 @@ object_guid  simulation_context::insert_collider(
     for (angeo::collision_object_id  coid : coids)
         m_coids_to_guids.insert({ coid, collider_guid });
 
-    m_folders.at(under_folder_guid.index).content.insert({ name, collider_guid });
+    m_folders.at(under_folder_guid.index).insert_content(OBJECT_KIND::COLLIDER, collider_guid, name);
 
 if (owner_guid != invalid_object_guid())
     switch (owner_guid.kind)
@@ -1424,10 +1472,7 @@ if (owner_guid != invalid_object_guid())
         m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(collider_guid);
 
     if (is_moveable)
-    {
-        m_moveable_colliders.insert(collider_guid.index);
         m_rigid_bodies_with_invalidated_shape.insert(rigid_body_guid);
-    }
 
     return collider_guid;
 }
@@ -1462,10 +1507,9 @@ void  simulation_context::erase_collider(object_guid const  collider_guid)
     }
     for (angeo::collision_object_id  coid : elem.id)
         m_collision_scene_ptr->erase_object(coid);
-    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_folders.at(elem.folder_index).erase_content(elem.element_name, OBJECT_KIND::COLLIDER);
     for (angeo::collision_object_id  coid : elem.id)
         m_coids_to_guids.erase(coid);
-    m_moveable_colliders.erase(collider_guid.index);
     m_colliders.erase(collider_guid.index);
 }
 
@@ -1671,24 +1715,18 @@ object_guid  simulation_context::insert_rigid_body(
 
     self->m_rbids_to_guids.insert({ rbid, rigid_body_guid });
 
-    self->m_folders.at(under_folder_guid.index).content.insert({ to_string(OBJECT_KIND::RIGID_BODY), rigid_body_guid });
+    self->m_folders.at(under_folder_guid.index).insert_content(OBJECT_KIND::RIGID_BODY, rigid_body_guid);
 
-    for_each_child_folder(under_folder_guid, true, true,
-        [self, rigid_body_guid](object_guid const  folder_guid, folder_content_type const&  fct) -> bool {
-            for (auto const&  name_and_guid : fct.content)
-                if (name_and_guid.second.kind == OBJECT_KIND::COLLIDER)
-                {
-                    self->m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(name_and_guid.second);
-                    self->m_colliders.at(name_and_guid.second.index).rigid_body = rigid_body_guid;
-                }
+    for_each_object_of_kind_under_folder(under_folder_guid, true, OBJECT_KIND::COLLIDER,
+        [self, rigid_body_guid](object_guid const  collider_guid) -> bool {
+            self->m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(collider_guid);
+            self->m_colliders.at(collider_guid.index).rigid_body = rigid_body_guid;
             return true;
         });
 
     if (is_moveable)
     {
         self->m_moveable_rigid_bodies.insert(rigid_body_guid.index);
-        for (object_guid  collider_guid : m_rigid_bodies.at(rigid_body_guid.index).colliders)
-            self->m_moveable_colliders.insert(collider_guid.index);
         self->m_rigid_bodies_with_invalidated_shape.insert(rigid_body_guid);
     }
 
@@ -1834,12 +1872,9 @@ void  simulation_context::erase_rigid_body(object_guid const  rigid_body_guid)
 
     auto const&  elem = m_rigid_bodies.at(rigid_body_guid.index);
     for (object_guid  collider_guid : elem.colliders)
-    {
         m_colliders.at(collider_guid.index).rigid_body = invalid_object_guid();
-        m_moveable_colliders.erase(collider_guid.index);
-    }
     m_rigid_body_simulator_ptr->erase_rigid_body(elem.id);
-    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_folders.at(elem.folder_index).erase_content(OBJECT_KIND::RIGID_BODY);
     m_rbids_to_guids.erase(elem.id);
     m_moveable_rigid_bodies.erase(rigid_body_guid.index);
     m_rigid_bodies.erase(rigid_body_guid.index);
@@ -2035,7 +2070,7 @@ object_guid  simulation_context::insert_timer(
             m_timers.insert({ tid, under_folder_guid.index, name })
             };
     m_tmids_to_guids.insert({ tid, timer_guid });
-    m_folders.at(under_folder_guid.index).content.insert({ name, timer_guid });
+    m_folders.at(under_folder_guid.index).insert_content(OBJECT_KIND::TIMER, timer_guid, name);
     return timer_guid;
 }
 
@@ -2051,7 +2086,7 @@ void  simulation_context::erase_timer(object_guid const  timer_guid)
             m_device_simulator_ptr->erase_request_info(infos.back());
     }
     m_device_simulator_ptr->erase_timer(elem.id);
-    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_folders.at(elem.folder_index).erase_content(elem.element_name, OBJECT_KIND::TIMER);
     m_tmids_to_guids.erase(elem.id);
     m_timers.erase(timer_guid.index);
 }
@@ -2141,7 +2176,7 @@ object_guid  simulation_context::insert_sensor(
             };
     m_colliders.at(collider_.index).owner = sensor_guid;
     m_seids_to_guids.insert({ sid, sensor_guid });
-    m_folders.at(under_folder_guid.index).content.insert({ name, sensor_guid });
+    m_folders.at(under_folder_guid.index).insert_content(OBJECT_KIND::SENSOR, sensor_guid, name);
     return sensor_guid;
 }
 
@@ -2161,7 +2196,7 @@ void  simulation_context::erase_sensor(object_guid const  sensor_guid)
     remove_request_infos(m_device_simulator_ptr->request_infos_touch_begin_of_sensor(elem.id));
     remove_request_infos(m_device_simulator_ptr->request_infos_touch_end_of_sensor(elem.id));
     m_device_simulator_ptr->erase_sensor(elem.id);
-    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_folders.at(elem.folder_index).erase_content(elem.element_name, OBJECT_KIND::SENSOR);
     m_seids_to_guids.erase(elem.id);
     m_sensors.erase(sensor_guid.index);
 }
@@ -2469,7 +2504,7 @@ object_guid  simulation_context::insert_agent(
 
     m_agids_to_guids.insert({ id, agent_guid });
 
-    m_folders.at(under_folder_guid.index).content.insert({ to_string(OBJECT_KIND::AGENT), agent_guid });
+    m_folders.at(under_folder_guid.index).insert_content(OBJECT_KIND::AGENT, agent_guid);
 
     return agent_guid;
 }
@@ -2491,7 +2526,7 @@ void  simulation_context::erase_agent(object_guid const  agent_guid)
             erase_batch(batch_it->second);
     }
 
-    m_folders.at(elem.folder_index).content.erase(elem.element_name);
+    m_folders.at(elem.folder_index).erase_content(OBJECT_KIND::AGENT);
     m_agids_to_guids.erase(elem.id);
     m_agents.erase(agent_guid.index);
 }
@@ -3132,6 +3167,12 @@ void  simulation_context::clear_pending_late_requests()
 void  simulation_context::clear_invalidated_guids()
 {
     m_invalidated_guids.clear();
+}
+
+
+void  simulation_context::clear_relocated_frame_guids()
+{
+    m_relocated_frame_guids.clear();
 }
 
 

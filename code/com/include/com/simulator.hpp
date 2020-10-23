@@ -163,6 +163,7 @@ private:
     void  simulate();
     void  update_collision_contacts_and_constraints();
     void  commit_state_changes();
+    void  update_collider_locations_of_relocated_frames();
 
     void  camera_update();
 

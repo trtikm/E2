@@ -371,6 +371,7 @@ void  simulator::commit_state_changes()
     simulation_context&  ctx = *context();
 
     ctx.clear_invalidated_guids();
+    ctx.clear_relocated_frame_guids();
 
     ctx.process_rigid_bodies_with_invalidated_shape();
     ctx.process_pending_early_requests();
@@ -386,12 +387,37 @@ void  simulator::commit_state_changes()
                 ctx.orientation_of_rigid_body(*rb_it)
                 );
 
-    for (auto  col_it = ctx.moveable_colliders_begin(), col_end = ctx.moveable_colliders_end(); col_it != col_end; ++col_it)
-        ctx.relocate_collider(*col_it, ctx.frame_world_matrix(ctx.frame_of_collider(*col_it)));
-
     ctx.process_pending_requests();
+
+    update_collider_locations_of_relocated_frames();
 }
 
+
+void  simulator::update_collider_locations_of_relocated_frames()
+{
+    TMPROF_BLOCK();
+
+    simulation_context&  ctx = *context();
+    for (object_guid  frame_guid : ctx.relocated_frame_guids())
+        if (ctx.is_valid_frame_guid(frame_guid))
+        {
+            bool  has_relocated_parent = false;
+            for (object_guid  closest_frame_guid = ctx.find_closest_frame(ctx.folder_of_frame(frame_guid), false);
+                    closest_frame_guid != invalid_object_guid();
+                    closest_frame_guid = ctx.find_closest_frame(ctx.folder_of_frame(closest_frame_guid), false))
+                if (ctx.relocated_frame_guids().count(closest_frame_guid) != 0UL)
+                {
+                    has_relocated_parent = true;
+                    break;
+                }
+            if (!has_relocated_parent)
+                ctx.for_each_object_of_kind_under_folder(ctx.folder_of_frame(frame_guid), true, OBJECT_KIND::COLLIDER,
+                    [&ctx](object_guid const  collider_guid) -> bool {
+                        ctx.relocate_collider(collider_guid, ctx.frame_world_matrix(ctx.frame_of_collider(collider_guid)));
+                        return true;
+                    });
+        }
+}
 
 
 void  simulator::camera_update()
