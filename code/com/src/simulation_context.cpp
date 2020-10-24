@@ -3217,6 +3217,15 @@ void  simulation_context::clear(bool const  also_caches)
         );
 
     clear_invalidated_guids();
+
+    if (also_caches)
+    {
+        m_ai_simulator_ptr->clear();
+        m_device_simulator_ptr->clear();
+        m_rigid_body_simulator_ptr->clear();
+        m_collision_scene_ptr->clear();
+        m_frames_provider.clear();
+    }
 }
 
 
