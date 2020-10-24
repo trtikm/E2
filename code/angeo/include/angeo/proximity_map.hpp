@@ -518,9 +518,10 @@ void  proximity_map<object_type__>::rebalance(
         return;
     }
 
-    natural_32_bit const  diff_front_back_objects =
-            node_ptr->m_front_child_node->m_num_objects - node_ptr->m_back_child_node->m_num_objects;
-    float_32_bit const  ratio = (float_32_bit)diff_front_back_objects / (float_32_bit)node_ptr->m_num_objects;
+    float_32_bit const  diff_front_back_objects =
+            (float_32_bit)node_ptr->m_front_child_node->m_num_objects -
+            (float_32_bit)node_ptr->m_back_child_node->m_num_objects;
+    float_32_bit const  ratio = diff_front_back_objects / (float_32_bit)node_ptr->m_num_objects;
 
     if (ratio >= m_min_ratio_for_applycation_balancing_rotation)
     {
