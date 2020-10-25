@@ -87,6 +87,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_sight_contacts_directed(true)
     , render_sight_contacts_random(true)
     , render_sight_image(false)
+    , render_agent_action_transition_contratints(true)
     , sight_image_scale(5.0f)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_field_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
@@ -95,6 +96,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , colour_of_ray_cast_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_collision_contact{ 1.0f, 0.5f, 0.5f, 1.0f }
     , colour_of_agent_perspective_frustum{0.5f, 0.5f, 0.5f, 1.0f}
+    , colour_of_agent_action_transition_contratints{0.75f, 1.0f, 0.25f, 1.0f}
     , disabled_collider_colour_multiplier(0.5f)
     , include_normals_to_batches_of_trinagle_mesh_colliders(true)
     , include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders(false)
@@ -165,6 +167,7 @@ simulator::simulator(std::string const&  data_root_dir)
     , m_text_cache()
     , m_collider_batches_cache()
     , m_agent_sight_frustum_batches_cache()
+    , m_agent_action_transition_contratints_cache()
     , m_sight_image_render_data(nullptr)
 {}
 
@@ -217,6 +220,7 @@ void  simulator::clear(bool const  also_caches)
     context()->clear(also_caches);
     clear_cache_of_collider_batches();
     clear_cache_of_agent_sight_batches();
+    clear_cache_of_agent_action_transition_contratints();
     m_sight_image_render_data = nullptr;
 }
 
@@ -253,7 +257,19 @@ void  simulator::round()
                         simulation_config().paused = true;
                 }
             }
-            else { SLOG("PAUSED\n"); }
+            else
+            {
+                simulation_context&  ctx = *context();
+
+                ctx.process_pending_early_requests();
+                ctx.process_pending_requests();
+                update_collider_locations_of_relocated_frames();
+                ctx.process_rigid_bodies_with_invalidated_shape();
+                ctx.clear_invalidated_guids();
+                ctx.clear_relocated_frame_guids();
+
+                SLOG("PAUSED\n");
+            }
         on_end_simulation();
 
         on_begin_camera_update();
@@ -503,6 +519,8 @@ void  simulator::render()
         render_sight_contacts();
     if (cfg.render_sight_image)
         render_sight_image();
+    if (cfg.render_agent_action_transition_contratints)
+        render_agent_action_transition_contratints();
 
     if (cfg.render_text)
         render_text();
@@ -969,6 +987,93 @@ void  simulator::render_sight_image()
     }
 }
 
+
+void  simulator::render_agent_action_transition_contratints()
+{
+    simulation_context&  ctx = *context();
+    render_configuration&  cfg = render_config();
+
+    render_tasks_map  tasks;
+    for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
+    {
+        ai::agent const&  agent = m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it));
+        for (auto const&  name_and_config : agent.get_action_controller().get_current_action().get_transitions())
+            if (name_and_config.second.perception_guard != nullptr)
+            {
+                ai::agent_action::transition_config::location_constraint_config const&  constraint =
+                        name_and_config.second.perception_guard->location_constraint;
+
+                com::object_guid const  frame_guid =
+                        ctx.folder_content(ctx.from_relative_path(agent.get_binding()->folder_guid_of_agent, constraint.frame_folder))
+                           .content.at(com::to_string(com::OBJECT_KIND::FRAME));
+
+                std::string  id_name;
+                std::unordered_map<std::string, gfx::batch>::iterator  cache_it;
+                switch (constraint.shape_type)
+                {
+                case angeo::COLLISION_SHAPE_TYPE::BOX:
+                    id_name = gfx::make_box_id_without_prefix(
+                                    constraint.aabb_half_size,
+                                    cfg.colour_of_agent_action_transition_contratints,
+                                    true
+                                    );
+                    cache_it = m_agent_action_transition_contratints_cache.find(id_name);
+                    if (cache_it == m_agent_action_transition_contratints_cache.end())
+                        cache_it = m_agent_action_transition_contratints_cache.insert({
+                            id_name,
+                            gfx::create_wireframe_box(constraint.aabb_half_size, cfg.colour_of_agent_action_transition_contratints)
+                            }).first;
+                    break;
+                case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+                    id_name = gfx::make_capsule_id_without_prefix(
+                                    max_coord(constraint.aabb_half_size) - min_coord(constraint.aabb_half_size),
+                                    min_coord(constraint.aabb_half_size),
+                                    5U,
+                                    cfg.colour_of_agent_action_transition_contratints,
+                                    true
+                                    );
+                    cache_it = m_agent_action_transition_contratints_cache.find(id_name);
+                    if (cache_it == m_agent_action_transition_contratints_cache.end())
+                        cache_it = m_agent_action_transition_contratints_cache.insert({
+                            id_name,
+                            gfx::create_wireframe_capsule(
+                                        max_coord(constraint.aabb_half_size) - min_coord(constraint.aabb_half_size),
+                                        min_coord(constraint.aabb_half_size),
+                                        5U,
+                                        cfg.colour_of_agent_action_transition_contratints
+                                        )
+                            }).first;
+                    break;
+                case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+                    id_name = gfx::make_sphere_id_without_prefix(
+                                    min_coord(constraint.aabb_half_size),
+                                    5U,
+                                    cfg.colour_of_agent_action_transition_contratints,
+                                    true
+                                    );
+                    cache_it = m_agent_action_transition_contratints_cache.find(id_name);
+                    if (cache_it == m_agent_action_transition_contratints_cache.end())
+                        cache_it = m_agent_action_transition_contratints_cache.insert({
+                            id_name,
+                            gfx::create_wireframe_sphere(
+                                        min_coord(constraint.aabb_half_size),
+                                        5U,
+                                        cfg.colour_of_agent_action_transition_contratints
+                                        )
+                            }).first;
+                    break;
+                default: { UNREACHABLE(); } break;
+                }
+
+                auto&  task = tasks[id_name];
+                if (task.batch.empty())
+                    task.batch = cache_it->second;
+                task.frame_guids.push_back(frame_guid);
+            }
+    }
+    for (auto const&  id_and_task : tasks)
+        render_task(id_and_task.second);
+}
 
 void  simulator::render_text()
 {

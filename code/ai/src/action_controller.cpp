@@ -75,6 +75,18 @@ void  insert_collider_to_context(
 }
 
 
+com::object_guid  get_frame_guid_under_agent_folder(
+        com::object_guid const  folder_guid_of_agent,
+        std::string const&  relative_path_to_folder_containing_the_frame,
+        com::simulation_context const&  ctx
+        )
+{
+    com::object_guid const  folder_guid = ctx.from_relative_path(folder_guid_of_agent, relative_path_to_folder_containing_the_frame);
+    com::object_guid const  frame_guid = ctx.folder_content(folder_guid).content.at(com::to_string(com::OBJECT_KIND::FRAME));
+    return frame_guid;
+}
+
+
 }}
 
 
@@ -305,15 +317,19 @@ void  agent_action::load_transitions(
             tc.perception_guard->sensor_owner_can_be_myself = tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::AGENT ?
                     guard.get<bool>("sensor_owner_can_be_myself") : false;
             boost::property_tree::ptree const&  location = guard.find("location_constraint")->second;
-            tc.perception_guard->location_constraint.shape_type =
-                    angeo::as_collision_shape_type(location.get<std::string>("shape_type"));
+            tc.perception_guard->location_constraint.frame_folder = location.count("frame_folder") == 0UL ?
+                    "motion_object/" : location.get<std::string>("frame_folder");
+            tc.perception_guard->location_constraint.shape_type = location.count("shape_type") == 0UL ?
+                    angeo::COLLISION_SHAPE_TYPE::BOX : angeo::as_collision_shape_type(location.get<std::string>("shape_type"));
             ASSUMPTION(
                 tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::BOX ||
                 tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE ||
                 tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE
                 );
-            tc.perception_guard->location_constraint.origin = read_vector3(location.find("origin")->second);
+            tc.perception_guard->location_constraint.origin = location.count("origin") == 0UL ?
+                    vector3_zero() : read_vector3(location.find("origin")->second);
             tc.perception_guard->location_constraint.aabb_half_size = read_aabb_half_size(location.find("aabb_half_size")->second);
+            ASSUMPTION(min_coord(tc.perception_guard->location_constraint.aabb_half_size) > 0.0001f);
         }
         else
             tc.perception_guard = nullptr;
@@ -534,10 +550,15 @@ bool  agent_action::collect_transition_info(agent_action const&  from_action, tr
                     ray_it->second.ray_origin_in_world_space +
                     ray_it->second.parameter_to_coid * ray_it->second.ray_direction_in_world_space
                     ;
+            com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
+                    binding().folder_guid_of_agent,
+                    percept.location_constraint.frame_folder,
+                    ctx()
+                    );
             vector3 const  contact_point_in_motion_object_space =
                     angeo::point3_to_coordinate_system(
                             contact_point_in_world_space,
-                            ctx().frame_coord_system_in_world_space(binding().frame_guid_of_motion_object)
+                            ctx().frame_coord_system_in_world_space(frame_guid)
                             );
             switch(percept.location_constraint.shape_type)
             {
@@ -713,15 +734,11 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
                     TRANSITIONS.at(from_action_ptr->NAME).motion_object_position;
             if (pos_cfg != nullptr)
             {
-                com::object_guid const  folder_guid = ctx().from_relative_path(
+                com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
                         pos_cfg->is_self_frame ? binding().folder_guid_of_agent : info.other_entiry_folder_guid,
-                        pos_cfg->frame_folder
+                        pos_cfg->frame_folder,
+                        ctx()
                         );
-                INVARIANT(ctx().is_valid_folder_guid(folder_guid));
-                com::object_guid const  frame_guid =
-                        ctx().folder_content(folder_guid).content.at(com::to_string(com::OBJECT_KIND::FRAME));
-                INVARIANT(ctx().is_valid_frame_guid(frame_guid));
-
                 origin = transform_point(pos_cfg->origin, ctx().frame_world_matrix(frame_guid));                
             }
             else if (from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)

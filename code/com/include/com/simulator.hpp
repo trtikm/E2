@@ -80,6 +80,7 @@ struct  simulator : public osi::simulator
         bool  render_sight_contacts_directed;
         bool  render_sight_contacts_random;
         bool  render_sight_image;
+        bool  render_agent_action_transition_contratints;
         float_32_bit  sight_image_scale;
         vector4  colour_of_rigid_body_collider;
         vector4  colour_of_field_collider;
@@ -88,6 +89,7 @@ struct  simulator : public osi::simulator
         vector4  colour_of_ray_cast_collider;
         vector4  colour_of_collision_contact;
         vector4  colour_of_agent_perspective_frustum;
+        vector4  colour_of_agent_action_transition_contratints;
         float_32_bit  disabled_collider_colour_multiplier;
         bool  include_normals_to_batches_of_trinagle_mesh_colliders;
         bool  include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders;
@@ -111,6 +113,7 @@ struct  simulator : public osi::simulator
 
     void  clear_cache_of_collider_batches() { m_collider_batches_cache.clear(); }
     void  clear_cache_of_agent_sight_batches() { m_agent_sight_frustum_batches_cache.clear(); }
+    void  clear_cache_of_agent_action_transition_contratints() { m_agent_action_transition_contratints_cache.clear(); }
     void  clear(bool const  also_caches);
 
     void  round() override;
@@ -178,6 +181,7 @@ private:
     void  render_sight_frustums();
     void  render_sight_contacts();
     void  render_sight_image();
+    void  render_agent_action_transition_contratints();
     void  render_text();
 
     gfx::batch  create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled);
@@ -200,6 +204,7 @@ private:
     using  cached_collider_batch_state = std::array<gfx::batch, 2U>;
     std::unordered_map<object_guid, cached_collider_batch_state>  m_collider_batches_cache;
     std::unordered_map<object_guid, gfx::batch>  m_agent_sight_frustum_batches_cache;
+    std::unordered_map<std::string, gfx::batch>  m_agent_action_transition_contratints_cache;
     struct  sight_image_render_data;
     std::shared_ptr<sight_image_render_data>  m_sight_image_render_data;
 };

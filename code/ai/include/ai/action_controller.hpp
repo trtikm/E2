@@ -103,6 +103,7 @@ struct  agent_action
 
         struct  location_constraint_config
         {
+            std::string  frame_folder;
             angeo::COLLISION_SHAPE_TYPE  shape_type; // Only BOX, CAPSULE, or SPHERE!
             vector3  origin;
             vector3  aabb_half_size;
@@ -271,6 +272,8 @@ struct  action_controller
             float_32_bit const  time_step_in_seconds,
             motion_desire_props const&  desire
             );
+
+    agent_action const&  get_current_action() const { return *m_current_action; }
 
 private:
     action_execution_context_ptr  m_context;
