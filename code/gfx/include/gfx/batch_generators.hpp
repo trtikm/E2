@@ -152,8 +152,8 @@ batch  create_solid_box(
 std::string  make_box_id_without_prefix(
         vector3 const&  half_sizes_along_axes,
         vector4 const&  colour,
-        FOG_TYPE const  fog_type,
-        bool const  wireframe
+        bool const  wireframe,
+        FOG_TYPE const  fog_type = FOG_TYPE::NONE
         );
 bool  parse_box_info_from_id(
         boost::property_tree::ptree const&  ptree,
@@ -185,8 +185,8 @@ std::string  make_capsule_id_without_prefix(
         float_32_bit const  thickness_from_central_line,
         natural_8_bit const  num_lines_per_quarter_of_circle,
         vector4 const&  colour,
-        FOG_TYPE const  fog_type,
-        bool const  wireframe
+        bool const  wireframe,
+        FOG_TYPE const  fog_type = FOG_TYPE::NONE
         );
 bool  parse_capsule_info_from_id(
         boost::property_tree::ptree const&  ptree,
@@ -224,8 +224,8 @@ std::string  make_sphere_id_without_prefix(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
         vector4 const&  colour,
-        FOG_TYPE const  fog_type,
-        bool const  wireframe
+        bool const  wireframe,
+        FOG_TYPE const  fog_type = FOG_TYPE::NONE
         );
 bool  parse_sphere_info_from_id(
         boost::property_tree::ptree const&  ptree,

@@ -13,8 +13,8 @@ std::string  make_sphere_id_without_prefix(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
         vector4 const&  colour,
-        FOG_TYPE const  fog_type,
-        bool const  wireframe
+        bool const  wireframe,
+        FOG_TYPE const  fog_type
         )
 {
     using namespace gfx::detail;
@@ -112,8 +112,8 @@ batch  create_wireframe_sphere(
                                     radius,
                                     num_lines_per_quarter_of_circle,
                                     colour,
-                                    fog_type_,
-                                    true
+                                    true,
+                                    fog_type_
                                     )
                            : id
                 );
@@ -194,7 +194,7 @@ batch  create_solid_smooth_sphere(
                 normals,
                 colour,
                 fog_type_,
-                id.empty() ? make_sphere_id_without_prefix(radius, num_lines_per_quarter_of_circle, colour, fog_type_, false) : id
+                id.empty() ? make_sphere_id_without_prefix(radius, num_lines_per_quarter_of_circle, colour, false, fog_type_) : id
                 );
 }
 
@@ -271,7 +271,7 @@ batch  create_solid_sphere(
                 normals,
                 colour,
                 fog_type_,
-                id.empty() ? make_sphere_id_without_prefix(radius, num_lines_per_quarter_of_circle, colour, fog_type_, false) : id
+                id.empty() ? make_sphere_id_without_prefix(radius, num_lines_per_quarter_of_circle, colour, false, fog_type_) : id
                 );
 }
 

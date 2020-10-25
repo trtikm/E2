@@ -14,8 +14,8 @@ std::string  make_capsule_id_without_prefix(
         float_32_bit const  thickness_from_central_line,
         natural_8_bit const  num_lines_per_quarter_of_circle,
         vector4 const&  colour,
-        FOG_TYPE const  fog_type,
-        bool const  wireframe
+        bool const  wireframe,
+        FOG_TYPE const  fog_type
         )
 {
     using namespace gfx::detail;
@@ -164,8 +164,8 @@ batch  create_wireframe_capsule(
                                     thickness_from_central_line,
                                     num_lines_per_quarter_of_circle,
                                     colour,
-                                    fog_type_,
-                                    true
+                                    true,
+                                    fog_type_
                                     )
                            : id
                 );
@@ -279,8 +279,8 @@ batch  create_solid_capsule(
                                     thickness_from_central_line,
                                     num_lines_per_quarter_of_circle,
                                     colour,
-                                    fog_type_,
-                                    false
+                                    false,
+                                    fog_type_
                                     )
                            : id
                 );

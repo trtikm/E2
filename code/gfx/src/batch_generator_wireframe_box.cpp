@@ -42,8 +42,8 @@ batch  create_wireframe_box( // Deprecated!
 std::string  make_box_id_without_prefix(
         vector3 const&  half_sizes_along_axes,
         vector4 const&  colour,
-        FOG_TYPE const  fog_type,
-        bool const  wireframe
+        bool const  wireframe,
+        FOG_TYPE const  fog_type
         )
 {
     using namespace gfx::detail;
@@ -108,7 +108,7 @@ batch  create_wireframe_box(
                 vertices,
                 colour,
                 fog_type_, 
-                id.empty() ? make_box_id_without_prefix(half_sizes_along_axes, colour, fog_type_, true) : id
+                id.empty() ? make_box_id_without_prefix(half_sizes_along_axes, colour, true, fog_type_) : id
                 );
 }
 
@@ -217,7 +217,7 @@ batch  create_solid_box(
                 normals,
                 colour,
                 fog_type_,
-                id.empty() ? make_box_id_without_prefix(half_sizes_along_axes, colour, fog_type_, false) : id
+                id.empty() ? make_box_id_without_prefix(half_sizes_along_axes, colour, false, fog_type_) : id
                 );
 }
 
