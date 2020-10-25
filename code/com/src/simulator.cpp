@@ -69,7 +69,8 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , batch_frame(gfx::create_basis_vectors())
     , batch_sensory_collision_contact(gfx::create_arrow(0.1f, { 1.0f, 1.0f, 0.0f, 1.0f }))
     , batch_physics_collision_contact(gfx::create_arrow(0.1f, { 1.0f, 0.0f, 0.0f, 1.0f }))
-    , batch_sight_raycast_contact(gfx::create_coord_cross(0.025f, { 0.5f, 0.7f, 1.0f, 1.0f }))
+    , batch_sight_raycast_contact_directed(gfx::create_coord_cross(0.025f, { 0.7f, 0.5f, 1.0f, 1.0f }))
+    , batch_sight_raycast_contact_random(gfx::create_coord_cross(0.025f, { 0.5f, 0.7f, 1.0f, 1.0f }))
     , render_fps(true)
     , render_grid(true)
     , render_frames(false)
@@ -83,7 +84,8 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_colliders_of_ray_casts(true)
     , render_collision_contacts(true)
     , render_sight_frustums(true)
-    , render_sight_contacts(true)
+    , render_sight_contacts_directed(true)
+    , render_sight_contacts_random(true)
     , render_sight_image(false)
     , sight_image_scale(5.0f)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
@@ -497,7 +499,7 @@ void  simulator::render()
 
     if (cfg.render_sight_frustums)
         render_sight_frustums();
-    if (cfg.render_sight_contacts)
+    if (cfg.render_sight_contacts_directed || cfg.render_sight_contacts_random)
         render_sight_contacts();
     if (cfg.render_sight_image)
         render_sight_image();
@@ -874,7 +876,8 @@ void  simulator::render_sight_contacts()
 {
     simulation_context&  ctx = *context();
 
-    render_task_info  task_sight_contacts{ render_config().batch_sight_raycast_contact, {}, {} };
+    render_task_info  task_sight_contacts_directed{ render_config().batch_sight_raycast_contact_directed, {}, {} };
+    render_task_info  task_sight_contacts_random{ render_config().batch_sight_raycast_contact_random, {}, {} };
     for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
     {
         ai::sight_controller const&  sight = m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it)).get_sight_controller();
@@ -882,20 +885,29 @@ void  simulator::render_sight_contacts()
         if (camera == nullptr)
             continue;
 
-        ai::sight_controller::ray_casts_in_time const&  ray_casts = sight.get_random_ray_casts_in_time();
-        task_sight_contacts.world_matrices.reserve(task_sight_contacts.world_matrices.size() + ray_casts.size());
-        for (auto  ray_it = ray_casts.begin(), end = ray_casts.end(); ray_it != end; ++ray_it)
-        {
-            vector3 const  contact_point =
-                    ray_it->second.ray_origin_in_world_space +
-                    ray_it->second.parameter_to_coid * ray_it->second.ray_direction_in_world_space
-                    ;
-            matrix44  W;
-            compose_from_base_matrix(contact_point, matrix33_identity(), W);
-            task_sight_contacts.world_matrices.push_back(W);
-        }
+        auto const  add_sight_contacts = [](ai::sight_controller::ray_casts_in_time const&  ray_casts, render_task_info&  task) -> void {
+            task.world_matrices.reserve(task.world_matrices.size() + ray_casts.size());
+            for (auto  ray_it = ray_casts.begin(), end = ray_casts.end(); ray_it != end; ++ray_it)
+            {
+                vector3 const  contact_point =
+                        ray_it->second.ray_origin_in_world_space +
+                        ray_it->second.parameter_to_coid * ray_it->second.ray_direction_in_world_space
+                        ;
+                matrix44  W;
+                compose_from_base_matrix(contact_point, matrix33_identity(), W);
+                task.world_matrices.push_back(W);
+            }
+        };
+
+        if (render_config().render_sight_contacts_directed)
+            add_sight_contacts(sight.get_directed_ray_casts_in_time(), task_sight_contacts_directed);
+        if (render_config().render_sight_contacts_random)
+            add_sight_contacts(sight.get_random_ray_casts_in_time(), task_sight_contacts_random);
     }
-    render_task(task_sight_contacts);
+    if (render_config().render_sight_contacts_directed)
+        render_task(task_sight_contacts_directed);
+    if (render_config().render_sight_contacts_random)
+        render_task(task_sight_contacts_random);
 }
 
 

@@ -2124,6 +2124,13 @@ std::string const&  simulation_context::name_of_sensor(object_guid const  sensor
 }
 
 
+object_guid  simulation_context::collider_of_sensor(object_guid const  sensor_guid) const
+{
+    ASSUMPTION(is_valid_sensor_guid(sensor_guid));
+    return m_sensors.at(sensor_guid.index).collider;
+}
+
+
 object_guid  simulation_context::to_sensor_guid(com::device_simulator::sensor_id const  sid) const
 {
     return m_seids_to_guids.at(sid);

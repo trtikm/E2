@@ -213,6 +213,44 @@ void  camera_perspective::projection_matrix_orthogonal_2d(matrix44&  output) con
 }
 
 
+bool  camera_perspective::pixel_coordinates_in_01_of_point_in_camera_space(vector3 const&  point, vector2&  pixel) const
+{
+    if (point(2) > -m_near || point(2) < -m_far)
+        return false;
+    pixel = { ((point(0) / -point(2)) * m_near - m_left) / (m_right - m_left),
+              ((point(1) / -point(2)) * m_near - m_bottom) / (m_top - m_bottom) };
+    return pixel(0) >= 0.0f && pixel(0) <= 1.0f && pixel(1) >= 0.0f && pixel(1) <= 1.0f;
+}
+
+
+void  camera_perspective::ray_points_in_camera_space(vector2 const&  pixel_coords_in_01, vector3&  ray_begin, vector3&  ray_end) const
+{
+    ASSUMPTION(
+        pixel_coords_in_01(0) >= 0.0f && pixel_coords_in_01(0) <= 1.0f &&
+        pixel_coords_in_01(1) >= 0.0f && pixel_coords_in_01(1) <= 1.0f &&
+        m_near > 0.001f
+        );
+    ray_begin = { m_left + pixel_coords_in_01(0) * (m_right - m_left), m_bottom + pixel_coords_in_01(1) * (m_top - m_bottom), -m_near };
+    ray_end = (m_far / m_near) * ray_begin;
+}
+
+
+void  camera_perspective::clip_planes_in_camera_space(std::array<std::pair<vector3, vector3>, 6U>&  clip_planes) const
+{
+    // Front and back
+    clip_planes.at(0) = { { 0.0f, 0.0f, -m_near }, -vector3_unit_z() };
+    clip_planes.at(1) = { { 0.0f, 0.0f,  -m_far }, vector3_unit_z() };
+
+    // Left and right
+    clip_planes.at(2) = { { -m_left, 0.0f, -m_near }, {  m_near, 0.0f, -m_left } };
+    clip_planes.at(3) = { { m_right, 0.0f, -m_near }, { -m_near, 0.0f, -m_right } };
+
+    // Bottom and top
+    clip_planes.at(4) = { { 0.0f, -m_bottom, -m_near }, { 0.0f, m_near, -m_bottom } };
+    clip_planes.at(5) = { { 0.0f,     m_top, -m_near }, { 0.0f, -m_near, -m_top } };
+}
+
+
 camera_perspective_ptr  create_camera_perspective(
         angeo::coordinate_system_ptr  coordinate_system,
         float_32_bit const  near,

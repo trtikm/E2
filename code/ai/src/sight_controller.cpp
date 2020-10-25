@@ -63,6 +63,7 @@ sight_controller::camera_config::camera_config(
 sight_controller::ray_cast_config::ray_cast_config(
         bool const  do_directed_ray_casts_,
         natural_32_bit const  num_random_ray_casts_per_second_,
+        bool const  do_update_depth_image_,
         float_32_bit const  max_ray_cast_info_life_time_in_seconds_,
         natural_16_bit const  num_cells_along_x_axis_,
         natural_16_bit const  num_cells_along_y_axis_,
@@ -72,6 +73,7 @@ sight_controller::ray_cast_config::ray_cast_config(
         )
     : do_directed_ray_casts(do_directed_ray_casts_)
     , num_random_ray_casts_per_second(num_random_ray_casts_per_second_)
+    , do_update_depth_image(do_update_depth_image_)
     , max_ray_cast_info_life_time_in_seconds(max_ray_cast_info_life_time_in_seconds_)
     , num_cells_along_x_axis(num_cells_along_x_axis_)
     , num_cells_along_y_axis(num_cells_along_y_axis_)
@@ -138,24 +140,32 @@ void  sight_controller::next_round(float_32_bit const  time_step_in_seconds)
     if (!m_ray_cast_config.do_directed_ray_casts && m_ray_cast_config.num_random_ray_casts_per_second == 0U)
         return;
 
-    m_current_time += time_step_in_seconds;
-
-    erase_obsolete_ray_casts(m_directed_ray_casts_in_time);
-    erase_obsolete_ray_casts(m_random_ray_casts_in_time);
-
     update_camera(time_step_in_seconds);
     if (get_camera() == nullptr)
         return;
 
+    m_current_time += time_step_in_seconds;
+
+    matrix44  from_camera_matrix;
+    angeo::from_base_matrix(*get_camera()->coordinate_system(), from_camera_matrix);
+
+    if (m_ray_cast_config.do_directed_ray_casts)
     {
-        matrix44  from_camera_matrix;
-        angeo::from_base_matrix(*get_camera()->coordinate_system(), from_camera_matrix);
+        erase_obsolete_ray_casts(m_directed_ray_casts_in_time);
+        perform_directed_ray_casts(from_camera_matrix);
+    }
+    if (m_ray_cast_config.num_random_ray_casts_per_second > 0U)
+    {
+        erase_obsolete_ray_casts(m_random_ray_casts_in_time);
         perform_random_ray_casts(time_step_in_seconds, from_camera_matrix);
     }
 
-    std::fill(m_depth_image.begin(), m_depth_image.end(), 0.0f);
-    update_depth_image(m_directed_ray_casts_in_time);
-    update_depth_image(m_random_ray_casts_in_time);
+    if (m_ray_cast_config.do_update_depth_image)
+    {
+        std::fill(m_depth_image.begin(), m_depth_image.end(), 0.0f);
+        update_depth_image(m_directed_ray_casts_in_time);
+        update_depth_image(m_random_ray_casts_in_time);
+    }
 }
 
 
@@ -265,6 +275,48 @@ void  sight_controller::update_camera(float_32_bit const  time_step_in_seconds)
 }
 
 
+void  sight_controller::perform_directed_ray_casts(matrix44 const&  from_camera_matrix)
+{
+    com::simulation_context const&  ctx = *m_binding->context;
+
+    matrix44  to_camera_matrix;
+    angeo::to_base_matrix(*get_camera()->coordinate_system(), to_camera_matrix);
+
+    auto const  collider_acceptor = 
+        [this, &ctx, &to_camera_matrix, &from_camera_matrix](com::object_guid const  collider_guid) -> bool {
+            switch (ctx.collision_class_of(collider_guid))
+            {
+            case angeo::COLLISION_CLASS::SENSOR_WIDE_RANGE:
+            case angeo::COLLISION_CLASS::SENSOR_NARROW_RANGE:
+            case angeo::COLLISION_CLASS::SENSOR_DEDICATED:
+            case angeo::COLLISION_CLASS::RAY_CAST_TARGET:
+                break;
+            default:
+                return true;
+            }
+            if (!ctx.is_collider_enabled(collider_guid))
+                return true;
+            angeo::coordinate_system const&  frame = ctx.frame_coord_system_in_world_space(ctx.frame_of_collider(collider_guid));
+            vector3 const  origin = transform_point(frame.origin(), to_camera_matrix);
+            vector2  camera_coords_01;
+            if (!get_camera()->pixel_coordinates_in_01_of_point_in_camera_space(origin, camera_coords_01))
+                return true;
+            ray_cast_info  info;
+            if (perform_ray_cast(camera_coords_01, from_camera_matrix, info)/* && info.collider_guid == collider_guid */)
+                m_directed_ray_casts_in_time.insert({ m_current_time, info });
+            return true;
+        };
+
+    for (com::simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), agent_end = ctx.agents_end();
+            agent_it != agent_end; ++agent_it)
+        ctx.for_each_object_of_kind_under_folder(ctx.folder_of_agent(*agent_it), true, com::OBJECT_KIND::COLLIDER, collider_acceptor);
+
+    for (com::simulation_context::sensor_guid_iterator  sensor_it = ctx.sensors_begin(), sensor_end = ctx.sensors_end();
+            sensor_it != sensor_end; ++sensor_it)
+        collider_acceptor(ctx.collider_of_sensor(*sensor_it));
+}
+
+
 void  sight_controller::perform_random_ray_casts(float_32_bit const  time_step_in_seconds, matrix44 const&  from_camera_matrix)
 {
     float_32_bit const  ray_cast_duration = 1.0f / (float_32_bit)m_ray_cast_config.num_random_ray_casts_per_second;
@@ -287,7 +339,7 @@ void  sight_controller::perform_random_ray_casts(float_32_bit const  time_step_i
 
 
 bool  sight_controller::perform_ray_cast(
-        vector2 const  camera_coords_01,
+        vector2 const&  camera_coords_01,
         matrix44 const&  from_camera_matrix,
         ray_cast_info&  result
         ) const
@@ -297,15 +349,12 @@ bool  sight_controller::perform_ray_cast(
     result.cell_y = std::max(0U, std::min(m_ray_cast_config.num_cells_along_y_axis - 1U,
                         (natural_32_bit)(camera_coords_01(1) * (m_ray_cast_config.num_cells_along_y_axis - 1U) + 0.5f)));
 
-    vector3 const  camera_coords{
-            (get_camera()->left() + camera_coords_01(0) * (get_camera()->right() - get_camera()->left())),
-            (get_camera()->bottom() + camera_coords_01(1) * (get_camera()->top() - get_camera()->bottom())),
-            -get_camera()->near_plane()
-            };
-    float_32_bit const  scale_to_far_plane = get_camera()->far_plane() / get_camera()->near_plane();
+    vector3  ray_begin_in_camera, ray_end_in_camera;
+    get_camera()->ray_points_in_camera_space(camera_coords_01, ray_begin_in_camera, ray_end_in_camera);
 
-    result.ray_origin_in_world_space = get_camera()->coordinate_system()->origin();
-    vector3 const  ray_end = transform_point(scale_to_far_plane * camera_coords, from_camera_matrix);
+    result.ray_origin_in_world_space = transform_point(ray_begin_in_camera, from_camera_matrix);;
+    vector3 const  ray_end = transform_point(ray_end_in_camera, from_camera_matrix);
+
     result.collider_guid = ctx().ray_cast_to_nearest_collider(
             result.ray_origin_in_world_space,
             ray_end,
@@ -317,7 +366,7 @@ bool  sight_controller::perform_ray_cast(
     if (result.collider_guid == com::invalid_object_guid())
         return false;
 
-    result.camera_coords_of_cell_coords = contract32(camera_coords);
+    result.camera_coords_of_cell_coords = contract32(ray_begin_in_camera);
     result.ray_direction_in_world_space = ray_end - result.ray_origin_in_world_space;
 
     auto const  to01 = [](float_32_bit const  x, float_32_bit const  lo, float_32_bit const  hi) {

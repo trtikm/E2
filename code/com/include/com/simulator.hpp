@@ -62,7 +62,8 @@ struct  simulator : public osi::simulator
         gfx::batch  batch_frame;
         gfx::batch  batch_sensory_collision_contact;
         gfx::batch  batch_physics_collision_contact;
-        gfx::batch  batch_sight_raycast_contact;
+        gfx::batch  batch_sight_raycast_contact_directed;
+        gfx::batch  batch_sight_raycast_contact_random;
         bool  render_fps;
         bool  render_grid;
         bool  render_frames;
@@ -76,7 +77,8 @@ struct  simulator : public osi::simulator
         bool  render_colliders_of_ray_casts;
         bool  render_collision_contacts;
         bool  render_sight_frustums;
-        bool  render_sight_contacts;
+        bool  render_sight_contacts_directed;
+        bool  render_sight_contacts_random;
         bool  render_sight_image;
         float_32_bit  sight_image_scale;
         vector4  colour_of_rigid_body_collider;

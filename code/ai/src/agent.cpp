@@ -68,7 +68,7 @@ static sight_controller::ray_cast_config  make_ray_cast_config(agent_config cons
     //        collider_filter,    // collider_filter
     //        depth_image_func    // depth_image_func
     //        };
-    return sight_controller::ray_cast_config(false, 0U);
+    return sight_controller::ray_cast_config(true, 0U);
 }
 
 

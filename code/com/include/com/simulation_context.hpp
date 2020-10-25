@@ -532,6 +532,7 @@ struct  simulation_context
     bool  is_sensor_enabled(object_guid const  sensor_guid) const;
     object_guid  folder_of_sensor(object_guid const  sensor_guid) const;
     std::string const&  name_of_sensor(object_guid const  sensor_guid) const;
+    object_guid  collider_of_sensor(object_guid const  sensor_guid) const;
     object_guid  to_sensor_guid(com::device_simulator::sensor_id const  sid) const;
     sensor_guid_iterator  sensors_begin() const;
     sensor_guid_iterator  sensors_end() const;

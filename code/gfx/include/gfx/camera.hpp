@@ -111,6 +111,15 @@ struct camera_perspective : public camera
     void  projection_matrix_orthogonal(matrix44&  output) const;
     void  projection_matrix_orthogonal_2d(matrix44&  output) const;
 
+    // If the passed point is within the frustum, then the pixel coords are computed and returns true. Otherwise returns false.
+    bool  pixel_coordinates_in_01_of_point_in_camera_space(vector3 const&  point, vector2&  pixel) const;
+
+    void  ray_points_in_camera_space(vector2 const&  pixel_coords_in_01, vector3&  ray_begin, vector3&  ray_end) const;
+
+    // Each pair represents a origin and normal (not mornalised; pointing into the frustum) of a clip plane.
+    // Order of planes in the array: front, back, left, right, bottom, top.
+    void  clip_planes_in_camera_space(std::array<std::pair<vector3, vector3>, 6U>&  clip_planes) const;
+
 private:
 
     float_32_bit  m_near;

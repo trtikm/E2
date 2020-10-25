@@ -75,7 +75,10 @@ struct  simulator : public com::simulator
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_U()) != 0UL)
                 render_config().render_sight_frustums = !render_config().render_sight_frustums;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_H()) != 0UL)
-                render_config().render_sight_contacts = !render_config().render_sight_contacts;
+                if (shift)
+                    render_config().render_sight_contacts_random = !render_config().render_sight_contacts_random;
+                else
+                    render_config().render_sight_contacts_directed = !render_config().render_sight_contacts_directed;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_I()) != 0UL)
             {
                 if (shift)
@@ -147,7 +150,8 @@ struct  simulator : public com::simulator
                 "\tALT+R/S/A/L/Y - colliders of rigid bodies/\n"
                 "\t\t\tsensors/agents/fields/ray cast targets\n"
                 "\tALT+K - collisions\n"
-                "\tALT+U/H - sight frustums/contacts\n"
+                "\tALT+U - sight frustums\n"
+                "\tALT+H(+SHIFT) - sight directed(/random) contacts\n"
                 "\tALT+I(+SHIFT) - scale-up(down) sight image\n"
                 );
             SLOG(

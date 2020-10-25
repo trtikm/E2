@@ -42,6 +42,7 @@ struct  sight_controller
     {
         bool  do_directed_ray_casts;
         natural_32_bit  num_random_ray_casts_per_second;
+        bool  do_update_depth_image;
         float_32_bit  max_ray_cast_info_life_time_in_seconds;
         natural_16_bit  num_cells_along_x_axis;     // Must be a power of 2.
         natural_16_bit  num_cells_along_y_axis;     // Must be a power of 2.
@@ -61,6 +62,7 @@ struct  sight_controller
         ray_cast_config(
                 bool const  do_directed_ray_casts_ = true,
                 natural_32_bit const  num_random_ray_casts_per_second_ = 2U * 32U * 32U,
+                bool const  do_update_depth_image_ = true,
                 float_32_bit const  max_ray_cast_info_life_time_in_seconds_ = 0.1f,
                 natural_16_bit const  num_cells_along_x_axis_ = 32U,    // Must be a power of 2.
                 natural_16_bit const  num_cells_along_y_axis_ = 32U,    // Must be a power of 2.
@@ -128,8 +130,9 @@ struct  sight_controller
 private:
     void  erase_obsolete_ray_casts(ray_casts_in_time&  ray_casts);
     void  update_camera(float_32_bit const  time_step_in_seconds);
+    void  perform_directed_ray_casts(matrix44 const&  from_camera_matrix);
     void  perform_random_ray_casts(float_32_bit const  time_step_in_seconds, matrix44 const&  from_camera_matrix);
-    bool  perform_ray_cast(vector2 const  camera_coords_01, matrix44 const&  from_camera_matrix, ray_cast_info&  result) const;
+    bool  perform_ray_cast(vector2 const&  camera_coords_01, matrix44 const&  from_camera_matrix, ray_cast_info&  result) const;
     void  update_depth_image(ray_casts_in_time const&  ray_casts);
 
     camera_config  m_camera_config;
