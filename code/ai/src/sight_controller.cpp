@@ -309,7 +309,11 @@ void  sight_controller::perform_directed_ray_casts(matrix44 const&  from_camera_
 
     for (com::simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), agent_end = ctx.agents_end();
             agent_it != agent_end; ++agent_it)
-        ctx.for_each_object_of_kind_under_folder(ctx.folder_of_agent(*agent_it), true, com::OBJECT_KIND::COLLIDER, collider_acceptor);
+    {
+        std::unordered_set<com::object_guid> const&  agent_colliders = ctx.colliders_of_agent(*agent_it);
+        for (auto  collider_it = agent_colliders.begin(); collider_it != agent_colliders.end(); ++collider_it)
+            collider_acceptor(*collider_it);
+    }
 
     for (com::simulation_context::sensor_guid_iterator  sensor_it = ctx.sensors_begin(), sensor_end = ctx.sensors_end();
             sensor_it != sensor_end; ++sensor_it)
