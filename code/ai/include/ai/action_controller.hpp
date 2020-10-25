@@ -22,20 +22,22 @@
 namespace ai {
 
 
+struct  agent;
+
+
 struct  action_execution_context
 {
-    action_execution_context(
-            agent_state_variables_ptr  state_variables_,
-            skeletal_motion_templates  motion_templates_,
-            scene_binding_ptr  binding_
-            );
+    explicit  action_execution_context(agent* const  myself_);
 
-    agent_state_variables_ptr  state_variables;
-    skeletal_motion_templates  motion_templates;
+    agent_state_variables&  state_variables() const;
+    skeletal_motion_templates  motion_templates() const;
+    scene_binding const&  binding() const;
+    com::simulation_context const&  ctx() const;
+
+    agent*  myself;
     skeleton_interpolator_animation  animate;
     skeleton_interpolator_look_at  look_at;
     skeleton_interpolator_aim_at  aim_at;
-    scene_binding_ptr  binding;
     float_32_bit  time_buffer;
 };
 
@@ -147,10 +149,10 @@ struct  agent_action
             );
     virtual  ~agent_action() {}
 
-    agent_state_variables&  state_variables() const { return *m_context->state_variables; }
-    skeletal_motion_templates  motion_templates() const { return m_context->motion_templates; }
-    scene_binding const&  binding() const { return *m_context->binding; }
-    com::simulation_context const&  ctx() const { return *m_context->binding->context; }
+    agent_state_variables&  state_variables() const { return m_context->state_variables(); }
+    skeletal_motion_templates  agent_action::motion_templates() const { return m_context->motion_templates(); }
+    scene_binding const&  agent_action::binding() const { return m_context->binding(); }
+    com::simulation_context const&  agent_action::ctx() const { return m_context->ctx(); }
 
     float_32_bit  compute_desire_penalty(motion_desire_props const&  props) const;
 
@@ -260,12 +262,7 @@ struct  action_guesture : public  agent_action
 
 struct  action_controller
 {
-    action_controller(
-            agent_config const  config,
-            agent_state_variables_ptr const  state_variables,
-            skeletal_motion_templates const  motion_templates,
-            scene_binding_ptr const  binding
-            );
+    action_controller(agent_config const  config, agent*  const  myself);
     ~action_controller();
 
     void  next_round(

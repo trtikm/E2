@@ -58,13 +58,13 @@ void  skeleton_interpolator_animation::move_to_target()
 
 void  skeleton_interpolator_animation::commit(
         skeletal_motion_templates const  motion_templates,
-        scene_binding_ptr const  binding
+        scene_binding const&  binding
         ) const
 {
     auto const&  parents = motion_templates.parents();
     for (natural_32_bit bone = 0; bone != m_current_frames.size(); ++bone)
-        binding->context->request_relocate_frame(
-                binding->frame_guids_of_bones.at(bone),
+        binding.context->request_relocate_frame(
+                binding.frame_guids_of_bones.at(bone),
                 parents.at(bone) < 0 ? m_current_offset : m_current_frames.at(bone).origin(),
                 m_current_frames.at(bone).orientation()
                 );
@@ -83,7 +83,7 @@ void  skeleton_interpolator_look_at::interpolate(
         vector3 const&  look_at_target_in_agent_space,
         std::vector<angeo::coordinate_system>&  frames_to_update,
         skeletal_motion_templates const  motion_templates,
-        scene_binding_ptr const  binding
+        scene_binding const&  binding
         )
 {
     TMPROF_BLOCK();
@@ -117,15 +117,15 @@ void  skeleton_interpolator_look_at::interpolate(
         {
             angeo::coordinate_system_explicit  chain_world_frame;
             if (parents.at(name_and_info.second->root_bone) != -1)
-                chain_world_frame = binding->context->frame_explicit_coord_system_in_world_space(
-                        binding->frame_guids_of_bones.at(parents.at(name_and_info.second->root_bone))
+                chain_world_frame = binding.context->frame_explicit_coord_system_in_world_space(
+                        binding.frame_guids_of_bones.at(parents.at(name_and_info.second->root_bone))
                         );
 
             target.target = angeo::point3_to_coordinate_system(
                                     angeo::point3_from_coordinate_system(
                                             look_at_target_in_agent_space,
-                                            binding->context->frame_coord_system_in_world_space(
-                                                    binding->frame_guid_of_skeleton
+                                            binding.context->frame_coord_system_in_world_space(
+                                                    binding.frame_guid_of_skeleton
                                                     )
                                             ),
                                     chain_world_frame
@@ -212,7 +212,7 @@ void  skeleton_interpolator_aim_at::interpolate(
         vector3 const&  aim_at_target_in_agent_space,
         std::vector<angeo::coordinate_system>&  frames_to_update,
         skeletal_motion_templates const  motion_templates,
-        scene_binding_ptr const  binding
+        scene_binding const&  binding
         )
 {
     TMPROF_BLOCK();
@@ -244,15 +244,15 @@ void  skeleton_interpolator_aim_at::interpolate(
         {
             angeo::coordinate_system_explicit  chain_world_frame;
             if (parents.at(name_and_info.second->root_bone) != -1)
-                chain_world_frame = binding->context->frame_explicit_coord_system_in_world_space(
-                        binding->frame_guids_of_bones.at(parents.at(name_and_info.second->root_bone))
+                chain_world_frame = binding.context->frame_explicit_coord_system_in_world_space(
+                        binding.frame_guids_of_bones.at(parents.at(name_and_info.second->root_bone))
                         );
 
             vector3  target = angeo::point3_to_coordinate_system(
                                     angeo::point3_from_coordinate_system(
                                             aim_at_target_in_agent_space,
-                                            binding->context->frame_coord_system_in_world_space(
-                                                    binding->frame_guid_of_skeleton
+                                            binding.context->frame_coord_system_in_world_space(
+                                                    binding.frame_guid_of_skeleton
                                                     )
                                             ),
                                     chain_world_frame

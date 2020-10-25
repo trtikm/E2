@@ -21,7 +21,7 @@ struct  skeleton_interpolator_animation
             );
     void  move_to_target();
     std::vector<angeo::coordinate_system>& get_current_frames_ref() { return m_current_frames; }
-    void  commit(skeletal_motion_templates const  motion_templates, scene_binding_ptr const  binding) const;
+    void  commit(skeletal_motion_templates const  motion_templates, scene_binding const&  binding) const;
 
 private:
     std::vector<angeo::coordinate_system>  m_src_frames;
@@ -41,7 +41,7 @@ struct  skeleton_interpolator_look_at
             vector3 const&  look_at_target_in_agent_space,
             std::vector<angeo::coordinate_system>&  frames_to_update,
             skeletal_motion_templates const  motion_templates,
-            scene_binding_ptr const  binding
+            scene_binding const&  binding
             );
 private:
     void  update_look_at_target_in_local_space(
@@ -63,7 +63,7 @@ struct  skeleton_interpolator_aim_at
             vector3 const&  aim_at_target_in_agent_space,
             std::vector<angeo::coordinate_system>&  frames_to_update,
             skeletal_motion_templates const  motion_templates,
-            scene_binding_ptr const  binding
+            scene_binding const&  binding
             );
 };
 

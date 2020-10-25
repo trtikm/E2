@@ -1,4 +1,5 @@
 #include <ai/action_controller.hpp>
+#include <ai/agent.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <angeo/linear_segment_curve.hpp>
 #include <com/simulation_context.hpp>
@@ -79,19 +80,39 @@ void  insert_collider_to_context(
 namespace ai {
 
 
-action_execution_context::action_execution_context(
-        agent_state_variables_ptr  state_variables_,
-        skeletal_motion_templates  motion_templates_,
-        scene_binding_ptr  binding_
-        )
-    : state_variables(state_variables_)
-    , motion_templates(motion_templates_)
+action_execution_context::action_execution_context(agent* const  myself_)
+    : myself(myself_)
     , animate()
     , look_at()
     , aim_at()
-    , binding(binding_)
     , time_buffer(0.0f)
 {}
+
+
+agent_state_variables&  action_execution_context::state_variables() const
+{
+    return myself->state_variables_ref();
+}
+
+
+skeletal_motion_templates  action_execution_context::motion_templates() const
+{
+    return myself->get_motion_templates();
+}
+
+
+scene_binding const&  action_execution_context::binding() const
+{
+    return *myself->get_binding();
+}
+
+
+com::simulation_context const&  action_execution_context::ctx() const
+{
+    return *binding().context;
+}
+
+
 
 
 bool  agent_action::motion_object_config::operator==(motion_object_config const&  other) const
@@ -459,7 +480,7 @@ void  agent_action::update_animation(float_32_bit const  time_step_in_seconds)
                 );
     }
 
-    m_context->animate.commit(motion_templates(), m_context->binding);
+    m_context->animate.commit(motion_templates(), binding());
 }
 
 
@@ -801,18 +822,13 @@ void  action_guesture::next_round(float_32_bit const  time_step_in_seconds)
 //}
 
 
-action_controller::action_controller(
-        agent_config const  config,
-        agent_state_variables_ptr const  state_variables,
-        skeletal_motion_templates const  motion_templates,
-        scene_binding_ptr const  binding
-        )
-    : m_context(std::make_shared<action_execution_context>(state_variables, motion_templates, binding))
+action_controller::action_controller(agent_config const  config, agent*  const  myself)
+    : m_context(std::make_shared<action_execution_context>(myself))
     , m_current_action(nullptr) // loaded below
     , m_available_actions() // loaded below
 {
-    if (m_context->state_variables->count("animation_speed") == 0UL)
-        m_context->state_variables->insert({ "animation_speed", { "animation_speed", 1.0f, 0.5f, 2.0f } });
+    if (m_context->state_variables().count("animation_speed") == 0UL)
+        m_context->state_variables().insert({ "animation_speed", { "animation_speed", 1.0f, 0.5f, 2.0f } });
     for (auto const&  name_and_ptree : config.actions())
     {
         ASSUMPTION(name_and_ptree.second->size() == 1UL);
@@ -847,7 +863,7 @@ action_controller::action_controller(
     m_current_action = m_available_actions.at(config.initial_action());
     m_current_action->on_transition(nullptr, agent_action::transition_info());
     m_context->animate.move_to_target();
-    m_context->animate.commit(m_context->motion_templates, m_context->binding);
+    m_context->animate.commit(m_context->motion_templates(), m_context->binding());
 }
 
 

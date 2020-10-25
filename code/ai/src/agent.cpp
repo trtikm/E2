@@ -88,7 +88,7 @@ agent::agent(
     : m_state_variables(load_agent_state_variables(config))
     , m_motion_templates(motion_templates)
     , m_binding(binding)
-    , m_action_controller(config, m_state_variables, motion_templates, binding)
+    , m_action_controller(config, this)
     , m_sight_controller(
             make_camera_config(),
             make_ray_cast_config(config, binding),
