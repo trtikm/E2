@@ -149,6 +149,7 @@ struct  agent_action
             );
     virtual  ~agent_action() {}
 
+    agent&  myself() const { return *m_context->myself; }
     agent_state_variables&  state_variables() const { return m_context->state_variables(); }
     skeletal_motion_templates  agent_action::motion_templates() const { return m_context->motion_templates(); }
     scene_binding const&  agent_action::binding() const { return m_context->binding(); }
