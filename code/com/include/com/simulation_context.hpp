@@ -601,6 +601,7 @@ struct  simulation_context
     bool  is_valid_agent_guid(object_guid const  agent_guid) const;
     object_guid  folder_of_agent(object_guid const  agent_guid) const;
     std::string const&  name_of_agent(object_guid const  agent_guid) const;
+    std::unordered_set<object_guid> const&  colliders_of_agent(object_guid const  agent_guid) const;
     object_guid  to_agent_guid(ai::agent_id const  agid) const;
     agent_guid_iterator  agents_begin() const;
     agent_guid_iterator  agents_end() const;
@@ -796,7 +797,18 @@ private:
         object_guid  collider;
     };
 
-    using  folder_element_agent = folder_element<ai::agent_id>;
+    struct  folder_element_agent : public folder_element<ai::agent_id>
+    {
+        folder_element_agent()
+            : base_type()
+            , colliders()
+        {}
+        folder_element_agent(module_specific_id const  id_, index_type const  folder_index_, std::string const&  name_)
+            : base_type(id_, folder_index_, name_)
+            , colliders()
+        {}
+        std::unordered_set<object_guid>  colliders;
+    };
 
     object_guid  m_root_folder;
     dynamic_array<folder_content_type, index_type>  m_folders;

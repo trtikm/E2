@@ -1432,20 +1432,20 @@ object_guid  simulation_context::insert_collider(
                 owner_guid = it->second;
                 return rigid_body_guid == invalid_object_guid();
             }
-            //it = fct.content.find(to_string(OBJECT_KIND::AGENT));
-            //if (it != fct.content.end())
-            //{
-            //    owner_guid = it->second;
-            //    return rigid_body_guid == invalid_object_guid();
-            //}
+            it = fct.content.find(to_string(OBJECT_KIND::AGENT));
+            if (it != fct.content.end())
+            {
+                owner_guid = it->second;
+                return rigid_body_guid == invalid_object_guid();
+            }
             return true;
         });
-    //ASSUMPTION(owner_guid != invalid_object_guid());
 
-    bool const  is_moveable = rigid_body_guid != invalid_object_guid() && is_rigid_body_moveable(rigid_body_guid);
+    bool const  is_moveable_via_rigid_body = rigid_body_guid != invalid_object_guid() && is_rigid_body_moveable(rigid_body_guid);
+    bool const  is_moveable_via_agent = owner_guid != invalid_object_guid() && owner_guid.kind == OBJECT_KIND::AGENT;
 
     std::vector<angeo::collision_object_id> coids;
-    coids_builder(frame_world_matrix(frame_guid), is_moveable, coids);
+    coids_builder(frame_world_matrix(frame_guid), is_moveable_via_rigid_body || is_moveable_via_agent, coids);
     ASSUMPTION(!coids.empty());
 
     object_guid const  collider_guid = {
@@ -1458,20 +1458,19 @@ object_guid  simulation_context::insert_collider(
 
     m_folders.at(under_folder_guid.index).insert_content(OBJECT_KIND::COLLIDER, collider_guid, name);
 
-if (owner_guid != invalid_object_guid())
-    switch (owner_guid.kind)
-    {
-    case OBJECT_KIND::RIGID_BODY: break;
-    case OBJECT_KIND::SENSOR: m_sensors.at(owner_guid.index).collider = collider_guid; break;
-    // TODO:
-    //case OBJECT_KIND::AGENT: m_agents.at(owner_guid.index).colliders.push_back(collider_guid); break;
-    default: UNREACHABLE(); break;
-    }
+    if (owner_guid != invalid_object_guid())
+        switch (owner_guid.kind)
+        {
+        case OBJECT_KIND::RIGID_BODY: break;
+        case OBJECT_KIND::SENSOR: m_sensors.at(owner_guid.index).collider = collider_guid; break;
+        case OBJECT_KIND::AGENT: m_agents.at(owner_guid.index).colliders.insert(collider_guid); break;
+        default: UNREACHABLE(); break;
+        }
 
     if (rigid_body_guid != invalid_object_guid())
         m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(collider_guid);
 
-    if (is_moveable)
+    if (is_moveable_via_rigid_body)
         m_rigid_bodies_with_invalidated_shape.insert(rigid_body_guid);
 
     return collider_guid;
@@ -1492,8 +1491,7 @@ void  simulation_context::erase_collider(object_guid const  collider_guid)
         {
         case OBJECT_KIND::RIGID_BODY: break;
         case OBJECT_KIND::SENSOR: m_sensors.at(elem.owner.index).collider = invalid_object_guid(); break;
-        // TODO:
-        //case OBJECT_KIND::AGENT: m_agents.at(owner_guid.index).colliders.push_back(collider_guid); break;
+        case OBJECT_KIND::AGENT: m_agents.at(elem.owner.index).colliders.erase(collider_guid); break;
         default: UNREACHABLE(); break;
         }
     if (is_valid_rigid_body_guid(elem.rigid_body))
@@ -2399,6 +2397,13 @@ std::string const&  simulation_context::name_of_agent(object_guid const  agent_g
 {
     ASSUMPTION(is_valid_agent_guid(agent_guid));
     return m_agents.at(agent_guid.index).element_name;
+}
+
+
+std::unordered_set<object_guid> const&  simulation_context::colliders_of_agent(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    return m_agents.at(agent_guid.index).colliders;
 }
 
 
