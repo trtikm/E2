@@ -103,7 +103,7 @@ struct  agent_action
 
         struct  location_constraint_config
         {
-            angeo::COLLISION_SHAPE_TYPE  shape_type;
+            angeo::COLLISION_SHAPE_TYPE  shape_type; // Only BOX, CAPSULE, or SPHERE!
             vector3  origin;
             vector3  aabb_half_size;
         };
@@ -113,6 +113,7 @@ struct  agent_action
             PERCEPTION_KIND  perception_kind;
             std::string  sensor_folder_name;
             com::OBJECT_KIND  sensor_owner_kind; // Only AGENT or SENSOR.
+            bool  sensor_owner_can_be_myself; // Only used when 'sensor_owner_kind==AGENT'; for SENSOR is always false.
             location_constraint_config  location_constraint;
 
         };

@@ -1,6 +1,7 @@
 #include <ai/action_controller.hpp>
 #include <ai/agent.hpp>
 #include <ai/skeleton_utils.hpp>
+#include <angeo/collide.hpp>
 #include <angeo/linear_segment_curve.hpp>
 #include <com/simulation_context.hpp>
 #include <utility/std_pair_hash.hpp>
@@ -300,9 +301,17 @@ void  agent_action::load_transitions(
                     com::read_object_kind_from_string(guard.get<std::string>("sensor_owner_kind"));
             ASSUMPTION(tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::AGENT ||
                        tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::SENSOR);
+            if (tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::AGENT)
+            tc.perception_guard->sensor_owner_can_be_myself = tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::AGENT ?
+                    guard.get<bool>("sensor_owner_can_be_myself") : false;
             boost::property_tree::ptree const&  location = guard.find("location_constraint")->second;
             tc.perception_guard->location_constraint.shape_type =
                     angeo::as_collision_shape_type(location.get<std::string>("shape_type"));
+            ASSUMPTION(
+                tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::BOX ||
+                tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE ||
+                tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE
+                );
             tc.perception_guard->location_constraint.origin = read_vector3(location.find("origin")->second);
             tc.perception_guard->location_constraint.aabb_half_size = read_aabb_half_size(location.find("aabb_half_size")->second);
         }
@@ -502,7 +511,72 @@ bool  agent_action::collect_transition_info(agent_action const&  from_action, tr
         return true;
     transition_config::perception_guard_config const  percept = *config.perception_guard;
 
-    // TODO!
+    if (percept.perception_kind == transition_config::PERCEPTION_KIND::SIGHT)
+    {
+        sight_controller::ray_casts_in_time const&  ray_casts = myself().get_sight_controller().get_directed_ray_casts_in_time();
+        for (auto  ray_it = ray_casts.begin(), end = ray_casts.end(); ray_it != end; ++ray_it)
+        {
+            com::object_guid const  collider_guid = ray_it->second.collider_guid;
+
+            com::object_guid const  owner_guid = ctx().owner_of_collider(collider_guid);
+            if (owner_guid.kind != percept.sensor_owner_kind)
+                continue;
+
+            if (owner_guid.kind == com::OBJECT_KIND::AGENT && !percept.sensor_owner_can_be_myself &&
+                    ctx().folder_of_agent(owner_guid) == binding().folder_guid_of_agent)
+                continue;
+
+            std::string const&  folder_name = ctx().name_of_folder(ctx().folder_of_collider(collider_guid));
+            if (folder_name != percept.sensor_folder_name)
+                continue;
+
+            vector3 const  contact_point_in_world_space =
+                    ray_it->second.ray_origin_in_world_space +
+                    ray_it->second.parameter_to_coid * ray_it->second.ray_direction_in_world_space
+                    ;
+            vector3 const  contact_point_in_motion_object_space =
+                    angeo::point3_to_coordinate_system(
+                            contact_point_in_world_space,
+                            ctx().frame_coord_system_in_world_space(binding().frame_guid_of_motion_object)
+                            );
+            switch(percept.location_constraint.shape_type)
+            {
+            case angeo::COLLISION_SHAPE_TYPE::BOX:
+                if (!angeo::collision_point_and_bbox(
+                        contact_point_in_motion_object_space,
+                        percept.location_constraint.origin - percept.location_constraint.aabb_half_size,
+                        percept.location_constraint.origin + percept.location_constraint.aabb_half_size
+                        ))
+                    continue;
+                break;
+            case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+                if (!angeo::is_point_inside_capsule(
+                        contact_point_in_motion_object_space - percept.location_constraint.origin,
+                        max_coord(percept.location_constraint.aabb_half_size) - min_coord(percept.location_constraint.aabb_half_size),
+                        min_coord(percept.location_constraint.aabb_half_size)
+                        ))
+                    continue;
+                break;
+            case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+                if (!angeo::is_point_inside_sphere(
+                        contact_point_in_motion_object_space - percept.location_constraint.origin,
+                        min_coord(percept.location_constraint.aabb_half_size)
+                        ))
+                    continue;
+                break;
+            default: { UNREACHABLE(); } break;
+            }
+
+            info.other_entiry_folder_guid = ctx().folder_of(owner_guid);
+            return true;
+        }
+    }
+    else
+    {
+        INVARIANT(percept.perception_kind == transition_config::PERCEPTION_KIND::TOUCH);
+
+        // TODO!
+    }
 
     return false;
 }
