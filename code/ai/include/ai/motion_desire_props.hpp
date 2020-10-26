@@ -11,9 +11,9 @@ namespace ai {
 struct  motion_desire_props
 {
     // All fields, including those in nested structures, are in cortex's LOGICAL space
-    // which lies inside agent's space. They all are also in the range <-1.0, 1.0>.
-    // Action controller defines the actual transformations between the logical and agent's
-    // space.
+    // which lies inside agent's space (i.e. in its motion/ghost object space). They all
+    // are also in the range <-1.0, 1.0>. Action controller defines the actual transformations
+    // between the logical and agent's spaces.
 
     struct  move_props
     {
