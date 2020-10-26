@@ -35,7 +35,7 @@ simulator::simulation_configuration::simulation_configuration()
     , simulation_time_buffer(0.0f)
     , last_time_step(0.0f)
 
-    , commit_state_changes_in_the_same_round(false)
+    , commit_state_changes_in_the_same_round(true)
 
     , paused(true)
     , num_rounds_to_pause(0U)
@@ -259,14 +259,8 @@ void  simulator::round()
             }
             else
             {
-                simulation_context&  ctx = *context();
-
-                ctx.process_pending_early_requests();
-                ctx.process_pending_requests();
+                context()->process_pending_requests();
                 update_collider_locations_of_relocated_frames();
-                ctx.process_rigid_bodies_with_invalidated_shape();
-                ctx.clear_invalidated_guids();
-                ctx.clear_relocated_frame_guids();
 
                 SLOG("PAUSED\n");
             }
@@ -1003,9 +997,17 @@ void  simulator::render_agent_action_transition_contratints()
                 ai::agent_action::transition_config::location_constraint_config const&  constraint =
                         name_and_config.second.perception_guard->location_constraint;
 
-                com::object_guid const  frame_guid =
-                        ctx.folder_content(ctx.from_relative_path(agent.get_binding()->folder_guid_of_agent, constraint.frame_folder))
-                           .content.at(com::to_string(com::OBJECT_KIND::FRAME));
+                matrix44  world_matrix;
+                {
+                    com::object_guid const  frame_guid =
+                            ctx.folder_content(ctx.from_relative_path(agent.get_binding()->folder_guid_of_agent, constraint.frame_folder))
+                               .content.at(com::to_string(com::OBJECT_KIND::FRAME));
+                    angeo::coordinate_system_explicit  frame = ctx.frame_explicit_coord_system_in_world_space(frame_guid);
+                    frame.origin_ref() += constraint.origin(0) * frame.basis_vector_x() +
+                                          constraint.origin(1) * frame.basis_vector_y() +
+                                          constraint.origin(2) * frame.basis_vector_z() ;
+                    angeo::from_base_matrix(frame, world_matrix);
+                }
 
                 std::string  id_name;
                 std::unordered_map<std::string, gfx::batch>::iterator  cache_it;
@@ -1068,7 +1070,7 @@ void  simulator::render_agent_action_transition_contratints()
                 auto&  task = tasks[id_name];
                 if (task.batch.empty())
                     task.batch = cache_it->second;
-                task.frame_guids.push_back(frame_guid);
+                task.world_matrices.push_back(world_matrix);
             }
     }
     for (auto const&  id_and_task : tasks)
