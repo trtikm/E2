@@ -3200,9 +3200,7 @@ void  simulation_context::clear(bool const  also_caches)
     clear_pending_requests();
     clear_pending_late_requests();
     clear_rigid_bodies_with_invalidated_shape();
-
-    m_collision_contacts.clear();
-    m_from_colliders_to_contacts.clear();
+    clear_collision_contacts();
 
     if (also_caches)
     {
