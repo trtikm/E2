@@ -998,7 +998,13 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
     TMPROF_BLOCK();
 
     m_current_action->next_round(time_step_in_seconds);
+    if (m_current_action->is_ghost_complete())
+        process_action_transitions();
+}
 
+
+void  action_controller::process_action_transitions()
+{
     std::shared_ptr<agent_action>  best_action;
     agent_action::transition_info  best_info;
     {

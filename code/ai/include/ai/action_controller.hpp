@@ -277,6 +277,8 @@ struct  action_controller
     agent_action const&  get_current_action() const { return *m_current_action; }
 
 private:
+    void  process_action_transitions();
+
     action_execution_context_ptr  m_context;
     std::shared_ptr<agent_action>  m_current_action;
     std::unordered_map<std::string, std::shared_ptr<agent_action> >  m_available_actions;
