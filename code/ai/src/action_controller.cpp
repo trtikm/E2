@@ -102,6 +102,12 @@ action_execution_context::action_execution_context(agent* const  myself_)
 {}
 
 
+motion_desire_props const&  action_execution_context::desire() const
+{
+    return myself->get_cortex().get_motion_desire_props();
+}
+
+
 agent_state_variables&  action_execution_context::state_variables() const
 {
     return myself->state_variables_ref();
@@ -365,10 +371,10 @@ void  agent_action::load_transitions(
 }
 
 
-float_32_bit  agent_action::compute_desire_penalty(motion_desire_props const&  props) const
+float_32_bit  agent_action::compute_desire_penalty() const
 {
     std::vector<float_32_bit>  props_vec, ideal_vec, weights_vec;
-    as_vector(props, props_vec);
+    as_vector(desire(), props_vec);
     as_vector(DESIRE.ideal, ideal_vec);
     as_vector(DESIRE.weights, weights_vec);
 
@@ -463,6 +469,28 @@ void  agent_action::update_ghost()
 }
 
 
+void  agent_action::update_look_at(float_32_bit const  time_step_in_seconds)
+{
+    float_32_bit const  longitude = 0.5f * PI() * (desire().look_at.longitude - 1.0f);
+    float_32_bit const  altitude = 0.5f * PI() * desire().look_at.altitude;
+    float_32_bit const  magnitude = (0.5f * (1.0f + desire().look_at.magnitude)) *
+                                    myself().get_sight_controller().get_camera()->far_plane();
+    float_32_bit const  cos_altitude = std::cosf(desire().look_at.altitude);
+    vector3  target = {
+        magnitude * cos_altitude * std::cosf(longitude),
+        magnitude * cos_altitude * std::sinf(longitude),
+        magnitude * std::sinf(altitude),
+    };
+    target = transform_point(target, ctx().frame_world_matrix(ctx().parent_frame(binding().frame_guid_of_skeleton)));
+    m_context->look_at.interpolate(time_step_in_seconds, target, m_context->animate.get_current_frames_ref(), motion_templates(), binding());
+}
+
+
+void  agent_action::update_aim_at(float_32_bit const  time_step_in_seconds)
+{
+}
+
+
 void  agent_action::update_animation(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
@@ -504,8 +532,6 @@ void  agent_action::update_animation(float_32_bit const  time_step_in_seconds)
                         - m_animation.last_keyframe_completion_time)
                 );
     }
-
-    m_context->animate.commit(motion_templates(), binding());
 }
 
 
@@ -731,7 +757,7 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
             vector3  origin;
 
             std::shared_ptr<transition_config::motion_object_position_config> const  pos_cfg =
-                    TRANSITIONS.at(from_action_ptr->NAME).motion_object_position;
+                    from_action_ptr->TRANSITIONS.at(NAME).motion_object_position;
             if (pos_cfg != nullptr)
             {
                 com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
@@ -861,6 +887,11 @@ void  agent_action::next_round(float_32_bit const  time_step_in_seconds)
     update_time(time_step_in_seconds);
     update_ghost();
     update_animation(time_step_in_seconds);
+    if (IS_LOOK_AT_ENABLED)
+        update_look_at(time_step_in_seconds);
+    if (IS_AIM_AT_ENABLED)
+        update_aim_at(time_step_in_seconds);
+    m_context->animate.commit(motion_templates(), binding());
 }
 
 
@@ -962,10 +993,7 @@ action_controller::~action_controller()
 {}
 
 
-void  action_controller::next_round(
-        float_32_bit const  time_step_in_seconds,
-        motion_desire_props const&  desire
-        )
+void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
@@ -979,7 +1007,7 @@ void  action_controller::next_round(
         if ((m_current_action->is_cyclic() || !m_current_action->is_complete()) && m_current_action->is_guard_valid())
         {
             best_action = m_current_action;
-            best_penalty = m_current_action->compute_desire_penalty(desire);
+            best_penalty = m_current_action->compute_desire_penalty();
         }
         for (auto const&  name_and_props : m_current_action->get_transitions())
         {
@@ -987,7 +1015,7 @@ void  action_controller::next_round(
             agent_action::transition_info  info;
             if (!action_ptr->collect_transition_info(*m_current_action, info))
                 continue;
-            float_32_bit const  penalty = action_ptr->compute_desire_penalty(desire);
+            float_32_bit const  penalty = action_ptr->compute_desire_penalty();
             if (best_action == nullptr || penalty < best_penalty)
             {
                 best_action = action_ptr;

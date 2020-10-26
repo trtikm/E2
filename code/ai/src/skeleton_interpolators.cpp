@@ -80,7 +80,7 @@ skeleton_interpolator_look_at::skeleton_interpolator_look_at()
 
 void  skeleton_interpolator_look_at::interpolate(
         float_32_bit const  time_step_in_seconds,
-        vector3 const&  look_at_target_in_agent_space,
+        vector3 const&  look_at_target_in_world_space,
         std::vector<angeo::coordinate_system>&  frames_to_update,
         skeletal_motion_templates const  motion_templates,
         scene_binding const&  binding
@@ -121,15 +121,7 @@ void  skeleton_interpolator_look_at::interpolate(
                         binding.frame_guids_of_bones.at(parents.at(name_and_info.second->root_bone))
                         );
 
-            target.target = angeo::point3_to_coordinate_system(
-                                    angeo::point3_from_coordinate_system(
-                                            look_at_target_in_agent_space,
-                                            binding.context->frame_coord_system_in_world_space(
-                                                    binding.frame_guid_of_skeleton
-                                                    )
-                                            ),
-                                    chain_world_frame
-                                    );
+            target.target = angeo::point3_to_coordinate_system(look_at_target_in_world_space, chain_world_frame);
             target.direction = name_and_info.second->direction;
         }
         look_at_targets.push_back(target);
@@ -160,56 +152,13 @@ void  skeleton_interpolator_look_at::interpolate(
 }
 
 
-void  skeleton_interpolator_look_at::update_look_at_target_in_local_space(
-        vector3 const&  look_at_target_from_cortex,
-        angeo::coordinate_system_explicit const&  agent_frame,
-        ai::sight_controller::camera_perspective_ptr const  camera
-        )
-{
-    matrix44  M;
-    angeo::to_base_matrix(agent_frame, M);
-
-    vector3 const  camera_origin_in_local_space = transform_point(camera->coordinate_system()->origin(), M);
-    if (length(look_at_target_from_cortex - camera_origin_in_local_space) < camera->near_plane())
-        return;
-
-    if (m_target_pose_reached)
-    {
-        m_target_pose_reached = false;
-        m_look_at_target_in_local_space = look_at_target_from_cortex;
-        return;
-    }
-
-    vector3 const  target_dir = m_look_at_target_in_local_space - camera_origin_in_local_space;
-    vector3 const  camera_forward_dir = transform_vector(-angeo::axis_z(*camera->coordinate_system()), M);
-    vector3 const  rot_axis = cross_product(camera_forward_dir, target_dir);
-    vector3 const  clip_planes_normals[2] = { cross_product(rot_axis, camera_forward_dir), cross_product(target_dir, rot_axis) };
-    vector3 const  cortex_target_dir = look_at_target_from_cortex - camera_origin_in_local_space;
-
-    if (dot_product(clip_planes_normals[0], cortex_target_dir) <= 0.0f)
-        return; // The cortex's target is on the opposite way to the current target.
-    if (dot_product(clip_planes_normals[1], cortex_target_dir) <= 0.0f)
-        return; // The cortex's target will be reached AFTER the current target.
-
-    float_32_bit const  rot_axes_difference = angle(rot_axis, cross_product(camera_forward_dir, cortex_target_dir));
-
-    if (rot_axes_difference > PI() * 5.0f / 180.0f)
-        return; // The cortex's target is too far from the rotation plane of camera to the current targer.
-
-    // The cortex's target lies between camera and current target in the proximity of the rotation plane.
-    // So, it seems to be useful to change to the proposed cortex's target.
-    m_target_pose_reached = false;
-    m_look_at_target_in_local_space = look_at_target_from_cortex;
-}
-
-
 skeleton_interpolator_aim_at::skeleton_interpolator_aim_at()
 {}
 
 
 void  skeleton_interpolator_aim_at::interpolate(
         float_32_bit const  time_step_in_seconds,
-        vector3 const&  aim_at_target_in_agent_space,
+        vector3 const&  aim_at_target_in_world_space,
         std::vector<angeo::coordinate_system>&  frames_to_update,
         skeletal_motion_templates const  motion_templates,
         scene_binding const&  binding
@@ -248,16 +197,7 @@ void  skeleton_interpolator_aim_at::interpolate(
                         binding.frame_guids_of_bones.at(parents.at(name_and_info.second->root_bone))
                         );
 
-            vector3  target = angeo::point3_to_coordinate_system(
-                                    angeo::point3_from_coordinate_system(
-                                            aim_at_target_in_agent_space,
-                                            binding.context->frame_coord_system_in_world_space(
-                                                    binding.frame_guid_of_skeleton
-                                                    )
-                                            ),
-                                    chain_world_frame
-                                    );
-
+            vector3  target = angeo::point3_to_coordinate_system(aim_at_target_in_world_space, chain_world_frame);
             aim_at_targets.push_back(angeo::aim_at_target{ target, name_and_info.second->touch_points.at("pointer") });
         }
 

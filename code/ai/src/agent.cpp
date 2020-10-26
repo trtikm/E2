@@ -110,7 +110,7 @@ void  agent::next_round(
 
     m_sight_controller.next_round(time_step_in_seconds);
     m_cortex->next_round(time_step_in_seconds, keyboard, mouse, window);
-    m_action_controller.next_round(time_step_in_seconds, m_cortex->get_motion_desire_props());
+    m_action_controller.next_round(time_step_in_seconds);
 }
 
 

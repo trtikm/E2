@@ -29,6 +29,7 @@ struct  action_execution_context
 {
     explicit  action_execution_context(agent* const  myself_);
 
+    motion_desire_props const&  desire() const;
     agent_state_variables&  state_variables() const;
     skeletal_motion_templates  motion_templates() const;
     scene_binding const&  binding() const;
@@ -152,12 +153,13 @@ struct  agent_action
     virtual  ~agent_action() {}
 
     agent&  myself() const { return *m_context->myself; }
+    motion_desire_props const&  desire() const { return m_context->desire(); }
     agent_state_variables&  state_variables() const { return m_context->state_variables(); }
     skeletal_motion_templates  agent_action::motion_templates() const { return m_context->motion_templates(); }
     scene_binding const&  agent_action::binding() const { return m_context->binding(); }
     com::simulation_context const&  agent_action::ctx() const { return m_context->ctx(); }
 
-    float_32_bit  compute_desire_penalty(motion_desire_props const&  props) const;
+    float_32_bit  compute_desire_penalty() const;
 
     bool  is_cyclic() const { return IS_CYCLIC; }
     bool  is_complete() const;
@@ -175,6 +177,8 @@ struct  agent_action
     void  apply_effects(float_32_bit const  time_step_in_seconds);
     void  update_time(float_32_bit const  time_step_in_seconds);
     void  update_ghost();
+    void  update_look_at(float_32_bit const  time_step_in_seconds);
+    void  update_aim_at(float_32_bit const  time_step_in_seconds);
     void  update_animation(float_32_bit const  time_step_in_seconds);
 
     bool  is_guard_valid() const;
@@ -268,10 +272,7 @@ struct  action_controller
     action_controller(agent_config const  config, agent*  const  myself);
     ~action_controller();
 
-    void  next_round(
-            float_32_bit const  time_step_in_seconds,
-            motion_desire_props const&  desire
-            );
+    void  next_round(float_32_bit const  time_step_in_seconds);
 
     agent_action const&  get_current_action() const { return *m_current_action; }
 
