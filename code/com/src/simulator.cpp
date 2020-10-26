@@ -35,8 +35,6 @@ simulator::simulation_configuration::simulation_configuration()
     , simulation_time_buffer(0.0f)
     , last_time_step(0.0f)
 
-    , commit_state_changes_in_the_same_round(true)
-
     , paused(true)
     , num_rounds_to_pause(0U)
 {}
@@ -282,27 +280,45 @@ void  simulator::simulate()
 {
     TMPROF_BLOCK();
 
+    simulation_context&  ctx = *context();
+
     simulation_config().simulation_time_buffer =
         std::min(simulation_config().simulation_time_buffer + round_seconds(),
                  (float_32_bit)simulation_config().MAX_NUM_SUB_SIMULATION_STEPS * simulation_config().MAX_SIMULATION_TIME_DELTA);
 
     do
     {
-        if (!simulation_config().commit_state_changes_in_the_same_round)
-            commit_state_changes();
-
         simulation_config().last_time_step = std::min(simulation_config().simulation_time_buffer,
                                                       simulation_config().MAX_SIMULATION_TIME_DELTA);
         simulation_config().simulation_time_buffer -= simulation_config().last_time_step;
 
+        ctx.clear_collision_contacts();
         update_collision_contacts_and_constraints();
 
-        device_simulator()->next_round((simulation_context const&)*context(), simulation_config().last_time_step);
+        device_simulator()->next_round((simulation_context const&)ctx, simulation_config().last_time_step);
         ai_simulator()->next_round(simulation_config().last_time_step, get_keyboard_props(), get_mouse_props(), get_window_props());
         custom_module_round();
 
-        if (simulation_config().commit_state_changes_in_the_same_round)
-            commit_state_changes();
+        ctx.process_rigid_bodies_with_invalidated_shape();
+        ctx.process_pending_early_requests();
+
+        rigid_body_simulator()->solve_constraint_system(simulation_config().last_time_step, simulation_config().last_time_step * 0.75f);
+        rigid_body_simulator()->integrate_motion_of_rigid_bodies(simulation_config().last_time_step);
+        rigid_body_simulator()->prepare_contact_cache_and_constraint_system_for_next_frame();
+
+        ctx.clear_invalidated_guids();
+        ctx.clear_relocated_frame_guids();
+
+        for (auto  rb_it = ctx.moveable_rigid_bodies_begin(), rb_end = ctx.moveable_rigid_bodies_end(); rb_it != rb_end; ++rb_it)
+            ctx.frame_relocate_relative_to_parent(
+                    ctx.frame_of_rigid_body(*rb_it),
+                    ctx.mass_centre_of_rigid_body(*rb_it),
+                    ctx.orientation_of_rigid_body(*rb_it)
+                    );
+
+        ctx.process_pending_requests();
+
+        update_collider_locations_of_relocated_frames();
     }
     while (simulation_config().simulation_time_buffer >= simulation_config().MAX_SIMULATION_TIME_DELTA);
 }
@@ -314,7 +330,6 @@ void  simulator::update_collision_contacts_and_constraints()
 
     simulation_context&  ctx = *context();
 
-    ctx.clear_collision_contacts();
     collision_scene()->compute_contacts_of_all_dynamic_objects(
             [this, &ctx](
                 angeo::contact_id const&  cid,
@@ -373,35 +388,6 @@ void  simulator::update_collision_contacts_and_constraints()
                 },
             true
             );
-}
-
-
-void  simulator::commit_state_changes()
-{
-    TMPROF_BLOCK();
-
-    simulation_context&  ctx = *context();
-
-    ctx.clear_invalidated_guids();
-    ctx.clear_relocated_frame_guids();
-
-    ctx.process_rigid_bodies_with_invalidated_shape();
-    ctx.process_pending_early_requests();
-
-    rigid_body_simulator()->solve_constraint_system(simulation_config().last_time_step, simulation_config().last_time_step * 0.75f);
-    rigid_body_simulator()->integrate_motion_of_rigid_bodies(simulation_config().last_time_step);
-    rigid_body_simulator()->prepare_contact_cache_and_constraint_system_for_next_frame();
-
-    for (auto  rb_it = ctx.moveable_rigid_bodies_begin(), rb_end = ctx.moveable_rigid_bodies_end(); rb_it != rb_end; ++rb_it)
-        ctx.frame_relocate_relative_to_parent(
-                ctx.frame_of_rigid_body(*rb_it),
-                ctx.mass_centre_of_rigid_body(*rb_it),
-                ctx.orientation_of_rigid_body(*rb_it)
-                );
-
-    ctx.process_pending_requests();
-
-    update_collider_locations_of_relocated_frames();
 }
 
 
@@ -825,6 +811,8 @@ void  simulator::render_collision_contacts()
             it != end; ++it)
     {
         collision_contact const&  cc = *it;
+        if (ctx.invalidated_guids().count(cc.first_collider()) != 0UL || ctx.invalidated_guids().count(cc.second_collider()) != 0UL)
+            continue;
 
         render_task_info*  task_ptr;
         {

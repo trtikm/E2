@@ -31,8 +31,6 @@ struct  simulator : public osi::simulator
         float_32_bit  simulation_time_buffer;
         float_32_bit  last_time_step;
 
-        bool  commit_state_changes_in_the_same_round;
-
         bool  paused;
         natural_32_bit  num_rounds_to_pause;
     };
@@ -167,7 +165,6 @@ private:
 
     void  simulate();
     void  update_collision_contacts_and_constraints();
-    void  commit_state_changes();
     void  update_collider_locations_of_relocated_frames();
 
     void  camera_update();
