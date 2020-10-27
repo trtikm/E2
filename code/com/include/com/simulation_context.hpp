@@ -370,6 +370,9 @@ struct  simulation_context
             ) const;
     void  request_enable_collider(object_guid const  collider_guid, bool const  state) const;
     void  request_enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state) const;
+    void  request_enable_colliding(object_guid const  base_folder_guid_1, std::string const&  relative_path_to_collider_1,
+                                   object_guid const  base_folder_guid_2, std::string const&  relative_path_to_collider_2,
+                                   const bool  state) const;
     void  request_insert_collider_box(
             object_guid const  under_folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
@@ -900,27 +903,33 @@ private:
         REQUEST_ERASE_BATCH                         = 5,
         REQUEST_ENABLE_COLLIDER                     = 6,
         REQUEST_ENABLE_COLLIDING                    = 7,
-        REQUEST_INSERT_COLLIDER_BOX                 = 8,
-        REQUEST_INSERT_COLLIDER_CAPSULE             = 9,
-        REQUEST_INSERT_COLLIDER_SPHERE              = 10,
-        REQUEST_ERASE_COLLIDER                      = 11,
-        REQUEST_INSERT_RIGID_BODY                   = 12,
-        REQUEST_ERASE_RIGID_BODY                    = 13,
-        REQUEST_SET_LINEAR_VELOCITY                 = 14,
-        REQUEST_SET_ANGULAR_VELOCITY                = 15,
-        REQUEST_SET_LINEAR_ACCEL                    = 16,
-        REQUEST_SET_ANGULAR_ACCEL                   = 17,
-        REQUEST_DEL_LINEAR_ACCEL                    = 18,
-        REQUEST_DEL_ANGULAR_ACCEL                   = 19,
-        REQUEST_ERASE_TIMER                         = 20,
-        REQUEST_ERASE_SENSOR                        = 21,
-        REQUEST_ERASE_AGENT                         = 22,
+        REQUEST_ENABLE_COLLIDING_BY_PATH            = 8,
+        REQUEST_INSERT_COLLIDER_BOX                 = 9,
+        REQUEST_INSERT_COLLIDER_CAPSULE             = 10,
+        REQUEST_INSERT_COLLIDER_SPHERE              = 11,
+        REQUEST_ERASE_COLLIDER                      = 12,
+        REQUEST_INSERT_RIGID_BODY                   = 13,
+        REQUEST_ERASE_RIGID_BODY                    = 14,
+        REQUEST_SET_LINEAR_VELOCITY                 = 15,
+        REQUEST_SET_ANGULAR_VELOCITY                = 16,
+        REQUEST_SET_LINEAR_ACCEL                    = 17,
+        REQUEST_SET_ANGULAR_ACCEL                   = 18,
+        REQUEST_DEL_LINEAR_ACCEL                    = 19,
+        REQUEST_DEL_ANGULAR_ACCEL                   = 20,
+        REQUEST_ERASE_TIMER                         = 21,
+        REQUEST_ERASE_SENSOR                        = 22,
+        REQUEST_ERASE_AGENT                         = 23,
     };
 
     struct  request_data_relocate_frame { object_guid  frame_guid; vector3  position; quaternion  orientation; };
     struct  request_data_set_parent_frame { object_guid  frame_guid; object_guid  parent_frame_guid; };
     struct  request_data_enable_collider { object_guid  collider_guid; bool  state; };
     struct  request_data_enable_colliding { object_guid  collider_1; object_guid  collider_2; bool  state; };
+    struct  request_data_enable_colliding_by_path {
+                object_guid  base_folder_guid_1; std::string  relative_path_to_collider_1;
+                object_guid  base_folder_guid_2; std::string  relative_path_to_collider_2;
+                bool  state;
+                };
     struct  request_data_set_velocity { object_guid  rb_guid; vector3  velocity; };
     struct  request_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
     struct  request_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
@@ -958,6 +967,7 @@ private:
     mutable std::list<object_guid>  m_requests_erase_batch;
     mutable std::list<request_data_enable_collider>  m_requests_enable_collider;
     mutable std::list<request_data_enable_colliding>  m_requests_enable_colliding;
+    mutable std::list<request_data_enable_colliding_by_path>  m_requests_enable_colliding_by_path;
     mutable std::list<request_data_insert_collider_box>  m_requests_insert_collider_box;
     mutable std::list<request_data_insert_collider_capsule>  m_requests_insert_collider_capsule;
     mutable std::list<request_data_insert_collider_sphere>  m_requests_insert_collider_sphere;

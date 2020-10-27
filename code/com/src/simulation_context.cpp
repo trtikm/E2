@@ -93,6 +93,7 @@ simulation_context::simulation_context(
     , m_requests_erase_batch()
     , m_requests_enable_collider()
     , m_requests_enable_colliding()
+    , m_requests_enable_colliding_by_path()
     , m_requests_insert_collider_box()
     , m_requests_insert_collider_sphere()
     , m_requests_insert_collider_capsule()
@@ -1297,6 +1298,20 @@ void  simulation_context::request_enable_colliding(
     ASSUMPTION(collider_1 != collider_2);
     m_requests_enable_colliding.push_back({collider_1, collider_2, state});
     m_pending_requests.push_back(REQUEST_ENABLE_COLLIDING);
+}
+
+
+void  simulation_context::request_enable_colliding(object_guid const  base_folder_guid_1, std::string const&  relative_path_to_collider_1,
+                                                   object_guid const  base_folder_guid_2, std::string const&  relative_path_to_collider_2,
+                                                   const bool  state) const
+{
+    ASSUMPTION(base_folder_guid_1 != base_folder_guid_2 || relative_path_to_collider_1 != relative_path_to_collider_2);
+    m_requests_enable_colliding_by_path.push_back({
+            base_folder_guid_1, relative_path_to_collider_1,
+            base_folder_guid_2, relative_path_to_collider_2,
+            state
+            });
+    m_pending_requests.push_back(REQUEST_ENABLE_COLLIDING_BY_PATH);
 }
 
 
@@ -2998,6 +3013,12 @@ void  simulation_context::process_pending_requests()
             auto  cursor = make_request_cursor_to(m_requests_enable_colliding);
             enable_colliding(cursor->collider_1, cursor->collider_2, cursor->state);
             } break;
+        case REQUEST_ENABLE_COLLIDING_BY_PATH: {
+            auto  cursor = make_request_cursor_to(m_requests_enable_colliding_by_path);
+            enable_colliding(from_relative_path(cursor->base_folder_guid_1, cursor->relative_path_to_collider_1),
+                             from_relative_path(cursor->base_folder_guid_2, cursor->relative_path_to_collider_2),
+                             cursor->state);
+            } break;
         case REQUEST_INSERT_COLLIDER_BOX: {
             auto  cursor = make_request_cursor_to(m_requests_insert_collider_box);
             insert_collider_box(cursor->under_folder_guid, cursor->name, cursor->half_sizes_along_axes,
@@ -3074,6 +3095,7 @@ void  simulation_context::clear_pending_requests()
     m_requests_erase_batch.clear();
     m_requests_enable_collider.clear();
     m_requests_enable_colliding.clear();
+    m_requests_enable_colliding_by_path.clear();
     m_requests_insert_collider_box.clear();
     m_requests_insert_collider_capsule.clear();
     m_requests_insert_collider_sphere.clear();
