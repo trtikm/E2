@@ -99,6 +99,7 @@ action_execution_context::action_execution_context(agent* const  myself_)
     , look_at()
     , aim_at()
     , time_buffer(0.0f)
+    , disabled_colliding_with_our_motion_object()
 {}
 
 
@@ -349,6 +350,10 @@ void  agent_action::load_transitions(
             ASSUMPTION(!tc.motion_object_position->frame_folder.empty() &&
                        tc.motion_object_position->frame_folder.back() == '/');
             tc.motion_object_position->origin = read_vector3(position.find("origin")->second);
+            tc.motion_object_position->disable_colliding = position.count("disable_colliding") == 0UL ?
+                        "" : position.get<std::string>("disable_colliding");
+            if (!tc.motion_object_position->disable_colliding.empty() && tc.motion_object_position->disable_colliding.back() == '/')
+                tc.motion_object_position->disable_colliding += com::to_string(com::OBJECT_KIND::COLLIDER);
 
             tc.aabb_alignment = transition_config::AABB_ALIGNMENT::CENTER;
         }
@@ -765,7 +770,7 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
                         pos_cfg->frame_folder,
                         ctx()
                         );
-                origin = transform_point(pos_cfg->origin, ctx().frame_world_matrix(frame_guid));                
+                origin = transform_point(pos_cfg->origin, ctx().frame_world_matrix(frame_guid));
             }
             else if (from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
             {
@@ -844,6 +849,36 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
                 MOTION_OBJECT_CONFIG.collision_material,
                 angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
                 );
+    }
+
+    if (from_action_ptr != nullptr && from_action_ptr != this)
+    {
+        while (!m_context->disabled_colliding_with_our_motion_object.empty())
+        {
+            action_execution_context::scene_object_relative_path const&  rel_path =
+                    m_context->disabled_colliding_with_our_motion_object.back();
+            if (ctx().is_valid_collider_guid(ctx().from_relative_path(rel_path.base_folder_guid, rel_path.relative_path)))
+                ctx().request_enable_colliding(
+                            binding().folder_guid_of_agent, "motion_object/" + com::to_string(com::OBJECT_KIND::COLLIDER),
+                            rel_path.base_folder_guid, rel_path.relative_path,
+                            true
+                            );
+            m_context->disabled_colliding_with_our_motion_object.pop_back();
+        }
+
+        std::shared_ptr<transition_config::motion_object_position_config> const  pos_cfg =
+                from_action_ptr->TRANSITIONS.at(NAME).motion_object_position;
+        if (pos_cfg != nullptr && !pos_cfg->disable_colliding.empty())
+        {
+            INVARIANT(info.other_entiry_folder_guid != com::invalid_object_guid());
+            action_execution_context::scene_object_relative_path const  rel_path { info.other_entiry_folder_guid, pos_cfg->disable_colliding };
+            m_context->disabled_colliding_with_our_motion_object.push_back(rel_path);
+            ctx().request_enable_colliding(
+                    binding().folder_guid_of_agent, "motion_object/" + com::to_string(com::OBJECT_KIND::COLLIDER),
+                    rel_path.base_folder_guid, rel_path.relative_path,
+                    false
+                    );
+        }
     }
 
     for (auto const&  name_and_props : SENSORS)

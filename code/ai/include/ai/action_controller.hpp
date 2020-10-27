@@ -27,6 +27,12 @@ struct  agent;
 
 struct  action_execution_context
 {
+    struct  scene_object_relative_path
+    {
+        com::object_guid  base_folder_guid;
+        std::string  relative_path;
+    };
+
     explicit  action_execution_context(agent* const  myself_);
 
     motion_desire_props const&  desire() const;
@@ -40,6 +46,7 @@ struct  action_execution_context
     skeleton_interpolator_look_at  look_at;
     skeleton_interpolator_aim_at  aim_at;
     float_32_bit  time_buffer;
+    std::vector<scene_object_relative_path>  disabled_colliding_with_our_motion_object;
 };
 
 
@@ -125,6 +132,7 @@ struct  agent_action
             bool  is_self_frame;
             std::string  frame_folder;
             vector3  origin;
+            std::string  disable_colliding;
         };
 
         std::shared_ptr<perception_guard_config>  perception_guard;
