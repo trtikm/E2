@@ -797,13 +797,10 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
             ctx().request_relocate_frame(binding().frame_guid_of_motion_object, origin, frame.orientation());
         }
 
-        if (is_ghost_complete())
-        {
-            if (skeleton_parent_frame_guid != binding().frame_guid_of_motion_object)
-                ctx().request_set_parent_frame(binding().frame_guid_of_skeleton, binding().frame_guid_of_motion_object);
-        }
-        else if (skeleton_parent_frame_guid != binding().frame_guid_of_ghost_object)
-            ctx().request_set_parent_frame(binding().frame_guid_of_skeleton, binding().frame_guid_of_ghost_object);
+        ctx().request_set_parent_frame(
+                binding().frame_guid_of_skeleton,
+                is_ghost_complete() ? binding().frame_guid_of_motion_object : binding().frame_guid_of_ghost_object
+                );
     }
 
     if (from_action_ptr == nullptr || from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
