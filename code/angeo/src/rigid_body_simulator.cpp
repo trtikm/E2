@@ -65,7 +65,7 @@ rigid_body_simulator::rigid_body_simulator()
     , m_custom_constraints_cache()
     , m_from_constraints_to_custom_constraint_ids()
     , m_released_custom_constraint_ids()
-    , m_max_generated_custom_constraint_id(0U)
+    , m_max_generated_custom_constraint_id(invalid_custom_constraint_id())
 
     , m_rigid_bodies()
     , m_inverted_inertia_tensors() 
@@ -387,7 +387,7 @@ custom_constraint_id  rigid_body_simulator::gen_fresh_custom_constraint_id()
 
 void  rigid_body_simulator::release_generated_custom_constraint_id(custom_constraint_id const  constraint_id)
 {
-    ASSUMPTION(constraint_id > 0U && constraint_id <= m_max_generated_custom_constraint_id);
+    ASSUMPTION(constraint_id != invalid_custom_constraint_id() && constraint_id <= m_max_generated_custom_constraint_id);
     m_released_custom_constraint_ids.insert(constraint_id);
 }
 
