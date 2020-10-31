@@ -48,6 +48,7 @@ scene_binding::scene_binding(
 
     , folder_guid_of_motion_object(com::invalid_object_guid())
     , frame_guid_of_motion_object(com::invalid_object_guid())
+    , frame_guid_of_motion_object_skeleton_sync(com::invalid_object_guid())
 {
     ASSUMPTION(
             context != nullptr &&
@@ -73,6 +74,13 @@ scene_binding::scene_binding(
             com::invalid_object_guid(),
             origin,
             orientation
+            );
+
+    frame_guid_of_motion_object_skeleton_sync = context->insert_frame(
+            context->insert_folder(folder_guid_of_motion_object, "skeleton_sync", false),
+            com::invalid_object_guid(),
+            vector3_zero(),
+            quaternion_identity()
             );
 
     folder_guid_of_skeleton = context->insert_folder(folder_guid_of_agent, "skeleton", false);

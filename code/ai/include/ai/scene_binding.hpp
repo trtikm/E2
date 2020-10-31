@@ -42,6 +42,7 @@ struct  scene_binding
 
     com::object_guid  folder_guid_of_motion_object;
     com::object_guid  frame_guid_of_motion_object;
+    com::object_guid  frame_guid_of_motion_object_skeleton_sync;
 
 private:
     scene_binding(

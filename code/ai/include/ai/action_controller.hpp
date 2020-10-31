@@ -83,6 +83,9 @@ struct  agent_action
                                                     // involved in the overall derivative.
     };
 
+    enum struct AABB_ALIGNMENT : natural_8_bit { CENTER, X_LO, X_HI, Y_LO, Y_HI, Z_LO, Z_HI };
+    static  AABB_ALIGNMENT  aabb_alignment_from_string(std::string const&  alignment_name);
+
     struct  motion_object_config
     {
         bool  operator==(motion_object_config const&  other) const;
@@ -90,6 +93,7 @@ struct  agent_action
 
         angeo::COLLISION_SHAPE_TYPE  shape_type;
         vector3  aabb_half_size;
+        AABB_ALIGNMENT  aabb_alignment; // Alignment inside AABB 'agent_action::AABB_HALF_SIZE'.
         angeo::COLLISION_MATERIAL_TYPE  collision_material;
         float_32_bit  mass_inverted;
         matrix33  inertia_tensor_inverted;
@@ -108,7 +112,6 @@ struct  agent_action
 
     struct  transition_config
     {
-        enum struct AABB_ALIGNMENT : natural_8_bit { CENTER, X_LO, X_HI, Y_LO, Y_HI, Z_LO, Z_HI };
         enum struct PERCEPTION_KIND : natural_8_bit { SIGHT, TOUCH };
 
         struct  location_constraint_config
@@ -221,8 +224,8 @@ protected:
     bool  USE_GHOST_OBJECT_FOR_SKELETON_LOCATION;
     std::unordered_map<std::string, sensor_config>  SENSORS;
     std::unordered_map<std::string, transition_config>  TRANSITIONS;
-    motion_object_config  MOTION_OBJECT_CONFIG;
-    vector3  MOTION_OBJECT_RELOCATION_OFFSET;
+    motion_object_config  MOTION_OBJECT_CONFIG; // INVARIANT: for each i, MOTION_OBJECT_CONFIG.aabb_half_size(i) <= AABB_HALF_SIZE(i)
+    vector3  AABB_HALF_SIZE; // AABB of the entire agent; it is used for motion object aligment on transition between actions.
 
 private:
     void  load_desire(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
