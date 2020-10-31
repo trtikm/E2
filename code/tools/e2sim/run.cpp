@@ -101,7 +101,12 @@ struct  simulator : public com::simulator
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_G()) != 0UL)
                 render_config().render_grid = !render_config().render_grid;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_F()) != 0UL)
-                render_config().render_frames = !render_config().render_frames;
+            {
+                if (shift)
+                    render_config().render_skeleton_frames = !render_config().render_skeleton_frames;
+                else
+                    render_config().render_frames = !render_config().render_frames;
+            }
         }
         else if (ctrl && !alt)
         {
@@ -145,7 +150,7 @@ struct  simulator : public com::simulator
                 "3. Render\n"
                 "\tALT+B - batches\n"
                 "\tALT+G - grid\n"
-                "\tALT+F - frames\n"
+                "\tALT+F(+SHIFT) - frames(of skeleton bones)\n"
                 "\tALT+W - wireframe\n"
                 "\tALT+R/S/A/L/Y - colliders of rigid bodies/\n"
                 "\t\t\tsensors/agents/fields/ray cast targets\n"

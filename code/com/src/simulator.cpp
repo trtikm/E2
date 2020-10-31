@@ -72,6 +72,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_fps(true)
     , render_grid(true)
     , render_frames(false)
+    , render_skeleton_frames(false)
     , render_text(true)
     , render_in_wireframe(false)
     , render_scene_batches(true)
@@ -678,12 +679,22 @@ void  simulator::render_frames()
     if (!gfx::make_current(cfg.batch_frame, cfg.draw_state, true))
         return;
 
+    std::unordered_set<object_guid>  skeleton_frames;
+    if (!render_config().render_skeleton_frames)
+        for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
+        {
+            std::vector<com::object_guid> const&  bone_frame_guids =
+                    m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it)).get_binding()->frame_guids_of_bones;
+            skeleton_frames.insert(bone_frame_guids.begin(), bone_frame_guids.end());
+        }
+
     gfx::vertex_shader_instanced_data_provider  instanced_data_provider(cfg.batch_frame);
     for (simulation_context::frame_guid_iterator  frame_it = ctx.frames_begin(), frame_end = ctx.frames_end();
          frame_it != frame_end; ++frame_it)
-        instanced_data_provider.insert_from_model_to_camera_matrix(
-                cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(*frame_it)
-                );
+        if (skeleton_frames.count(*frame_it) == 0UL)
+            instanced_data_provider.insert_from_model_to_camera_matrix(
+                    cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(*frame_it)
+                    );
     gfx::render_batch(
         cfg.batch_frame,
         instanced_data_provider,

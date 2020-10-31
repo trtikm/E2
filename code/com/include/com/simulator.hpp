@@ -65,6 +65,7 @@ struct  simulator : public osi::simulator
         bool  render_fps;
         bool  render_grid;
         bool  render_frames;
+        bool  render_skeleton_frames;
         bool  render_text;
         bool  render_in_wireframe;
         bool  render_scene_batches;
