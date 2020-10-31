@@ -12,9 +12,11 @@
 #   include <angeo/collision_shape_id.hpp>
 #   include <angeo/collision_material.hpp>
 #   include <angeo/collision_class.hpp>
+#   include <angeo/custom_constraint_id.hpp>
 #   include <com/object_guid.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <string>
+#   include <array>
 #   include <unordered_map>
 #   include <vector>
 #   include <memory>
@@ -196,14 +198,15 @@ struct  agent_action
     virtual void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info);
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
-    virtual std::unordered_set<com::object_guid>  get_motion_object_collider_guids() const;
+    using  on_custom_folder_erase_func = std::function<void()>;
+    virtual void  get_custom_folders(std::unordered_map<com::object_guid, on_custom_folder_erase_func>&  folders) {}
 
-private:
-    void  load_desire(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
-    void  load_effects(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
-    void  load_motion_object_config(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults_);
-    void  load_sensors(boost::property_tree::ptree const&  ptree);
-    void  load_transitions(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
+protected:
+    void  get_motion_object_relocation_frame(
+            angeo::coordinate_system&  frame,
+            agent_action* const  from_action_ptr,
+            transition_info const&  info
+            ) const;
 
     // CONSTANTS
 
@@ -219,6 +222,14 @@ private:
     std::unordered_map<std::string, sensor_config>  SENSORS;
     std::unordered_map<std::string, transition_config>  TRANSITIONS;
     motion_object_config  MOTION_OBJECT_CONFIG;
+    vector3  MOTION_OBJECT_RELOCATION_OFFSET;
+
+private:
+    void  load_desire(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
+    void  load_effects(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
+    void  load_motion_object_config(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults_);
+    void  load_sensors(boost::property_tree::ptree const&  ptree);
+    void  load_transitions(boost::property_tree::ptree const&  ptree, boost::property_tree::ptree const&  defaults);
 
     // MUTABLE DATA
 
@@ -260,19 +271,44 @@ struct  action_guesture : public  agent_action
 //    void  next_round(float_32_bit const  time_step_in_seconds) override;
 //    angeo::coordinate_system  target;
 //};
-//
-//
-//struct  action_roller : public  agent_action
-//{
-//    explicit  action_roller(
-//            std::string const&  name_,
-//            boost::property_tree::ptree const&  ptree_,
-//            boost::property_tree::ptree const&  defaults_,
-//            action_execution_context_ptr const  context_
-//            );
-//    //void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info) override {}
-//    //void  next_round(float_32_bit const  time_step_in_seconds) override {}
-//};
+
+
+struct  action_roller : public  agent_action
+{
+    struct  roller_object_config
+    {
+        bool  operator==(roller_object_config const&  other) const;
+        bool  operator!=(roller_object_config const&  other) const { return !(*this == other); }
+
+        float_32_bit  roller_radius;
+        float_32_bit  roller_mass_inverted;
+    };
+
+    explicit  action_roller(
+            std::string const&  name_,
+            boost::property_tree::ptree const&  ptree_,
+            boost::property_tree::ptree const&  defaults_,
+            action_execution_context_ptr const  context_
+            );
+    void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info) override;
+    void  next_round(float_32_bit const  time_step_in_seconds) override;
+    void  get_custom_folders(std::unordered_map<com::object_guid, on_custom_folder_erase_func>&  folders) override;
+
+private:
+    void  create_custom_constraint_ids();
+    void  release_custom_constraint_ids();
+    void  insert_joint_between_roller_and_motion_object() const;
+
+    // CONSTANTS
+
+    roller_object_config  ROLLER_CONFIG;
+
+    // MUTABLE DATA
+
+    com::object_guid  m_roller_folder_guid;
+    com::object_guid  m_roller_frame_guid;
+    std::array<angeo::custom_constraint_id, 3>  m_roller_joint_ccids;
+};
 
 
 struct  action_controller

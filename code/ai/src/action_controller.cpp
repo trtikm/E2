@@ -3,6 +3,7 @@
 #include <ai/skeleton_utils.hpp>
 #include <angeo/collide.hpp>
 #include <angeo/linear_segment_curve.hpp>
+#include <angeo/utility.hpp>
 #include <com/simulation_context.hpp>
 #include <utility/std_pair_hash.hpp>
 #include <utility/assumptions.hpp>
@@ -166,6 +167,7 @@ agent_action::agent_action(
     , SENSORS() // loaded below
     , TRANSITIONS() // loaded below
     , MOTION_OBJECT_CONFIG() // loaded below
+    , MOTION_OBJECT_RELOCATION_OFFSET(vector3_zero())
     // MUTABLE DATA
     , m_context(context_)
     , m_start_time(0.0f)
@@ -731,15 +733,11 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
 
     if (from_action_ptr == nullptr)
     {
-        matrix44  W = ctx().frame_world_matrix(binding().frame_guid_of_motion_object);
-        matrix44  F;
-        angeo::from_base_matrix(motion_templates().at(MOTION_TEMPLATE_NAME).reference_frames.at(0), F);
-        vector3  pos;
-        matrix33  rot;
-        decompose_matrix44(W * F, pos, rot);
-        quaternion const  ori = rotation_matrix_to_quaternion(rot);
-        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, pos, ori);
-        ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, pos, ori);
+        angeo::coordinate_system  relocation_frame;
+        get_motion_object_relocation_frame(relocation_frame, from_action_ptr, info);
+        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, relocation_frame);
+        ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, relocation_frame);
+        ctx().request_relocate_frame(binding().frame_guid_of_skeleton, vector3_zero(), quaternion_identity());
     }
 
     {
@@ -749,52 +747,15 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
             (skeleton_parent_frame_guid == binding().frame_guid_of_ghost_object ||
                 skeleton_parent_frame_guid == binding().frame_guid_of_motion_object)
             );
-        m_ghost_object_start_coord_system = ctx().frame_coord_system(skeleton_parent_frame_guid);
+        m_ghost_object_start_coord_system = ctx().frame_coord_system_in_world_space(skeleton_parent_frame_guid);
         ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, m_ghost_object_start_coord_system);
 
         if (from_action_ptr != nullptr && from_action_ptr != this)
         {
-            angeo::coordinate_system const  frame =
-                    skeleton_parent_frame_guid == binding().frame_guid_of_motion_object ?
-                            m_ghost_object_start_coord_system :
-                            ctx().frame_coord_system(binding().frame_guid_of_motion_object);
-
-            vector3  origin;
-
-            std::shared_ptr<transition_config::motion_object_position_config> const  pos_cfg =
-                    from_action_ptr->TRANSITIONS.at(NAME).motion_object_position;
-            if (pos_cfg != nullptr)
-            {
-                com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
-                        pos_cfg->is_self_frame ? binding().folder_guid_of_agent : info.other_entiry_folder_guid,
-                        pos_cfg->frame_folder,
-                        ctx()
-                        );
-                origin = transform_point(pos_cfg->origin, ctx().frame_world_matrix(frame_guid));
-            }
-            else if (from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
-            {
-                natural_32_bit  coord_idx;
-                float_32_bit  sign;
-                switch (from_action_ptr->TRANSITIONS.at(NAME).aabb_alignment)
-                {
-                case transition_config::AABB_ALIGNMENT::CENTER: coord_idx = 0U; sign = 0.0f; break;
-                case transition_config::AABB_ALIGNMENT::X_LO: coord_idx = 0U; sign = -1.0f; break;
-                case transition_config::AABB_ALIGNMENT::X_HI: coord_idx = 0U; sign = 1.0f; break;
-                case transition_config::AABB_ALIGNMENT::Y_LO: coord_idx = 1U; sign = -1.0f; break;
-                case transition_config::AABB_ALIGNMENT::Y_HI: coord_idx = 1U; sign = 1.0f; break;
-                case transition_config::AABB_ALIGNMENT::Z_LO: coord_idx = 2U; sign = -1.0f; break;
-                case transition_config::AABB_ALIGNMENT::Z_HI: coord_idx = 2U; sign = 1.0f; break;
-                default: { UNREACHABLE(); } break;
-                }
-
-                float_32_bit const  delta = from_action_ptr->MOTION_OBJECT_CONFIG.aabb_half_size(coord_idx) -
-                                            MOTION_OBJECT_CONFIG.aabb_half_size(coord_idx);
-            
-                origin = frame.origin() + (sign * delta) * vector3_unit(coord_idx);
-            }
-
-            ctx().request_relocate_frame(binding().frame_guid_of_motion_object, origin, frame.orientation());
+            angeo::coordinate_system  relocation_frame;
+            get_motion_object_relocation_frame(relocation_frame, from_action_ptr, info);
+            ctx().request_relocate_frame(binding().frame_guid_of_motion_object, relocation_frame.origin(), relocation_frame.orientation());
+            ctx().request_relocate_frame(binding().frame_guid_of_skeleton, vector3_zero(), quaternion_identity());
         }
 
         ctx().request_set_parent_frame(
@@ -821,8 +782,8 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
 
             linear_velocity = ctx().linear_velocity_of_rigid_body(rigid_body_guid);
             angular_velocity = ctx().angular_velocity_of_rigid_body(rigid_body_guid);
-            linear_acceleration = ctx().linear_acceleration_of_rigid_body(rigid_body_guid);
-            angular_acceleration = ctx().angular_acceleration_of_rigid_body(rigid_body_guid);
+            linear_acceleration = ctx().initial_linear_acceleration_of_rigid_body(rigid_body_guid);
+            angular_acceleration = ctx().initial_angular_acceleration_of_rigid_body(rigid_body_guid);
 
             ctx().request_erase_collider(collider_guid);
             ctx().request_erase_rigid_body(rigid_body_guid);
@@ -856,7 +817,7 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
                     m_context->disabled_colliding_with_our_motion_object.back();
             if (ctx().is_valid_collider_guid(ctx().from_relative_path(rel_path.base_folder_guid, rel_path.relative_path)))
                 ctx().request_enable_colliding(
-                            binding().folder_guid_of_agent, "motion_object/" + com::to_string(com::OBJECT_KIND::COLLIDER),
+                            binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
                             rel_path.base_folder_guid, rel_path.relative_path,
                             true
                             );
@@ -871,7 +832,7 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
             action_execution_context::scene_object_relative_path const  rel_path { info.other_entiry_folder_guid, pos_cfg->disable_colliding };
             m_context->disabled_colliding_with_our_motion_object.push_back(rel_path);
             ctx().request_enable_colliding(
-                    binding().folder_guid_of_agent, "motion_object/" + com::to_string(com::OBJECT_KIND::COLLIDER),
+                    binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
                     rel_path.base_folder_guid, rel_path.relative_path,
                     false
                     );
@@ -911,6 +872,69 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
 }
 
 
+void  agent_action::get_motion_object_relocation_frame(
+        angeo::coordinate_system&  relocated_frame,
+        agent_action* const  from_action_ptr,
+        transition_info const&  info
+        ) const
+{
+    if (from_action_ptr == nullptr)
+    {
+        matrix44  W = ctx().frame_world_matrix(binding().frame_guid_of_motion_object);
+        matrix44  F;
+        angeo::from_base_matrix(motion_templates().at(MOTION_TEMPLATE_NAME).reference_frames.at(0), F);
+        vector3  pos;
+        matrix33  rot;
+        decompose_matrix44(W * F, pos, rot);
+        relocated_frame.set_origin(pos + MOTION_OBJECT_RELOCATION_OFFSET);
+        relocated_frame.set_orientation(rotation_matrix_to_quaternion(rot));
+    }
+    else
+    {
+        relocated_frame = ctx().parent_frame(binding().frame_guid_of_skeleton) == binding().frame_guid_of_motion_object ?
+                                m_ghost_object_start_coord_system :
+                                ctx().frame_coord_system(binding().frame_guid_of_motion_object);
+
+        if (from_action_ptr != this)
+        {
+            vector3 const  offset = MOTION_OBJECT_RELOCATION_OFFSET - from_action_ptr->MOTION_OBJECT_RELOCATION_OFFSET;
+            std::shared_ptr<transition_config::motion_object_position_config> const  pos_cfg =
+                    from_action_ptr->TRANSITIONS.at(NAME).motion_object_position;
+            if (pos_cfg != nullptr)
+            {
+                com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
+                        pos_cfg->is_self_frame ? binding().folder_guid_of_agent : info.other_entiry_folder_guid,
+                        pos_cfg->frame_folder,
+                        ctx()
+                        );
+                relocated_frame.set_origin(transform_point(pos_cfg->origin, ctx().frame_world_matrix(frame_guid)) + offset);
+            }
+            else if (from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
+            {
+                natural_32_bit  coord_idx;
+                float_32_bit  sign;
+                switch (from_action_ptr->TRANSITIONS.at(NAME).aabb_alignment)
+                {
+                case transition_config::AABB_ALIGNMENT::CENTER: coord_idx = 0U; sign = 0.0f; break;
+                case transition_config::AABB_ALIGNMENT::X_LO: coord_idx = 0U; sign = -1.0f; break;
+                case transition_config::AABB_ALIGNMENT::X_HI: coord_idx = 0U; sign = 1.0f; break;
+                case transition_config::AABB_ALIGNMENT::Y_LO: coord_idx = 1U; sign = -1.0f; break;
+                case transition_config::AABB_ALIGNMENT::Y_HI: coord_idx = 1U; sign = 1.0f; break;
+                case transition_config::AABB_ALIGNMENT::Z_LO: coord_idx = 2U; sign = -1.0f; break;
+                case transition_config::AABB_ALIGNMENT::Z_HI: coord_idx = 2U; sign = 1.0f; break;
+                default: { UNREACHABLE(); } break;
+                }
+
+                float_32_bit const  delta = from_action_ptr->MOTION_OBJECT_CONFIG.aabb_half_size(coord_idx) -
+                                            MOTION_OBJECT_CONFIG.aabb_half_size(coord_idx);
+            
+                relocated_frame.set_origin(relocated_frame.origin() + offset + (sign * delta) * vector3_unit(coord_idx));
+            }
+        }
+    }
+}
+
+
 void  agent_action::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
@@ -924,14 +948,6 @@ void  agent_action::next_round(float_32_bit const  time_step_in_seconds)
     if (IS_AIM_AT_ENABLED)
         update_aim_at(time_step_in_seconds);
     m_context->animate.commit(motion_templates(), binding());
-}
-
-
-std::unordered_set<com::object_guid>  agent_action::get_motion_object_collider_guids() const
-{
-    return {
-        ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::COLLIDER))
-        };
 }
 
 
@@ -976,6 +992,246 @@ void  action_guesture::next_round(float_32_bit const  time_step_in_seconds)
 //}
 
 
+action_roller::action_roller(
+        std::string const&  name_,
+        boost::property_tree::ptree const&  ptree_,
+        boost::property_tree::ptree const&  defaults_,
+        action_execution_context_ptr const  context_
+        )
+    : agent_action(name_, ptree_.find("agent_action")->second, defaults_, context_)
+    , ROLLER_CONFIG() // loaded below
+    , m_roller_folder_guid(com::invalid_object_guid())
+    , m_roller_frame_guid(com::invalid_object_guid())
+    , m_roller_joint_ccids{
+            angeo::invalid_custom_constraint_id(),
+            angeo::invalid_custom_constraint_id(),
+            angeo::invalid_custom_constraint_id()
+            }
+{
+    ASSUMPTION(max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) == MOTION_OBJECT_CONFIG.aabb_half_size(2));
+
+    float_32_bit const  total = 2.0f * MOTION_OBJECT_CONFIG.aabb_half_size(2);
+    float_32_bit const  part = min_coord(MOTION_OBJECT_CONFIG.aabb_half_size);
+    ASSUMPTION(part > 0.0001f && total - part > 0.0001f);
+    float_32_bit const  fraction = part / total + 0.5f * (1.0f - part / total) * part / (total - part);
+    ASSUMPTION(fraction > 0.0001f && fraction < 0.9999f);
+    float_32_bit const  mass = MOTION_OBJECT_CONFIG.mass_inverted < 0.000001f || MOTION_OBJECT_CONFIG.mass_inverted > 1000000.0f ?
+                                    65.0f : 1.0f / MOTION_OBJECT_CONFIG.mass_inverted;
+
+    ROLLER_CONFIG.roller_radius = part;
+    ROLLER_CONFIG.roller_mass_inverted = 1.0f / (mass * fraction);
+
+    MOTION_OBJECT_CONFIG.aabb_half_size(2) -= 0.5f * part;
+    ASSUMPTION(
+            MOTION_OBJECT_CONFIG.aabb_half_size(2) > 0.0001f &&
+            MOTION_OBJECT_CONFIG.aabb_half_size(2) > 2.0f * ROLLER_CONFIG.roller_radius
+            );
+    MOTION_OBJECT_CONFIG.mass_inverted = 1.0f / (mass * (1.0f - fraction));
+    MOTION_OBJECT_CONFIG.inertia_tensor_inverted = matrix33_zero();
+    MOTION_OBJECT_CONFIG.is_moveable = true;
+
+    MOTION_OBJECT_RELOCATION_OFFSET = ROLLER_CONFIG.roller_radius * vector3_unit_z();
+}
+
+
+bool  action_roller::roller_object_config::operator==(roller_object_config const&  other) const
+{
+    return  are_equal(roller_radius, other.roller_radius, 0.001f) &&
+            are_equal(roller_mass_inverted, other.roller_mass_inverted, 0.001f);
+}
+
+
+void  action_roller::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
+{
+    agent_action::on_transition(from_action_ptr, info);
+
+    if (from_action_ptr == this)
+        return;
+
+    action_roller* const  from_roller_ptr = from_action_ptr == nullptr ? nullptr : dynamic_cast<action_roller*>(from_action_ptr);
+
+    angeo::coordinate_system  motion_object_frame;
+    get_motion_object_relocation_frame(motion_object_frame, from_action_ptr, info);
+
+    if (from_roller_ptr == nullptr)
+    {
+        m_roller_folder_guid = ctx().insert_folder(binding().folder_guid_of_agent, "roller", false);
+        m_roller_frame_guid = ctx().insert_frame(
+                m_roller_folder_guid,
+                com::invalid_object_guid(),
+                motion_object_frame.origin() - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(motion_object_frame),
+                motion_object_frame.orientation()
+                );
+        ctx().request_insert_rigid_body(
+                m_roller_folder_guid,
+                true,
+                vector3_zero(),
+                vector3_zero(),
+                vector3_zero(),
+                vector3_zero(),
+                ROLLER_CONFIG.roller_mass_inverted,
+                matrix33_zero()
+                );
+        ctx().request_insert_collider_sphere(
+                m_roller_folder_guid,
+                com::to_string(com::OBJECT_KIND::COLLIDER),
+                ROLLER_CONFIG.roller_radius,
+                MOTION_OBJECT_CONFIG.collision_material,
+                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
+                );
+        ctx().request_enable_colliding(
+                binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
+                m_roller_folder_guid, com::to_string(com::OBJECT_KIND::COLLIDER),
+                false
+                );
+        create_custom_constraint_ids();
+
+        return;
+    }
+
+    m_roller_folder_guid = from_roller_ptr->m_roller_folder_guid;
+    m_roller_frame_guid = from_roller_ptr->m_roller_frame_guid;
+
+    if (get_motion_object_config() != from_roller_ptr->get_motion_object_config() || ROLLER_CONFIG != from_roller_ptr->ROLLER_CONFIG)
+    {
+        release_custom_constraint_ids();
+
+        vector3  linear_velocity, angular_velocity, linear_acceleration, angular_acceleration;
+        {
+            com::object_guid const  rigid_body_guid =
+                    ctx().folder_content(m_roller_folder_guid).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY));
+            com::object_guid const  collider_guid =
+                    ctx().folder_content(m_roller_folder_guid).content.at(com::to_string(com::OBJECT_KIND::COLLIDER));
+
+            ASSUMPTION(ctx().is_valid_rigid_body_guid(rigid_body_guid) && ctx().is_valid_collider_guid(collider_guid));
+
+            linear_velocity = ctx().linear_velocity_of_rigid_body(rigid_body_guid);
+            angular_velocity = ctx().angular_velocity_of_rigid_body(rigid_body_guid);
+            linear_acceleration = ctx().initial_linear_acceleration_of_rigid_body(rigid_body_guid);
+            angular_acceleration = ctx().initial_angular_acceleration_of_rigid_body(rigid_body_guid);
+
+            ctx().request_erase_collider(collider_guid);
+            ctx().request_erase_rigid_body(rigid_body_guid);
+        }
+
+        ctx().request_insert_rigid_body(
+                m_roller_folder_guid,
+                true,
+                linear_velocity,
+                angular_velocity,
+                linear_acceleration,
+                angular_acceleration,
+                ROLLER_CONFIG.roller_mass_inverted,
+                matrix33_zero()
+                );
+        ctx().request_insert_collider_sphere(
+                m_roller_folder_guid,
+                com::to_string(com::OBJECT_KIND::COLLIDER),
+                ROLLER_CONFIG.roller_radius,
+                MOTION_OBJECT_CONFIG.collision_material,
+                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
+                );
+        ctx().request_enable_colliding(
+                binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
+                m_roller_folder_guid, com::to_string(com::OBJECT_KIND::COLLIDER),
+                false
+                );
+
+        INVARIANT([this]() -> bool {
+            for (angeo::custom_constraint_id const  ccid : m_roller_joint_ccids)
+                if (ccid == angeo::invalid_custom_constraint_id())
+                    return false;
+            return true;
+            }());
+    }
+
+    ctx().request_relocate_frame(
+            m_roller_frame_guid,
+            motion_object_frame.origin() - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(motion_object_frame),
+            motion_object_frame.orientation()
+            );
+}
+
+
+void  action_roller::next_round(float_32_bit const  time_step_in_seconds)
+{
+    agent_action::next_round(time_step_in_seconds);
+    insert_joint_between_roller_and_motion_object();
+    // TODO
+}
+
+
+void  action_roller::get_custom_folders(std::unordered_map<com::object_guid, on_custom_folder_erase_func>&  folders)
+{
+    folders.insert({ m_roller_folder_guid, [this](){ release_custom_constraint_ids(); }});
+}
+
+
+void  action_roller::create_custom_constraint_ids()
+{
+    for (angeo::custom_constraint_id&  ccid : m_roller_joint_ccids)
+    {
+        INVARIANT(ccid == angeo::invalid_custom_constraint_id());
+        ccid = ctx().acquire_fresh_custom_constraint_id_from_physics();
+    }
+}
+
+
+void  action_roller::release_custom_constraint_ids()
+{
+    for (angeo::custom_constraint_id&  ccid : m_roller_joint_ccids)
+    {
+        INVARIANT(ccid != angeo::invalid_custom_constraint_id());
+        ctx().release_acquired_custom_constraint_id_back_to_physics(ccid);
+        ccid = angeo::invalid_custom_constraint_id();
+    }
+}
+
+
+void  action_roller::insert_joint_between_roller_and_motion_object() const
+{
+    angeo::coordinate_system_explicit const&  motion_object_frame =
+            ctx().frame_explicit_coord_system_in_world_space(binding().frame_guid_of_motion_object);
+    vector3 const  roller_joint = ctx().frame_coord_system_in_world_space(m_roller_frame_guid).origin();
+    vector3 const  body_joint =
+            motion_object_frame.origin() - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * motion_object_frame.basis_vector_z();
+    vector3 const  joint_delta = body_joint - roller_joint;
+    vector3 const  joint = roller_joint + 0.5f * joint_delta;
+    float_32_bit const  joint_separation_distance = length(joint_delta);
+    vector3  unit_constraint_vector[3];
+    {
+        if (joint_separation_distance < 0.0001f)
+            unit_constraint_vector[0] = vector3_unit_z();
+        else
+            unit_constraint_vector[0] = (1.0f / joint_separation_distance) * joint_delta;
+        angeo::compute_tangent_space_of_unit_vector(
+                unit_constraint_vector[0],
+                unit_constraint_vector[1],
+                unit_constraint_vector[2]
+                );
+    }
+    float_32_bit const  bias[3] {
+            10.0f * joint_separation_distance,
+            0.0f,
+            0.0f
+            };
+    for (natural_32_bit i = 0U; i != 3U; ++i)
+        ctx().request_early_insertion_of_custom_constraint_to_physics(
+                m_roller_joint_ccids[i],
+                ctx().folder_content(m_roller_folder_guid).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
+                unit_constraint_vector[i],
+                cross_product(joint - roller_joint, unit_constraint_vector[i]),
+                ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
+                -unit_constraint_vector[i],
+                -cross_product(joint - motion_object_frame.origin(), unit_constraint_vector[i]),
+                bias[i],
+                -std::numeric_limits<float_32_bit>::max(),
+                std::numeric_limits<float_32_bit>::max(),
+                0.0f
+                );
+}
+
+
 action_controller::action_controller(agent_config const  config, agent*  const  myself)
     : m_context(std::make_shared<action_execution_context>(myself))
     , m_current_action(nullptr) // loaded below
@@ -995,6 +1251,9 @@ action_controller::action_controller(agent_config const  config, agent*  const  
         else if (it->first == "action_guesture")
             m_available_actions[name_and_ptree.first] =
                     std::make_shared<action_guesture>(name_and_ptree.first, it->second, config.defaults(), m_context);        
+        else if (it->first == "action_roller")
+            m_available_actions[name_and_ptree.first] =
+                    std::make_shared<action_roller>(name_and_ptree.first, it->second, config.defaults(), m_context);        
         else { UNREACHABLE(); }
     }
     ASSUMPTION(
@@ -1067,6 +1326,19 @@ void  action_controller::process_action_transitions()
     if (m_current_action != best_action || m_current_action->is_complete())
     {
         best_action->on_transition(&*m_current_action, best_info);
+        if (m_current_action != best_action)
+        {
+            std::unordered_map<com::object_guid, agent_action::on_custom_folder_erase_func>  old_custom_folders, new_custom_folders;
+            m_current_action->get_custom_folders(old_custom_folders);
+            best_action->get_custom_folders(new_custom_folders);
+            for (auto const&  guid_and_func : old_custom_folders)
+                if (new_custom_folders.count(guid_and_func.first) == 0UL)
+                {
+                    if (guid_and_func.second.operator bool()) // Do we have a valid function to call?
+                        guid_and_func.second(); // Erase/release data related to the erased folder 'guid_and_func.first'.
+                    m_context->ctx().request_erase_non_root_folder(guid_and_func.first);
+                }
+        }
         m_current_action = best_action;
     }
 }
