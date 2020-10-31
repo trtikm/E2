@@ -428,6 +428,8 @@ struct  simulation_context
     vector3 const&  angular_velocity_of_rigid_body(object_guid const  rigid_body_guid) const;
     vector3 const&  linear_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const;
     vector3 const&  angular_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const;
+    vector3  initial_linear_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const;
+    vector3  initial_angular_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const;
     angeo::custom_constraint_id  acquire_fresh_custom_constraint_id_from_physics() const;
     void  release_acquired_custom_constraint_id_back_to_physics(angeo::custom_constraint_id const  ccid) const;
     vector3  compute_velocity_of_point_of_rigid_body(object_guid const  rigid_body_guid, vector3 const&  point_in_world_space) const;

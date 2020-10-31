@@ -66,6 +66,10 @@ struct  rigid_body_simulator
 
     vector3 const&  get_linear_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear; }
     vector3 const&  get_angular_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular; }
+    vector3  get_initial_linear_acceleration(rigid_body_id const  id) const { return get_linear_acceleration(id) - compute_linear_acceleration_from_sources(id); }
+    vector3  get_initial_angular_acceleration(rigid_body_id const  id) const { return get_angular_acceleration(id) - compute_angular_acceleration_from_sources(id); }
+    vector3  compute_linear_acceleration_from_sources(rigid_body_id const  id) const;
+    vector3  compute_angular_acceleration_from_sources(rigid_body_id const  id) const;
     void  set_linear_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration);
     void  set_angular_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration);
     void  remove_linear_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid);

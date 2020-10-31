@@ -166,6 +166,28 @@ void  rigid_body_simulator::set_orientation(rigid_body_id const  id, quaternion 
 }
 
 
+vector3  rigid_body_simulator::compute_linear_acceleration_from_sources(rigid_body_id const  id) const
+{
+    vector3  accel = vector3_zero();
+    auto const  accels_it = m_linear_accelerations_from_sources.find(id);
+    if (accels_it != m_linear_accelerations_from_sources.end())
+        for (auto const&  guid_and_accel : accels_it->second)
+            accel += guid_and_accel.second;
+    return accel;
+}
+
+
+vector3  rigid_body_simulator::compute_angular_acceleration_from_sources(rigid_body_id const  id) const
+{
+    vector3  accel = vector3_zero();
+    auto const  accels_it = m_angular_accelerations_from_sources.find(id);
+    if (accels_it != m_angular_accelerations_from_sources.end())
+        for (auto const&  guid_and_accel : accels_it->second)
+            accel += guid_and_accel.second;
+    return accel;
+}
+
+
 void  rigid_body_simulator::set_linear_acceleration_from_source(
         rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration
         )

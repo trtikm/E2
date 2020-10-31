@@ -1652,6 +1652,20 @@ vector3 const&  simulation_context::angular_acceleration_of_rigid_body(object_gu
 }
 
 
+vector3  simulation_context::initial_linear_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    return m_rigid_body_simulator_ptr->get_initial_linear_acceleration(m_rigid_bodies.at(rigid_body_guid.index).id);
+}
+
+
+vector3  simulation_context::initial_angular_acceleration_of_rigid_body(object_guid const  rigid_body_guid) const
+{
+    ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
+    return m_rigid_body_simulator_ptr->get_initial_angular_acceleration(m_rigid_bodies.at(rigid_body_guid.index).id);
+}
+
+
 angeo::custom_constraint_id  simulation_context::acquire_fresh_custom_constraint_id_from_physics() const
 {
     return m_rigid_body_simulator_ptr->gen_fresh_custom_constraint_id();
