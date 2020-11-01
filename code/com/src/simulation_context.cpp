@@ -101,7 +101,9 @@ simulation_context::simulation_context(
     , m_requests_insert_rigid_body()
     , m_requests_erase_rigid_body()
     , m_requests_set_linear_velocity()
+    , m_requests_set_linear_velocity_by_path()
     , m_requests_set_angular_velocity()
+    , m_requests_set_angular_velocity_by_path()
     , m_requests_set_linear_acceleration_from_source()
     , m_requests_set_angular_acceleration_from_source()
     , m_requests_del_linear_acceleration_from_source()
@@ -1800,10 +1802,28 @@ void  simulation_context::request_set_rigid_body_linear_velocity(object_guid con
 }
 
 
+void  simulation_context::request_set_rigid_body_linear_velocity(
+        object_guid const  base_folder_guid, std::string const&  relative_path_to_rigid_body, vector3 const&  velocity
+        ) const
+{
+    m_requests_set_linear_velocity_by_path.push_back({ base_folder_guid, relative_path_to_rigid_body, velocity });
+    m_pending_requests.push_back(REQUEST_SET_LINEAR_VELOCITY_BY_PATH);
+}
+
+
 void  simulation_context::request_set_rigid_body_angular_velocity(object_guid const  rigid_body_guid,  vector3 const&  velocity) const
 {
     m_requests_set_angular_velocity.push_back({ rigid_body_guid, velocity });
     m_pending_requests.push_back(REQUEST_SET_ANGULAR_VELOCITY);
+}
+
+
+void  simulation_context::request_set_rigid_body_angular_velocity(
+        object_guid const  base_folder_guid, std::string const&  relative_path_to_rigid_body,  vector3 const&  velocity
+        ) const
+{
+    m_requests_set_angular_velocity_by_path.push_back({ base_folder_guid, relative_path_to_rigid_body, velocity });
+    m_pending_requests.push_back(REQUEST_SET_ANGULAR_VELOCITY_BY_PATH);
 }
 
 
@@ -3064,9 +3084,19 @@ void  simulation_context::process_pending_requests()
             auto  cursor = make_request_cursor_to(m_requests_set_linear_velocity);
             set_rigid_body_linear_velocity(cursor->rb_guid, cursor->velocity);
             } break;
+        case REQUEST_SET_LINEAR_VELOCITY_BY_PATH: {
+            auto  cursor = make_request_cursor_to(m_requests_set_linear_velocity_by_path);
+            set_rigid_body_linear_velocity(from_relative_path(cursor->base_folder_guid, cursor->relative_path_to_rigid_body),
+                                           cursor->velocity);
+            } break;
         case REQUEST_SET_ANGULAR_VELOCITY: {
             auto  cursor = make_request_cursor_to(m_requests_set_angular_velocity);
             set_rigid_body_angular_velocity(cursor->rb_guid, cursor->velocity);
+            } break;
+        case REQUEST_SET_ANGULAR_VELOCITY_BY_PATH: {
+            auto  cursor = make_request_cursor_to(m_requests_set_angular_velocity_by_path);
+            set_rigid_body_angular_velocity(from_relative_path(cursor->base_folder_guid, cursor->relative_path_to_rigid_body),
+                                            cursor->velocity);
             } break;
         case REQUEST_SET_LINEAR_ACCEL: {
             auto  cursor = make_request_cursor_to(m_requests_set_linear_acceleration_from_source);
@@ -3117,7 +3147,9 @@ void  simulation_context::clear_pending_requests()
     m_requests_insert_rigid_body.clear();
     m_requests_erase_rigid_body.clear();
     m_requests_set_linear_velocity.clear();
+    m_requests_set_linear_velocity_by_path.clear();
     m_requests_set_angular_velocity.clear();
+    m_requests_set_angular_velocity_by_path.clear();
     m_requests_set_linear_acceleration_from_source.clear();
     m_requests_set_angular_acceleration_from_source.clear();
     m_requests_del_linear_acceleration_from_source.clear();

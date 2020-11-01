@@ -455,7 +455,11 @@ struct  simulation_context
             ) const;
     void  request_erase_rigid_body(object_guid const  rigid_body_guid) const;
     void  request_set_rigid_body_linear_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity) const;
+    void  request_set_rigid_body_linear_velocity(object_guid const  base_folder_guid, std::string const&  relative_path_to_rigid_body,
+                                                 vector3 const&  velocity) const;
     void  request_set_rigid_body_angular_velocity(object_guid const  rigid_body_guid,  vector3 const&  velocity) const;
+    void  request_set_rigid_body_angular_velocity(object_guid const  base_folder_guid, std::string const&  relative_path_to_rigid_body,
+                                                  vector3 const&  velocity) const;
     void  request_set_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
                                                                  vector3 const&  acceleration) const;
     void  request_set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
@@ -866,8 +870,8 @@ private:
 
     enum REQUEST_EARLY_KIND
     {
-        REQUEST_INSERT_CUSTOM_CONSTRAINT     = 0,
-        REQUEST_INSERT_INSTANT_CONSTRAINT    = 1,
+        REQUEST_INSERT_CUSTOM_CONSTRAINT,
+        REQUEST_INSERT_INSTANT_CONSTRAINT,
     };
 
     struct request_data_insertion_of_custom_constraint {
@@ -897,30 +901,32 @@ private:
 
     enum REQUEST_KIND
     {
-        REQUEST_ERASE_FOLDER                        = 0,
-        REQUEST_ERASE_FRAME                         = 1,
-        REQUEST_RELOCATE_FRAME                      = 2,
-        REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT   = 3,
-        REQUEST_SET_PARENT_FRAME                    = 4,
-        REQUEST_ERASE_BATCH                         = 5,
-        REQUEST_ENABLE_COLLIDER                     = 6,
-        REQUEST_ENABLE_COLLIDING                    = 7,
-        REQUEST_ENABLE_COLLIDING_BY_PATH            = 8,
-        REQUEST_INSERT_COLLIDER_BOX                 = 9,
-        REQUEST_INSERT_COLLIDER_CAPSULE             = 10,
-        REQUEST_INSERT_COLLIDER_SPHERE              = 11,
-        REQUEST_ERASE_COLLIDER                      = 12,
-        REQUEST_INSERT_RIGID_BODY                   = 13,
-        REQUEST_ERASE_RIGID_BODY                    = 14,
-        REQUEST_SET_LINEAR_VELOCITY                 = 15,
-        REQUEST_SET_ANGULAR_VELOCITY                = 16,
-        REQUEST_SET_LINEAR_ACCEL                    = 17,
-        REQUEST_SET_ANGULAR_ACCEL                   = 18,
-        REQUEST_DEL_LINEAR_ACCEL                    = 19,
-        REQUEST_DEL_ANGULAR_ACCEL                   = 20,
-        REQUEST_ERASE_TIMER                         = 21,
-        REQUEST_ERASE_SENSOR                        = 22,
-        REQUEST_ERASE_AGENT                         = 23,
+        REQUEST_ERASE_FOLDER,
+        REQUEST_ERASE_FRAME,
+        REQUEST_RELOCATE_FRAME,
+        REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT,
+        REQUEST_SET_PARENT_FRAME,
+        REQUEST_ERASE_BATCH,
+        REQUEST_ENABLE_COLLIDER,
+        REQUEST_ENABLE_COLLIDING,
+        REQUEST_ENABLE_COLLIDING_BY_PATH,
+        REQUEST_INSERT_COLLIDER_BOX,
+        REQUEST_INSERT_COLLIDER_CAPSULE,
+        REQUEST_INSERT_COLLIDER_SPHERE,
+        REQUEST_ERASE_COLLIDER,
+        REQUEST_INSERT_RIGID_BODY,
+        REQUEST_ERASE_RIGID_BODY,
+        REQUEST_SET_LINEAR_VELOCITY,
+        REQUEST_SET_LINEAR_VELOCITY_BY_PATH,
+        REQUEST_SET_ANGULAR_VELOCITY,
+        REQUEST_SET_ANGULAR_VELOCITY_BY_PATH,
+        REQUEST_SET_LINEAR_ACCEL,
+        REQUEST_SET_ANGULAR_ACCEL,
+        REQUEST_DEL_LINEAR_ACCEL,
+        REQUEST_DEL_ANGULAR_ACCEL,
+        REQUEST_ERASE_TIMER,
+        REQUEST_ERASE_SENSOR,
+        REQUEST_ERASE_AGENT,
     };
 
     struct  request_data_relocate_frame { object_guid  frame_guid; vector3  position; quaternion  orientation; };
@@ -933,6 +939,10 @@ private:
                 bool  state;
                 };
     struct  request_data_set_velocity { object_guid  rb_guid; vector3  velocity; };
+    struct  request_data_set_velocity_by_path {
+                object_guid  base_folder_guid; std::string  relative_path_to_rigid_body;
+                vector3  velocity;
+                };
     struct  request_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
     struct  request_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
     struct  request_data_insert_collider_base
@@ -977,7 +987,9 @@ private:
     mutable std::list<request_data_insert_rigid_body>  m_requests_insert_rigid_body;
     mutable std::list<object_guid>  m_requests_erase_rigid_body;
     mutable std::list<request_data_set_velocity>  m_requests_set_linear_velocity;
+    mutable std::list<request_data_set_velocity_by_path>  m_requests_set_linear_velocity_by_path;
     mutable std::list<request_data_set_velocity>  m_requests_set_angular_velocity;
+    mutable std::list<request_data_set_velocity_by_path>  m_requests_set_angular_velocity_by_path;
     mutable std::list<request_data_set_acceleration_from_source>  m_requests_set_linear_acceleration_from_source;
     mutable std::list<request_data_set_acceleration_from_source>  m_requests_set_angular_acceleration_from_source;
     mutable std::list<request_data_del_acceleration_from_source>  m_requests_del_linear_acceleration_from_source;
