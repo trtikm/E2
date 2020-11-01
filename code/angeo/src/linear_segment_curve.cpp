@@ -43,4 +43,14 @@ void  linear_segment_curve::sort()
 }
 
 
+void  load(linear_segment_curve&  curve, boost::property_tree::ptree const&  ptree)
+{
+    curve.points.clear();
+    curve.points.reserve(ptree.size());
+    for (boost::property_tree::ptree::value_type const&  void_and_data : ptree)
+        curve.points.push_back({ void_and_data.second.get<float_32_bit>("x") , void_and_data.second.get<float_32_bit>("y") });
+    curve.sort();
+}
+
+
 }
