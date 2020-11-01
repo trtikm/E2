@@ -4,7 +4,6 @@
 #   include <angeo/coordinate_system.hpp>
 #   include <angeo/tensor_math.hpp>
 #	include <angeo/skeleton_kinematics.hpp>
-#   include <angeo/linear_segment_curve.hpp>
 #   include <gfx/keyframe.hpp>
 #   include <gfx/modelspace.hpp>
 #   include <utility/async_resource_load.hpp>
