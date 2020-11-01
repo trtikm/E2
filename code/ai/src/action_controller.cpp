@@ -1003,8 +1003,6 @@ action_guesture::action_guesture(
 void  action_guesture::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
 {
     agent_action::on_transition(from_action_ptr, info);
-
-    // TODO
 }
 
 
@@ -1012,7 +1010,10 @@ void  action_guesture::next_round(float_32_bit const  time_step_in_seconds)
 {
     agent_action::next_round(time_step_in_seconds);
 
-    // TODO
+    com::object_guid const  rigid_body_guid =
+            ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY));
+    ctx().request_set_rigid_body_linear_velocity(rigid_body_guid, vector3_zero());
+    ctx().request_set_rigid_body_angular_velocity(rigid_body_guid, vector3_zero());
 }
 
 
@@ -1045,6 +1046,8 @@ action_roller::action_roller(
             angeo::invalid_custom_constraint_id(),
             angeo::invalid_custom_constraint_id()
             }
+    , m_desire_move_forward_to_linear_speed() // loaded below
+    , m_desire_move_turn_ccw_to_angular_speed() // loaded below
 {
     ASSUMPTION(max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) == MOTION_OBJECT_CONFIG.aabb_half_size(2));
 
@@ -1067,6 +1070,9 @@ action_roller::action_roller(
     MOTION_OBJECT_CONFIG.mass_inverted = 1.0f / (mass * (1.0f - fraction));
     MOTION_OBJECT_CONFIG.inertia_tensor_inverted = matrix33_zero();
     MOTION_OBJECT_CONFIG.is_moveable = true;
+
+    angeo::load(m_desire_move_forward_to_linear_speed, ptree_.get_child("desire_move_forward_to_linear_speed"));
+    angeo::load(m_desire_move_turn_ccw_to_angular_speed, ptree_.get_child("desire_move_turn_ccw_to_angular_speed"));
 }
 
 
@@ -1079,6 +1085,8 @@ bool  action_roller::roller_object_config::operator==(roller_object_config const
 
 void  action_roller::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
 {
+    TMPROF_BLOCK();
+
     agent_action::on_transition(from_action_ptr, info);
 
     if (from_action_ptr == this)
@@ -1198,7 +1206,22 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
 void  action_roller::next_round(float_32_bit const  time_step_in_seconds)
 {
     agent_action::next_round(time_step_in_seconds);
+
     insert_joint_between_roller_and_motion_object();
+
+    angeo::coordinate_system_explicit const&  motion_object_frame =
+            ctx().frame_explicit_coord_system_in_world_space(binding().frame_guid_of_motion_object);
+
+    ctx().request_set_rigid_body_angular_velocity(
+            ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
+            m_desire_move_turn_ccw_to_angular_speed(desire().move.turn_ccw) * motion_object_frame.basis_vector_z()
+            );
+    ctx().request_set_rigid_body_angular_velocity(
+            ctx().folder_content(m_roller_folder_guid).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
+            (m_desire_move_forward_to_linear_speed(desire().move.forward) / ROLLER_CONFIG.roller_radius)
+                    * motion_object_frame.basis_vector_x()
+            );
+
     // TODO
 }
 

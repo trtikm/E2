@@ -13,6 +13,7 @@
 #   include <angeo/collision_material.hpp>
 #   include <angeo/collision_class.hpp>
 #   include <angeo/custom_constraint_id.hpp>
+#   include <angeo/linear_segment_curve.hpp>
 #   include <com/object_guid.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <string>
@@ -311,6 +312,8 @@ private:
     com::object_guid  m_roller_folder_guid;
     com::object_guid  m_roller_frame_guid;
     std::array<angeo::custom_constraint_id, 3>  m_roller_joint_ccids;
+    angeo::linear_segment_curve  m_desire_move_forward_to_linear_speed;
+    angeo::linear_segment_curve  m_desire_move_turn_ccw_to_angular_speed;
 };
 
 
