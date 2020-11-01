@@ -25,6 +25,17 @@ struct  agent_state_variable
             float_32_bit const  max_value_
             );
 
+    std::string const&  get_name() const { return name; }
+    float_32_bit  get_value() const { return value; }
+    float_32_bit  get_min_value() const { return constants.min_value; }
+    float_32_bit  get_max_value() const { return constants.max_value; }
+
+    void  set_value(float_32_bit const  x)
+    {
+        value = x < constants.min_value ? constants.min_value : (x > constants.max_value ? constants.max_value : x);
+    }
+
+private:
     std::string  name;
     float_32_bit  value;
     config  constants;
