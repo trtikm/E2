@@ -288,6 +288,8 @@ struct  action_roller : public  agent_action
         float_32_bit  roller_mass_inverted;
     };
 
+    enum struct  ANIMATION_SPEED_SUBJECT : natural_8_bit { ROLLER, MOTION_OBJECT };
+
     explicit  action_roller(
             std::string const&  name_,
             boost::property_tree::ptree const&  ptree_,
@@ -313,7 +315,10 @@ private:
     com::object_guid  m_roller_frame_guid;
     std::array<angeo::custom_constraint_id, 3>  m_roller_joint_ccids;
     angeo::linear_segment_curve  m_desire_move_forward_to_linear_speed;
+    angeo::linear_segment_curve  m_desire_move_left_to_linear_speed;
     angeo::linear_segment_curve  m_desire_move_turn_ccw_to_angular_speed;
+    angeo::linear_segment_curve  m_angular_speed_to_animation_speed;
+    ANIMATION_SPEED_SUBJECT  m_animation_speed_subject;
 };
 
 

@@ -458,7 +458,7 @@ void  agent_action::apply_effects(float_32_bit const  time_step_in_seconds)
 
 void  agent_action::update_time(float_32_bit const  time_step_in_seconds)
 {
-    m_current_time += state_variables().at("animation_speed").value * time_step_in_seconds;
+    m_current_time += state_variables().at("animation_speed").get_value() * time_step_in_seconds;
     m_current_time += m_context->time_buffer;
     m_context->time_buffer = 0.0f;
 
@@ -1003,17 +1003,19 @@ action_guesture::action_guesture(
 void  action_guesture::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
 {
     agent_action::on_transition(from_action_ptr, info);
+
+    ctx().request_set_rigid_body_angular_velocity(
+            binding().folder_guid_of_motion_object,
+            com::to_string(com::OBJECT_KIND::RIGID_BODY),
+            vector3_zero()
+            );
+    state_variables().at("animation_speed").set_value(1.0f);
 }
 
 
 void  action_guesture::next_round(float_32_bit const  time_step_in_seconds)
 {
     agent_action::next_round(time_step_in_seconds);
-
-    com::object_guid const  rigid_body_guid =
-            ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY));
-    ctx().request_set_rigid_body_linear_velocity(rigid_body_guid, vector3_zero());
-    ctx().request_set_rigid_body_angular_velocity(rigid_body_guid, vector3_zero());
 }
 
 
@@ -1046,8 +1048,11 @@ action_roller::action_roller(
             angeo::invalid_custom_constraint_id(),
             angeo::invalid_custom_constraint_id()
             }
-    , m_desire_move_forward_to_linear_speed() // loaded below
-    , m_desire_move_turn_ccw_to_angular_speed() // loaded below
+    , m_desire_move_forward_to_linear_speed{{ { -1.0f, 0.0f }, { 1.0f, 0.0f } }}  // loaded below
+    , m_desire_move_left_to_linear_speed{{ { -1.0f, 0.0f }, { 1.0f, 0.0f } }}  // loaded below
+    , m_desire_move_turn_ccw_to_angular_speed{{ { -1.0f, 0.0f }, { 1.0f, 0.0f } }}  // loaded below
+    , m_angular_speed_to_animation_speed{{ { -1.0f, 1.0f }, { 1.0f, 1.0f } }} // loaded below
+    , m_animation_speed_subject(ANIMATION_SPEED_SUBJECT::ROLLER) // loaded below
 {
     ASSUMPTION(max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) == MOTION_OBJECT_CONFIG.aabb_half_size(2));
 
@@ -1071,8 +1076,33 @@ action_roller::action_roller(
     MOTION_OBJECT_CONFIG.inertia_tensor_inverted = matrix33_zero();
     MOTION_OBJECT_CONFIG.is_moveable = true;
 
-    angeo::load(m_desire_move_forward_to_linear_speed, ptree_.get_child("desire_move_forward_to_linear_speed"));
-    angeo::load(m_desire_move_turn_ccw_to_angular_speed, ptree_.get_child("desire_move_turn_ccw_to_angular_speed"));
+    auto  ptree_it = ptree_.find("desire_move_forward_to_linear_speed");
+    if (ptree_it != ptree_.not_found())
+        angeo::load(m_desire_move_forward_to_linear_speed, ptree_it->second);
+
+    ptree_it = ptree_.find("desire_move_left_to_linear_speed");
+    if (ptree_it != ptree_.not_found())
+        angeo::load(m_desire_move_left_to_linear_speed, ptree_it->second);
+
+    ptree_it = ptree_.find("desire_move_turn_ccw_to_angular_speed");
+    if (ptree_it != ptree_.not_found())
+        angeo::load(m_desire_move_turn_ccw_to_angular_speed, ptree_it->second);
+
+    ptree_it = ptree_.find("roller_linear_speed_to_animation_speed");
+    if (ptree_it != ptree_.not_found())
+    {
+        angeo::load(m_angular_speed_to_animation_speed, ptree_it->second);
+        for (vector2&  point : m_angular_speed_to_animation_speed.points)
+            point(0) /= ROLLER_CONFIG.roller_radius;
+        m_animation_speed_subject = ANIMATION_SPEED_SUBJECT::ROLLER;
+    }
+    else
+    {
+        ptree_it = ptree_.find("motion_object_angular_speed_to_animation_speed");
+        if (ptree_it != ptree_.not_found())
+            angeo::load(m_angular_speed_to_animation_speed, ptree_it->second);
+        m_animation_speed_subject = ANIMATION_SPEED_SUBJECT::MOTION_OBJECT;
+    }
 }
 
 
@@ -1141,11 +1171,17 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
 
     m_roller_folder_guid = from_roller_ptr->m_roller_folder_guid;
     m_roller_frame_guid = from_roller_ptr->m_roller_frame_guid;
+    for (natural_32_bit  i = 0U, n = (natural_32_bit)m_roller_joint_ccids.size(); i != n; ++i)
+    {
+        INVARIANT(
+            m_roller_joint_ccids.at(i) == angeo::invalid_custom_constraint_id() &&
+            from_roller_ptr->m_roller_joint_ccids.at(i) != angeo::invalid_custom_constraint_id()
+            );
+        std::swap(m_roller_joint_ccids.at(i), from_roller_ptr->m_roller_joint_ccids.at(i));
+    }
 
     if (get_motion_object_config() != from_roller_ptr->get_motion_object_config() || ROLLER_CONFIG != from_roller_ptr->ROLLER_CONFIG)
     {
-        release_custom_constraint_ids();
-
         vector3  linear_velocity, angular_velocity, linear_acceleration, angular_acceleration;
         {
             com::object_guid const  rigid_body_guid =
@@ -1212,17 +1248,29 @@ void  action_roller::next_round(float_32_bit const  time_step_in_seconds)
     angeo::coordinate_system_explicit const&  motion_object_frame =
             ctx().frame_explicit_coord_system_in_world_space(binding().frame_guid_of_motion_object);
 
+    vector3 const  motion_object_angular_velocity =
+            m_desire_move_turn_ccw_to_angular_speed(desire().move.turn_ccw) * motion_object_frame.basis_vector_z();
     ctx().request_set_rigid_body_angular_velocity(
             ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
-            m_desire_move_turn_ccw_to_angular_speed(desire().move.turn_ccw) * motion_object_frame.basis_vector_z()
-            );
-    ctx().request_set_rigid_body_angular_velocity(
-            ctx().folder_content(m_roller_folder_guid).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
-            (m_desire_move_forward_to_linear_speed(desire().move.forward) / ROLLER_CONFIG.roller_radius)
-                    * motion_object_frame.basis_vector_x()
+            motion_object_angular_velocity
             );
 
-    // TODO
+    vector3 const  roller_angular_velocity =
+            (m_desire_move_forward_to_linear_speed(desire().move.forward) / ROLLER_CONFIG.roller_radius)
+                * motion_object_frame.basis_vector_x();
+    ctx().request_set_rigid_body_angular_velocity(
+            ctx().folder_content(m_roller_folder_guid).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
+            roller_angular_velocity
+            );
+
+    vector3  angular_velocity_for_animation_speed;
+    switch (m_animation_speed_subject)
+    {
+    case ANIMATION_SPEED_SUBJECT::ROLLER: angular_velocity_for_animation_speed = roller_angular_velocity; break;
+    case ANIMATION_SPEED_SUBJECT::MOTION_OBJECT: angular_velocity_for_animation_speed = motion_object_angular_velocity; break;
+    default: { UNREACHABLE(); } break;
+    }
+    state_variables().at("animation_speed").set_value(m_angular_speed_to_animation_speed(length(angular_velocity_for_animation_speed)));
 }
 
 
