@@ -88,7 +88,6 @@ simulation_context::simulation_context(
     , m_requests_erase_folder()
     , m_requests_erase_frame()
     , m_requests_relocate_frame()
-    , m_requests_relocate_frame_relative_to_parent()
     , m_requests_set_parent_frame()
     , m_requests_erase_batch()
     , m_requests_enable_collider()
@@ -218,7 +217,41 @@ simulation_context::folder_content_type const&  simulation_context::folder_conte
 }
 
 
-object_guid  simulation_context::folder_of_folder(object_guid const  folder_guid) const
+object_guid  simulation_context::folder_content_of_name(object_guid const  folder_guid, std::string const&  name) const
+{
+    folder_content_type::names_to_guids_map const&  content = folder_content(folder_guid).content;
+    auto const  it = content.find(name);
+    return it == content.end() ? invalid_object_guid() : it->second;
+}
+
+
+object_guid  simulation_context::folder_content_frame(object_guid const  folder_guid) const
+{
+    return folder_content_of_name(folder_guid, to_string(OBJECT_KIND::FRAME));
+}
+
+
+object_guid  simulation_context::folder_content_rigid_body(object_guid const  folder_guid) const
+{
+    return folder_content_of_name(folder_guid, to_string(OBJECT_KIND::RIGID_BODY));
+}
+
+
+object_guid  simulation_context::folder_content_agent(object_guid const  folder_guid) const
+{
+    return folder_content_of_name(folder_guid, to_string(OBJECT_KIND::AGENT));
+}
+
+
+object_guid  simulation_context::child_folder(object_guid const  folder_guid, std::string const&  child_folder_name) const
+{
+    folder_content_type::names_to_guids_map const&  children = folder_content(folder_guid).child_folders;
+    auto const  it = children.find(child_folder_name);
+    return it == children.end() ? invalid_object_guid() : it->second;
+}
+
+
+object_guid  simulation_context::parent_folder(object_guid const  folder_guid) const
 {
     ASSUMPTION(is_valid_folder_guid(folder_guid));
     return folder_content(folder_guid).parent_folder;
@@ -229,7 +262,7 @@ object_guid  simulation_context::folder_of(object_guid const  guid) const
 {
     switch (guid.kind)
     {
-    case OBJECT_KIND::FOLDER: return folder_of_folder(guid);
+    case OBJECT_KIND::FOLDER: return parent_folder(guid);
     case OBJECT_KIND::FRAME: return folder_of_frame(guid);
     case OBJECT_KIND::BATCH: return folder_of_batch(guid);
     case OBJECT_KIND::COLLIDER: return folder_of_collider(guid);
@@ -243,9 +276,9 @@ object_guid  simulation_context::folder_of(object_guid const  guid) const
 }
 
 
-std::string const&  simulation_context::name_of_folder(object_guid const  guid) const
+std::string const&  simulation_context::name_of_folder(object_guid const  folder_guid) const
 {
-    return folder_content(guid).folder_name;
+    return folder_content(folder_guid).folder_name;
 }
 
 
@@ -583,14 +616,21 @@ matrix44 const&  simulation_context::frame_world_matrix(object_guid const  frame
 
 
 object_guid  simulation_context::insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
-                                              vector3 const  origin, quaternion const  orientation) const
+                                              vector3 const  origin, quaternion const  orientation, bool const  relative_to_parent) const
 {
     simulation_context* const  self = const_cast<simulation_context*>(this);
     object_guid const  frame_guid = self->insert_frame(under_folder_guid);
     if (is_valid_frame_guid(parent_frame_guid))
         self->set_parent_frame(frame_guid, parent_frame_guid);
-    self->frame_relocate(frame_guid, origin, orientation);
+    self->frame_relocate(frame_guid, origin, orientation, relative_to_parent);
     return frame_guid;
+}
+
+
+object_guid  simulation_context::insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
+                                              angeo::coordinate_system const&  frame, bool const  relative_to_parent) const
+{
+    return insert_frame(under_folder_guid, parent_frame_guid, frame.origin(), frame.orientation(), relative_to_parent);
 }
 
 
@@ -602,34 +642,18 @@ void  simulation_context::request_erase_frame(object_guid const  frame_guid) con
 
 
 void  simulation_context::request_relocate_frame(object_guid const  frame_guid, vector3 const&  new_origin,
-                                                 quaternion const&  new_orientation) const
+                                                 quaternion const&  new_orientation, bool const  relative_to_parent) const
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    m_requests_relocate_frame.push_back({ frame_guid, new_origin, new_orientation });
+    m_requests_relocate_frame.push_back({ frame_guid, new_origin, new_orientation, relative_to_parent });
     m_pending_requests.push_back(REQUEST_RELOCATE_FRAME);
 }
 
 
-void  simulation_context::request_relocate_frame(object_guid const  frame_guid,
-                                                 angeo::coordinate_system const&  frame) const
+void  simulation_context::request_relocate_frame(object_guid const  frame_guid, angeo::coordinate_system const&  frame,
+                                                 bool const  relative_to_parent) const
 {
-    request_relocate_frame(frame_guid, frame.origin(), frame.orientation());
-}
-
-
-void  simulation_context::request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
-                                                                    quaternion const&  new_orientation) const
-{
-    ASSUMPTION(is_valid_frame_guid(frame_guid));
-    m_requests_relocate_frame_relative_to_parent.push_back({ frame_guid, new_origin, new_orientation });
-    m_pending_requests.push_back(REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT);
-}
-
-
-void  simulation_context::request_relocate_frame_relative_to_parent(object_guid const  frame_guid,
-                                                                    angeo::coordinate_system const&  frame) const
-{
-    request_relocate_frame_relative_to_parent(frame_guid, frame.origin(), frame.orientation());
+    request_relocate_frame(frame_guid, frame.origin(), frame.orientation(), relative_to_parent);
 }
 
 
@@ -745,28 +769,22 @@ void  simulation_context::frame_set_orientation(object_guid const  frame_guid, q
 }
 
 
-void  simulation_context::frame_relocate(object_guid const  frame_guid, angeo::coordinate_system const& new_coord_system)
+void  simulation_context::frame_relocate(object_guid const  frame_guid, vector3 const&  new_origin, quaternion const&  new_orientation,
+                                         bool const  relative_to_parent)
 {
     ASSUMPTION(is_valid_frame_guid(frame_guid));
-    m_frames_provider.relocate(m_frames.at(frame_guid.index).id, new_coord_system);
+    if (relative_to_parent)
+        m_frames_provider.relocate_relative_to_parent(m_frames.at(frame_guid.index).id, new_origin, new_orientation);
+    else
+        m_frames_provider.relocate(m_frames.at(frame_guid.index).id, new_origin, new_orientation);
     m_relocated_frame_guids.insert(frame_guid);
 }
 
 
-void  simulation_context::frame_relocate(object_guid const  frame_guid, vector3 const&  new_origin, quaternion const&  new_orientation)
+void  simulation_context::frame_relocate(object_guid const  frame_guid, angeo::coordinate_system const&  new_coord_system,
+                                         bool const  relative_to_parent)
 {
-    ASSUMPTION(is_valid_frame_guid(frame_guid));
-    m_frames_provider.relocate(m_frames.at(frame_guid.index).id, new_origin, new_orientation);
-    m_relocated_frame_guids.insert(frame_guid);
-}
-
-
-void  simulation_context::frame_relocate_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
-                                                            quaternion const&  new_orientation)
-{
-    ASSUMPTION(is_valid_frame_guid(frame_guid));
-    m_frames_provider.relocate_relative_to_parent(m_frames.at(frame_guid.index).id, new_origin, new_orientation);
-    m_relocated_frame_guids.insert(frame_guid);
+    frame_relocate(frame_guid, new_coord_system.origin(), new_coord_system.orientation(), relative_to_parent);
 }
 
 
@@ -3026,11 +3044,7 @@ void  simulation_context::process_pending_requests()
             break;
         case REQUEST_RELOCATE_FRAME: {
             auto  cursor = make_request_cursor_to(m_requests_relocate_frame);
-            frame_relocate(cursor->frame_guid, cursor->position, cursor->orientation);
-            } break;
-        case REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT: {
-            auto  cursor = make_request_cursor_to(m_requests_relocate_frame_relative_to_parent);
-            frame_relocate_relative_to_parent(cursor->frame_guid, cursor->position, cursor->orientation);
+            frame_relocate(cursor->frame_guid, cursor->position, cursor->orientation, cursor->relative_to_parent);
             } break;
         case REQUEST_SET_PARENT_FRAME: {
             auto  cursor = make_request_cursor_to(m_requests_set_parent_frame);
@@ -3134,7 +3148,6 @@ void  simulation_context::clear_pending_requests()
     m_requests_erase_folder.clear();
     m_requests_erase_frame.clear();
     m_requests_relocate_frame.clear();
-    m_requests_relocate_frame_relative_to_parent.clear();
     m_requests_set_parent_frame.clear();
     m_requests_erase_batch.clear();
     m_requests_enable_collider.clear();

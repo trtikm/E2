@@ -147,9 +147,14 @@ struct  simulation_context
     object_guid  root_folder() const;
     bool  is_folder_empty(object_guid const  folder_guid) const;
     folder_content_type const&  folder_content(object_guid const  folder_guid) const;
-    object_guid  folder_of_folder(object_guid const  guid) const;
+    object_guid  folder_content_of_name(object_guid const  folder_guid, std::string const&  name) const;
+    object_guid  folder_content_frame(object_guid const  folder_guid) const;
+    object_guid  folder_content_rigid_body(object_guid const  folder_guid) const;
+    object_guid  folder_content_agent(object_guid const  folder_guid) const;
+    object_guid  child_folder(object_guid const  folder_guid, std::string const&  child_folder_name) const;
+    object_guid  parent_folder(object_guid const  folder_guid) const;
     object_guid  folder_of(object_guid const  folder_guid) const;
-    std::string const&  name_of_folder(object_guid const  guid) const;
+    std::string const&  name_of_folder(object_guid const  folder_guid) const;
     std::string const&  name_of(object_guid const  guid) const;
     folder_guid_iterator  folders_begin() const;
     folder_guid_iterator  folders_end() const;
@@ -188,14 +193,14 @@ struct  simulation_context
     angeo::coordinate_system_explicit const&  frame_explicit_coord_system_in_world_space(object_guid const  frame_guid) const;
     matrix44 const&  frame_world_matrix(object_guid const  frame_guid) const;
     object_guid  insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
-                              vector3 const  origin, quaternion const  orientation) const;
+                              vector3 const  origin, quaternion const  orientation, bool const  relative_to_parent = false) const;
+    object_guid  insert_frame(object_guid const  under_folder_guid, object_guid const  parent_frame_guid,
+                              angeo::coordinate_system const&  frame, bool const  relative_to_parent = false) const;
     void  request_erase_frame(object_guid const  frame_guid) const;
-    void  request_relocate_frame(object_guid const  frame_guid, vector3 const&  new_origin,
-                                 quaternion const&  new_orientation) const;
-    void  request_relocate_frame(object_guid const  frame_guid, angeo::coordinate_system const&  frame) const;
-    void  request_relocate_frame_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
-                                                    quaternion const&  new_orientation) const;
-    void  request_relocate_frame_relative_to_parent(object_guid const  frame_guid, angeo::coordinate_system const&  frame) const;
+    void  request_relocate_frame(object_guid const  frame_guid, vector3 const&  new_origin, quaternion const&  new_orientation,
+                                 bool const  relative_to_parent = false) const;
+    void  request_relocate_frame(object_guid const  frame_guid, angeo::coordinate_system const&  frame,
+                                 bool const  relative_to_parent = false) const;
     void  request_set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid) const;
     // Disabled (not const) for modules.
     void  set_parent_frame(object_guid const  frame_guid, object_guid const  parent_frame_guid);
@@ -205,10 +210,10 @@ struct  simulation_context
     void  frame_rotate(object_guid const  frame_guid, quaternion const&  rotation);
     void  frame_set_origin(object_guid const  frame_guid, vector3 const&  new_origin);
     void  frame_set_orientation(object_guid const  frame_guid, quaternion const&  new_orientation);
-    void  frame_relocate(object_guid const  frame_guid, angeo::coordinate_system const& new_coord_system);
-    void  frame_relocate(object_guid const  frame_guid, vector3 const&  new_origin, quaternion const&  new_orientation);
-    void  frame_relocate_relative_to_parent(object_guid const  frame_guid, vector3 const&  new_origin,
-                                            quaternion const&  new_orientation);
+    void  frame_relocate(object_guid const  frame_guid, vector3 const&  new_origin, quaternion const&  new_orientation,
+                         bool const  relative_to_parent = false);
+    void  frame_relocate(object_guid const  frame_guid, angeo::coordinate_system const&  new_coord_system,
+                         bool const  relative_to_parent = false);
     void  frame_relocate_relative_to_parent(object_guid const  frame_guid, object_guid const  relocation_frame_guid);
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -904,7 +909,6 @@ private:
         REQUEST_ERASE_FOLDER,
         REQUEST_ERASE_FRAME,
         REQUEST_RELOCATE_FRAME,
-        REQUEST_RELOCATE_FRAME_RELATIVE_TO_PARENT,
         REQUEST_SET_PARENT_FRAME,
         REQUEST_ERASE_BATCH,
         REQUEST_ENABLE_COLLIDER,
@@ -929,7 +933,11 @@ private:
         REQUEST_ERASE_AGENT,
     };
 
-    struct  request_data_relocate_frame { object_guid  frame_guid; vector3  position; quaternion  orientation; };
+    struct  request_data_relocate_frame {
+                object_guid  frame_guid;
+                vector3  position; quaternion  orientation;
+                bool  relative_to_parent;
+                };
     struct  request_data_set_parent_frame { object_guid  frame_guid; object_guid  parent_frame_guid; };
     struct  request_data_enable_collider { object_guid  collider_guid; bool  state; };
     struct  request_data_enable_colliding { object_guid  collider_1; object_guid  collider_2; bool  state; };
@@ -974,7 +982,6 @@ private:
     mutable std::list<object_guid>  m_requests_erase_folder;
     mutable std::list<object_guid>  m_requests_erase_frame;
     mutable std::list<request_data_relocate_frame>  m_requests_relocate_frame;
-    mutable std::list<request_data_relocate_frame>  m_requests_relocate_frame_relative_to_parent;
     mutable std::list<request_data_set_parent_frame>  m_requests_set_parent_frame;
     mutable std::list<object_guid>  m_requests_erase_batch;
     mutable std::list<request_data_enable_collider>  m_requests_enable_collider;

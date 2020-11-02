@@ -311,10 +311,11 @@ void  simulator::simulate()
         ctx.clear_relocated_frame_guids();
 
         for (auto  rb_it = ctx.moveable_rigid_bodies_begin(), rb_end = ctx.moveable_rigid_bodies_end(); rb_it != rb_end; ++rb_it)
-            ctx.frame_relocate_relative_to_parent(
+            ctx.frame_relocate(
                     ctx.frame_of_rigid_body(*rb_it),
                     ctx.mass_centre_of_rigid_body(*rb_it),
-                    ctx.orientation_of_rigid_body(*rb_it)
+                    ctx.orientation_of_rigid_body(*rb_it),
+                    true
                     );
 
         ctx.process_pending_requests();
