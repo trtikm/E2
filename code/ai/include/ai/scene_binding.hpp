@@ -33,17 +33,16 @@ struct  scene_binding
 
     com::object_guid  folder_guid_of_agent;
 
-    com::object_guid  folder_guid_of_skeleton; // always has a parent frame: either ghost or motion object frame (see below).
-    com::object_guid  frame_guid_of_skeleton; // always has a parent frame: either ghost or motion object frame (see below).
-    std::vector<com::object_guid>  frame_guids_of_bones;
-
-    com::object_guid  folder_guid_of_ghost_object;
-    com::object_guid  frame_guid_of_ghost_object;
-
     com::object_guid  folder_guid_of_motion_object;
     com::object_guid  frame_guid_of_motion_object;
-    com::object_guid  frame_guid_of_motion_object_skeleton_sync;
 
+    com::object_guid  folder_guid_of_skeleton;
+    com::object_guid  frame_guid_of_skeleton; // always has a parent frame: either motion object or ghost frame.
+    std::vector<com::object_guid>  frame_guids_of_bones;
+
+    com::object_guid  folder_guid_of_skeleton_sync;
+    com::object_guid  frame_guid_of_skeleton_sync_source;
+    com::object_guid  frame_guid_of_skeleton_sync_target;
 private:
     scene_binding(
             com::simulation_context const*  context_,

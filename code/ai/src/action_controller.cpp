@@ -164,7 +164,11 @@ agent_action::agent_action(
     , IS_CYCLIC(ptree_.get<bool>("IS_CYCLIC"))
     , IS_LOOK_AT_ENABLED(ptree_.get<bool>("IS_LOOK_AT_ENABLED"))
     , IS_AIM_AT_ENABLED(ptree_.get<bool>("IS_AIM_AT_ENABLED"))
-    , USE_GHOST_OBJECT_FOR_SKELETON_LOCATION(ptree_.get<bool>("USE_GHOST_OBJECT_FOR_SKELETON_LOCATION"))
+    , DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE(
+            ptree_.count("DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE") == 0U ?
+                    false :
+                    ptree_.get<bool>("DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE")
+            )
     , SENSORS() // loaded below
     , TRANSITIONS() // loaded below
     , MOTION_OBJECT_CONFIG() // loaded below
@@ -175,7 +179,6 @@ agent_action::agent_action(
     , m_end_time(0.0f)
     , m_end_ghost_time(0.0f)
     , m_current_time(0.0f)
-    , m_ghost_object_start_coord_system()
     , m_animation{0.0f, 0U, 0U}
 {
     ASSUMPTION(motion_templates().motions_map().count(MOTION_TEMPLATE_NAME) != 0UL);
@@ -441,12 +444,6 @@ float_32_bit  agent_action::interpolation_parameter_ghost() const
                 1.0f : (m_current_time - m_start_time) / (m_end_ghost_time - m_start_time);
 }
 
-com::object_guid  agent_action::get_frame_guid_of_skeleton_location() const
-{
-    return USE_GHOST_OBJECT_FOR_SKELETON_LOCATION ? binding().frame_guid_of_ghost_object :
-                                                    binding().frame_guid_of_motion_object_skeleton_sync;
-}
-
 
 void  agent_action::apply_effects(float_32_bit const  time_step_in_seconds)
 {
@@ -472,27 +469,35 @@ void  agent_action::update_time(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  agent_action::update_ghost()
+void  agent_action::update_skeleton_sync()
 {
-    angeo::coordinate_system  cs_motion = ctx().frame_coord_system(binding().frame_guid_of_motion_object_skeleton_sync);
-    angeo::coordinate_system  cs_ghost = ctx().frame_coord_system(binding().frame_guid_of_ghost_object);
-    float_32_bit  param_ghost = interpolation_parameter_ghost();
-
-    if (is_ghost_complete())
-    {
-        if (ctx().parent_frame(binding().frame_guid_of_skeleton) != binding().frame_guid_of_motion_object_skeleton_sync)
-            ctx().request_set_parent_frame(binding().frame_guid_of_skeleton, binding().frame_guid_of_motion_object_skeleton_sync);
-        return;
-    }
+    INVARIANT(
+        ctx().parent_frame(binding().frame_guid_of_skeleton) == binding().frame_guid_of_motion_object &&
+        ctx().parent_frame(binding().frame_guid_of_skeleton_sync_target) == binding().frame_guid_of_motion_object
+        );
 
     angeo::coordinate_system  result;
-    angeo::interpolate_spherical(
-            m_ghost_object_start_coord_system,
-            ctx().frame_coord_system_in_world_space(binding().frame_guid_of_motion_object_skeleton_sync),
-            interpolation_parameter_ghost(),
-            result
-            );
-    ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, result);
+    if (is_ghost_complete())
+        result = ctx().frame_coord_system(binding().frame_guid_of_skeleton_sync_target);
+    else if (ctx().parent_frame(binding().frame_guid_of_skeleton_sync_source) == binding().frame_guid_of_motion_object)
+        angeo::interpolate_spherical(
+                ctx().frame_coord_system(binding().frame_guid_of_skeleton_sync_source),
+                ctx().frame_coord_system(binding().frame_guid_of_skeleton_sync_target),
+                interpolation_parameter_ghost(),
+                result
+                );
+    else
+    {
+        angeo::coordinate_system  in_world;
+        angeo::interpolate_spherical(
+                ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton_sync_source),
+                ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton_sync_target),
+                interpolation_parameter_ghost(),
+                in_world
+                );
+        angeo::to_coordinate_system(ctx().frame_coord_system_in_world_space(binding().frame_guid_of_motion_object), in_world, result);
+    }
+    ctx().request_relocate_frame(binding().frame_guid_of_skeleton, result);
 }
 
 
@@ -752,37 +757,40 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
     INVARIANT(m_end_ghost_time >= m_start_time && m_end_ghost_time <= m_end_time);
     INVARIANT(m_animation.target_keyframe_index < keyframes.num_keyframes());
 
-    if (from_action_ptr == nullptr)
+    INVARIANT(ctx().parent_frame(binding().frame_guid_of_skeleton) == binding().frame_guid_of_motion_object);
+
+    // Relocations of frames
     {
         angeo::coordinate_system  relocation_frame;
         get_motion_object_relocation_frame(relocation_frame, from_action_ptr, info);
-        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, relocation_frame);
-        ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, relocation_frame);
-        ctx().request_relocate_frame(binding().frame_guid_of_motion_object_skeleton_sync, vector3_zero(), quaternion_identity());
-    }
 
-    {
-        com::object_guid const  skeleton_parent_frame_guid = ctx().parent_frame(binding().frame_guid_of_skeleton);
-        INVARIANT(
-            ctx().is_valid_frame_guid(skeleton_parent_frame_guid) &&
-            (skeleton_parent_frame_guid == binding().frame_guid_of_ghost_object ||
-                skeleton_parent_frame_guid == binding().frame_guid_of_motion_object_skeleton_sync)
-            );
-        m_ghost_object_start_coord_system = ctx().frame_coord_system_in_world_space(skeleton_parent_frame_guid);
-        ctx().request_relocate_frame(binding().frame_guid_of_ghost_object, m_ghost_object_start_coord_system);
+        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, relocation_frame.origin(), relocation_frame.orientation());
+        if (from_action_ptr != this)
+            ctx().request_relocate_frame(binding().frame_guid_of_skeleton_sync_target, vector3_zero(), quaternion_identity());
 
-        if (from_action_ptr != nullptr && from_action_ptr != this)
+        angeo::coordinate_system  ghost_start_frame;
+        if (from_action_ptr != nullptr)
+            angeo::to_coordinate_system(
+                    relocation_frame,
+                    ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton),
+                    ghost_start_frame
+                    );
+        if (DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE)
         {
-            angeo::coordinate_system  relocation_frame;
-            get_motion_object_relocation_frame(relocation_frame, from_action_ptr, info);
-            ctx().request_relocate_frame(binding().frame_guid_of_motion_object, relocation_frame.origin(), relocation_frame.orientation());
-            ctx().request_relocate_frame(binding().frame_guid_of_motion_object_skeleton_sync, vector3_zero(), quaternion_identity());
+            if (ctx().parent_frame(binding().frame_guid_of_skeleton_sync_source) != com::invalid_object_guid())
+                ctx().request_set_parent_frame(binding().frame_guid_of_skeleton_sync_source, com::invalid_object_guid());
+            ctx().request_relocate_frame(
+                    binding().frame_guid_of_skeleton_sync_source,
+                    ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton)
+                    );
         }
-
-        ctx().request_set_parent_frame(
-                binding().frame_guid_of_skeleton,
-                is_ghost_complete() ? binding().frame_guid_of_motion_object_skeleton_sync : binding().frame_guid_of_ghost_object
-                );
+        else
+        {
+            if (ctx().parent_frame(binding().frame_guid_of_skeleton_sync_source) != binding().frame_guid_of_motion_object)
+                ctx().request_set_parent_frame(binding().frame_guid_of_skeleton_sync_source, binding().frame_guid_of_motion_object);
+            ctx().request_relocate_frame(binding().frame_guid_of_skeleton_sync_source, ghost_start_frame);
+        }
+        ctx().request_relocate_frame(binding().frame_guid_of_skeleton, ghost_start_frame);
     }
 
     if (from_action_ptr == nullptr || from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
@@ -979,7 +987,7 @@ void  agent_action::next_round(float_32_bit const  time_step_in_seconds)
 
     apply_effects(time_step_in_seconds);
     update_time(time_step_in_seconds);
-    update_ghost();
+    update_skeleton_sync();
     update_animation(time_step_in_seconds);
     if (IS_LOOK_AT_ENABLED)
         update_look_at(time_step_in_seconds);
@@ -1125,7 +1133,7 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
     action_roller* const  from_roller_ptr = from_action_ptr == nullptr ? nullptr : dynamic_cast<action_roller*>(from_action_ptr);
 
     ctx().request_relocate_frame(
-            binding().frame_guid_of_motion_object_skeleton_sync,
+            binding().frame_guid_of_skeleton_sync_target,
             (-0.5f * ROLLER_CONFIG.roller_radius) * vector3_unit_z(),
             quaternion_identity()
             );

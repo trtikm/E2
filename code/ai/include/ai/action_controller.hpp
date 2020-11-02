@@ -178,7 +178,6 @@ struct  agent_action
     bool  is_cyclic() const { return IS_CYCLIC; }
     bool  is_complete() const;
     bool  is_ghost_complete() const;
-    bool  use_ghost_object_for_skeleton_location() const { return USE_GHOST_OBJECT_FOR_SKELETON_LOCATION; }
 
     float_32_bit  interpolation_parameter() const;
     float_32_bit  interpolation_parameter_ghost() const;
@@ -186,11 +185,9 @@ struct  agent_action
     std::unordered_map<std::string, transition_config> const&  get_transitions() const { return TRANSITIONS; };
     motion_object_config const&  get_motion_object_config() const { return MOTION_OBJECT_CONFIG; }
 
-    com::object_guid  get_frame_guid_of_skeleton_location() const;
-
     void  apply_effects(float_32_bit const  time_step_in_seconds);
     void  update_time(float_32_bit const  time_step_in_seconds);
-    void  update_ghost();
+    void  update_skeleton_sync();
     void  update_look_at(float_32_bit const  time_step_in_seconds);
     void  update_aim_at(float_32_bit const  time_step_in_seconds);
     void  update_animation(float_32_bit const  time_step_in_seconds);
@@ -222,7 +219,7 @@ protected:
     bool  IS_CYCLIC;
     bool  IS_LOOK_AT_ENABLED;
     bool  IS_AIM_AT_ENABLED;
-    bool  USE_GHOST_OBJECT_FOR_SKELETON_LOCATION;
+    bool  DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE;
     std::unordered_map<std::string, sensor_config>  SENSORS;
     std::unordered_map<std::string, transition_config>  TRANSITIONS;
     motion_object_config  MOTION_OBJECT_CONFIG; // INVARIANT: for each i, MOTION_OBJECT_CONFIG.aabb_half_size(i) <= AABB_HALF_SIZE(i)
@@ -243,8 +240,6 @@ private:
     float_32_bit  m_end_time;
     float_32_bit  m_end_ghost_time;
     float_32_bit  m_current_time;
-
-    angeo::coordinate_system  m_ghost_object_start_coord_system;
 
     skeletal_animation_info  m_animation;
 };
