@@ -120,6 +120,9 @@ struct coordinate_system
     void set_origin(vector3 const&  new_origin) { m_origin = new_origin; }
     void set_orientation(quaternion const&  new_normalised_orientation);
 
+    vector3&  origin_ref() { return m_origin; }
+    quaternion&  orientation_ref() { return m_orientation; }
+
 private:
     vector3  m_origin;
     quaternion  m_orientation;
@@ -155,6 +158,9 @@ inline vector3  point3_to_coordinate_system(vector3 const&  p, coordinate_system
 {
     return vector3_to_coordinate_system(p - coord_system.origin(), coord_system);
 }
+
+void  from_coordinate_system(coordinate_system const&  base, coordinate_system const&  subject, coordinate_system&  result);
+void  to_coordinate_system(coordinate_system const&  base, coordinate_system const&  subject, coordinate_system&  result);
 
 void  from_base_matrix(coordinate_system const&  coord_system, matrix44&  output);
 void  to_base_matrix(coordinate_system const&  coord_system, matrix44&  output);

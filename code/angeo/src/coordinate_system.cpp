@@ -93,6 +93,29 @@ void  integrate(
     coord_system.set_orientation( normalised(coord_system.orientation() + scale(time_step_in_seconds, orientation_derivative)) );
 }
 
+void  from_coordinate_system(coordinate_system const&  base, coordinate_system const&  subject, coordinate_system&  result)
+{
+    //      F(r) = F(b)*F(s)
+    matrix44  Fb, Fs;
+    from_base_matrix(base, Fb);
+    from_base_matrix(subject, Fs);
+    matrix33 R;
+    decompose_matrix44(Fb * Fs, result.origin_ref(), R);
+    result.orientation_ref() = rotation_matrix_to_quaternion(R);
+}
+
+void  to_coordinate_system(coordinate_system const&  base, coordinate_system const&  subject, coordinate_system&  result)
+{
+    //      F(s) = F(b)*F(r)
+    // T(b)*F(s) =      F(r)
+    matrix44  Tb, Fs;
+    to_base_matrix(base, Tb);
+    from_base_matrix(subject, Fs);
+    matrix33 R;
+    decompose_matrix44(Tb * Fs, result.origin_ref(), R);
+    result.orientation_ref() = rotation_matrix_to_quaternion(R);
+}
+
 void  from_base_matrix(coordinate_system const&  coord_system, matrix44&  output)
 {
     compose_from_base_matrix(coord_system.origin(), quaternion_to_rotation_matrix(coord_system.orientation()), output);
