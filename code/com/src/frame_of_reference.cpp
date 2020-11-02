@@ -32,8 +32,8 @@ void  frames_provider::erase(frame_id const  id)
 {
     ASSUMPTION(valid(id));
     frame_of_reference&  frame = m_frames.at(id);
-    for (frame_id  child_id : frame.children)
-        set_parent(child_id, frame.parent);
+    while (!frame.children.empty())
+        set_parent(frame.children.back(), frame.parent);
     set_parent(id, invalid_frame_id());
     m_frames.erase(id);
 }
