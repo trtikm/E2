@@ -999,14 +999,15 @@ void  simulator::render_agent_action_transition_contratints()
 
                 matrix44  world_matrix;
                 {
+                    matrix44  W;
+                    angeo::from_base_matrix(constraint.frame, W);
+
                     com::object_guid const  frame_guid =
-                            ctx.folder_content(ctx.from_relative_path(agent.get_binding()->folder_guid_of_agent, constraint.frame_folder))
-                               .content.at(com::to_string(com::OBJECT_KIND::FRAME));
-                    angeo::coordinate_system_explicit  frame = ctx.frame_explicit_coord_system_in_world_space(frame_guid);
-                    frame.origin_ref() += constraint.origin(0) * frame.basis_vector_x() +
-                                          constraint.origin(1) * frame.basis_vector_y() +
-                                          constraint.origin(2) * frame.basis_vector_z() ;
-                    angeo::from_base_matrix(frame, world_matrix);
+                            ctx.folder_content_frame(
+                                    ctx.from_relative_path(agent.get_binding()->folder_guid_of_agent, constraint.frame_folder)
+                                    );
+
+                    world_matrix = ctx.frame_world_matrix(frame_guid) * W;
                 }
 
                 std::string  id_name;

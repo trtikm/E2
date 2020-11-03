@@ -24,6 +24,17 @@ vector3  read_vector3(boost::property_tree::ptree const&  ptree)
 }
 
 
+quaternion  read_quaternion(boost::property_tree::ptree const&  ptree)
+{
+    return make_quaternion_wxyz(
+                ptree.get<float_32_bit>("w"),
+                ptree.get<float_32_bit>("x"),
+                ptree.get<float_32_bit>("y"),
+                ptree.get<float_32_bit>("z")
+                );
+}
+
+
 vector3  read_aabb_half_size(boost::property_tree::ptree const&  ptree)
 {
     vector3  u = read_vector3(ptree);
@@ -318,7 +329,7 @@ void  agent_action::load_sensors(boost::property_tree::ptree const&  ptree)
         sc.collision_class = angeo::read_collison_class_from_string(name_and_props.second.get<std::string>("collision_class"));
         sc.aabb_half_size = read_aabb_half_size(name_and_props.second.find("aabb_half_size")->second);
         sc.frame.set_origin(read_vector3(name_and_props.second.find("origin")->second));
-        sc.frame.set_orientation(quaternion_identity()); // TODO!
+        sc.frame.set_orientation(read_quaternion(name_and_props.second.find("orientation")->second));
         SENSORS.insert({ name_and_props.first, sc });
     }
 }
@@ -367,33 +378,36 @@ void  agent_action::load_transitions(
                 tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE ||
                 tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE
                 );
-            tc.perception_guard->location_constraint.origin = location.count("origin") == 0UL ?
-                    vector3_zero() : read_vector3(location.find("origin")->second);
+            tc.perception_guard->location_constraint.frame.set_origin(location.count("origin") == 0UL ?
+                    vector3_zero() : read_vector3(location.find("origin")->second));
+            tc.perception_guard->location_constraint.frame.set_orientation(location.count("orientation") == 0UL ?
+                    quaternion_identity() : read_quaternion(location.find("orientation")->second));
             tc.perception_guard->location_constraint.aabb_half_size = read_aabb_half_size(location.find("aabb_half_size")->second);
             ASSUMPTION(min_coord(tc.perception_guard->location_constraint.aabb_half_size) > 0.0001f);
         }
         else
             tc.perception_guard = nullptr;
 
-        if (name_and_props.second.count("motion_object_position") != 0UL)
+        if (name_and_props.second.count("motion_object_location") != 0UL)
         {
-            boost::property_tree::ptree const&  position = name_and_props.second.find("motion_object_position")->second;
-            tc.motion_object_position = std::make_shared<agent_action::transition_config::motion_object_position_config>();
-            tc.motion_object_position->is_self_frame = position.get<std::string>("frame_owner") == "SELF";
-            tc.motion_object_position->frame_folder = position.get<std::string>("frame_folder");
-            ASSUMPTION(!tc.motion_object_position->frame_folder.empty() &&
-                       tc.motion_object_position->frame_folder.back() == '/');
-            tc.motion_object_position->origin = read_vector3(position.find("origin")->second);
-            tc.motion_object_position->disable_colliding = position.count("disable_colliding") == 0UL ?
-                        "" : position.get<std::string>("disable_colliding");
-            if (!tc.motion_object_position->disable_colliding.empty() && tc.motion_object_position->disable_colliding.back() == '/')
-                tc.motion_object_position->disable_colliding += com::to_string(com::OBJECT_KIND::COLLIDER);
+            boost::property_tree::ptree const&  location = name_and_props.second.find("motion_object_location")->second;
+            tc.motion_object_location = std::make_shared<agent_action::transition_config::motion_object_location_config>();
+            tc.motion_object_location->is_self_frame = location.get<std::string>("frame_owner") == "SELF";
+            tc.motion_object_location->frame_folder = location.get<std::string>("frame_folder");
+            ASSUMPTION(!tc.motion_object_location->frame_folder.empty() &&
+                       tc.motion_object_location->frame_folder.back() == '/');
+            tc.motion_object_location->frame.set_origin(read_vector3(location.find("origin")->second));
+            tc.motion_object_location->frame.set_orientation(read_quaternion(location.find("orientation")->second));
+            tc.motion_object_location->disable_colliding = location.count("disable_colliding") == 0UL ?
+                        "" : location.get<std::string>("disable_colliding");
+            if (!tc.motion_object_location->disable_colliding.empty() && tc.motion_object_location->disable_colliding.back() == '/')
+                tc.motion_object_location->disable_colliding += com::to_string(com::OBJECT_KIND::COLLIDER);
 
             tc.aabb_alignment = AABB_ALIGNMENT::Z_LO;
         }
         else
         {
-            tc.motion_object_position = nullptr;
+            tc.motion_object_location = nullptr;
             tc.aabb_alignment = aabb_alignment_from_string(get(name_and_props.second, "aabb_alignment"));
         }
         TRANSITIONS.insert({ name_and_props.first, tc });
@@ -605,43 +619,46 @@ bool  agent_action::collect_transition_info(agent_action const&  from_action, tr
             if (folder_name != percept.sensor_folder_name)
                 continue;
 
-            vector3 const  contact_point_in_world_space =
-                    ray_it->second.ray_origin_in_world_space +
-                    ray_it->second.parameter_to_coid * ray_it->second.ray_direction_in_world_space
-                    ;
-            com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
-                    binding().folder_guid_of_agent,
-                    percept.location_constraint.frame_folder,
-                    ctx()
-                    );
-            vector3 const  contact_point_in_motion_object_space =
-                    angeo::point3_to_coordinate_system(
-                            contact_point_in_world_space,
-                            ctx().frame_coord_system_in_world_space(frame_guid)
-                            );
+            vector3  contact_point_in_constraint_space;
+            {
+                vector3 const  contact_point_in_world_space =
+                        ray_it->second.ray_origin_in_world_space +
+                        ray_it->second.parameter_to_coid * ray_it->second.ray_direction_in_world_space
+                        ;
+                com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
+                        binding().folder_guid_of_agent,
+                        percept.location_constraint.frame_folder,
+                        ctx()
+                        );
+                vector3 const  contact_point_in_motion_object_space =
+                        angeo::point3_to_coordinate_system(
+                                contact_point_in_world_space,
+                                ctx().frame_coord_system_in_world_space(frame_guid)
+                                );
+                contact_point_in_constraint_space =
+                        angeo::point3_to_coordinate_system(contact_point_in_motion_object_space, percept.location_constraint.frame);
+            }
+
             switch(percept.location_constraint.shape_type)
             {
             case angeo::COLLISION_SHAPE_TYPE::BOX:
                 if (!angeo::collision_point_and_bbox(
-                        contact_point_in_motion_object_space,
-                        percept.location_constraint.origin - percept.location_constraint.aabb_half_size,
-                        percept.location_constraint.origin + percept.location_constraint.aabb_half_size
+                        contact_point_in_constraint_space,
+                        -percept.location_constraint.aabb_half_size,
+                        percept.location_constraint.aabb_half_size
                         ))
                     continue;
                 break;
             case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
                 if (!angeo::is_point_inside_capsule(
-                        contact_point_in_motion_object_space - percept.location_constraint.origin,
+                        contact_point_in_constraint_space,
                         max_coord(percept.location_constraint.aabb_half_size) - min_coord(percept.location_constraint.aabb_half_size),
                         min_coord(percept.location_constraint.aabb_half_size)
                         ))
                     continue;
                 break;
             case angeo::COLLISION_SHAPE_TYPE::SPHERE:
-                if (!angeo::is_point_inside_sphere(
-                        contact_point_in_motion_object_space - percept.location_constraint.origin,
-                        min_coord(percept.location_constraint.aabb_half_size)
-                        ))
+                if (!angeo::is_point_inside_sphere(contact_point_in_constraint_space, min_coord(percept.location_constraint.aabb_half_size)))
                     continue;
                 break;
             default: { UNREACHABLE(); } break;
@@ -853,8 +870,8 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
             m_context->disabled_colliding_with_our_motion_object.pop_back();
         }
 
-        std::shared_ptr<transition_config::motion_object_position_config> const  pos_cfg =
-                from_action_ptr->TRANSITIONS.at(NAME).motion_object_position;
+        std::shared_ptr<transition_config::motion_object_location_config> const  pos_cfg =
+                from_action_ptr->TRANSITIONS.at(NAME).motion_object_location;
         if (pos_cfg != nullptr && !pos_cfg->disable_colliding.empty())
         {
             INVARIANT(info.other_entiry_folder_guid != com::invalid_object_guid());
@@ -924,8 +941,8 @@ void  agent_action::get_motion_object_relocation_frame(
 
         if (from_action_ptr != this)
         {
-            std::shared_ptr<transition_config::motion_object_position_config> const  pos_cfg =
-                    from_action_ptr->TRANSITIONS.at(NAME).motion_object_position;
+            std::shared_ptr<transition_config::motion_object_location_config> const  pos_cfg =
+                    from_action_ptr->TRANSITIONS.at(NAME).motion_object_location;
             if (pos_cfg != nullptr)
             {
                 com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
@@ -933,7 +950,7 @@ void  agent_action::get_motion_object_relocation_frame(
                         pos_cfg->frame_folder,
                         ctx()
                         );
-                relocated_frame.set_origin(transform_point(pos_cfg->origin, ctx().frame_world_matrix(frame_guid)));
+                angeo::from_coordinate_system(ctx().frame_coord_system_in_world_space(frame_guid), pos_cfg->frame, relocated_frame);
             }
             else if (!are_equal_3d(AABB_HALF_SIZE, from_action_ptr->AABB_HALF_SIZE, 0.001f) ||
                      from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)

@@ -119,7 +119,7 @@ struct  agent_action
         {
             std::string  frame_folder;
             angeo::COLLISION_SHAPE_TYPE  shape_type; // Only BOX, CAPSULE, or SPHERE!
-            vector3  origin;
+            angeo::coordinate_system  frame;
             vector3  aabb_half_size;
         };
 
@@ -133,16 +133,16 @@ struct  agent_action
 
         };
 
-        struct  motion_object_position_config
+        struct  motion_object_location_config
         {
             bool  is_self_frame;
             std::string  frame_folder;
-            vector3  origin;
+            angeo::coordinate_system  frame;
             std::string  disable_colliding;
         };
 
         std::shared_ptr<perception_guard_config>  perception_guard;
-        std::shared_ptr<motion_object_position_config>  motion_object_position;
+        std::shared_ptr<motion_object_location_config>  motion_object_location;
         AABB_ALIGNMENT  aabb_alignment;
     };
 
