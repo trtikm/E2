@@ -776,14 +776,15 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
 
     INVARIANT(ctx().parent_frame(binding().frame_guid_of_skeleton) == binding().frame_guid_of_motion_object);
 
-    // Relocations of frames
+    if (from_action_ptr != this)
     {
+        // Relocations of frames
+
         angeo::coordinate_system  relocation_frame;
         get_motion_object_relocation_frame(relocation_frame, from_action_ptr, info);
 
         ctx().request_relocate_frame(binding().frame_guid_of_motion_object, relocation_frame.origin(), relocation_frame.orientation());
-        if (from_action_ptr != this)
-            ctx().request_relocate_frame(binding().frame_guid_of_skeleton_sync_target, vector3_zero(), quaternion_identity());
+        ctx().request_relocate_frame(binding().frame_guid_of_skeleton_sync_target, vector3_zero(), quaternion_identity());
 
         angeo::coordinate_system  ghost_start_frame;
         if (from_action_ptr != nullptr)
