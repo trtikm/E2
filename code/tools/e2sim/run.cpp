@@ -58,6 +58,13 @@ struct  simulator : public com::simulator
 
         if (alt && !ctrl)
         {
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_C()) != 0UL)
+            {
+                if (render_config().camera_controller_type == CAMERA_CONTROLLER_TYPE::FREE_FLY)
+                    render_config().camera_controller_type = CAMERA_CONTROLLER_TYPE::CAMERA_IS_LOCKED;
+                else
+                    render_config().camera_controller_type = CAMERA_CONTROLLER_TYPE::FREE_FLY;
+            }
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_B()) != 0UL)
                 render_config().render_scene_batches = !render_config().render_scene_batches;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_R()) != 0UL)
@@ -129,11 +136,14 @@ struct  simulator : public com::simulator
 
     void  on_begin_render() override
     {
+        if (render_config().camera_controller_type == CAMERA_CONTROLLER_TYPE::CAMERA_IS_LOCKED)
+            SLOG("CAMERA IS LOCKED\n");
         if (get_keyboard_props().keys_pressed().count(osi::KEY_F1()) != 0UL)
         {
             SLOG("\n=== HELP BEGIN ===\n");
 
             SLOG("1. Camera - free fly\n");
+            SLOG("\tALT+C - toggle camera locked\n");
             for (auto const&  action : render_config().free_fly_config)
                 if (!action.help().empty())
                     SLOG("\t" << action.help() << "\n");

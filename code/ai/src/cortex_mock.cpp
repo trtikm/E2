@@ -8,12 +8,7 @@
 namespace ai {
 
 
-void  cortex_mock::next_round(
-        float_32_bit const  time_step_in_seconds,
-        osi::keyboard_props const&  keyboard,
-        osi::mouse_props const&  mouse,
-        osi::window_props const&  window
-        )
+void  cortex_mock::next_round(float_32_bit const  time_step_in_seconds, mock_input_props const&  mock_input)
 {
     TMPROF_BLOCK();
 
@@ -23,24 +18,25 @@ void  cortex_mock::next_round(
     auto const  clip = [](float_32_bit const  x) -> float_32_bit { return std::max(-1.0f, std::min(x, 1.0f)); };
 
     vector2 const  mouse_pos {
-        clip(2.0f * (mouse.cursor_x() / (float_32_bit)window.window_width()) - 1.0f),
-        clip(2.0f * (1.0f - mouse.cursor_y() / (float_32_bit)window.window_height()) - 1.0f)
+        clip(2.0f * (mock_input.mouse->cursor_x() / (float_32_bit)mock_input.window->window_width()) - 1.0f),
+        clip(2.0f * (1.0f - mock_input.mouse->cursor_y() / (float_32_bit)mock_input.window->window_height()) - 1.0f)
     };
 
     // states of buttons & keys -----------------------
 
-    bool const  lmouse = mouse.buttons_pressed().count(osi::LEFT_MOUSE_BUTTON()) != 0UL;
-    bool const  rmouse = mouse.buttons_pressed().count(osi::RIGHT_MOUSE_BUTTON()) != 0UL;
-    bool const  shift = keyboard.keys_pressed().count(osi::KEY_LSHIFT()) != 0UL ||
-                        keyboard.keys_pressed().count(osi::KEY_RSHIFT()) != 0UL;
-    bool const  ctrl = keyboard.keys_pressed().count(osi::KEY_LCTRL()) != 0UL ||
-                       keyboard.keys_pressed().count(osi::KEY_RCTRL()) != 0UL;
-    bool const  alt = keyboard.keys_pressed().count(osi::KEY_LALT()) != 0UL ||
-                      keyboard.keys_pressed().count(osi::KEY_RALT()) != 0UL;
+    bool const  lmouse = mock_input.mouse->buttons_pressed().count(osi::LEFT_MOUSE_BUTTON()) != 0UL;
+    bool const  mmouse = mock_input.mouse->buttons_pressed().count(osi::MIDDLE_MOUSE_BUTTON()) != 0UL;
+    bool const  rmouse = mock_input.mouse->buttons_pressed().count(osi::RIGHT_MOUSE_BUTTON()) != 0UL;
+    bool const  shift = mock_input.keyboard->keys_pressed().count(osi::KEY_LSHIFT()) != 0UL ||
+                        mock_input.keyboard->keys_pressed().count(osi::KEY_RSHIFT()) != 0UL;
+    bool const  ctrl = mock_input.keyboard->keys_pressed().count(osi::KEY_LCTRL()) != 0UL ||
+                       mock_input.keyboard->keys_pressed().count(osi::KEY_RCTRL()) != 0UL;
+    bool const  alt = mock_input.keyboard->keys_pressed().count(osi::KEY_LALT()) != 0UL ||
+                      mock_input.keyboard->keys_pressed().count(osi::KEY_RALT()) != 0UL;
 
     // speed --------------------
 
-    if (lmouse && !rmouse)
+    if (lmouse && !mmouse && !rmouse)
     {
         if (shift)
         {
@@ -58,7 +54,7 @@ void  cortex_mock::next_round(
 
     // subject & sign -----------------------
 
-    if (lmouse && rmouse)
+    if (!lmouse && mmouse && !rmouse)
     {
         if (shift)
             motion_desire_props_ref().guesture.sign.intensity = mouse_pos(1);
@@ -76,10 +72,18 @@ void  cortex_mock::next_round(
 
     // look/aim_at_target -----------------------
 
-    if (!lmouse && rmouse)
+    if (!lmouse && !mmouse && rmouse)
     {
         if (ctrl)
-            motion_desire_props_ref().aim_at = motion_desire_props_ref().look_at;
+        {
+            if (shift)
+                motion_desire_props_ref().aim_at.magnitude = mouse_pos(1);
+            else
+            {
+                motion_desire_props_ref().aim_at.longitude = -mouse_pos(0);
+                motion_desire_props_ref().aim_at.altitude = mouse_pos(1);
+            }
+        }
         else
         {
             if (shift)

@@ -35,6 +35,8 @@ struct  simulator : public osi::simulator
         natural_32_bit  num_rounds_to_pause;
     };
 
+    enum struct CAMERA_CONTROLLER_TYPE : natural_8_bit { CAMERA_IS_LOCKED, FREE_FLY, CUSTOM_CONTROL };
+
     struct  render_configuration
     {
         render_configuration(osi::window_props const&  wnd_props, std::string const&  data_root_dir);
@@ -42,6 +44,7 @@ struct  simulator : public osi::simulator
         // Global config - fields are only initialised in the constructor and then never changed in this class.
         //                 Feel free to modify these field, ideally in the callback 'on_begin_round()'
         gfx::free_fly_config  free_fly_config;
+        CAMERA_CONTROLLER_TYPE  camera_controller_type;
         gfx::font_mono_props  font_props;
         vector3  clear_colour;
         vector4  diffuse_colour;
@@ -124,6 +127,7 @@ struct  simulator : public osi::simulator
         virtual void  on_end_simulation() {}
 
         virtual void  on_begin_camera_update() {}
+        virtual void  custom_camera_update() {}
         virtual void  on_end_camera_update() {}
 
         virtual void  on_begin_render() {}

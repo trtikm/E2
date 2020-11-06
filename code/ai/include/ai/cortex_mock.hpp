@@ -11,12 +11,7 @@ namespace ai {
 
 struct  cortex_mock : public cortex
 {
-    void  next_round(
-            float_32_bit const  time_step_in_seconds,
-            osi::keyboard_props const&  keyboard,
-            osi::mouse_props const&  mouse,
-            osi::window_props const&  window
-            ) override;
+    void  next_round(float_32_bit const  time_step_in_seconds, mock_input_props const&  mock_input) override;
 };
 
 

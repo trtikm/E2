@@ -15,7 +15,7 @@ cortex_default::cortex_default()
 
 void  cortex_default::next_round(float_32_bit const  time_step_in_seconds)
 {
-    cortex::next_round(time_step_in_seconds);
+    motion_desire_props_ref() = motion_desire_props();
 }
 
 

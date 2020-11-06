@@ -43,6 +43,7 @@ simulator::simulation_configuration::simulation_configuration()
 simulator::render_configuration::render_configuration(osi::window_props const&  wnd_props, std::string const&  data_root_dir)
     // Global config
     : free_fly_config(gfx::default_free_fly_config(wnd_props.pixel_width_mm(), wnd_props.pixel_height_mm()))
+    , camera_controller_type(CAMERA_CONTROLLER_TYPE::FREE_FLY)
     , font_props(
             [&data_root_dir]() -> gfx::font_mono_props {
                 gfx::font_mono_props  props;
@@ -283,6 +284,10 @@ void  simulator::simulate()
 
     simulation_context&  ctx = *context();
 
+    static ai::cortex::mock_input_props const  mock_input{ &get_keyboard_props(), &get_mouse_props(), &get_window_props() };
+    ai::cortex::mock_input_props const* const  mock_input_ptr =
+            render_config().camera_controller_type == CAMERA_CONTROLLER_TYPE::CAMERA_IS_LOCKED ? &mock_input : nullptr;
+
     simulation_config().simulation_time_buffer =
         std::min(simulation_config().simulation_time_buffer + round_seconds(),
                  (float_32_bit)simulation_config().MAX_NUM_SUB_SIMULATION_STEPS * simulation_config().MAX_SIMULATION_TIME_DELTA);
@@ -297,7 +302,7 @@ void  simulator::simulate()
         update_collision_contacts_and_constraints();
 
         device_simulator()->next_round((simulation_context const&)ctx, simulation_config().last_time_step);
-        ai_simulator()->next_round(simulation_config().last_time_step, get_keyboard_props(), get_mouse_props(), get_window_props());
+        ai_simulator()->next_round(simulation_config().last_time_step, mock_input_ptr);
         custom_module_round();
 
         ctx.process_rigid_bodies_with_invalidated_shape();
@@ -423,8 +428,17 @@ void  simulator::update_collider_locations_of_relocated_frames()
 void  simulator::camera_update()
 {
     gfx::adjust(*render_config().camera, get_window_props());
-    gfx::free_fly(*render_config().camera->coordinate_system(), render_config().free_fly_config,
-                  round_seconds(), get_mouse_props(), get_keyboard_props());
+    switch (render_config().camera_controller_type)
+    {
+    case CAMERA_CONTROLLER_TYPE::FREE_FLY:
+        gfx::free_fly(*render_config().camera->coordinate_system(), render_config().free_fly_config,
+                      round_seconds(), get_mouse_props(), get_keyboard_props());
+        break;
+    case CAMERA_CONTROLLER_TYPE::CUSTOM_CONTROL:
+        custom_camera_update();
+        break;
+    default: break;
+    }
     render_config().camera->to_camera_space_matrix(render_config().matrix_from_world_to_camera);
     render_config().camera->projection_matrix(render_config().matrix_from_camera_to_clipspace);
     render_config().directional_light_direction_in_camera_space =

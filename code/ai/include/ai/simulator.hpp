@@ -29,12 +29,7 @@ struct simulator
 
     void  clear();
 
-    void  next_round(
-            float_32_bit const  time_step_in_seconds,
-            osi::keyboard_props const&  keyboard,
-            osi::mouse_props const&  mouse,
-            osi::window_props const&  window
-            );
+    void  next_round(float_32_bit const  time_step_in_seconds, cortex::mock_input_props const* const  mock_input_ptr);
 
 private:
     dynamic_array<agent_ptr, agent_id>  m_agents;

@@ -13,9 +13,25 @@ cortex::cortex()
 {}
 
 
-void  cortex::next_round(float_32_bit const  time_step_in_seconds)
+cortex::mock_input_props::mock_input_props(
+        osi::keyboard_props const* const  keyboard_,
+        osi::mouse_props const* const  mouse_,
+        osi::window_props const* const  window_
+        )
+    : keyboard(keyboard_)
+    , mouse(mouse_)
+    , window(window_)
 {
-    m_motion_desire_props = motion_desire_props();
+    ASSUMPTION(keyboard != nullptr && mouse != nullptr && window != nullptr);
+}
+
+
+void  cortex::next_round(float_32_bit const  time_step_in_seconds, mock_input_props const* const  mock_input_ptr)
+{
+    if (mock_input_ptr == nullptr)
+        next_round(time_step_in_seconds);
+    else
+        next_round(time_step_in_seconds, *mock_input_ptr);
 }
 
 

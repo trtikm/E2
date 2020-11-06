@@ -99,17 +99,12 @@ agent::agent(
 {}
 
 
-void  agent::next_round(
-        float_32_bit const  time_step_in_seconds,
-        osi::keyboard_props const&  keyboard,
-        osi::mouse_props const&  mouse,
-        osi::window_props const&  window
-        )
+void  agent::next_round(float_32_bit const  time_step_in_seconds, cortex::mock_input_props const* const  mock_input_ptr)
 {
     TMPROF_BLOCK();
 
     m_sight_controller.next_round(time_step_in_seconds);
-    m_cortex->next_round(time_step_in_seconds, keyboard, mouse, window);
+    m_cortex->next_round(time_step_in_seconds, mock_input_ptr);
     m_action_controller.next_round(time_step_in_seconds);
 }
 

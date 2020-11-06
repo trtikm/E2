@@ -39,12 +39,7 @@ struct agent
 
     cortex const&  get_cortex() const { return *m_cortex; }
 
-    void  next_round(
-            float_32_bit const  time_step_in_seconds,
-            osi::keyboard_props const&  keyboard,
-            osi::mouse_props const&  mouse,
-            osi::window_props const&  window
-            );
+    void  next_round(float_32_bit const  time_step_in_seconds, cortex::mock_input_props const* const  mock_input_ptr);
 
 private:
     agent_state_variables_ptr  m_state_variables;
