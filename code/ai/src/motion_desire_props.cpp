@@ -3,12 +3,20 @@
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
+#include <algorithm>
 
 namespace ai {
 
 
+float_32_bit  clip_to_valid_desire_range(float_32_bit const x)
+{
+    return std::max(-1.0f, std::min(x, 1.0f));
+}
+
+
 void  as_vector(motion_desire_props const&  props, std::vector<float_32_bit>&  output)
 {
+    output.reserve(15UL);
     output.push_back(props.move.forward);
     output.push_back(props.move.left);
     output.push_back(props.move.up);
@@ -24,6 +32,27 @@ void  as_vector(motion_desire_props const&  props, std::vector<float_32_bit>&  o
     output.push_back(props.aim_at.longitude);
     output.push_back(props.aim_at.altitude);
     output.push_back(props.aim_at.magnitude);
+}
+
+
+void  from_vector(std::vector<float_32_bit> const&  data, motion_desire_props&  output_props)
+{
+    INVARIANT(data.size() == 15UL);
+    output_props.move.forward = clip_to_valid_desire_range(data.at(0));
+    output_props.move.left = clip_to_valid_desire_range(data.at(1));
+    output_props.move.up = clip_to_valid_desire_range(data.at(2));
+    output_props.move.turn_ccw = clip_to_valid_desire_range(data.at(3));
+    output_props.guesture.subject.head = clip_to_valid_desire_range(data.at(4));
+    output_props.guesture.subject.tail = clip_to_valid_desire_range(data.at(5));
+    output_props.guesture.sign.head = clip_to_valid_desire_range(data.at(6));
+    output_props.guesture.sign.tail = clip_to_valid_desire_range(data.at(7));
+    output_props.guesture.sign.intensity = clip_to_valid_desire_range(data.at(8));
+    output_props.look_at.longitude = clip_to_valid_desire_range(data.at(9));
+    output_props.look_at.altitude = clip_to_valid_desire_range(data.at(10));
+    output_props.look_at.magnitude = clip_to_valid_desire_range(data.at(11));
+    output_props.aim_at.longitude = clip_to_valid_desire_range(data.at(12));
+    output_props.aim_at.altitude = clip_to_valid_desire_range(data.at(13));
+    output_props.aim_at.magnitude = clip_to_valid_desire_range(data.at(14));
 }
 
 

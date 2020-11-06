@@ -64,7 +64,10 @@ struct  motion_desire_props
 };
 
 
+float_32_bit  clip_to_valid_desire_range(float_32_bit const x);
+
 void  as_vector(motion_desire_props const&  props, std::vector<float_32_bit>&  output);
+void  from_vector(std::vector<float_32_bit> const&  data, motion_desire_props&  output_props);
 
 void  load(
         motion_desire_props&  props,
