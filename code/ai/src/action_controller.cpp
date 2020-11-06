@@ -582,13 +582,26 @@ bool  agent_action::is_guard_valid() const
 }
 
 
-bool  agent_action::collect_transition_info(agent_action const&  from_action, transition_info&  info) const
+bool  agent_action::collect_transition_info(agent_action const* const  from_action_ptr, transition_info&  info) const
 {
-    ASSUMPTION(&from_action != this);
+    ASSUMPTION(from_action_ptr != this);
 
+    if (!collect_other_entiry_folder_guid(from_action_ptr, info))
+        return false;
+
+    collect_motion_object_relocation_frame(from_action_ptr, info);
+
+    return true;
+}
+
+
+bool  agent_action::collect_other_entiry_folder_guid(agent_action const* const  from_action_ptr, transition_info&  info) const
+{
     info.other_entiry_folder_guid = com::invalid_object_guid();
+    if (from_action_ptr == nullptr)
+        return true;
 
-    transition_config const&  config = from_action.TRANSITIONS.at(NAME);
+    transition_config const&  config = from_action_ptr->TRANSITIONS.at(NAME);
     if (config.perception_guard == nullptr)
         return true;
     transition_config::perception_guard_config const  percept = *config.perception_guard;
@@ -669,6 +682,89 @@ bool  agent_action::collect_transition_info(agent_action const&  from_action, tr
     }
 
     return false;
+}
+
+
+void  agent_action::collect_motion_object_relocation_frame(agent_action const* const  from_action_ptr, transition_info&  info) const
+{
+    if (from_action_ptr == nullptr)
+    {
+        matrix44  W = ctx().frame_world_matrix(binding().frame_guid_of_motion_object);
+        matrix44  F;
+        angeo::from_base_matrix(motion_templates().at(MOTION_TEMPLATE_NAME).reference_frames.at(0), F);
+        vector3  pos;
+        matrix33  rot;
+        decompose_matrix44(W * F, pos, rot);
+        info.motion_object_relocation_frame.set_origin(pos);
+        info.motion_object_relocation_frame.set_orientation(rotation_matrix_to_quaternion(rot));
+    }
+    else
+    {
+        info.motion_object_relocation_frame = ctx().frame_coord_system_in_world_space(binding().frame_guid_of_motion_object);
+
+        if (from_action_ptr != this)
+        {
+            std::shared_ptr<transition_config::motion_object_location_config> const  pos_cfg =
+                    from_action_ptr->TRANSITIONS.at(NAME).motion_object_location;
+            if (pos_cfg != nullptr)
+            {
+                com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
+                        pos_cfg->is_self_frame ? binding().folder_guid_of_agent : info.other_entiry_folder_guid,
+                        pos_cfg->frame_folder,
+                        ctx()
+                        );
+                angeo::from_coordinate_system(
+                        ctx().frame_coord_system_in_world_space(frame_guid),
+                        pos_cfg->frame,
+                        info.motion_object_relocation_frame
+                        );
+            }
+            else if (!are_equal_3d(AABB_HALF_SIZE, from_action_ptr->AABB_HALF_SIZE, 0.001f) ||
+                     from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
+            {
+                auto const  get_shift_vector =
+                    [](AABB_ALIGNMENT const  alignment, vector3 const&  aabb, vector3 const&  aabb_aligned) -> vector3 {
+                        natural_32_bit  coord_idx;
+                        float_32_bit  sign;
+                        switch (alignment)
+                        {
+                        case AABB_ALIGNMENT::CENTER: coord_idx = 0U; sign = 0.0f; break;
+                        case AABB_ALIGNMENT::X_LO: coord_idx = 0U; sign = -1.0f; break;
+                        case AABB_ALIGNMENT::X_HI: coord_idx = 0U; sign = 1.0f; break;
+                        case AABB_ALIGNMENT::Y_LO: coord_idx = 1U; sign = -1.0f; break;
+                        case AABB_ALIGNMENT::Y_HI: coord_idx = 1U; sign = 1.0f; break;
+                        case AABB_ALIGNMENT::Z_LO: coord_idx = 2U; sign = -1.0f; break;
+                        case AABB_ALIGNMENT::Z_HI: coord_idx = 2U; sign = 1.0f; break;
+                        default: { UNREACHABLE(); } break;
+                        }
+                        return (sign * (aabb(coord_idx) - aabb_aligned(coord_idx))) * vector3_unit(coord_idx);
+                    };
+
+                vector3 const  from_motion_object_aabb_shift = get_shift_vector(
+                        from_action_ptr->MOTION_OBJECT_CONFIG.aabb_alignment,
+                        from_action_ptr->AABB_HALF_SIZE,
+                        from_action_ptr->MOTION_OBJECT_CONFIG.aabb_half_size
+                        );
+                vector3 const  agent_aabb_shift = get_shift_vector(
+                        from_action_ptr->TRANSITIONS.at(NAME).aabb_alignment,
+                        from_action_ptr->AABB_HALF_SIZE,
+                        AABB_HALF_SIZE
+                        );
+                vector3 const  motion_object_aabb_shift = get_shift_vector(
+                        MOTION_OBJECT_CONFIG.aabb_alignment,
+                        AABB_HALF_SIZE,
+                        MOTION_OBJECT_CONFIG.aabb_half_size
+                        );
+
+                info.motion_object_relocation_frame.set_origin(
+                        info.motion_object_relocation_frame.origin()
+                        - from_motion_object_aabb_shift
+                        + agent_aabb_shift
+                        + motion_object_aabb_shift
+                        );
+            }
+        }
+    }
 }
 
 
@@ -773,16 +869,13 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
     {
         // Relocations of frames
 
-        angeo::coordinate_system  relocation_frame;
-        get_motion_object_relocation_frame(relocation_frame, from_action_ptr, info);
-
-        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, relocation_frame.origin(), relocation_frame.orientation());
+        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, info.motion_object_relocation_frame);
         ctx().request_relocate_frame(binding().frame_guid_of_skeleton_sync_target, vector3_zero(), quaternion_identity());
 
         angeo::coordinate_system  ghost_start_frame;
         if (from_action_ptr != nullptr)
             angeo::to_coordinate_system(
-                    relocation_frame,
+                    info.motion_object_relocation_frame,
                     ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton),
                     ghost_start_frame
                     );
@@ -909,86 +1002,6 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
                                 name_and_props.second.under_folder + name_and_props.first + "/"
                                 )
                         );
-}
-
-
-void  agent_action::get_motion_object_relocation_frame(
-        angeo::coordinate_system&  relocated_frame,
-        agent_action* const  from_action_ptr,
-        transition_info const&  info
-        ) const
-{
-    if (from_action_ptr == nullptr)
-    {
-        matrix44  W = ctx().frame_world_matrix(binding().frame_guid_of_motion_object);
-        matrix44  F;
-        angeo::from_base_matrix(motion_templates().at(MOTION_TEMPLATE_NAME).reference_frames.at(0), F);
-        vector3  pos;
-        matrix33  rot;
-        decompose_matrix44(W * F, pos, rot);
-        relocated_frame.set_origin(pos);
-        relocated_frame.set_orientation(rotation_matrix_to_quaternion(rot));
-    }
-    else
-    {
-        relocated_frame = ctx().frame_coord_system_in_world_space(binding().frame_guid_of_motion_object);
-
-        if (from_action_ptr != this)
-        {
-            std::shared_ptr<transition_config::motion_object_location_config> const  pos_cfg =
-                    from_action_ptr->TRANSITIONS.at(NAME).motion_object_location;
-            if (pos_cfg != nullptr)
-            {
-                com::object_guid const  frame_guid = get_frame_guid_under_agent_folder(
-                        pos_cfg->is_self_frame ? binding().folder_guid_of_agent : info.other_entiry_folder_guid,
-                        pos_cfg->frame_folder,
-                        ctx()
-                        );
-                angeo::from_coordinate_system(ctx().frame_coord_system_in_world_space(frame_guid), pos_cfg->frame, relocated_frame);
-            }
-            else if (!are_equal_3d(AABB_HALF_SIZE, from_action_ptr->AABB_HALF_SIZE, 0.001f) ||
-                     from_action_ptr->MOTION_OBJECT_CONFIG != MOTION_OBJECT_CONFIG)
-            {
-                auto const  get_shift_vector =
-                    [](AABB_ALIGNMENT const  alignment, vector3 const&  aabb, vector3 const&  aabb_aligned) -> vector3 {
-                        natural_32_bit  coord_idx;
-                        float_32_bit  sign;
-                        switch (alignment)
-                        {
-                        case AABB_ALIGNMENT::CENTER: coord_idx = 0U; sign = 0.0f; break;
-                        case AABB_ALIGNMENT::X_LO: coord_idx = 0U; sign = -1.0f; break;
-                        case AABB_ALIGNMENT::X_HI: coord_idx = 0U; sign = 1.0f; break;
-                        case AABB_ALIGNMENT::Y_LO: coord_idx = 1U; sign = -1.0f; break;
-                        case AABB_ALIGNMENT::Y_HI: coord_idx = 1U; sign = 1.0f; break;
-                        case AABB_ALIGNMENT::Z_LO: coord_idx = 2U; sign = -1.0f; break;
-                        case AABB_ALIGNMENT::Z_HI: coord_idx = 2U; sign = 1.0f; break;
-                        default: { UNREACHABLE(); } break;
-                        }
-                        return (sign * (aabb(coord_idx) - aabb_aligned(coord_idx))) * vector3_unit(coord_idx);
-                    };
-
-                vector3 const  from_motion_object_aabb_shift = get_shift_vector(
-                        from_action_ptr->MOTION_OBJECT_CONFIG.aabb_alignment,
-                        from_action_ptr->AABB_HALF_SIZE,
-                        from_action_ptr->MOTION_OBJECT_CONFIG.aabb_half_size
-                        );
-                vector3 const  agent_aabb_shift = get_shift_vector(
-                        from_action_ptr->TRANSITIONS.at(NAME).aabb_alignment,
-                        from_action_ptr->AABB_HALF_SIZE,
-                        AABB_HALF_SIZE
-                        );
-                vector3 const  motion_object_aabb_shift = get_shift_vector(
-                        MOTION_OBJECT_CONFIG.aabb_alignment,
-                        AABB_HALF_SIZE,
-                        MOTION_OBJECT_CONFIG.aabb_half_size
-                        );
-
-                relocated_frame.set_origin(
-                        relocated_frame.origin()- from_motion_object_aabb_shift + agent_aabb_shift + motion_object_aabb_shift
-                        );
-            }
-        }
-    }
 }
 
 
@@ -1149,17 +1162,15 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
             quaternion_identity()
             );
 
-    angeo::coordinate_system  motion_object_frame;
-    get_motion_object_relocation_frame(motion_object_frame, from_action_ptr, info);
-
     if (from_roller_ptr == nullptr)
     {
         m_roller_folder_guid = ctx().insert_folder(binding().folder_guid_of_agent, "roller", false);
         m_roller_frame_guid = ctx().insert_frame(
                 m_roller_folder_guid,
                 com::invalid_object_guid(),
-                motion_object_frame.origin() - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(motion_object_frame),
-                motion_object_frame.orientation()
+                info.motion_object_relocation_frame.origin()
+                        - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(info.motion_object_relocation_frame),
+                info.motion_object_relocation_frame.orientation()
                 );
         ctx().request_insert_rigid_body(
                 m_roller_folder_guid,
@@ -1252,8 +1263,9 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
 
     ctx().request_relocate_frame(
             m_roller_frame_guid,
-            motion_object_frame.origin() - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(motion_object_frame),
-            motion_object_frame.orientation()
+            info.motion_object_relocation_frame.origin()
+                    - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(info.motion_object_relocation_frame),
+            info.motion_object_relocation_frame.orientation()
             );
 }
 
@@ -1405,15 +1417,23 @@ action_controller::action_controller(agent_config const  config, agent*  const  
             return true;
         }()
     );
+
     m_current_action = m_available_actions.at(config.initial_action());
-    m_current_action->on_transition(nullptr, agent_action::transition_info());
-    m_context->animate.move_to_target();
-    m_context->animate.commit(m_context->motion_templates(), m_context->binding());
-}
+ }
 
 
 action_controller::~action_controller()
 {}
+
+
+void  action_controller::initialise()
+{
+    agent_action::transition_info  info;
+    m_current_action->collect_transition_info(nullptr, info);
+    m_current_action->on_transition(nullptr, info);
+    m_context->animate.move_to_target();
+    m_context->animate.commit(m_context->motion_templates(), m_context->binding());
+}
 
 
 void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
@@ -1442,7 +1462,7 @@ void  action_controller::process_action_transitions()
         {
             std::shared_ptr<agent_action> const  action_ptr = m_available_actions.at(name_and_props.first);
             agent_action::transition_info  info;
-            if (!action_ptr->collect_transition_info(*m_current_action, info))
+            if (!action_ptr->collect_transition_info(&*m_current_action, info))
                 continue;
             float_32_bit const  penalty = action_ptr->compute_desire_penalty();
             if (best_action == nullptr || penalty < best_penalty)

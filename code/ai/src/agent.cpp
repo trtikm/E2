@@ -96,7 +96,9 @@ agent::agent(
             m_binding
             )
     , m_cortex(make_cortex(config))
-{}
+{
+    m_action_controller.initialise();
+}
 
 
 void  agent::next_round(float_32_bit const  time_step_in_seconds, cortex::mock_input_props const* const  mock_input_ptr)

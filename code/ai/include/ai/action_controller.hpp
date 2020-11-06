@@ -148,6 +148,7 @@ struct  agent_action
     struct  transition_info
     {
         com::object_guid  other_entiry_folder_guid;
+        angeo::coordinate_system  motion_object_relocation_frame;
     };
 
     struct  skeletal_animation_info
@@ -193,7 +194,7 @@ struct  agent_action
 
     bool  is_guard_valid() const;
 
-    bool  collect_transition_info(agent_action const&  from_action, transition_info&  info) const;
+    bool  collect_transition_info(agent_action const* const  from_action_ptr, transition_info&  info) const;
 
     virtual void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info);
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
@@ -202,11 +203,8 @@ struct  agent_action
     virtual void  get_custom_folders(std::unordered_map<com::object_guid, on_custom_folder_erase_func>&  folders) {}
 
 protected:
-    void  get_motion_object_relocation_frame(
-            angeo::coordinate_system&  frame,
-            agent_action* const  from_action_ptr,
-            transition_info const&  info
-            ) const;
+    bool  collect_other_entiry_folder_guid(agent_action const* const  from_action_ptr, transition_info&  info) const;
+    void  collect_motion_object_relocation_frame(agent_action const* const  from_action_ptr, transition_info&  info) const;
 
     // CONSTANTS
 
@@ -320,6 +318,8 @@ struct  action_controller
 {
     action_controller(agent_config const  config, agent*  const  myself);
     ~action_controller();
+
+    void  initialise();
 
     void  next_round(float_32_bit const  time_step_in_seconds);
 
