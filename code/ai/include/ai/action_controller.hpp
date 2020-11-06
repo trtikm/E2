@@ -62,7 +62,6 @@ struct  agent_action
     {
         motion_desire_props  ideal;
         motion_desire_props  weights;
-        float_32_bit  treashold;
     };
 
     struct  effect_config

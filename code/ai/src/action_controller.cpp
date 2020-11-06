@@ -243,15 +243,8 @@ void  agent_action::load_desire(
         boost::property_tree::ptree const&  defaults
         )
 {
-    auto get = [&ptree, &defaults](std::string const&  property_name) -> float_32_bit {
-        auto  it = ptree.find(property_name);
-        if (it == ptree.not_found())
-            it = defaults.find(property_name);
-        return it->second.get_value<float_32_bit>();
-    };
     load(DESIRE.ideal, ptree.find("ideal")->second, defaults.find("ideal")->second);
     load(DESIRE.weights, ptree.find("weights")->second, defaults.find("weights")->second);
-    DESIRE.treashold = get("treashold");
 }
 
 
