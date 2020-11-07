@@ -38,12 +38,15 @@ struct  object_guid
 {
     using  index_type = natural_16_bit;
 
+    object_guid() : kind(OBJECT_KIND::NONE), index(std::numeric_limits<object_guid::index_type>::max()) {}
+    object_guid(OBJECT_KIND const kind_, index_type const  index_) : kind(kind_), index(index_) {}
+
     OBJECT_KIND  kind;
     index_type  index;
 };
 
 
-inline object_guid  invalid_object_guid() { return { OBJECT_KIND::NONE, std::numeric_limits<object_guid::index_type>::max() }; }
+inline object_guid  invalid_object_guid() { return {}; }
 
 
 inline bool operator==(object_guid const  left, object_guid const  right) noexcept
