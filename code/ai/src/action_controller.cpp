@@ -675,11 +675,11 @@ void  agent_action::collect_motion_object_relocation_frame(agent_action const* c
 }
 
 
-void  agent_action::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
+void  agent_action::on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(this != from_action_ptr || is_complete());
+    ASSUMPTION((this != from_action_ptr || is_complete()) && ((this == from_action_ptr) == (info_ptr == nullptr)));
 
     skeletal_motion_templates::keyframes const  keyframes = motion_templates().at(MOTION_TEMPLATE_NAME).keyframes;
 
@@ -776,13 +776,13 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
     {
         // Relocations of frames
 
-        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, info.motion_object_relocation_frame);
+        ctx().request_relocate_frame(binding().frame_guid_of_motion_object, info_ptr->motion_object_relocation_frame);
         ctx().request_relocate_frame(binding().frame_guid_of_skeleton_sync_target, vector3_zero(), quaternion_identity());
 
         angeo::coordinate_system  ghost_start_frame;
         if (from_action_ptr != nullptr)
             angeo::to_coordinate_system(
-                    info.motion_object_relocation_frame,
+                    info_ptr->motion_object_relocation_frame,
                     ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton),
                     ghost_start_frame
                     );
@@ -868,8 +868,10 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
                 from_action_ptr->TRANSITIONS.at(NAME).motion_object_location;
         if (pos_cfg != nullptr && !pos_cfg->disable_colliding.empty())
         {
-            INVARIANT(info.other_entiry_folder_guid != com::invalid_object_guid());
-            action_execution_context::scene_object_relative_path const  rel_path { info.other_entiry_folder_guid, pos_cfg->disable_colliding };
+            INVARIANT(info_ptr->other_entiry_folder_guid != com::invalid_object_guid());
+            action_execution_context::scene_object_relative_path const  rel_path {
+                    info_ptr->other_entiry_folder_guid, pos_cfg->disable_colliding
+                    };
             m_context->disabled_colliding_with_our_motion_object.push_back(rel_path);
             ctx().request_enable_colliding(
                     binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
@@ -939,9 +941,9 @@ action_guesture::action_guesture(
 }
 
 
-void  action_guesture::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
+void  action_guesture::on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr)
 {
-    agent_action::on_transition(from_action_ptr, info);
+    agent_action::on_transition(from_action_ptr, info_ptr);
 
     ctx().request_set_rigid_body_angular_velocity(
             binding().folder_guid_of_motion_object,
@@ -1052,11 +1054,11 @@ bool  action_roller::roller_object_config::operator==(roller_object_config const
 }
 
 
-void  action_roller::on_transition(agent_action* const  from_action_ptr, transition_info const&  info)
+void  action_roller::on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr)
 {
     TMPROF_BLOCK();
 
-    agent_action::on_transition(from_action_ptr, info);
+    agent_action::on_transition(from_action_ptr, info_ptr);
 
     if (from_action_ptr == this)
         return;
@@ -1075,9 +1077,9 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
         m_roller_frame_guid = ctx().insert_frame(
                 m_roller_folder_guid,
                 com::invalid_object_guid(),
-                info.motion_object_relocation_frame.origin()
-                        - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(info.motion_object_relocation_frame),
-                info.motion_object_relocation_frame.orientation()
+                info_ptr->motion_object_relocation_frame.origin()
+                        - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(info_ptr->motion_object_relocation_frame),
+                info_ptr->motion_object_relocation_frame.orientation()
                 );
         ctx().request_insert_rigid_body(
                 m_roller_folder_guid,
@@ -1170,9 +1172,9 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
 
     ctx().request_relocate_frame(
             m_roller_frame_guid,
-            info.motion_object_relocation_frame.origin()
-                    - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(info.motion_object_relocation_frame),
-            info.motion_object_relocation_frame.orientation()
+            info_ptr->motion_object_relocation_frame.origin()
+                    - max_coord(MOTION_OBJECT_CONFIG.aabb_half_size) * angeo::axis_z(info_ptr->motion_object_relocation_frame),
+            info_ptr->motion_object_relocation_frame.orientation()
             );
 }
 
@@ -1337,7 +1339,7 @@ void  action_controller::initialise()
 {
     agent_action::transition_info  info;
     m_current_action->collect_transition_info(nullptr, info);
-    m_current_action->on_transition(nullptr, info);
+    m_current_action->on_transition(nullptr, &info);
     m_context->animate.move_to_target();
     m_context->animate.commit(m_context->motion_templates(), m_context->binding());
 }
@@ -1384,7 +1386,7 @@ void  action_controller::process_action_transitions()
 
     if (m_current_action != best_action || m_current_action->is_complete())
     {
-        best_action->on_transition(&*m_current_action, best_info);
+        best_action->on_transition(&*m_current_action, m_current_action == best_action ? nullptr : &best_info);
         if (m_current_action != best_action)
         {
             std::unordered_map<com::object_guid, agent_action::on_custom_folder_erase_func>  old_custom_folders, new_custom_folders;

@@ -196,7 +196,7 @@ struct  agent_action
 
     bool  collect_transition_info(agent_action const* const  from_action_ptr, transition_info&  info) const;
 
-    virtual void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info);
+    virtual void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr);
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
     using  on_custom_folder_erase_func = std::function<void()>;
@@ -250,7 +250,7 @@ struct  action_guesture : public  agent_action
             boost::property_tree::ptree const&  defaults_,
             action_execution_context_ptr const  context_
             );
-    void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info) override;
+    void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr) override;
     void  next_round(float_32_bit const  time_step_in_seconds) override;
 };
 
@@ -263,7 +263,7 @@ struct  action_guesture : public  agent_action
 //            boost::property_tree::ptree const&  defaults_,
 //            action_execution_context_ptr const  context_
 //            );
-//    //void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info) override {}
+//    //void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr) override {}
 //    void  next_round(float_32_bit const  time_step_in_seconds) override;
 //    angeo::coordinate_system  target;
 //};
@@ -288,7 +288,7 @@ struct  action_roller : public  agent_action
             boost::property_tree::ptree const&  defaults_,
             action_execution_context_ptr const  context_
             );
-    void  on_transition(agent_action* const  from_action_ptr, transition_info const&  info) override;
+    void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr) override;
     void  next_round(float_32_bit const  time_step_in_seconds) override;
     void  get_custom_folders(std::unordered_map<com::object_guid, on_custom_folder_erase_func>&  folders) override;
 
