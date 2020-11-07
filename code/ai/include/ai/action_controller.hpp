@@ -98,6 +98,7 @@ struct  agent_action
         float_32_bit  mass_inverted;
         matrix33  inertia_tensor_inverted;
         bool  is_moveable;
+        vector3  offset_from_center_of_agent_aabb;
     };
 
     struct  sensor_config
