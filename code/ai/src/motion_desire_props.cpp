@@ -1,4 +1,5 @@
 #include <ai/motion_desire_props.hpp>
+#include <ai/utils_ptree.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -62,28 +63,21 @@ void  load(
         boost::property_tree::ptree const&  defaults_
         )
 {
-    auto get = [&ptree_, &defaults_](std::string const&  property_name) -> float_32_bit {
-        auto  it = ptree_.find(property_name);
-        if (it == ptree_.not_found())
-            it = defaults_.find(property_name);
-        ASSUMPTION(it != defaults_.not_found());
-        return it->second.get_value<float_32_bit>();
-    };
-    props.move.forward = get("move:forward");
-    props.move.left = get("move:left");
-    props.move.up = get("move:up");
-    props.move.turn_ccw = get("move:turn_ccw");
-    props.guesture.subject.head = get("guesture:subject:head");
-    props.guesture.subject.tail = get("guesture:subject:tail");
-    props.guesture.sign.head = get("guesture:sign:head");
-    props.guesture.sign.tail = get("guesture:sign:tail");
-    props.guesture.sign.intensity = get("guesture:sign:intensity");
-    props.look_at.longitude = get("look_at:longitude");
-    props.look_at.altitude = get("look_at:altitude");
-    props.look_at.magnitude = get("look_at:magnitude");
-    props.aim_at.longitude = get("aim_at:longitude");
-    props.aim_at.altitude = get("aim_at:altitude");
-    props.aim_at.magnitude = get("aim_at:magnitude");
+    props.move.forward = get_value<float_32_bit>("move:forward", ptree_, &defaults_);
+    props.move.left = get_value<float_32_bit>("move:left", ptree_, &defaults_);
+    props.move.up = get_value<float_32_bit>("move:up", ptree_, &defaults_);
+    props.move.turn_ccw = get_value<float_32_bit>("move:turn_ccw", ptree_, &defaults_);
+    props.guesture.subject.head = get_value<float_32_bit>("guesture:subject:head", ptree_, &defaults_);
+    props.guesture.subject.tail = get_value<float_32_bit>("guesture:subject:tail", ptree_, &defaults_);
+    props.guesture.sign.head = get_value<float_32_bit>("guesture:sign:head", ptree_, &defaults_);
+    props.guesture.sign.tail = get_value<float_32_bit>("guesture:sign:tail", ptree_, &defaults_);
+    props.guesture.sign.intensity = get_value<float_32_bit>("guesture:sign:intensity", ptree_, &defaults_);
+    props.look_at.longitude = get_value<float_32_bit>("look_at:longitude", ptree_, &defaults_);
+    props.look_at.altitude = get_value<float_32_bit>("look_at:altitude", ptree_, &defaults_);
+    props.look_at.magnitude = get_value<float_32_bit>("look_at:magnitude", ptree_, &defaults_);
+    props.aim_at.longitude = get_value<float_32_bit>("aim_at:longitude", ptree_, &defaults_);
+    props.aim_at.altitude = get_value<float_32_bit>("aim_at:altitude", ptree_, &defaults_);
+    props.aim_at.magnitude = get_value<float_32_bit>("aim_at:magnitude", ptree_, &defaults_);
 }
 
 

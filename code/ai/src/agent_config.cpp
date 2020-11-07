@@ -1,4 +1,5 @@
 #include <ai/agent_config.hpp>
+#include <ai/utils_ptree.hpp>
 #include <utility/canonical_path.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -7,28 +8,6 @@
 #include <utility/log.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/property_tree/json_parser.hpp>
-
-namespace ai { namespace detail { namespace {
-
-
-void  load_ptree(boost::property_tree::ptree&  ptree, boost::filesystem::path const&  ptree_pathname)
-{
-    if (!boost::filesystem::is_regular_file(ptree_pathname))
-        throw std::runtime_error(msgstream() << "Cannot access the file '" << ptree_pathname << "'.");
-    boost::property_tree::read_json(ptree_pathname.string(), ptree);
-}
-
-
-std::shared_ptr<boost::property_tree::ptree>  load_ptree(boost::filesystem::path const&  ptree_pathname)
-{
-    std::shared_ptr<boost::property_tree::ptree>  ptree(new boost::property_tree::ptree);
-    load_ptree(*ptree, ptree_pathname);
-    return ptree;
-}
-
-
-}}}
 
 namespace ai { namespace detail {
 
@@ -47,14 +26,14 @@ agent_config_data::agent_config_data(async::finalise_load_on_destroy_ptr const f
         throw std::runtime_error(msgstream() << "Cannot access directory '" << root_dir << "'.");
 
     boost::property_tree::ptree  root_cfg;
-    detail::load_ptree(root_cfg, root_dir / "config.json");
+    load_ptree(root_cfg, root_dir / "config.json");
 
-    m_use_cortex_mock = root_cfg.get<bool>("use_cortex_mock");
+    m_use_cortex_mock = get_value<bool>("use_cortex_mock", root_cfg);
 
     std::vector<boost::filesystem::path>  root_load_dirs{ finaliser->get_key().get_unique_id() };
     if (root_cfg.count("imports") != 0UL)
     {
-        boost::property_tree::ptree const&  imports = root_cfg.find("imports")->second;
+        boost::property_tree::ptree const&  imports = get_ptree("imports", root_cfg);
         for (auto  it = imports.begin(); it != imports.end(); ++it)
             root_load_dirs.push_back(root_load_dirs.front() / it->second.data());
     }

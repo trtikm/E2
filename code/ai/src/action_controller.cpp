@@ -1,6 +1,7 @@
 #include <ai/action_controller.hpp>
 #include <ai/agent.hpp>
 #include <ai/skeleton_utils.hpp>
+#include <ai/utils_ptree.hpp>
 #include <angeo/collide.hpp>
 #include <angeo/linear_segment_curve.hpp>
 #include <angeo/utility.hpp>
@@ -16,31 +17,6 @@
 #include <algorithm>
 
 namespace ai { namespace {
-
-
-vector3  read_vector3(boost::property_tree::ptree const&  ptree)
-{
-    return { ptree.get<float_32_bit>("x"), ptree.get<float_32_bit>("y"), ptree.get<float_32_bit>("z") };
-}
-
-
-quaternion  read_quaternion(boost::property_tree::ptree const&  ptree)
-{
-    return make_quaternion_wxyz(
-                ptree.get<float_32_bit>("w"),
-                ptree.get<float_32_bit>("x"),
-                ptree.get<float_32_bit>("y"),
-                ptree.get<float_32_bit>("z")
-                );
-}
-
-
-vector3  read_aabb_half_size(boost::property_tree::ptree const&  ptree)
-{
-    vector3  u = read_vector3(ptree);
-    ASSUMPTION(u(0) > 0.0f && u(1) > 0.0f && u(2) > 0.0f);
-    return u;
-}
 
 
 void  insert_collider_to_context(
@@ -170,16 +146,12 @@ agent_action::agent_action(
     : NAME(name_)
     , DESIRE() // loaded below
     , EFFECTS() // loaded below
-    , MOTION_TEMPLATE_NAME(ptree_.get<std::string>("MOTION_TEMPLATE_NAME"))
-    , ONLY_INTERPOLATE_TO_MOTION_TEMPLATE(ptree_.get<bool>("ONLY_INTERPOLATE_TO_MOTION_TEMPLATE"))
-    , IS_CYCLIC(ptree_.get<bool>("IS_CYCLIC"))
-    , IS_LOOK_AT_ENABLED(ptree_.get<bool>("IS_LOOK_AT_ENABLED"))
-    , IS_AIM_AT_ENABLED(ptree_.get<bool>("IS_AIM_AT_ENABLED"))
-    , DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE(
-            ptree_.count("DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE") == 0U ?
-                    false :
-                    ptree_.get<bool>("DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE")
-            )
+    , MOTION_TEMPLATE_NAME(get_value<std::string>("MOTION_TEMPLATE_NAME", ptree_))
+    , ONLY_INTERPOLATE_TO_MOTION_TEMPLATE(get_value<bool>("ONLY_INTERPOLATE_TO_MOTION_TEMPLATE", ptree_))
+    , IS_CYCLIC(get_value<bool>("IS_CYCLIC", ptree_))
+    , IS_LOOK_AT_ENABLED(get_value<bool>("IS_LOOK_AT_ENABLED", ptree_))
+    , IS_AIM_AT_ENABLED(get_value<bool>("IS_AIM_AT_ENABLED", ptree_))
+    , DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE(get_value<bool>("DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE", false, ptree_))
     , SENSORS() // loaded below
     , TRANSITIONS() // loaded below
     , MOTION_OBJECT_CONFIG() // loaded below
@@ -193,31 +165,13 @@ agent_action::agent_action(
     , m_animation{0.0f, 0U, 0U}
 {
     ASSUMPTION(motion_templates().motions_map().count(MOTION_TEMPLATE_NAME) != 0UL);
-    load_desire(
-            ptree_.find("DESIRE")->second,
-            defaults_.count("DESIRE") == 0UL ?
-                    boost::property_tree::ptree() : defaults_.find("DESIRE")->second
-            );
-    load_effects(
-            ptree_.find("EFFECTS")->second,
-            defaults_.count("EFFECTS") == 0UL ?
-                    boost::property_tree::ptree() : defaults_.find("EFFECTS")->second
-            );
-    load_motion_object_config(
-            ptree_.find("MOTION_OBJECT_CONFIG")->second,
-            defaults_.count("MOTION_OBJECT_CONFIG") == 0UL ?
-                    boost::property_tree::ptree() : defaults_.find("MOTION_OBJECT_CONFIG")->second
-            );
-    {
-        auto const  it = ptree_.find("AABB_HALF_SIZE");
-        AABB_HALF_SIZE = it == ptree_.not_found() ? motion_templates().at(MOTION_TEMPLATE_NAME).bboxes.front() : read_vector3(it->second);
-    }
-    load_sensors(ptree_.find("SENSORS")->second);
-    load_transitions(
-            ptree_.find("TRANSITIONS")->second,
-            defaults_.count("TRANSITIONS") == 0UL ?
-                    boost::property_tree::ptree() : defaults_.find("TRANSITIONS")->second
-            );
+    load_desire(get_ptree("DESIRE", ptree_), get_ptree_or_empty("DESIRE", defaults_));
+    load_effects(get_ptree("EFFECTS", ptree_), get_ptree_or_empty("EFFECTS", defaults_));
+    load_motion_object_config(get_ptree("MOTION_OBJECT_CONFIG", ptree_), get_ptree_or_empty("MOTION_OBJECT_CONFIG", defaults_));
+    AABB_HALF_SIZE =
+            read_aabb_half_size("AABB_HALF_SIZE", "AABB_HALF_SIZE_FROM_KEYFRAME", motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree_);
+    load_sensors(get_ptree_or_empty("SENSORS", ptree_));
+    load_transitions(get_ptree("TRANSITIONS", ptree_), get_ptree_or_empty("TRANSITIONS", defaults_));
 }
 
 
@@ -243,8 +197,8 @@ void  agent_action::load_desire(
         boost::property_tree::ptree const&  defaults
         )
 {
-    load(DESIRE.ideal, ptree.find("ideal")->second, defaults.find("ideal")->second);
-    load(DESIRE.weights, ptree.find("weights")->second, defaults.find("weights")->second);
+    load(DESIRE.ideal, get_ptree("ideal", ptree), get_ptree_or_empty("ideal", defaults));
+    load(DESIRE.weights, get_ptree("weights", ptree), get_ptree_or_empty("weights", defaults));
 }
 
 
@@ -262,51 +216,15 @@ void  agent_action::load_motion_object_config(
         boost::property_tree::ptree const&  defaults
         )
 {
-    auto get_ptree = [&ptree, &defaults](std::string const&  property_name) -> boost::property_tree::ptree const* {
-        auto  it = ptree.find(property_name);
-        if (it == ptree.not_found())
-            it = defaults.find(property_name);
-        if (it == defaults.not_found())
-            return nullptr;
-        return &it->second;
-    };
-
     MOTION_OBJECT_CONFIG.shape_type = angeo::as_collision_shape_type(ptree.get<std::string>("shape_type"));
-
-    {
-        boost::property_tree::ptree const* const  p = get_ptree("aabb_half_size");
-        if (p == nullptr)
-            MOTION_OBJECT_CONFIG.aabb_half_size = motion_templates().at(MOTION_TEMPLATE_NAME).bboxes.front();
-        else
-            MOTION_OBJECT_CONFIG.aabb_half_size = read_vector3(*p);
-
-        MOTION_OBJECT_CONFIG.aabb_alignment =
-                ptree.count("aabb_alignment") != 0U ?
-                        aabb_alignment_from_string(ptree.get<std::string>("aabb_alignment")) :
-                        defaults.count("aabb_alignment") != 0U ?
-                                aabb_alignment_from_string(defaults.get<std::string>("aabb_alignment")) :
-                                AABB_ALIGNMENT::Z_LO;
-    }
-
+    MOTION_OBJECT_CONFIG.aabb_half_size =
+            read_aabb_half_size("aabb_half_size", "aabb_half_size_from_keyframe", motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree);
+    MOTION_OBJECT_CONFIG.aabb_alignment = aabb_alignment_from_string(get_value("aabb_alignment", "Z_LO", ptree, &defaults));
     MOTION_OBJECT_CONFIG.collision_material =
-            angeo::read_collison_material_from_string(get_ptree("collision_material")->get_value<std::string>());
-
-    MOTION_OBJECT_CONFIG.mass_inverted = get_ptree("mass_inverted")->get_value<float_32_bit>();
-
-    {
-        boost::property_tree::ptree const* const  p = get_ptree("inertia_tensor_inverted");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(0,0) = p->get<float_32_bit>("00");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(0,1) = p->get<float_32_bit>("01");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(0,2) = p->get<float_32_bit>("02");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(1,0) = p->get<float_32_bit>("10");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(1,1) = p->get<float_32_bit>("11");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(1,2) = p->get<float_32_bit>("12");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(2,0) = p->get<float_32_bit>("20");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(2,1) = p->get<float_32_bit>("21");
-        MOTION_OBJECT_CONFIG.inertia_tensor_inverted(2,2) = p->get<float_32_bit>("22");
-    }
-
-    MOTION_OBJECT_CONFIG.is_moveable = get_ptree("is_moveable")->get_value<bool>();
+            angeo::read_collison_material_from_string(get_value<std::string>("collision_material", ptree, &defaults));
+    MOTION_OBJECT_CONFIG.mass_inverted = get_value<float_32_bit>("mass_inverted", ptree, &defaults);
+    read_matrix33(get_ptree("inertia_tensor_inverted", ptree, &defaults), MOTION_OBJECT_CONFIG.inertia_tensor_inverted);
+    MOTION_OBJECT_CONFIG.is_moveable = get_value<bool>("is_moveable", ptree, &defaults);
 }
 
 
@@ -316,13 +234,13 @@ void  agent_action::load_sensors(boost::property_tree::ptree const&  ptree)
     {
         sensor_config  sc;
         sc.name = name_and_props.first;
-        sc.under_folder = name_and_props.second.get<std::string>("under_folder");
+        sc.under_folder = get_value<std::string>("under_folder", name_and_props.second);
         ASSUMPTION(ctx().is_valid_folder_guid(ctx().from_relative_path(binding().folder_guid_of_agent, sc.under_folder)));
-        sc.shape_type = angeo::as_collision_shape_type(name_and_props.second.get<std::string>("shape_type"));
-        sc.collision_class = angeo::read_collison_class_from_string(name_and_props.second.get<std::string>("collision_class"));
-        sc.aabb_half_size = read_aabb_half_size(name_and_props.second.find("aabb_half_size")->second);
-        sc.frame.set_origin(read_vector3(name_and_props.second.find("origin")->second));
-        sc.frame.set_orientation(read_quaternion(name_and_props.second.find("orientation")->second));
+        sc.shape_type = angeo::as_collision_shape_type(get_value<std::string>("shape_type", name_and_props.second));
+        sc.collision_class = angeo::read_collison_class_from_string(get_value<std::string>("collision_class", name_and_props.second));
+        sc.aabb_half_size = read_aabb_half_size(get_ptree("aabb_half_size", name_and_props.second));
+        sc.frame.set_origin(read_vector3(get_ptree("origin", name_and_props.second)));
+        sc.frame.set_orientation(read_quaternion(get_ptree("orientation", name_and_props.second)));
         SENSORS.insert({ name_and_props.first, sc });
     }
 }
@@ -333,75 +251,64 @@ void  agent_action::load_transitions(
         boost::property_tree::ptree const&  defaults
         )
 {
-    auto get = [&defaults](boost::property_tree::ptree const&  ptree, std::string const&  property_name) -> std::string {
-        auto  it = ptree.find(property_name);
-        if (it == ptree.not_found())
-            it = defaults.find(property_name);
-        return it->second.get_value<std::string>();
-    };
-
     for (auto const&  name_and_props : ptree)
     {
         transition_config  tc;
         if (name_and_props.second.count("perception_guard") != 0UL)
         {
-            boost::property_tree::ptree const&  guard = name_and_props.second.find("perception_guard")->second;
+            boost::property_tree::ptree const&  guard = get_ptree("perception_guard", name_and_props.second);
             tc.perception_guard = std::make_shared<agent_action::transition_config::perception_guard_config>();
             tc.perception_guard->perception_kind =
-                    guard.get<std::string>("perception_kind") == "SIGHT" ?
+                    get_value<std::string>("perception_kind", guard) == "SIGHT" ?
                             transition_config::PERCEPTION_KIND::SIGHT :
                             transition_config::PERCEPTION_KIND::TOUCH ;
-            tc.perception_guard->sensor_folder_name = guard.get<std::string>("sensor_folder_name");
+            tc.perception_guard->sensor_folder_name = get_value<std::string>("sensor_folder_name", guard);
             ASSUMPTION(!tc.perception_guard->sensor_folder_name.empty() &&
                        tc.perception_guard->sensor_folder_name.back() != '/');
             tc.perception_guard->sensor_owner_kind =
-                    com::read_object_kind_from_string(guard.get<std::string>("sensor_owner_kind"));
+                    com::read_object_kind_from_string(get_value<std::string>("sensor_owner_kind", guard));
             ASSUMPTION(tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::AGENT ||
                        tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::SENSOR);
             if (tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::AGENT)
             tc.perception_guard->sensor_owner_can_be_myself = tc.perception_guard->sensor_owner_kind == com::OBJECT_KIND::AGENT ?
                     guard.get<bool>("sensor_owner_can_be_myself") : false;
-            boost::property_tree::ptree const&  location = guard.find("location_constraint")->second;
-            tc.perception_guard->location_constraint.frame_folder = location.count("frame_folder") == 0UL ?
-                    "motion_object/" : location.get<std::string>("frame_folder");
-            tc.perception_guard->location_constraint.shape_type = location.count("shape_type") == 0UL ?
-                    angeo::COLLISION_SHAPE_TYPE::BOX : angeo::as_collision_shape_type(location.get<std::string>("shape_type"));
+            boost::property_tree::ptree const&  location = get_ptree("location_constraint", guard);
+            tc.perception_guard->location_constraint.frame_folder = get_value("frame_folder", "motion_object/", location);
+            tc.perception_guard->location_constraint.shape_type = angeo::as_collision_shape_type(get_value("shape_type", "BOX", location));
             ASSUMPTION(
                 tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::BOX ||
                 tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE ||
                 tc.perception_guard->location_constraint.shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE
                 );
-            tc.perception_guard->location_constraint.frame.set_origin(location.count("origin") == 0UL ?
-                    vector3_zero() : read_vector3(location.find("origin")->second));
-            tc.perception_guard->location_constraint.frame.set_orientation(location.count("orientation") == 0UL ?
-                    quaternion_identity() : read_quaternion(location.find("orientation")->second));
-            tc.perception_guard->location_constraint.aabb_half_size = read_aabb_half_size(location.find("aabb_half_size")->second);
-            ASSUMPTION(min_coord(tc.perception_guard->location_constraint.aabb_half_size) > 0.0001f);
+            tc.perception_guard->location_constraint.frame.set_origin(get_value<vector3>("origin", vector3_zero(), &read_vector3, location));
+            tc.perception_guard->location_constraint.frame.set_orientation(
+                    get_value<quaternion>("orientation", quaternion_identity(), &read_quaternion, location)
+                    );
+            tc.perception_guard->location_constraint.aabb_half_size = read_aabb_half_size(get_ptree("aabb_half_size", location));
         }
         else
             tc.perception_guard = nullptr;
 
         if (name_and_props.second.count("motion_object_location") != 0UL)
         {
-            boost::property_tree::ptree const&  location = name_and_props.second.find("motion_object_location")->second;
+            boost::property_tree::ptree const&  location = get_ptree("motion_object_location", name_and_props.second);
             tc.motion_object_location = std::make_shared<agent_action::transition_config::motion_object_location_config>();
-            tc.motion_object_location->is_self_frame = location.get<std::string>("frame_owner") == "SELF";
-            tc.motion_object_location->frame_folder = location.get<std::string>("frame_folder");
+            tc.motion_object_location->is_self_frame = get_value<std::string>("frame_owner", location) == "SELF";
+            tc.motion_object_location->frame_folder = get_value<std::string>("frame_folder", location);
             ASSUMPTION(!tc.motion_object_location->frame_folder.empty() &&
                        tc.motion_object_location->frame_folder.back() == '/');
-            tc.motion_object_location->frame.set_origin(read_vector3(location.find("origin")->second));
-            tc.motion_object_location->frame.set_orientation(read_quaternion(location.find("orientation")->second));
-            tc.motion_object_location->disable_colliding = location.count("disable_colliding") == 0UL ?
-                        "" : location.get<std::string>("disable_colliding");
+            tc.motion_object_location->frame.set_origin(read_vector3(get_ptree("origin", location)));
+            tc.motion_object_location->frame.set_orientation(read_quaternion(get_ptree("orientation", location)));
+            tc.motion_object_location->disable_colliding = get_value("disable_colliding", "", location);
             if (!tc.motion_object_location->disable_colliding.empty() && tc.motion_object_location->disable_colliding.back() == '/')
                 tc.motion_object_location->disable_colliding += com::to_string(com::OBJECT_KIND::COLLIDER);
 
-            tc.aabb_alignment = AABB_ALIGNMENT::Z_LO;
+            tc.aabb_alignment = AABB_ALIGNMENT::Z_LO; // 'aabb_alignment' is not used, when 'motion_object_location' is specified.
         }
         else
         {
             tc.motion_object_location = nullptr;
-            tc.aabb_alignment = aabb_alignment_from_string(get(name_and_props.second, "aabb_alignment"));
+            tc.aabb_alignment = aabb_alignment_from_string(get_value<std::string>("aabb_alignment", name_and_props.second, &defaults));
         }
         TRANSITIONS.insert({ name_and_props.first, tc });
     }

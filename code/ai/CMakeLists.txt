@@ -50,6 +50,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/skeleton_utils.hpp
     ./src/skeleton_utils.cpp
+    ./include/ai/utils_ptree.hpp
+    ./src/utils_ptree.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
