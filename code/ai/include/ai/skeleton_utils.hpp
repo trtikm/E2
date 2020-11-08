@@ -38,6 +38,20 @@ std::pair<natural_32_bit, float_32_bit>  get_motion_template_transition_props(
         );
 
 
+struct  tranform_matrices_of_skeleton_bones
+{
+    tranform_matrices_of_skeleton_bones(
+            std::vector<angeo::coordinate_system> const* const  frames_,
+            std::vector<integer_32_bit> const* const  parents_
+            );
+    matrix44 const&  from_skeleton_to_bone_space_matrix(natural_32_bit const  bone_index) const;
+private:
+    std::vector<angeo::coordinate_system> const*  frames;
+    std::vector<integer_32_bit> const*  parents;
+    mutable std::unordered_map<natural_32_bit, matrix44>  cache_of_to_bone_space_matrices;
+};
+
+
 }
 
 #endif

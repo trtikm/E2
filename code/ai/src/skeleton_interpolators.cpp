@@ -80,10 +80,9 @@ skeleton_interpolator_look_at::skeleton_interpolator_look_at()
 
 void  skeleton_interpolator_look_at::interpolate(
         float_32_bit const  time_step_in_seconds,
-        vector3 const&  look_at_target_in_world_space,
+        vector3 const&  look_at_target_in_skeleton_space,
         std::vector<angeo::coordinate_system>&  frames_to_update,
-        skeletal_motion_templates const  motion_templates,
-        scene_binding const&  binding
+        skeletal_motion_templates const  motion_templates
         )
 {
     TMPROF_BLOCK();
@@ -91,6 +90,8 @@ void  skeleton_interpolator_look_at::interpolate(
     ASSUMPTION(frames_to_update.size() == motion_templates.names().size());
 
     auto const&  parents = motion_templates.parents();
+
+    tranform_matrices_of_skeleton_bones const  bone_matrices(&frames_to_update, &parents);
 
     std::vector<angeo::skeleton_kinematics_of_chain_of_bones>  kinematics;
     std::vector< angeo::look_at_target>  look_at_targets;
@@ -115,13 +116,12 @@ void  skeleton_interpolator_look_at::interpolate(
 
         angeo::look_at_target  target;
         {
-            angeo::coordinate_system_explicit  chain_world_frame;
-            if (parents.at(name_and_info.second->root_bone) != -1)
-                chain_world_frame = binding.context->frame_explicit_coord_system_in_world_space(
-                        binding.frame_guids_of_bones.at(parents.at(name_and_info.second->root_bone))
-                        );
-
-            target.target = angeo::point3_to_coordinate_system(look_at_target_in_world_space, chain_world_frame);
+            target.target = parents.at(name_and_info.second->root_bone) == -1 ?
+                    look_at_target_in_skeleton_space :
+                    transform_point(
+                            look_at_target_in_skeleton_space,
+                            bone_matrices.from_skeleton_to_bone_space_matrix(parents.at(name_and_info.second->root_bone))
+                            );
             target.direction = name_and_info.second->direction;
         }
         look_at_targets.push_back(target);
@@ -158,10 +158,9 @@ skeleton_interpolator_aim_at::skeleton_interpolator_aim_at()
 
 void  skeleton_interpolator_aim_at::interpolate(
         float_32_bit const  time_step_in_seconds,
-        vector3 const&  aim_at_target_in_world_space,
+        vector3 const&  aim_at_target_in_skeleton_space,
         std::vector<angeo::coordinate_system>&  frames_to_update,
-        skeletal_motion_templates const  motion_templates,
-        scene_binding const&  binding
+        skeletal_motion_templates const  motion_templates
         )
 {
     TMPROF_BLOCK();
@@ -169,6 +168,8 @@ void  skeleton_interpolator_aim_at::interpolate(
     ASSUMPTION(frames_to_update.size() == motion_templates.names().size());
     
     auto const&  parents = motion_templates.parents();
+
+    tranform_matrices_of_skeleton_bones const  bone_matrices(&frames_to_update, &parents);
 
     for (auto const&  name_and_info : motion_templates.aim_at())
     {
@@ -191,13 +192,12 @@ void  skeleton_interpolator_aim_at::interpolate(
 
         angeo::bone_aim_at_targets  aim_at_targets;
         {
-            angeo::coordinate_system_explicit  chain_world_frame;
-            if (parents.at(name_and_info.second->root_bone) != -1)
-                chain_world_frame = binding.context->frame_explicit_coord_system_in_world_space(
-                        binding.frame_guids_of_bones.at(parents.at(name_and_info.second->root_bone))
-                        );
-
-            vector3  target = angeo::point3_to_coordinate_system(aim_at_target_in_world_space, chain_world_frame);
+            vector3 const  target = parents.at(name_and_info.second->root_bone) == -1 ?
+                    aim_at_target_in_skeleton_space :
+                    transform_point(
+                            aim_at_target_in_skeleton_space,
+                            bone_matrices.from_skeleton_to_bone_space_matrix(parents.at(name_and_info.second->root_bone))
+                            );
             aim_at_targets.push_back(angeo::aim_at_target{ target, name_and_info.second->touch_points.at("pointer") });
         }
 

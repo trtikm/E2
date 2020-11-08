@@ -21,6 +21,7 @@ struct  skeleton_interpolator_animation
             );
     void  move_to_target();
     std::vector<angeo::coordinate_system>& get_current_frames_ref() { return m_current_frames; }
+    std::vector<angeo::coordinate_system>& get_target_frames_ref() { return m_dst_frames; }
     void  commit(skeletal_motion_templates const  motion_templates, scene_binding const&  binding) const;
 
 private:
@@ -38,10 +39,9 @@ struct  skeleton_interpolator_look_at
     skeleton_interpolator_look_at();
     void  interpolate(
             float_32_bit const  time_step_in_seconds,
-            vector3 const&  look_at_target_in_world_space,
+            vector3 const&  look_at_target_in_skeleton_space,
             std::vector<angeo::coordinate_system>&  frames_to_update,
-            skeletal_motion_templates const  motion_templates,
-            scene_binding const&  binding
+            skeletal_motion_templates const  motion_templates
             );
 private:
     angeo::joint_rotation_states_of_bones  m_joint_rotations;
@@ -55,10 +55,9 @@ struct  skeleton_interpolator_aim_at
     skeleton_interpolator_aim_at();
     void  interpolate(
             float_32_bit const  time_step_in_seconds,
-            vector3 const&  aim_at_target_in_world_space,
+            vector3 const&  aim_at_target_in_skeleton_space,
             std::vector<angeo::coordinate_system>&  frames_to_update,
-            skeletal_motion_templates const  motion_templates,
-            scene_binding const&  binding
+            skeletal_motion_templates const  motion_templates
             );
 };
 

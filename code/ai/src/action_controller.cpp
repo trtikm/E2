@@ -417,24 +417,28 @@ void  agent_action::update_skeleton_sync()
 }
 
 
-void  agent_action::update_look_at(float_32_bit const  time_step_in_seconds)
+void  agent_action::update_look_at(float_32_bit const  time_step_in_seconds, transition_info const* const  info_ptr)
 {
     float_32_bit const  longitude = 0.5f * PI() * (desire().look_at.longitude - 1.0f);
     float_32_bit const  altitude = 0.5f * PI() * desire().look_at.altitude;
     float_32_bit const  magnitude = (0.5f * (1.0f + desire().look_at.magnitude)) *
                                     myself().get_sight_controller().get_camera()->far_plane();
     float_32_bit const  cos_altitude = std::cosf(desire().look_at.altitude);
-    vector3  target = {
+    vector3 const  target_in_skeleton_space = {
         magnitude * cos_altitude * std::cosf(longitude),
         magnitude * cos_altitude * std::sinf(longitude),
         magnitude * std::sinf(altitude),
     };
-    target = transform_point(target, ctx().frame_world_matrix(ctx().parent_frame(binding().frame_guid_of_skeleton)));
-    m_context->look_at.interpolate(time_step_in_seconds, target, m_context->animate.get_current_frames_ref(), motion_templates(), binding());
+    m_context->look_at.interpolate(
+            time_step_in_seconds,
+            target_in_skeleton_space,
+            info_ptr == nullptr ? m_context->animate.get_current_frames_ref() : m_context->animate.get_target_frames_ref(),
+            motion_templates()
+            );
 }
 
 
-void  agent_action::update_aim_at(float_32_bit const  time_step_in_seconds)
+void  agent_action::update_aim_at(float_32_bit const  time_step_in_seconds, transition_info const* const  info_ptr)
 {
     // TODO!
 }
@@ -765,6 +769,10 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
         m_animation.target_keyframe_index = transition_props.first;
 
         m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+        if (IS_LOOK_AT_ENABLED && info_ptr != nullptr)
+            update_look_at(m_end_ghost_time - m_start_time, info_ptr);
+        if (IS_AIM_AT_ENABLED && info_ptr != nullptr)
+            update_aim_at(m_end_ghost_time - m_start_time, info_ptr);
     }
     else if (MOTION_TEMPLATE_NAME == from_action_ptr->MOTION_TEMPLATE_NAME && !from_action_ptr->is_complete())
     {
@@ -810,6 +818,10 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
         m_animation.target_keyframe_index = transition_props.first;
 
         m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+        if (IS_LOOK_AT_ENABLED && info_ptr != nullptr)
+            update_look_at(m_end_ghost_time - m_start_time, info_ptr);
+        if (IS_AIM_AT_ENABLED && info_ptr != nullptr)
+            update_aim_at(m_end_ghost_time - m_start_time, info_ptr);
     }
 
     INVARIANT(m_current_time >= m_start_time && m_current_time <= m_end_time);
@@ -975,9 +987,9 @@ void  agent_action::next_round(float_32_bit const  time_step_in_seconds)
     update_time(time_step_in_seconds);
     update_skeleton_sync();
     update_animation(time_step_in_seconds);
-    if (IS_LOOK_AT_ENABLED)
+    if (IS_LOOK_AT_ENABLED && is_ghost_complete())
         update_look_at(time_step_in_seconds);
-    if (IS_AIM_AT_ENABLED)
+    if (IS_AIM_AT_ENABLED && is_ghost_complete())
         update_aim_at(time_step_in_seconds);
     m_context->animate.commit(motion_templates(), binding());
 }

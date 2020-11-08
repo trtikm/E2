@@ -189,8 +189,8 @@ struct  agent_action
     void  apply_effects(float_32_bit const  time_step_in_seconds);
     void  update_time(float_32_bit const  time_step_in_seconds);
     void  update_skeleton_sync();
-    void  update_look_at(float_32_bit const  time_step_in_seconds);
-    void  update_aim_at(float_32_bit const  time_step_in_seconds);
+    void  update_look_at(float_32_bit const  time_step_in_seconds, transition_info const* const  info_ptr = nullptr);
+    void  update_aim_at(float_32_bit const  time_step_in_seconds, transition_info const* const  info_ptr = nullptr);
     void  update_animation(float_32_bit const  time_step_in_seconds);
 
     bool  is_guard_valid() const;

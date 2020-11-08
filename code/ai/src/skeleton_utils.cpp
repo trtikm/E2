@@ -117,4 +117,37 @@ std::pair<natural_32_bit, float_32_bit>  get_motion_template_transition_props(
 }
 
 
+tranform_matrices_of_skeleton_bones::tranform_matrices_of_skeleton_bones(
+        std::vector<angeo::coordinate_system> const* const  frames_,
+        std::vector<integer_32_bit> const* const  parents_
+        )
+    : frames(frames_)
+    , parents(parents_)
+{
+    ASSUMPTION(frames != nullptr && parents != nullptr && frames->size() == parents->size() && parents->front() == -1);
+}
+
+
+matrix44 const&  tranform_matrices_of_skeleton_bones::from_skeleton_to_bone_space_matrix(natural_32_bit const  bone_index) const
+{
+    ASSUMPTION(bone_index < (natural_32_bit)parents->size());
+    auto  it = cache_of_to_bone_space_matrices.find(bone_index);
+    if (it == cache_of_to_bone_space_matrices.end())
+    {
+        it = cache_of_to_bone_space_matrices.insert({ bone_index, matrix44_zero() }).first;
+        if (parents->at(bone_index) < 0)
+            angeo::to_base_matrix(frames->at(bone_index), it->second);
+        else
+        {
+            ASSUMPTION(parents->at(bone_index) < (integer_32_bit)bone_index);
+            matrix44 const&  to_parent_bone_matrix = from_skeleton_to_bone_space_matrix((natural_32_bit)parents->at(bone_index));
+            matrix44  to_this_bone_matrix;
+            angeo::to_base_matrix(frames->at(bone_index), to_this_bone_matrix);
+            it->second = to_this_bone_matrix * to_parent_bone_matrix;
+        }
+    }
+    return it->second;
+}
+
+
 }
