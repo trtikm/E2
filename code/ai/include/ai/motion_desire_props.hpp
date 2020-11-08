@@ -18,6 +18,7 @@ struct  motion_desire_props
     struct  move_props
     {
         move_props() : forward(0.0f), left(0.0f), up(0.0f), turn_ccw(0.0f) {}
+        void  clear() { *this = move_props(); }
 
         float_32_bit  forward;
         float_32_bit  left;
@@ -30,6 +31,7 @@ struct  motion_desire_props
         struct  subject_props
         {
             subject_props() : head(0.0f), tail(0.0f) {}
+            void  clear() { *this = subject_props(); }
 
             float_32_bit  head;
             float_32_bit  tail;
@@ -38,6 +40,7 @@ struct  motion_desire_props
         struct  sign_props
         {
             sign_props() : head(0.0f), tail(0.0f), intensity(0.0f) {}
+            void  clear() { *this = sign_props(); }
 
             float_32_bit  head;
             float_32_bit  tail;
@@ -51,6 +54,7 @@ struct  motion_desire_props
     struct  target_props
     {
         target_props() : longitude(0.0f), altitude(0.0f), magnitude(0.0f) {}
+        void  clear() { *this = target_props(); }
 
         float_32_bit  longitude;
         float_32_bit  altitude;
