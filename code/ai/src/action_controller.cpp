@@ -1406,7 +1406,6 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
 void  action_controller::process_action_transitions()
 {
     std::shared_ptr<agent_action>  best_action;
-    agent_action::transition_info  best_info;
     {
         best_action = nullptr;
         float_32_bit  best_penalty = 0.0f;
@@ -1418,23 +1417,25 @@ void  action_controller::process_action_transitions()
         for (auto const&  name_and_props : m_current_action->get_transitions())
         {
             std::shared_ptr<agent_action> const  action_ptr = m_available_actions.at(name_and_props.first);
-            agent_action::transition_info  info;
-            if (!action_ptr->collect_transition_info(&*m_current_action, info))
-                continue;
             float_32_bit const  penalty = action_ptr->compute_desire_penalty();
             if (best_action == nullptr || penalty < best_penalty)
             {
                 best_action = action_ptr;
                 best_penalty = penalty;
-                best_info = info;
             }
         }
     }
     INVARIANT(best_action != nullptr);
 
+    agent_action::transition_info  info;
+    if (m_current_action != best_action && !best_action->collect_transition_info(&*m_current_action, info))
+        best_action = m_current_action;
+
+    INVARIANT(m_current_action != best_action ||  m_current_action->is_cyclic() || !m_current_action->is_complete());
+
     if (m_current_action != best_action || m_current_action->is_complete())
     {
-        best_action->on_transition(&*m_current_action, m_current_action == best_action ? nullptr : &best_info);
+        best_action->on_transition(&*m_current_action, m_current_action == best_action ? nullptr : &info);
         if (m_current_action != best_action)
         {
             std::unordered_map<com::object_guid, agent_action::on_custom_folder_erase_func>  old_custom_folders, new_custom_folders;
@@ -1450,6 +1451,8 @@ void  action_controller::process_action_transitions()
         }
         m_current_action = best_action;
     }
+
+    INVARIANT(m_current_action->is_cyclic() || !m_current_action->is_complete());
 }
 
 
