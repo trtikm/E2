@@ -75,8 +75,6 @@ void  cortex_mock::next_round(float_32_bit const  time_step_in_seconds, mock_inp
 
     if (!lmouse && !mmouse && rmouse)
     {
-        motion_desire_props_ref().guesture.sign.clear();
-        motion_desire_props_ref().guesture.subject.clear();
         if (ctrl)
         {
             if (shift)
