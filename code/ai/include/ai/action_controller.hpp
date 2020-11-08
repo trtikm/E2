@@ -206,6 +206,12 @@ struct  agent_action
 protected:
     bool  collect_other_entiry_folder_guid(agent_action const* const  from_action_ptr, transition_info&  info) const;
     void  collect_motion_object_relocation_frame(agent_action const* const  from_action_ptr, transition_info&  info) const;
+    bool  is_empty_space(
+            angeo::coordinate_system const&  frame_in_world_space,
+            vector3 const&  aabb_half_sizes,
+            angeo::COLLISION_SHAPE_TYPE const  shape_type,
+            com::object_guid const  ignored_collider_guid = com::invalid_object_guid()
+            ) const;
 
     // CONSTANTS
 

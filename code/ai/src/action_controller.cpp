@@ -500,7 +500,44 @@ bool  agent_action::collect_transition_info(agent_action const* const  from_acti
 
     collect_motion_object_relocation_frame(from_action_ptr, info);
 
-    return true;
+    angeo::coordinate_system const  relocated_agent_frame {
+        angeo::point3_from_coordinate_system(-MOTION_OBJECT_CONFIG.offset_from_center_of_agent_aabb, info.motion_object_relocation_frame),
+        info.motion_object_relocation_frame.orientation()
+    };
+
+    vector3 const  aabb_half_size = {
+            // TODO: Load the coord scales from action's config JSON.
+            0.95f * AABB_HALF_SIZE(0),
+            0.95f * AABB_HALF_SIZE(1),
+            0.95f * AABB_HALF_SIZE(2)
+            }; 
+
+    std::shared_ptr<transition_config::motion_object_location_config> const  pos_cfg =
+            from_action_ptr == nullptr ? nullptr : from_action_ptr->TRANSITIONS.at(NAME).motion_object_location;
+
+    // Fast check whether the aabb in the relocated frame is inside aabb at the original location.
+    if (from_action_ptr != nullptr &&
+        pos_cfg == nullptr &&
+        aabb_half_size(0) <= from_action_ptr->AABB_HALF_SIZE(0) &&
+        aabb_half_size(1) <= from_action_ptr->AABB_HALF_SIZE(1) &&
+        aabb_half_size(2) <= from_action_ptr->AABB_HALF_SIZE(2) &&
+        are_equal(
+                relocated_agent_frame.orientation(),
+                ctx().frame_coord_system_in_world_space(binding().frame_guid_of_motion_object).orientation(),
+                0.001f
+                )
+        )
+        return true;
+
+    com::object_guid  ignored_collider_guid = com::invalid_object_guid();
+    if (pos_cfg != nullptr && !pos_cfg->disable_colliding.empty())
+    {
+        INVARIANT(info.other_entiry_folder_guid != com::invalid_object_guid());
+        ignored_collider_guid = ctx().from_relative_path(info.other_entiry_folder_guid, pos_cfg->disable_colliding);
+        INVARIANT(ignored_collider_guid == com::invalid_object_guid() || ctx().is_valid_collider_guid(ignored_collider_guid));
+    }
+
+    return is_empty_space(relocated_agent_frame, aabb_half_size, MOTION_OBJECT_CONFIG.shape_type, ignored_collider_guid);
 }
 
 
@@ -672,6 +709,18 @@ void  agent_action::collect_motion_object_relocation_frame(agent_action const* c
                 + motion_object_aabb_shift
                 );
     }
+}
+
+
+bool  agent_action::is_empty_space(
+        angeo::coordinate_system const&  frame_in_world_space,
+        vector3 const&  aabb_half_sizes,
+        angeo::COLLISION_SHAPE_TYPE const  shape_type,
+        com::object_guid const  ignored_collider_guid
+        ) const
+{
+    // TODO!
+    return true;
 }
 
 
