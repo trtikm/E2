@@ -117,6 +117,23 @@ collision_object_id  collision_scene::insert_box(
 {
     TMPROF_BLOCK();
 
+    collision_object_id const  coid = insert_box_data(half_sizes_along_axes, from_base_matrix, material, collision_class);
+
+    insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_boxes;
+
+    return coid;
+}
+
+
+collision_object_id  collision_scene::insert_box_data(
+        vector3 const&  half_sizes_along_axes,
+        matrix44 const&  from_base_matrix,
+        COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class
+        )
+{
     ASSUMPTION(half_sizes_along_axes(0) > 0.0001f && half_sizes_along_axes(1) > 0.0001f && half_sizes_along_axes(1) > 0.0001f);
 
     collision_object_id  coid;
@@ -163,10 +180,6 @@ collision_object_id  collision_scene::insert_box(
             invalid_ids.pop_back();
         }
     }
-    insert_object(coid, is_dynamic);
-
-    ++m_statistics.num_boxes;
-
     return coid;
 }
 
@@ -182,6 +195,31 @@ collision_object_id  collision_scene::insert_capsule(
 {
     TMPROF_BLOCK();
 
+    collision_object_id const  coid =
+            insert_capsule_data(
+                    half_distance_between_end_points,
+                    thickness_from_central_line,
+                    from_base_matrix,
+                    material,
+                    collision_class
+                    );
+
+    insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_capsules;
+
+    return coid;
+}
+
+
+collision_object_id  collision_scene::insert_capsule_data(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        matrix44 const&  from_base_matrix,
+        COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class
+        )
+{
     collision_object_id  coid;
     {
         vector3 const  end_point_1_in_model_space(0.0f, 0.0f, +half_distance_between_end_points);
@@ -222,9 +260,6 @@ collision_object_id  collision_scene::insert_capsule(
             invalid_ids.pop_back();
         }
     }
-    insert_object(coid, is_dynamic);
-
-    ++m_statistics.num_capsules;
 
     return coid;
 }
@@ -240,6 +275,29 @@ collision_object_id  collision_scene::insert_line(
 {
     TMPROF_BLOCK();
 
+    collision_object_id const  coid =
+            insert_line_data(
+                    half_distance_between_end_points,
+                    from_base_matrix,
+                    material,
+                    collision_class
+                    );
+
+    insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_lines;
+
+    return coid;
+}
+
+
+collision_object_id  collision_scene::insert_line_data(
+        float_32_bit const  half_distance_between_end_points,
+        matrix44 const&  from_base_matrix,
+        COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class
+        )
+{
     collision_object_id  coid;
     {
         vector3 const  end_point_1_in_model_space(0.0f, 0.0f, +half_distance_between_end_points);
@@ -275,9 +333,6 @@ collision_object_id  collision_scene::insert_line(
             invalid_ids.pop_back();
         }
     }
-    insert_object(coid, is_dynamic);
-
-    ++m_statistics.num_lines;
 
     return coid;
 }
@@ -292,6 +347,22 @@ collision_object_id  collision_scene::insert_point(
 {
     TMPROF_BLOCK();
 
+    collision_object_id const  coid = insert_point_data(from_base_matrix, material, collision_class);
+
+    insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_points;
+
+    return coid;
+}
+
+
+collision_object_id  collision_scene::insert_point_data(
+        matrix44 const&  from_base_matrix,
+        COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class
+        )
+{
     collision_object_id  coid;
     {
         vector3 const  position_in_world_space = transform_point(vector3_zero(), from_base_matrix);
@@ -316,9 +387,6 @@ collision_object_id  collision_scene::insert_point(
             invalid_ids.pop_back();
         }
     }
-    insert_object(coid, is_dynamic);
-
-    ++m_statistics.num_points;
 
     return coid;
 }
@@ -334,6 +402,23 @@ collision_object_id  collision_scene::insert_sphere(
 {
     TMPROF_BLOCK();
 
+    collision_object_id const  coid = insert_sphere_data(radius, from_base_matrix, material, collision_class);
+
+    insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_spheres;
+
+    return coid;
+}
+
+
+collision_object_id  collision_scene::insert_sphere_data(
+        float_32_bit const  radius,
+        matrix44 const&  from_base_matrix,
+        COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class
+        )
+{
     collision_object_id  coid;
     {
         sphere_geometry const  geometry { transform_point(vector3_zero(), from_base_matrix), radius };
@@ -358,9 +443,6 @@ collision_object_id  collision_scene::insert_sphere(
             invalid_ids.pop_back();
         }
     }
-    insert_object(coid, is_dynamic);
-
-    ++m_statistics.num_spheres;
 
     return coid;
 }
@@ -378,6 +460,33 @@ void  collision_scene::insert_triangle_mesh(
 {
     TMPROF_BLOCK();
 
+    insert_triangle_mesh_data(
+            num_triangles,
+            getter_of_end_points_in_model_space,
+            from_base_matrix,
+            material,
+            collision_class,
+            output_coids_of_individual_triangles
+            );
+
+    for (angeo::collision_object_id  coid : output_coids_of_individual_triangles)
+    {
+        insert_object(coid, is_dynamic);
+
+        ++m_statistics.num_triangles;
+    }
+}
+
+
+void  collision_scene::insert_triangle_mesh_data(
+        natural_32_bit const  num_triangles,
+        std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
+        matrix44 const&  from_base_matrix,
+        COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class,
+        std::vector<collision_object_id>&  output_coids_of_individual_triangles
+        )
+{
     ASSUMPTION(num_triangles > 0U);
 
     natural_32_bit  getter_index;
@@ -395,7 +504,6 @@ void  collision_scene::insert_triangle_mesh(
 
     auto const&  getter = m_triangles_end_point_getters.at(getter_index).first;
 
-    std::vector<angeo::collision_object_id>  collider_ids;
     for (natural_32_bit  i = 0U; i != num_triangles; ++i)
     {
         collision_object_id  coid;
@@ -444,14 +552,11 @@ void  collision_scene::insert_triangle_mesh(
                 invalid_ids.pop_back();
             }
         }
-        insert_object(coid, is_dynamic);
         output_coids_of_individual_triangles.push_back(coid);
-
-        collider_ids.push_back(coid);
-
-        ++m_statistics.num_triangles;
     }
     {
+        TMPROF_BLOCK();
+
         // The code in this block computes (and sets) for each inserted triangle:
         //      1. edges_ignore_mask
         //      2. neighbour for each edge (if there is any)
@@ -465,7 +570,7 @@ void  collision_scene::insert_triangle_mesh(
         natural_32_bit  vertex_counter = 0U;
         std::unordered_map<vector3, natural_32_bit>  vertex_ids;
         std::unordered_map<std::pair<natural_32_bit, natural_32_bit>, std::vector<edge_props> >  edges;
-        for (angeo::collision_object_id  coid : collider_ids)
+        for (angeo::collision_object_id  coid : output_coids_of_individual_triangles)
         {
             auto  result = vertex_ids.insert({ get_triangle_end_point_in_world_space(coid, 0U), vertex_counter });
             if (result.second)
@@ -530,8 +635,6 @@ void  collision_scene::erase_object(collision_object_id const  coid)
 {
     TMPROF_BLOCK();
 
-    release_data_of_erased_object(coid);
-
     auto const  it = m_dynamic_object_ids.find(coid);
     if (it == m_dynamic_object_ids.end())
     {
@@ -555,7 +658,7 @@ void  collision_scene::erase_object(collision_object_id const  coid)
     }
     m_disabled_colliders.erase(coid);
 
-    m_invalid_object_ids.at(as_number(get_shape_type(coid))).push_back(get_instance_index(coid));
+    erase_object_data(coid);
 
     switch (get_shape_type(coid))
     {
@@ -567,6 +670,51 @@ void  collision_scene::erase_object(collision_object_id const  coid)
     case COLLISION_SHAPE_TYPE::TRIANGLE: --m_statistics.num_triangles; break;
     default: UNREACHABLE();
     }
+}
+
+
+void  collision_scene::erase_object_data(collision_object_id const  coid)
+{
+    switch (get_shape_type(coid))
+    {
+    case COLLISION_SHAPE_TYPE::BOX:
+    case COLLISION_SHAPE_TYPE::CAPSULE:
+    case COLLISION_SHAPE_TYPE::LINE:
+    case COLLISION_SHAPE_TYPE::POINT:
+    case COLLISION_SHAPE_TYPE::SPHERE:
+        break; // Nothing to release for these coids.
+    case COLLISION_SHAPE_TYPE::TRIANGLE:
+        {
+            natural_32_bit const  instance_idx = get_instance_index(coid);
+
+            auto&  geometry = m_triangles_geometry.at(instance_idx);
+            auto&  getter_info = m_triangles_end_point_getters.at(geometry.end_points_getter_index);
+            ASSUMPTION(getter_info.second > 0U);
+            --getter_info.second;
+            if (getter_info.second == 0U)
+                m_triangles_indices_of_invalidated_end_point_getters.push_back(geometry.end_points_getter_index);
+
+            std::array<collision_object_id, 3U> const&  neighbours = m_triangles_neighbours_over_edges.at(instance_idx);
+            for (natural_32_bit  i = 0U; i!= 3U; ++i)
+            {
+                collision_object_id const  neighbour_i_coid = neighbours.at(i);
+                if (neighbour_i_coid != coid)
+                {
+                    std::array<collision_object_id, 3U>&  neighbour_i_neighbours =
+                            m_triangles_neighbours_over_edges.at(get_instance_index(neighbour_i_coid))
+                            ;
+                    for (natural_32_bit  j = 0U; j != 3U; ++j)
+                        if (neighbour_i_neighbours.at(j) == coid)
+                            neighbour_i_neighbours.at(j) = neighbour_i_coid;
+                }
+            }
+        }
+        break;
+    default:
+        UNREACHABLE();
+    }
+
+    m_invalid_object_ids.at(as_number(get_shape_type(coid))).push_back(get_instance_index(coid));
 }
 
 
@@ -884,6 +1032,91 @@ void  collision_scene::find_objects_in_proximity_to_line(
                     }
                 );
     }
+}
+
+
+void  collision_scene::find_contacts_with_box(
+        vector3 const&  half_sizes_along_axes,
+        matrix44 const&  from_base_matrix,
+        bool const  search_static,
+        bool const  search_dynamic,
+        contact_acceptor const&  acceptor,
+        std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
+        )
+{
+    collision_object_id const  coid =
+            insert_box_data(
+                    half_sizes_along_axes,
+                    from_base_matrix,
+                    COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,  // does not matter
+                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT             // does not matter
+                    );
+    find_contacts_with_collider(coid, search_static, search_dynamic, acceptor, collider_filter);
+    erase_object_data(coid);
+}
+
+
+void  collision_scene::find_contacts_with_capsule(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        matrix44 const&  from_base_matrix,
+        bool const  search_static,
+        bool const  search_dynamic,
+        contact_acceptor const&  acceptor,
+        std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
+        )
+{
+    collision_object_id const  coid =
+            insert_capsule_data(
+                    half_distance_between_end_points,
+                    thickness_from_central_line,
+                    from_base_matrix,
+                    COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,  // does not matter
+                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT             // does not matter
+                    );
+    find_contacts_with_collider(coid, search_static, search_dynamic, acceptor, collider_filter);
+    erase_object_data(coid);
+}
+
+
+void  collision_scene::find_contacts_with_sphere(
+        float_32_bit const  radius,
+        matrix44 const&  from_base_matrix,
+        bool const  search_static,
+        bool const  search_dynamic,
+        contact_acceptor const&  acceptor,
+        std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
+        )
+{
+    collision_object_id const  coid =
+            insert_sphere_data(
+                    radius,
+                    from_base_matrix,
+                    COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,  // does not matter
+                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT             // does not matter
+                    );
+    find_contacts_with_collider(coid, search_static, search_dynamic, acceptor, collider_filter);
+    erase_object_data(coid);
+}
+
+
+void  collision_scene::find_contacts_with_collider(
+        collision_object_id const  the_coid,
+        bool const  search_static,
+        bool const  search_dynamic,
+        contact_acceptor const&  acceptor,
+        std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
+        )
+{
+    find_objects_in_proximity_to_axis_aligned_bounding_box(
+            get_object_aabb_min_corner(the_coid),
+            get_object_aabb_max_corner(the_coid),
+            search_static,
+            search_dynamic,
+            [this, the_coid, &acceptor, &collider_filter](collision_object_id const  coid) -> bool {
+                return collider_filter(coid, get_collision_class(coid)) ? compute_contacts({ the_coid, coid }, acceptor, true) : true;
+                }
+            );
 }
 
 
@@ -1247,49 +1480,6 @@ COLLISION_CLASS  collision_scene::get_collision_class(collision_object_id const 
         return m_spheres_collision_class.at(get_instance_index(coid));
     case COLLISION_SHAPE_TYPE::TRIANGLE:
         return m_triangles_collision_class.at(get_instance_index(coid));
-    default:
-        UNREACHABLE();
-    }
-}
-
-
-void  collision_scene::release_data_of_erased_object(collision_object_id const  coid)
-{
-    switch (get_shape_type(coid))
-    {
-    case COLLISION_SHAPE_TYPE::BOX:
-    case COLLISION_SHAPE_TYPE::CAPSULE:
-    case COLLISION_SHAPE_TYPE::LINE:
-    case COLLISION_SHAPE_TYPE::POINT:
-    case COLLISION_SHAPE_TYPE::SPHERE:
-        break; // Nothing to release for these coids.
-    case COLLISION_SHAPE_TYPE::TRIANGLE:
-        {
-            natural_32_bit const  instance_idx = get_instance_index(coid);
-
-            auto&  geometry = m_triangles_geometry.at(instance_idx);
-            auto&  getter_info = m_triangles_end_point_getters.at(geometry.end_points_getter_index);
-            ASSUMPTION(getter_info.second > 0U);
-            --getter_info.second;
-            if (getter_info.second == 0U)
-                m_triangles_indices_of_invalidated_end_point_getters.push_back(geometry.end_points_getter_index);
-
-            std::array<collision_object_id, 3U> const&  neighbours = m_triangles_neighbours_over_edges.at(instance_idx);
-            for (natural_32_bit  i = 0U; i!= 3U; ++i)
-            {
-                collision_object_id const  neighbour_i_coid = neighbours.at(i);
-                if (neighbour_i_coid != coid)
-                {
-                    std::array<collision_object_id, 3U>&  neighbour_i_neighbours =
-                            m_triangles_neighbours_over_edges.at(get_instance_index(neighbour_i_coid))
-                            ;
-                    for (natural_32_bit  j = 0U; j != 3U; ++j)
-                        if (neighbour_i_neighbours.at(j) == coid)
-                            neighbour_i_neighbours.at(j) = neighbour_i_coid;
-                }
-            }
-        }
-        break;
     default:
         UNREACHABLE();
     }

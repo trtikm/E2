@@ -174,6 +174,35 @@ struct  collision_scene
             collision_object_acceptor const&  acceptor
             ) const;
 
+    void  find_contacts_with_box(
+            vector3 const&  half_sizes_along_axes,
+            matrix44 const&  from_base_matrix,
+            bool const  search_static,
+            bool const  search_dynamic,
+            contact_acceptor const&  acceptor,
+            std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter =
+                    [](collision_object_id, COLLISION_CLASS) { return true; }
+            );
+    void  find_contacts_with_capsule(
+            float_32_bit const  half_distance_between_end_points,
+            float_32_bit const  thickness_from_central_line,
+            matrix44 const&  from_base_matrix,
+            bool const  search_static,
+            bool const  search_dynamic,
+            contact_acceptor const&  acceptor,
+            std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter =
+                    [](collision_object_id, COLLISION_CLASS) { return true; }
+            );
+    void  find_contacts_with_sphere(
+            float_32_bit const  radius,
+            matrix44 const&  from_base_matrix,
+            bool const  search_static,
+            bool const  search_dynamic,
+            contact_acceptor const&  acceptor,
+            std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter =
+                    [](collision_object_id, COLLISION_CLASS) { return true; }
+            );
+
     bool  ray_cast_precise_collision_object_acceptor(
             collision_object_id const  coid,
             vector3 const&  ray_origin,
@@ -299,7 +328,54 @@ struct  collision_scene
 
 private:
 
-    void  release_data_of_erased_object(collision_object_id const  coid);
+    collision_object_id  insert_box_data(
+            vector3 const&  half_sizes_along_axes,
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class
+            );
+    collision_object_id  insert_capsule_data(
+            float_32_bit const  half_distance_between_end_points,
+            float_32_bit const  thickness_from_central_line,
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class
+            );
+    collision_object_id  insert_line_data(
+            float_32_bit const  half_distance_between_end_points,
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class
+            );
+    collision_object_id  insert_point_data(
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class
+            );
+    collision_object_id  insert_sphere_data(
+            float_32_bit const  radius,
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class
+            );
+    void  insert_triangle_mesh_data(
+            natural_32_bit const  num_triangles,
+            std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class,
+            std::vector<collision_object_id>&  output_coids_of_individual_triangles
+            );
+    void  erase_object_data(collision_object_id const  coid);
+
+    void  find_contacts_with_collider(
+            collision_object_id const  the_coid,
+            bool const  search_static,
+            bool const  search_dynamic,
+            contact_acceptor const&  acceptor,
+            std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter =
+                    [](collision_object_id, COLLISION_CLASS) { return true; }
+            );
 
     void  update_shape_position(collision_object_id const  coid, matrix44 const&  from_base_matrix);
 
