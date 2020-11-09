@@ -558,10 +558,16 @@ bool  agent_action::collect_other_entiry_folder_guid(agent_action const* const  
 
     if (percept.perception_kind == transition_config::PERCEPTION_KIND::SIGHT)
     {
+        std::unordered_set<com::object_guid>  visited_collider_guids;
         sight_controller::ray_casts_in_time const&  ray_casts = myself().get_sight_controller().get_directed_ray_casts_in_time();
         for (auto  ray_it = ray_casts.begin(), end = ray_casts.end(); ray_it != end; ++ray_it)
         {
             com::object_guid const  collider_guid = ray_it->second.collider_guid;
+            if (!ctx().is_valid_collider_guid(collider_guid))
+                continue;
+            if (visited_collider_guids.count(collider_guid) != 0UL)
+                continue;
+            visited_collider_guids.insert(collider_guid);
 
             com::object_guid const  owner_guid = ctx().owner_of_collider(collider_guid);
             if (owner_guid.kind != percept.sensor_owner_kind)
