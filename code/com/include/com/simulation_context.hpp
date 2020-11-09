@@ -651,6 +651,37 @@ struct  simulation_context
     natural_32_bit  num_collision_contacts() const;
     collision_contacts_iterator  collision_contacts_begin() const;
     collision_contacts_iterator  collision_contacts_end() const;
+    natural_32_bit  compute_contacts_with_box(
+            vector3 const&  half_sizes_along_axes,
+            matrix44 const&  from_base_matrix,
+            bool const  search_static,
+            bool const  search_dynamic,
+            std::function<bool(collision_contact const&)> const&  contact_acceptor =
+                    [](collision_contact const&) { return false; },
+            std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
+                    [](object_guid, angeo::COLLISION_CLASS) { return true; }
+            ) const;
+    natural_32_bit  compute_contacts_with_capsule(
+            float_32_bit const  half_distance_between_end_points,
+            float_32_bit const  thickness_from_central_line,
+            matrix44 const&  from_base_matrix,
+            bool const  search_static,
+            bool const  search_dynamic,
+            std::function<bool(collision_contact const&)> const&  contact_acceptor =
+                    [](collision_contact const&) { return false; },
+            std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
+                    [](object_guid, angeo::COLLISION_CLASS) { return true; }
+            ) const;
+    natural_32_bit  compute_contacts_with_sphere(
+            float_32_bit const  radius,
+            matrix44 const&  from_base_matrix,
+            bool const  search_static,
+            bool const  search_dynamic,
+            std::function<bool(collision_contact const&)> const&  contact_acceptor =
+                    [](collision_contact const&) { return false; },
+            std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
+                    [](object_guid, angeo::COLLISION_CLASS) { return true; }
+            ) const;
     // Disabled (not const) for modules.
     natural_32_bit  insert_collision_contact(collision_contact const&  cc);
     void  clear_collision_contacts();
@@ -687,7 +718,10 @@ struct  simulation_context
     // REQUESTS PROCESSING API
     /////////////////////////////////////////////////////////////////////////////////////
 
+    bool  has_pending_requests() const;
+
     // Disabled (not const) for modules.
+
     void  process_rigid_bodies_with_invalidated_shape();
     void  clear_rigid_bodies_with_invalidated_shape();
 

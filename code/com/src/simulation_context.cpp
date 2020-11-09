@@ -2656,6 +2656,110 @@ simulation_context::collision_contacts_iterator  simulation_context::collision_c
 }
 
 
+natural_32_bit  simulation_context::compute_contacts_with_box(
+        vector3 const&  half_sizes_along_axes,
+        matrix44 const&  from_base_matrix,
+        bool const  search_static,
+        bool const  search_dynamic,
+        std::function<bool(collision_contact const&)> const&  contact_acceptor,
+        std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter
+        ) const
+{
+    natural_32_bit  num_contacts = 0U;
+    m_collision_scene_ptr->find_contacts_with_box(
+            half_sizes_along_axes,
+            from_base_matrix,
+            search_static,
+            search_dynamic,
+            [this, &contact_acceptor, &num_contacts](
+                angeo::contact_id const&  cid,
+                vector3 const&  contact_point,
+                vector3 const&  unit_normal,
+                float_32_bit const  penetration_depth) -> bool {
+                    angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
+                    object_guid const  collider_2_guid = to_collider_guid(coid_2);
+                    collision_contact const  contact{ invalid_object_guid(), collider_2_guid, contact_point, unit_normal, penetration_depth };
+                    ++num_contacts;
+                    return contact_acceptor(contact);
+                    },
+            [this, &collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
+                return collider_filter(to_collider_guid(coid), cc);
+                }
+            );
+    return  num_contacts;
+}
+
+
+natural_32_bit  simulation_context::compute_contacts_with_capsule(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        matrix44 const&  from_base_matrix,
+        bool const  search_static,
+        bool const  search_dynamic,
+        std::function<bool(collision_contact const&)> const&  contact_acceptor,
+        std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter
+        ) const
+{
+    natural_32_bit  num_contacts = 0U;
+    m_collision_scene_ptr->find_contacts_with_capsule(
+            half_distance_between_end_points,
+            thickness_from_central_line,
+            from_base_matrix,
+            search_static,
+            search_dynamic,
+            [this, &contact_acceptor, &num_contacts](
+                angeo::contact_id const&  cid,
+                vector3 const&  contact_point,
+                vector3 const&  unit_normal,
+                float_32_bit const  penetration_depth) -> bool {
+                    angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
+                    object_guid const  collider_2_guid = to_collider_guid(coid_2);
+                    collision_contact const  contact{ invalid_object_guid(), collider_2_guid, contact_point, unit_normal, penetration_depth };
+                    ++num_contacts;
+                    return contact_acceptor(contact);
+                    },
+            [this, &collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
+                return collider_filter(to_collider_guid(coid), cc);
+                }
+            );
+    return  num_contacts;
+}
+
+
+natural_32_bit  simulation_context::compute_contacts_with_sphere(
+        float_32_bit const  radius,
+        matrix44 const&  from_base_matrix,
+        bool const  search_static,
+        bool const  search_dynamic,
+        std::function<bool(collision_contact const&)> const&  contact_acceptor,
+        std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter
+        ) const
+{
+    natural_32_bit  num_contacts = 0U;
+    m_collision_scene_ptr->find_contacts_with_sphere(
+            radius,
+            from_base_matrix,
+            search_static,
+            search_dynamic,
+            [this, &contact_acceptor, &num_contacts](
+                angeo::contact_id const&  cid,
+                vector3 const&  contact_point,
+                vector3 const&  unit_normal,
+                float_32_bit const  penetration_depth) -> bool {
+                    angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
+                    object_guid const  collider_2_guid = to_collider_guid(coid_2);
+                    collision_contact const  contact{ invalid_object_guid(), collider_2_guid, contact_point, unit_normal, penetration_depth };
+                    ++num_contacts;
+                    return contact_acceptor(contact);
+                    },
+            [this, &collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
+                return collider_filter(to_collider_guid(coid), cc);
+                }
+            );
+    return  num_contacts;
+}
+
+
 // Disabled (not const) for modules.
 
 
@@ -3031,9 +3135,15 @@ void  simulation_context::clear_pending_early_requests()
 }
 
 
+bool  simulation_context::has_pending_requests() const
+{
+    return !m_pending_requests.empty();
+}
+
+
 void  simulation_context::process_pending_requests()
 {
-    for ( ; !m_pending_requests.empty(); m_pending_requests.pop_front())
+    for ( ; has_pending_requests(); m_pending_requests.pop_front())
         switch (m_pending_requests.front())
         {
         case REQUEST_ERASE_FOLDER:
