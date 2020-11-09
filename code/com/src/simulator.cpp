@@ -235,11 +235,11 @@ void  simulator::round()
 
         ++m_FPS_num_rounds;
         m_FPS_time += round_seconds();
-        if (m_FPS_time >= 0.25L)
+        if (m_FPS_time >= 0.25f)
         {
-            m_FPS = 4U * m_FPS_num_rounds;
+            m_FPS = (natural_32_bit)(m_FPS_num_rounds / m_FPS_time + 0.5f);
             m_FPS_num_rounds = 0U;
-            m_FPS_time -= 0.25L;
+            do m_FPS_time -= 0.25f; while (m_FPS_time >= 0.25f);
         }
         if (render_config().render_text && render_config().render_fps)
             SLOG(render_config().fps_prefix << FPS() << "\n");
@@ -259,9 +259,11 @@ void  simulator::round()
             }
             else
             {
-                context()->process_pending_requests();
-                update_collider_locations_of_relocated_frames();
-
+                if (context()->has_pending_requests())
+                {
+                    context()->process_pending_requests();
+                    update_collider_locations_of_relocated_frames();
+                }
                 SLOG("PAUSED\n");
             }
         on_end_simulation();
