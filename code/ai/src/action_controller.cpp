@@ -718,12 +718,44 @@ void  agent_action::collect_motion_object_relocation_frame(agent_action const* c
 
 bool  agent_action::is_empty_space(
         angeo::coordinate_system const&  frame_in_world_space,
-        vector3 const&  aabb_half_sizes,
+        vector3 const&  aabb_half_size,
         angeo::COLLISION_SHAPE_TYPE const  shape_type,
         com::object_guid const  ignored_collider_guid
         ) const
 {
-    // TODO!
+    //auto const  acceptor = [](com::collision_contact const&) -> bool { return false; }; // we need to enumerate only till the first contact.
+    //auto const  filter = [ignored_collider_guid](com::object_guid const  collider_guid, angeo::COLLISION_CLASS const cc) -> bool {
+    //    switch (cc)
+    //    {
+    //    case angeo::COLLISION_CLASS::STATIC_OBJECT:
+    //    case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+    //    case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+    //    case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+    //        return collider_guid != ignored_collider_guid;
+    //    default:
+    //        return false;
+    //    }
+    //};
+    //matrix44  world_matrix;
+    //angeo::from_base_matrix(frame_in_world_space, world_matrix);
+    //switch (shape_type)
+    //{
+    //case angeo::COLLISION_SHAPE_TYPE::BOX:
+    //    return ctx().compute_contacts_with_box(aabb_half_size, world_matrix, true, true, acceptor, filter) == 0U;
+    //case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+    //    return ctx().compute_contacts_with_capsule(
+    //                max_coord(aabb_half_size) - min_coord(aabb_half_size),
+    //                min_coord(aabb_half_size),
+    //                world_matrix,
+    //                true,
+    //                true,
+    //                acceptor,
+    //                filter
+    //                ) == 0U;
+    //case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+    //    return ctx().compute_contacts_with_sphere(min_coord(aabb_half_size), world_matrix, true, true, acceptor, filter) == 0U;
+    //default: { UNREACHABLE(); break; }
+    //}
     return true;
 }
 
