@@ -1108,13 +1108,34 @@ void  collision_scene::find_contacts_with_collider(
         std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
         )
 {
+    contact_acceptor const  direct_acceptor =
+            [&acceptor](contact_id const& cid,
+                        vector3 const& contact_point,
+                        vector3 const& unit_normal,
+                        float_32_bit const  penetration_depth)
+                        -> bool {
+                return acceptor(contact_id(cid.first, {get_invalid_collision_object_id(), get_shape_feature_id(cid.second)}),
+                                contact_point, unit_normal, penetration_depth);
+            };
+    contact_acceptor const  swap_acceptor =
+            [&acceptor](contact_id const& cid,
+                        vector3 const& contact_point,
+                        vector3 const& unit_normal,
+                        float_32_bit const  penetration_depth)
+                        -> bool {
+                return acceptor(contact_id(cid.second, {get_invalid_collision_object_id(), get_shape_feature_id(cid.first)}),
+                                contact_point, -unit_normal, penetration_depth);
+            };
     find_objects_in_proximity_to_axis_aligned_bounding_box(
             get_object_aabb_min_corner(the_coid),
             get_object_aabb_max_corner(the_coid),
             search_static,
             search_dynamic,
-            [this, the_coid, &acceptor, &collider_filter](collision_object_id const  coid) -> bool {
-                return collider_filter(coid, get_collision_class(coid)) ? compute_contacts({ the_coid, coid }, acceptor, true) : true;
+            [this, the_coid, &direct_acceptor, &swap_acceptor, &collider_filter](collision_object_id const  coid) -> bool {
+                if (!collider_filter(coid, get_collision_class(coid)))
+                    return true;
+                collision_object_id_pair const  coid_pair = make_collision_object_id_pair(coid, the_coid);
+                return compute_contacts(coid_pair, coid_pair.first == the_coid ? swap_acceptor : direct_acceptor, true);
                 }
             );
 }
@@ -1635,16 +1656,6 @@ bool  collision_scene::compute_contacts(
                         -> bool {
                 ++m_statistics.num_contacts_in_last_frame;
                 return contact_acceptor_(cid, contact_point, unit_normal, penetration_depth);
-            };
-
-    auto const  swap_acceptor =
-            [this, &contact_acceptor_](contact_id const& cid,
-                        vector3 const& contact_point,
-                        vector3 const& unit_normal,
-                        float_32_bit const  penetration_depth)
-                        -> bool {
-                ++m_statistics.num_contacts_in_last_frame;
-                return contact_acceptor_(contact_id(cid.second, cid.first), contact_point, -unit_normal, penetration_depth);
             };
 
     switch (shape_type_1)
