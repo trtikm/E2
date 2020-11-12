@@ -2712,9 +2712,9 @@ natural_32_bit  simulation_context::compute_contacts_with_capsule(
                 vector3 const&  contact_point,
                 vector3 const&  unit_normal,
                 float_32_bit const  penetration_depth) -> bool {
-                    angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
-                    object_guid const  collider_2_guid = to_collider_guid(coid_2);
-                    collision_contact const  contact{ invalid_object_guid(), collider_2_guid, contact_point, unit_normal, penetration_depth };
+                    angeo::collision_object_id const  coid = angeo::get_object_id(angeo::get_first_collider_id(cid));
+                    object_guid const  collider_guid = to_collider_guid(coid);
+                    collision_contact const  contact{ collider_guid, invalid_object_guid(), contact_point, unit_normal, penetration_depth };
                     ++num_contacts;
                     return contact_acceptor(contact);
                     },
