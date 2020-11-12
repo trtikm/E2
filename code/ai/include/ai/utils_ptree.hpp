@@ -37,6 +37,13 @@ boost::property_tree::ptree const&  get_ptree_or_empty(
 
 
 template<typename T>
+inline T  get_value(boost::property_tree::ptree const&  ptree)
+{
+    return ptree.get_value<T>();
+}
+
+
+template<typename T>
 T  get_value(
         std::string const&  key,
         boost::property_tree::ptree const&  ptree,
