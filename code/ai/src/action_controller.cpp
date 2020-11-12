@@ -301,9 +301,14 @@ void  agent_action::load_transitions(
                        tc.motion_object_location->frame_folder.back() == '/');
             tc.motion_object_location->frame.set_origin(read_vector3(get_ptree("origin", location)));
             tc.motion_object_location->frame.set_orientation(read_quaternion(get_ptree("orientation", location)));
-            tc.motion_object_location->disable_colliding = get_value("disable_colliding", "", location);
-            if (!tc.motion_object_location->disable_colliding.empty() && tc.motion_object_location->disable_colliding.back() == '/')
-                tc.motion_object_location->disable_colliding += com::to_string(com::OBJECT_KIND::COLLIDER);
+            for (auto const&  empty_and_rel_path : get_ptree_or_empty("disable_colliding_with", location))
+            {
+                std::string  rel_path = get_value<std::string>(empty_and_rel_path.second);
+                ASSUMPTION(!rel_path.empty());
+                if (rel_path.back() == '/')
+                    rel_path += com::to_string(com::OBJECT_KIND::COLLIDER);
+                tc.motion_object_location->relative_paths_to_colliders_for_disable_colliding.push_back(rel_path);
+            }
 
             tc.aabb_alignment = AABB_ALIGNMENT::Z_LO; // 'aabb_alignment' is not used, when 'motion_object_location' is specified.
         }
@@ -533,15 +538,18 @@ bool  agent_action::collect_transition_info(agent_action const* const  from_acti
         )
         return true;
 
-    com::object_guid  ignored_collider_guid = com::invalid_object_guid();
-    if (pos_cfg != nullptr && !pos_cfg->disable_colliding.empty())
-    {
-        INVARIANT(info.other_entiry_folder_guid != com::invalid_object_guid());
-        ignored_collider_guid = ctx().from_relative_path(info.other_entiry_folder_guid, pos_cfg->disable_colliding);
-        INVARIANT(ignored_collider_guid == com::invalid_object_guid() || ctx().is_valid_collider_guid(ignored_collider_guid));
-    }
+    std::unordered_set<com::object_guid>  ignored_collider_guids;
+    if (from_action_ptr != nullptr)
+        from_action_ptr->get_colliders_to_be_ignored_in_empty_space_check(ignored_collider_guids);
+    if (pos_cfg != nullptr)
+        for (std::string const&  rel_path : pos_cfg->relative_paths_to_colliders_for_disable_colliding)
+        {
+            com::object_guid const  collider_guid = ctx().from_relative_path(info.other_entiry_folder_guid, rel_path);
+            INVARIANT(ctx().is_valid_collider_guid(collider_guid));
+            ignored_collider_guids.insert(collider_guid);
+        }
 
-    return is_empty_space(relocated_agent_frame, aabb_half_size, MOTION_OBJECT_CONFIG.shape_type, ignored_collider_guid);
+    return is_empty_space(relocated_agent_frame, aabb_half_size, MOTION_OBJECT_CONFIG.shape_type, ignored_collider_guids);
 }
 
 
@@ -722,46 +730,54 @@ void  agent_action::collect_motion_object_relocation_frame(agent_action const* c
 }
 
 
+void  agent_action::get_colliders_to_be_ignored_in_empty_space_check(std::unordered_set<com::object_guid>&  ignored_collider_guids) const
+{
+    ignored_collider_guids.insert(
+            ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::COLLIDER))
+            );
+}
+
+
 bool  agent_action::is_empty_space(
         angeo::coordinate_system const&  frame_in_world_space,
         vector3 const&  aabb_half_size,
         angeo::COLLISION_SHAPE_TYPE const  shape_type,
-        com::object_guid const  ignored_collider_guid
+        std::unordered_set<com::object_guid> const&  ignored_collider_guids
         ) const
 {
-    //auto const  acceptor = [](com::collision_contact const&) -> bool { return false; }; // we need to enumerate only till the first contact.
-    //auto const  filter = [ignored_collider_guid](com::object_guid const  collider_guid, angeo::COLLISION_CLASS const cc) -> bool {
-    //    switch (cc)
-    //    {
-    //    case angeo::COLLISION_CLASS::STATIC_OBJECT:
-    //    case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
-    //    case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
-    //    case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
-    //        return collider_guid != ignored_collider_guid;
-    //    default:
-    //        return false;
-    //    }
-    //};
-    //matrix44  world_matrix;
-    //angeo::from_base_matrix(frame_in_world_space, world_matrix);
-    //switch (shape_type)
-    //{
-    //case angeo::COLLISION_SHAPE_TYPE::BOX:
-    //    return ctx().compute_contacts_with_box(aabb_half_size, world_matrix, true, true, acceptor, filter) == 0U;
-    //case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
-    //    return ctx().compute_contacts_with_capsule(
-    //                max_coord(aabb_half_size) - min_coord(aabb_half_size),
-    //                min_coord(aabb_half_size),
-    //                world_matrix,
-    //                true,
-    //                true,
-    //                acceptor,
-    //                filter
-    //                ) == 0U;
-    //case angeo::COLLISION_SHAPE_TYPE::SPHERE:
-    //    return ctx().compute_contacts_with_sphere(min_coord(aabb_half_size), world_matrix, true, true, acceptor, filter) == 0U;
-    //default: { UNREACHABLE(); break; }
-    //}
+    auto const  acceptor = [](com::collision_contact const&) -> bool { return false; }; // we need to enumerate only till the first contact.
+    auto const  filter = [&ignored_collider_guids](com::object_guid const  collider_guid, angeo::COLLISION_CLASS const cc) -> bool {
+        switch (cc)
+        {
+        case angeo::COLLISION_CLASS::STATIC_OBJECT:
+        case angeo::COLLISION_CLASS::COMMON_MOVEABLE_OBJECT:
+        case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+        case angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT:
+            return ignored_collider_guids.count(collider_guid) == 0UL;
+        default:
+            return false;
+        }
+    };
+    matrix44  world_matrix;
+    angeo::from_base_matrix(frame_in_world_space, world_matrix);
+    switch (shape_type)
+    {
+    case angeo::COLLISION_SHAPE_TYPE::BOX:
+        return ctx().compute_contacts_with_box(aabb_half_size, world_matrix, true, true, acceptor, filter) == 0U;
+    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+        return ctx().compute_contacts_with_capsule(
+                    max_coord(aabb_half_size) - min_coord(aabb_half_size),
+                    min_coord(aabb_half_size),
+                    world_matrix,
+                    true,
+                    true,
+                    acceptor,
+                    filter
+                    ) == 0U;
+    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+        return ctx().compute_contacts_with_sphere(min_coord(aabb_half_size), world_matrix, true, true, acceptor, filter) == 0U;
+    default: { UNREACHABLE(); break; }
+    }
     return true;
 }
 
@@ -969,19 +985,17 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
 
         std::shared_ptr<transition_config::motion_object_location_config> const  pos_cfg =
                 from_action_ptr->TRANSITIONS.at(NAME).motion_object_location;
-        if (pos_cfg != nullptr && !pos_cfg->disable_colliding.empty())
-        {
-            INVARIANT(info_ptr->other_entiry_folder_guid != com::invalid_object_guid());
-            action_execution_context::scene_object_relative_path const  rel_path {
-                    info_ptr->other_entiry_folder_guid, pos_cfg->disable_colliding
-                    };
-            m_context->disabled_colliding_with_our_motion_object.push_back(rel_path);
-            ctx().request_enable_colliding(
-                    binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
-                    rel_path.base_folder_guid, rel_path.relative_path,
-                    false
-                    );
-        }
+        if (pos_cfg != nullptr)
+            for (std::string const&  rel_path : pos_cfg->relative_paths_to_colliders_for_disable_colliding)
+            {
+                INVARIANT(info_ptr->other_entiry_folder_guid != com::invalid_object_guid());
+                m_context->disabled_colliding_with_our_motion_object.push_back({ info_ptr->other_entiry_folder_guid, rel_path });
+                ctx().request_enable_colliding(
+                        binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
+                        info_ptr->other_entiry_folder_guid, rel_path,
+                        false
+                        );
+            }
     }
 
     for (auto const&  name_and_props : SENSORS)
@@ -1155,6 +1169,15 @@ bool  action_roller::roller_object_config::operator==(roller_object_config const
 {
     return  are_equal(roller_radius, other.roller_radius, 0.001f) &&
             are_equal(roller_mass_inverted, other.roller_mass_inverted, 0.001f);
+}
+
+
+void  action_roller::get_colliders_to_be_ignored_in_empty_space_check(std::unordered_set<com::object_guid>&  ignored_collider_guids) const
+{
+    agent_action::get_colliders_to_be_ignored_in_empty_space_check(ignored_collider_guids);
+    ignored_collider_guids.insert(
+            ctx().folder_content(m_roller_folder_guid).content.at(com::to_string(com::OBJECT_KIND::COLLIDER))
+            );
 }
 
 

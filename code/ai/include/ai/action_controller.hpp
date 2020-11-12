@@ -138,7 +138,7 @@ struct  agent_action
             bool  is_self_frame;
             std::string  frame_folder;
             angeo::coordinate_system  frame;
-            std::string  disable_colliding;
+            std::vector<std::string>  relative_paths_to_colliders_for_disable_colliding;
         };
 
         std::shared_ptr<perception_guard_config>  perception_guard;
@@ -196,6 +196,7 @@ struct  agent_action
     bool  is_guard_valid() const;
 
     bool  collect_transition_info(agent_action const* const  from_action_ptr, transition_info&  info) const;
+    virtual void  get_colliders_to_be_ignored_in_empty_space_check(std::unordered_set<com::object_guid>&  ignored_collider_guids) const;
 
     virtual void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr);
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
@@ -210,7 +211,7 @@ protected:
             angeo::coordinate_system const&  frame_in_world_space,
             vector3 const&  aabb_half_size,
             angeo::COLLISION_SHAPE_TYPE const  shape_type,
-            com::object_guid const  ignored_collider_guid = com::invalid_object_guid()
+            std::unordered_set<com::object_guid> const&  ignored_collider_guids
             ) const;
 
     // CONSTANTS
@@ -295,6 +296,7 @@ struct  action_roller : public  agent_action
             boost::property_tree::ptree const&  defaults_,
             action_execution_context_ptr const  context_
             );
+    void  get_colliders_to_be_ignored_in_empty_space_check(std::unordered_set<com::object_guid>&  ignored_collider_guids) const override;
     void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr) override;
     void  next_round(float_32_bit const  time_step_in_seconds) override;
     void  get_custom_folders(std::unordered_map<com::object_guid, on_custom_folder_erase_func>&  folders) override;
