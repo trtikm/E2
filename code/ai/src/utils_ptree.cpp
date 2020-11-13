@@ -112,7 +112,7 @@ vector3  read_aabb_half_size(
     if (p.empty())
     {
         integer_32_bit const  raw_index = get_value(keyframe_key, 0, ptree);
-        integer_32_bit const  index = raw_index < 0 ? (int)bboxes.size() - raw_index : raw_index;
+        integer_32_bit const  index = raw_index < 0 ? (int)bboxes.size() + raw_index : raw_index;
         ASSUMPTION(index >= 0 && index < (int)bboxes.size());
         return  bboxes.at(index);
     }
