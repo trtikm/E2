@@ -144,6 +144,7 @@ struct  agent_action
         std::shared_ptr<perception_guard_config>  perception_guard;
         std::shared_ptr<motion_object_location_config>  motion_object_location;
         AABB_ALIGNMENT  aabb_alignment;
+        bool  is_available_only_in_action_end;
     };
 
     struct  transition_info
@@ -181,7 +182,6 @@ struct  agent_action
     bool  is_ghost_complete() const;
 
     float_32_bit  interpolation_parameter() const;
-    float_32_bit  interpolation_parameter_ghost() const;
 
     std::unordered_map<std::string, transition_config> const&  get_transitions() const { return TRANSITIONS; };
     motion_object_config const&  get_motion_object_config() const { return MOTION_OBJECT_CONFIG; }
@@ -221,6 +221,7 @@ protected:
     std::vector<effect_config>  EFFECTS;
     std::string  MOTION_TEMPLATE_NAME;
     bool  ONLY_INTERPOLATE_TO_MOTION_TEMPLATE;
+    bool  USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION;
     bool  IS_CYCLIC;
     bool  IS_LOOK_AT_ENABLED;
     bool  IS_AIM_AT_ENABLED;
@@ -244,6 +245,7 @@ private:
     float_32_bit  m_start_time;
     float_32_bit  m_end_time;
     float_32_bit  m_end_ghost_time;
+    float_32_bit  m_end_interpolation_time;
     float_32_bit  m_current_time;
 
     skeletal_animation_info  m_animation;

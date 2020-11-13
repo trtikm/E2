@@ -148,6 +148,7 @@ agent_action::agent_action(
     , EFFECTS() // loaded below
     , MOTION_TEMPLATE_NAME(get_value<std::string>("MOTION_TEMPLATE_NAME", ptree_))
     , ONLY_INTERPOLATE_TO_MOTION_TEMPLATE(get_value<bool>("ONLY_INTERPOLATE_TO_MOTION_TEMPLATE", ptree_))
+    , USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION(get_value<bool>("USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION", false, ptree_))
     , IS_CYCLIC(get_value<bool>("IS_CYCLIC", ptree_))
     , IS_LOOK_AT_ENABLED(get_value<bool>("IS_LOOK_AT_ENABLED", ptree_))
     , IS_AIM_AT_ENABLED(get_value<bool>("IS_AIM_AT_ENABLED", ptree_))
@@ -161,10 +162,12 @@ agent_action::agent_action(
     , m_start_time(0.0f)
     , m_end_time(0.0f)
     , m_end_ghost_time(0.0f)
+    , m_end_interpolation_time(0.0f)
     , m_current_time(0.0f)
     , m_animation{0.0f, 0U, 0U}
 {
     ASSUMPTION(motion_templates().motions_map().count(MOTION_TEMPLATE_NAME) != 0UL);
+    ASSUMPTION(!(IS_CYCLIC && USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION));
     load_desire(get_ptree("DESIRE", ptree_), get_ptree_or_empty("DESIRE", defaults_));
     load_effects(get_ptree("EFFECTS", ptree_), get_ptree_or_empty("EFFECTS", defaults_));
     load_motion_object_config(get_ptree("MOTION_OBJECT_CONFIG", ptree_), get_ptree_or_empty("MOTION_OBJECT_CONFIG", defaults_));
@@ -317,6 +320,7 @@ void  agent_action::load_transitions(
             tc.motion_object_location = nullptr;
             tc.aabb_alignment = aabb_alignment_from_string(get_value<std::string>("aabb_alignment", name_and_props.second, &defaults));
         }
+        tc.is_available_only_in_action_end = get_value<bool>("is_available_only_in_action_end", false, name_and_props.second);
         TRANSITIONS.insert({ name_and_props.first, tc });
     }
 }
@@ -354,15 +358,8 @@ bool  agent_action::is_ghost_complete() const
 
 float_32_bit  agent_action::interpolation_parameter() const
 {
-    return  m_end_time - m_start_time < 0.0001f ?
-                1.0f : (m_current_time - m_start_time) / (m_end_time - m_start_time);
-}
-
-
-float_32_bit  agent_action::interpolation_parameter_ghost() const
-{
-    return  m_end_ghost_time - m_start_time < 0.0001f ?
-                1.0f : (m_current_time - m_start_time) / (m_end_ghost_time - m_start_time);
+    return  m_end_interpolation_time - m_start_time < 0.0001f ||  m_current_time >= m_end_interpolation_time ?
+                1.0f : (m_current_time - m_start_time) / (m_end_interpolation_time - m_start_time);
 }
 
 
@@ -376,11 +373,14 @@ void  agent_action::apply_effects(float_32_bit const  time_step_in_seconds)
 
 void  agent_action::update_time(float_32_bit const  time_step_in_seconds)
 {
+    if (m_current_time >= m_end_time)
+        return;
+
     m_current_time += state_variables().at("animation_speed").get_value() * time_step_in_seconds;
     m_current_time += m_context->time_buffer;
     m_context->time_buffer = 0.0f;
 
-    if (m_current_time >= m_end_time)
+    if (m_current_time > m_end_time)
     {
         m_context->time_buffer += m_current_time - m_end_time;
         m_current_time = m_end_time;
@@ -398,13 +398,11 @@ void  agent_action::update_skeleton_sync()
         );
 
     angeo::coordinate_system  result;
-    if (is_ghost_complete())
-        result = ctx().frame_coord_system(binding().frame_guid_of_skeleton_sync_target);
-    else if (ctx().parent_frame(binding().frame_guid_of_skeleton_sync_source) == binding().frame_guid_of_motion_object)
+    if (ctx().parent_frame(binding().frame_guid_of_skeleton_sync_source) == binding().frame_guid_of_motion_object)
         angeo::interpolate_spherical(
                 ctx().frame_coord_system(binding().frame_guid_of_skeleton_sync_source),
                 ctx().frame_coord_system(binding().frame_guid_of_skeleton_sync_target),
-                interpolation_parameter_ghost(),
+                interpolation_parameter(),
                 result
                 );
     else
@@ -413,7 +411,7 @@ void  agent_action::update_skeleton_sync()
         angeo::interpolate_spherical(
                 ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton_sync_source),
                 ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton_sync_target),
-                interpolation_parameter_ghost(),
+                interpolation_parameter(),
                 in_world
                 );
         angeo::to_coordinate_system(ctx().frame_coord_system_in_world_space(binding().frame_guid_of_motion_object), in_world, result);
@@ -504,6 +502,9 @@ bool  agent_action::collect_transition_info(agent_action const* const  from_acti
 {
     ASSUMPTION(from_action_ptr != this);
 
+    if (from_action_ptr != nullptr && from_action_ptr->TRANSITIONS.at(NAME).is_available_only_in_action_end && !from_action_ptr->is_complete())
+        return false;
+
     if (!collect_other_entiry_folder_guid(from_action_ptr, info))
         return false;
 
@@ -516,9 +517,9 @@ bool  agent_action::collect_transition_info(agent_action const* const  from_acti
 
     vector3 const  aabb_half_size = {
             // TODO: Load the coord scales from action's config JSON.
-            0.95f * AABB_HALF_SIZE(0),
-            0.95f * AABB_HALF_SIZE(1),
-            0.95f * AABB_HALF_SIZE(2)
+            0.75f * AABB_HALF_SIZE(0),
+            0.75f * AABB_HALF_SIZE(1),
+            0.75f * AABB_HALF_SIZE(2)
             }; 
 
     std::shared_ptr<transition_config::motion_object_location_config> const  pos_cfg =
@@ -795,6 +796,7 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
         m_start_time = keyframes.start_time_point();
         m_end_time = keyframes.end_time_point();
         m_end_ghost_time = m_start_time;
+        m_end_interpolation_time = m_end_ghost_time;
         m_current_time = m_start_time;
 
         m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
@@ -802,6 +804,23 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
         m_animation.target_keyframe_index = 1U;
 
         m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+    }
+    else if (from_action_ptr == this)
+    {
+        if (IS_CYCLIC && is_complete())
+        {
+            m_start_time = keyframes.start_time_point();
+            m_end_time = keyframes.end_time_point();
+            m_end_ghost_time = m_start_time;
+            m_end_interpolation_time = m_end_ghost_time;
+            m_current_time = m_start_time;
+
+            m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
+            m_animation.last_keyframe_completion_time = m_start_time;
+            m_animation.target_keyframe_index = 1U;
+
+            m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+        }
     }
     else if (ONLY_INTERPOLATE_TO_MOTION_TEMPLATE)
     {
@@ -816,6 +835,7 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
         m_start_time = keyframes.time_point_at(transition_props.first) - transition_props.second;
         m_end_time = keyframes.time_point_at(transition_props.first);
         m_end_ghost_time = m_end_time;
+        m_end_interpolation_time = m_end_ghost_time;
         m_current_time = m_start_time;
 
         m_animation.end_keyframe_index = transition_props.first;
@@ -828,29 +848,60 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
         if (IS_AIM_AT_ENABLED && info_ptr != nullptr)
             update_aim_at(m_end_ghost_time - m_start_time, info_ptr);
     }
-    else if (MOTION_TEMPLATE_NAME == from_action_ptr->MOTION_TEMPLATE_NAME && !from_action_ptr->is_complete())
+    else if (USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION)
     {
-        m_start_time = from_action_ptr->m_current_time;
-        m_end_time = keyframes.end_time_point();
-        m_end_ghost_time = m_start_time;
-        m_current_time = m_start_time;
+        std::pair<natural_32_bit, float_32_bit> const  transition_props =
+                get_motion_template_transition_props(
+                            motion_templates().transitions(),
+                            { from_action_ptr->MOTION_TEMPLATE_NAME, from_action_ptr->m_animation.target_keyframe_index },
+                            MOTION_TEMPLATE_NAME,
+                            motion_templates().default_transition_props()
+                            );
 
-        m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
-        m_animation.last_keyframe_completion_time = from_action_ptr->m_animation.last_keyframe_completion_time;
-        m_animation.target_keyframe_index = from_action_ptr->m_animation.target_keyframe_index;
-    }
-    else if (MOTION_TEMPLATE_NAME == from_action_ptr->MOTION_TEMPLATE_NAME && IS_CYCLIC)
-    {
-        m_start_time = keyframes.start_time_point();
+        m_start_time = keyframes.time_point_at(transition_props.first) - transition_props.second;
         m_end_time = keyframes.end_time_point();
-        m_end_ghost_time = m_start_time;
+        m_end_ghost_time = m_start_time + transition_props.second;
+        m_end_interpolation_time = m_end_time;
         m_current_time = m_start_time;
 
         m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
         m_animation.last_keyframe_completion_time = m_start_time;
-        m_animation.target_keyframe_index = 1U;
+        m_animation.target_keyframe_index = transition_props.first;
 
         m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+        if (IS_LOOK_AT_ENABLED && info_ptr != nullptr)
+            update_look_at(m_end_ghost_time - m_start_time, info_ptr);
+        if (IS_AIM_AT_ENABLED && info_ptr != nullptr)
+            update_aim_at(m_end_ghost_time - m_start_time, info_ptr);
+    }
+    else if (MOTION_TEMPLATE_NAME == from_action_ptr->MOTION_TEMPLATE_NAME)
+    {
+        if (!from_action_ptr->is_complete())
+        {
+            m_start_time = from_action_ptr->m_current_time;
+            m_end_time = keyframes.end_time_point();
+            m_end_ghost_time = m_start_time;
+            m_end_interpolation_time = m_end_ghost_time;
+            m_current_time = m_start_time;
+
+            m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
+            m_animation.last_keyframe_completion_time = from_action_ptr->m_animation.last_keyframe_completion_time;
+            m_animation.target_keyframe_index = from_action_ptr->m_animation.target_keyframe_index;
+        }
+        else if (IS_CYCLIC)
+        {
+            m_start_time = keyframes.start_time_point();
+            m_end_time = keyframes.end_time_point();
+            m_end_ghost_time = m_start_time;
+            m_end_interpolation_time = m_end_ghost_time;
+            m_current_time = m_start_time;
+
+            m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
+            m_animation.last_keyframe_completion_time = m_start_time;
+            m_animation.target_keyframe_index = 1U;
+
+            m_context->animate.set_target({MOTION_TEMPLATE_NAME, m_animation.target_keyframe_index}, motion_templates());
+        }
     }
     else
     {
@@ -865,6 +916,7 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
         m_start_time = keyframes.time_point_at(transition_props.first) - transition_props.second;
         m_end_time = keyframes.end_time_point();
         m_end_ghost_time = m_start_time + transition_props.second;
+        m_end_interpolation_time = m_end_ghost_time;
         m_current_time = m_start_time;
 
         m_animation.end_keyframe_index = (natural_32_bit)keyframes.num_keyframes() - 1U;
