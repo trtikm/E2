@@ -2495,8 +2495,6 @@ simulation_context::agent_guid_iterator  simulation_context::agents_end() const
 void  simulation_context::request_late_insert_agent(
         object_guid const  under_folder_guid,
         ai::agent_config const  config,
-        vector3 const&  origin,
-        quaternion const&  orientation,
         gfx::batch const  skeleton_attached_batch
         ) const
 {
@@ -2505,8 +2503,6 @@ void  simulation_context::request_late_insert_agent(
     m_requests_late_insert_agent.push_back({ 
             under_folder_guid,
             config,
-            origin,
-            orientation,
             skeleton_attached_batch,
             ai::skeletal_motion_templates()
             });
@@ -2534,14 +2530,23 @@ object_guid  simulation_context::insert_agent(
         object_guid const  under_folder_guid,
         ai::agent_config const  config,
         ai::skeletal_motion_templates const  motion_templates,
-        vector3 const&  origin,
-        quaternion const&  orientation,
         gfx::batch const  skeleton_attached_batch
         )
 {
     ASSUMPTION(
-        folder_content(under_folder_guid).content.empty() &&
-        folder_content(under_folder_guid).child_folders.empty() &&
+        ([this, under_folder_guid]() -> bool {
+            folder_content_type const&  fct = folder_content(under_folder_guid);
+            if (!fct.content.empty())
+                return false;
+            if (fct.child_folders.size() != 1UL || fct.child_folders.begin()->first != "motion_object")
+                return false;
+            folder_content_type const&  mo_fct = folder_content(fct.child_folders.begin()->second);
+            if (!mo_fct.child_folders.empty())
+                return false;
+            if (mo_fct.content.size() != 1UL || mo_fct.content.begin()->first != to_string(OBJECT_KIND::FRAME))
+                return false;
+            return true;
+            }()) &&
         motion_templates.loaded_successfully() &&
         skeleton_attached_batch.loaded_successfully() &&
         skeleton_attached_batch.is_attached_to_skeleton()
@@ -2550,9 +2555,7 @@ object_guid  simulation_context::insert_agent(
     ai::scene_binding_ptr const  binding = ai::scene_binding::create(
             this,
             under_folder_guid,
-            motion_templates,
-            origin,
-            orientation
+            motion_templates
             );
 
     ai::agent_id const  id = m_ai_simulator_ptr->insert_agent(config, motion_templates, binding);
@@ -3352,8 +3355,6 @@ void  simulation_context::process_pending_late_requests()
                         request.under_folder_guid,
                         request.config,
                         request.motion_templates,
-                        request.origin,
-                        request.orientation,
                         request.skeleton_attached_batch
                         );
             });

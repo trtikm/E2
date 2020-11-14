@@ -13,17 +13,13 @@ namespace ai {
 scene_binding_ptr  scene_binding::create(
         com::simulation_context const*  context_,
         com::object_guid  folder_guid_of_agent_,
-        skeletal_motion_templates const&  motion_templates,
-        vector3 const&  origin,
-        quaternion const&  orientation
+        skeletal_motion_templates const&  motion_templates
         )
 {
     return std::shared_ptr<scene_binding>(new scene_binding(
             context_,
             folder_guid_of_agent_,
-            motion_templates,
-            origin,
-            orientation
+            motion_templates
             ));
 }
 
@@ -31,16 +27,14 @@ scene_binding_ptr  scene_binding::create(
 scene_binding::scene_binding(
         com::simulation_context const*  context_,
         com::object_guid  folder_guid_of_agent_,
-        skeletal_motion_templates const&  motion_templates,
-        vector3 const&  origin,
-        quaternion const&  orientation
+        skeletal_motion_templates const&  motion_templates
         )
     : context(context_)
 
     , folder_guid_of_agent(folder_guid_of_agent_)
 
-    , folder_guid_of_motion_object(com::invalid_object_guid())
-    , frame_guid_of_motion_object(com::invalid_object_guid())
+    , folder_guid_of_motion_object(context->child_folder(folder_guid_of_agent, "motion_object"))
+    , frame_guid_of_motion_object(context->folder_content_frame(folder_guid_of_motion_object))
 
     , folder_guid_of_skeleton(com::invalid_object_guid())
     , frame_guid_of_skeleton(com::invalid_object_guid())
@@ -53,19 +47,12 @@ scene_binding::scene_binding(
     ASSUMPTION(
             context != nullptr &&
             context->is_valid_folder_guid(folder_guid_of_agent) &&
-            context->folder_content(folder_guid_of_agent).content.count("FRAME") == 0UL &&
-            context->folder_content(folder_guid_of_agent).child_folders.count("motion_object") == 0UL &&
+            context->is_valid_folder_guid(folder_guid_of_motion_object) &&
+            context->is_valid_frame_guid(frame_guid_of_motion_object) &&
+            context->parent_frame(frame_guid_of_motion_object) == com::invalid_object_guid() &&
             context->folder_content(folder_guid_of_agent).child_folders.count("skeleton") == 0UL &&
             context->folder_content(folder_guid_of_agent).child_folders.count("skeleton_sync") == 0UL &&
             motion_templates.loaded_successfully()
-            );
-
-    folder_guid_of_motion_object = context->insert_folder(folder_guid_of_agent, "motion_object", false);
-    frame_guid_of_motion_object = context->insert_frame(
-            folder_guid_of_motion_object,
-            com::invalid_object_guid(),
-            origin,
-            orientation
             );
 
     folder_guid_of_skeleton = context->insert_folder(folder_guid_of_agent, "skeleton", false);

@@ -23,9 +23,7 @@ struct  scene_binding
     static scene_binding_ptr  create(
             com::simulation_context const*  context_,
             com::object_guid  folder_guid_of_agent_,
-            skeletal_motion_templates const&  motion_templates,
-            vector3 const&  origin = vector3_zero(),
-            quaternion const&  orientation = quaternion_identity()
+            skeletal_motion_templates const&  motion_templates
             );
     ~scene_binding();
 
@@ -47,9 +45,7 @@ private:
     scene_binding(
             com::simulation_context const*  context_,
             com::object_guid  folder_guid_of_agent_,
-            skeletal_motion_templates const&  motion_templates,
-            vector3 const&  origin,
-            quaternion const&  orientation
+            skeletal_motion_templates const&  motion_templates
             );
 };
 

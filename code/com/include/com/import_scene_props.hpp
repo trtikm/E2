@@ -3,6 +3,7 @@
 
 #   include <com/object_guid.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <angeo/coordinate_system.hpp>
 #   include <string>
 
 namespace com {
@@ -15,6 +16,7 @@ struct  import_scene_props
     std::string  import_dir;    // absolute disk path to the dir of the imported scene.
     object_guid  folder_guid;   // under which folder to import the data
     object_guid  relocation_frame_guid; // can be invalid_object_guid()
+    angeo::coordinate_system_const_ptr  relocation_frame_ptr; // can be nullptr
     bool  store_in_cache;
     bool  apply_linear_velocity;
     bool  apply_angular_velocity;

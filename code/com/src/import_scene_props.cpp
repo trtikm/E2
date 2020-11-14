@@ -12,6 +12,7 @@ import_scene_props::import_scene_props(std::string const&  import_dir_, object_g
     : import_dir(import_dir_)
     , folder_guid(folder_guid_)
     , relocation_frame_guid(invalid_object_guid())
+    , relocation_frame_ptr(nullptr)
     , store_in_cache(true)
     , apply_linear_velocity(false)
     , apply_angular_velocity(false)

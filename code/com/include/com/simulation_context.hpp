@@ -622,8 +622,6 @@ struct  simulation_context
     void  request_late_insert_agent(
             object_guid const  under_folder_guid,
             ai::agent_config const  config,
-            vector3 const&  origin,
-            quaternion const&  orientation,
             gfx::batch const  skeleton_attached_batch
             ) const;
     void  request_erase_agent(object_guid const  agent_guid) const;
@@ -633,8 +631,6 @@ struct  simulation_context
             object_guid const  under_folder_guid,
             ai::agent_config const  config,
             ai::skeletal_motion_templates const  motion_templates,
-            vector3 const&  origin,
-            quaternion const&  orientation,
             gfx::batch const  skeleton_attached_batch
             );
     void  erase_agent(object_guid const  agent_guid);
@@ -1080,8 +1076,6 @@ private:
     {
         object_guid  under_folder_guid;
         ai::agent_config  config;
-        vector3  origin;
-        quaternion  orientation;
         gfx::batch  skeleton_attached_batch;
         ai::skeletal_motion_templates  motion_templates;
     };

@@ -74,16 +74,67 @@ static vector4  import_colour(boost::property_tree::ptree const&  hierarchy)
 }
 
 
+static void  read_import_props(
+        import_scene_props&  props,
+        simulation_context const&  ctx,
+        object_guid const  folder_guid,
+        boost::property_tree::ptree const&  ptree
+        )
+{
+    props.import_dir = ctx.get_import_root_dir() + ptree.get<std::string>("import_dir");
+    props.folder_guid = ptree.count("under_folder") == 0UL ?
+            ctx.root_folder() :
+            ctx.from_relative_path(folder_guid, ptree.get<std::string>("under_folder"));
+    props.relocation_frame_guid = ptree.count("relocation_frame") == 0UL ?
+            invalid_object_guid() :
+            ctx.from_relative_path(folder_guid, ptree.get<std::string>("relocation_frame"));
+    if (ptree.count("origin") == 0UL && ptree.count("orientation") == 0UL)
+        props.relocation_frame_ptr = nullptr;
+    else
+    {
+        vector3 const  origin = ptree.count("origin") == 0UL ? vector3_zero() : import_vector3(ptree.get_child("origin"));
+        quaternion const  orientation = ptree.count("orientation") == 0UL ? quaternion_identity() :
+                                                                            import_quaternion(ptree.get_child("orientation"));
+        props.relocation_frame_ptr = angeo::coordinate_system::create(origin, orientation);
+    }
+    ASSUMPTION(props.relocation_frame_guid == invalid_object_guid() || props.relocation_frame_ptr == nullptr);
+    props.store_in_cache = ptree.count("cache_imported_scene") != 0U ? ptree.get<bool>("cache_imported_scene") : true;
+    props.apply_linear_velocity = ptree.count("linear_velocity") != 0U;
+    props.apply_angular_velocity = ptree.count("angular_velocity") != 0U;
+    if (props.apply_linear_velocity)
+        props.linear_velocity = import_vector3(ptree.get_child("linear_velocity"));
+    if (props.apply_angular_velocity)
+        props.angular_velocity = import_vector3(ptree.get_child("angular_velocity"));
+    props.motion_frame_guid = ptree.count("motion_frame") == 0UL ?
+            invalid_object_guid() :
+            ctx.from_relative_path(folder_guid, ptree.get<std::string>("motion_frame"));
+    if (props.apply_linear_velocity && props.motion_frame_guid != invalid_object_guid() &&
+            ptree.count("add_motion_frame_velocity") != 0U)
+        props.add_motion_frame_velocity = ptree.get<bool>("add_motion_frame_velocity");
+}
+
+
 static void  import_frame(
         simulation_context&  ctx,
         boost::property_tree::ptree const&  hierarchy,
         object_guid const  folder_guid,
-        object_guid const  relocation_frame_guid
+        object_guid const  relocation_frame_guid,
+        angeo::coordinate_system_const_ptr const  relocation_frame_ptr
         )
 {
     object_guid const  frame_guid = ctx.insert_frame(folder_guid);
     if (relocation_frame_guid != invalid_object_guid())
         ctx.frame_relocate_relative_to_parent(frame_guid, relocation_frame_guid);
+    else if (relocation_frame_ptr != nullptr)
+    {
+        angeo::coordinate_system  loaded_frame {
+                import_vector3(hierarchy.find("origin")->second),
+                import_quaternion(hierarchy.find("orientation")->second)
+                };
+        angeo::coordinate_system  relocated_frame;
+        angeo::from_coordinate_system(*relocation_frame_ptr, loaded_frame, relocated_frame);
+        ctx.frame_relocate(frame_guid, relocated_frame, true);
+    }
     else
         ctx.frame_relocate(
                 frame_guid,
@@ -300,28 +351,8 @@ static void  import_reques_info(
                 );
     else if (kind == "IMPORT_SCENE")
     {
-        import_scene_props  props(
-                ctx.get_import_root_dir() + hierarchy.get<std::string>("import_dir"),
-                hierarchy.count("under_folder") == 0UL ?
-                        ctx.root_folder() :
-                        ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("under_folder"))
-                );
-        props.relocation_frame_guid = hierarchy.count("relocation_frame") == 0UL ?
-                invalid_object_guid() :
-                ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("relocation_frame"));
-        props.store_in_cache = hierarchy.get<bool>("cache_imported_scene");
-        props.apply_linear_velocity = hierarchy.count("linear_velocity") != 0U;
-        props.apply_angular_velocity = hierarchy.count("angular_velocity") != 0U;
-        if (props.apply_linear_velocity)
-            props.linear_velocity = import_vector3(hierarchy.get_child("linear_velocity"));
-        if (props.apply_angular_velocity)
-            props.angular_velocity = import_vector3(hierarchy.get_child("angular_velocity"));
-        props.motion_frame_guid = hierarchy.count("motion_frame") == 0UL ?
-                invalid_object_guid() :
-                ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("motion_frame"));
-        if (props.apply_linear_velocity && props.motion_frame_guid != invalid_object_guid() &&
-                hierarchy.count("add_motion_frame_velocity") != 0U)
-            props.add_motion_frame_velocity = hierarchy.get<bool>("add_motion_frame_velocity");
+        import_scene_props  props;
+        read_import_props(props, ctx, owner_guid, hierarchy);
         ctx.insert_request_info_import_scene({ owner_guid, to_device_event(hierarchy.get<std::string>("event")) }, props);
     }
     else if (kind == "ERASE_FOLDER")
@@ -437,8 +468,6 @@ static void  import_agent(
                     1U,
                     nullptr
                     ),
-            import_vector3(hierarchy.get_child("origin")),
-            import_quaternion(hierarchy.get_child("orientation")),
             agent_batch
             );
 }
@@ -449,7 +478,8 @@ static void  import_under_folder(
         delayed_import_tasks&  delayed_tasks,
         object_guid const  folder_guid,
         boost::property_tree::ptree const&  hierarchy,
-        object_guid const  relocation_frame_guid
+        object_guid  relocation_frame_guid,
+        angeo::coordinate_system_const_ptr  relocation_frame_ptr
         )
 {
     auto const  content = hierarchy.find("content");
@@ -477,7 +507,7 @@ static void  import_under_folder(
             { UNREACHABLE(); }
         }
         for (auto  content_it : load_tasks[OBJECT_KIND::FRAME])
-            import_frame(ctx, content_it->second, folder_guid, relocation_frame_guid);
+            import_frame(ctx, content_it->second, folder_guid, relocation_frame_guid, relocation_frame_ptr);
         for (auto  content_it : load_tasks[OBJECT_KIND::BATCH])
             import_batch(ctx, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::RIGID_BODY])
@@ -490,6 +520,12 @@ static void  import_under_folder(
             import_sensor(ctx, delayed_tasks, content_it->second, folder_guid, content_it->first);
         for (auto  content_it : load_tasks[OBJECT_KIND::AGENT])
             import_agent(ctx, content_it->second, folder_guid, content_it->first);
+
+        if (!load_tasks[OBJECT_KIND::FRAME].empty())
+        {
+            relocation_frame_guid = invalid_object_guid();
+            relocation_frame_ptr = nullptr;
+        }
     }
 
     auto const  folders = hierarchy.find("folders");
@@ -500,8 +536,18 @@ static void  import_under_folder(
                     delayed_tasks,
                     ctx.insert_folder(folder_guid, folder_it->first, false),
                     folder_it->second,
-                    invalid_object_guid()
+                    relocation_frame_guid,
+                    relocation_frame_ptr
                     );
+
+    auto const  imports = hierarchy.find("imports");
+    if (imports != hierarchy.not_found())
+        for (auto import_it = imports->second.begin(); import_it != imports->second.end(); ++import_it)
+        {
+            import_scene_props  props;
+            read_import_props(props, ctx, folder_guid, import_it->second);
+            ctx.request_late_import_scene_from_directory(props);
+        }
 }
 
 
@@ -595,7 +641,7 @@ void  import_scene(simulation_context&  ctx, imported_scene const  scene, import
         for (auto it = folders->second.begin(); it != folders->second.end(); ++it)
         {
             object_guid const  folder_guid = ctx.insert_folder(props.folder_guid, it->first, true);
-            import_under_folder(ctx, delayed_tasks, folder_guid, it->second, props.relocation_frame_guid);
+            import_under_folder(ctx, delayed_tasks, folder_guid, it->second, props.relocation_frame_guid, props.relocation_frame_ptr);
             apply_initial_velocities_to_imported_rigid_bodies(ctx, folder_guid, props);
         }
     for (auto request_infos_it = delayed_tasks.request_infos.begin(); request_infos_it != delayed_tasks.request_infos.end(); ++request_infos_it)
@@ -611,6 +657,15 @@ void  import_scene(simulation_context&  ctx, imported_scene const  scene, import
     }
 
     ctx.process_rigid_bodies_with_invalidated_shape();
+
+    auto const  imports = scene.hierarchy().find("imports");
+    if (imports != scene.hierarchy().not_found())
+        for (auto import_it = imports->second.begin(); import_it != imports->second.end(); ++import_it)
+        {
+            import_scene_props  import_props;
+            read_import_props(import_props, ctx, ctx.root_folder(), import_it->second);
+            ctx.request_late_import_scene_from_directory(import_props);
+        }
 }
 
 
