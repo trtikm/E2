@@ -735,16 +735,13 @@ class E2ObjectProps(bpy.types.PropertyGroup):
 
     AGENT_KIND=[
         # Python ident, UI name, description, UID
-        ("MOCK", "MOCK", "The cortex is replaced with human user.", 1),
-        ("STATIONARY", "STATIONARY", "The cortex keeping the agent to just stay at one place.", 2),
-        ("RANDOM", "RANDOM", "The cortex performs random actions.", 3),
-        ("ROBOT", "ROBOT", "The cortex is a neural network.", 4),
+        ("TODO", "TODO", "TODO: Read agent kinds from the disk.", 1),
     ]
     agent_kind: bpy.props.EnumProperty(
             name="Agent kind",
-            description="Defines what kind of cortex cotrolls the agent.",
+            description="Defines what actions and cortex agent has.",
             items=AGENT_KIND,
-            default="ROBOT"
+            default="TODO"
             )
 
 
@@ -1465,6 +1462,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         result = { "content":{}, "folders":{}, "imports": {} }
         if folder.e2_custom_props.folder_defines_agent is True:
             result["content"]["AGENT"] = self.export_agent(folder, data_root_dir)
+            result["folders"]["motion_object"] = { "content": { "FRAME": self.export_frame(folder) } }
         else:
             if folder.e2_custom_props.folder_defines_frame is True:
                 result["content"]["FRAME"] = self.export_frame(folder)
@@ -1741,9 +1739,6 @@ class E2SceneExportOperator(bpy.types.Operator):
             "object_kind": "AGENT",
             "kind": object_props.agent_kind
         }
-        frame_props = self.export_frame(object)
-        result["origin"] = frame_props["origin"]
-        result["orientation"] = frame_props["orientation"]
         batch_props = self.export_batch(object.children[0], data_root_dir)
         result["skeleton_batch_disk_path"] = batch_props["path"]
         result["skeleton_batch_skin"] = batch_props["skin"]
