@@ -147,11 +147,11 @@ agent_action::agent_action(
     , DESIRE() // loaded below
     , EFFECTS() // loaded below
     , MOTION_TEMPLATE_NAME(get_value<std::string>("MOTION_TEMPLATE_NAME", ptree_))
-    , ONLY_INTERPOLATE_TO_MOTION_TEMPLATE(get_value<bool>("ONLY_INTERPOLATE_TO_MOTION_TEMPLATE", ptree_))
+    , ONLY_INTERPOLATE_TO_MOTION_TEMPLATE(get_value<bool>("ONLY_INTERPOLATE_TO_MOTION_TEMPLATE", false, ptree_))
     , USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION(get_value<bool>("USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION", false, ptree_))
-    , IS_CYCLIC(get_value<bool>("IS_CYCLIC", ptree_))
-    , IS_LOOK_AT_ENABLED(get_value<bool>("IS_LOOK_AT_ENABLED", ptree_))
-    , IS_AIM_AT_ENABLED(get_value<bool>("IS_AIM_AT_ENABLED", ptree_))
+    , IS_CYCLIC(get_value<bool>("IS_CYCLIC", false, ptree_))
+    , IS_LOOK_AT_ENABLED(get_value<bool>("IS_LOOK_AT_ENABLED", false, ptree_))
+    , IS_AIM_AT_ENABLED(get_value<bool>("IS_AIM_AT_ENABLED", false, ptree_))
     , DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE(get_value<bool>("DEFINE_SKELETON_SYNC_SOURCE_IN_WORLD_SPACE", false, ptree_))
     , SENSORS() // loaded below
     , TRANSITIONS() // loaded below
@@ -168,9 +168,10 @@ agent_action::agent_action(
 {
     ASSUMPTION(motion_templates().motions_map().count(MOTION_TEMPLATE_NAME) != 0UL);
     ASSUMPTION(!(IS_CYCLIC && USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION));
+    ASSUMPTION(ONLY_INTERPOLATE_TO_MOTION_TEMPLATE == false || USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION == false);
     load_desire(get_ptree("DESIRE", ptree_), get_ptree_or_empty("DESIRE", defaults_));
-    load_effects(get_ptree("EFFECTS", ptree_), get_ptree_or_empty("EFFECTS", defaults_));
-    load_motion_object_config(get_ptree("MOTION_OBJECT_CONFIG", ptree_), get_ptree_or_empty("MOTION_OBJECT_CONFIG", defaults_));
+    load_effects(get_ptree_or_empty("EFFECTS", ptree_), get_ptree_or_empty("EFFECTS", defaults_));
+    load_motion_object_config(get_ptree_or_empty("MOTION_OBJECT_CONFIG", ptree_), get_ptree_or_empty("MOTION_OBJECT_CONFIG", defaults_));
     AABB_HALF_SIZE =
             read_aabb_half_size("AABB_HALF_SIZE", "AABB_HALF_SIZE_FROM_KEYFRAME", motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree_);
     load_sensors(get_ptree_or_empty("SENSORS", ptree_));
@@ -219,7 +220,7 @@ void  agent_action::load_motion_object_config(
         boost::property_tree::ptree const&  defaults
         )
 {
-    MOTION_OBJECT_CONFIG.shape_type = angeo::as_collision_shape_type(ptree.get<std::string>("shape_type"));
+    MOTION_OBJECT_CONFIG.shape_type = angeo::as_collision_shape_type(get_value<std::string>("shape_type", ptree, &defaults));
     MOTION_OBJECT_CONFIG.aabb_half_size =
             read_aabb_half_size("aabb_half_size", "aabb_half_size_from_keyframe", motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree);
     MOTION_OBJECT_CONFIG.aabb_alignment = aabb_alignment_from_string(get_value("aabb_alignment", "Z_LO", ptree, &defaults));
