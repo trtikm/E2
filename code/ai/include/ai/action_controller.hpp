@@ -265,20 +265,6 @@ struct  action_guesture : public  agent_action
 };
 
 
-//struct  action_interpolate : public  agent_action
-//{
-//    explicit  action_interpolate(
-//            std::string const&  name_,
-//            boost::property_tree::ptree const&  ptree_,
-//            boost::property_tree::ptree const&  defaults_,
-//            action_execution_context_ptr const  context_
-//            );
-//    //void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr) override {}
-//    void  next_round(float_32_bit const  time_step_in_seconds) override;
-//    angeo::coordinate_system  target;
-//};
-
-
 struct  action_roller : public  agent_action
 {
     struct  roller_object_config

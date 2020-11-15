@@ -377,7 +377,7 @@ void  agent_action::update_time(float_32_bit const  time_step_in_seconds)
     if (m_current_time >= m_end_time)
         return;
 
-    m_current_time += state_variables().at("animation_speed").get_value() * time_step_in_seconds;
+    m_current_time += (is_ghost_complete() ? state_variables().at("animation_speed").get_value() : 1.0f) * time_step_in_seconds;
     m_current_time += m_context->time_buffer;
     m_context->time_buffer = 0.0f;
 
@@ -1130,20 +1130,6 @@ void  action_guesture::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
-//void  action_interpolate::next_round(float_32_bit const  time_step_in_seconds)
-//{
-//    angeo::coordinate_system  result;
-//    angeo::interpolate_spherical(
-//            ctx().frame_coord_system_in_world_space(binding().frame_guid_of_skeleton),
-//            target,
-//            interpolation_parameter(),
-//            result
-//            );
-//    ctx().request_relocate_frame(binding().frame_guid_of_skeleton, result);
-//    agent_action::next_round(time_step_in_seconds);
-//}
-
-
 action_roller::action_roller(
         std::string const&  name_,
         boost::property_tree::ptree const&  ptree_,
@@ -1533,13 +1519,8 @@ void  action_controller::process_action_transitions()
 {
     std::shared_ptr<agent_action>  best_action;
     {
-        best_action = nullptr;
-        float_32_bit  best_penalty = 0.0f;
-        if ((m_current_action->is_cyclic() || !m_current_action->is_complete()) && m_current_action->is_guard_valid())
-        {
-            best_action = m_current_action;
-            best_penalty = m_current_action->compute_desire_penalty();
-        }
+        best_action = m_current_action;
+        float_32_bit  best_penalty = m_current_action->compute_desire_penalty();
         for (auto const&  name_and_props : m_current_action->get_transitions())
         {
             std::shared_ptr<agent_action> const  action_ptr = m_available_actions.at(name_and_props.first);
@@ -1551,13 +1532,10 @@ void  action_controller::process_action_transitions()
             }
         }
     }
-    INVARIANT(best_action != nullptr);
 
     agent_action::transition_info  info;
     if (m_current_action != best_action && !best_action->collect_transition_info(&*m_current_action, info))
         best_action = m_current_action;
-
-    INVARIANT(m_current_action != best_action ||  m_current_action->is_cyclic() || !m_current_action->is_complete());
 
     if (m_current_action != best_action || m_current_action->is_complete())
     {
@@ -1577,8 +1555,6 @@ void  action_controller::process_action_transitions()
         }
         m_current_action = best_action;
     }
-
-    INVARIANT(m_current_action->is_cyclic() || !m_current_action->is_complete());
 }
 
 
