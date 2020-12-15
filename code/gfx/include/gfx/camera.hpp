@@ -162,6 +162,9 @@ void  projection_matrix_orthogonal_2d(
         );
 
 
+bool  is_point_in_camera_space_inside_camera_frustum(camera_perspective const&  cam, vector3 const&  point_in_camera_space);
+
+
 }
 
 #endif

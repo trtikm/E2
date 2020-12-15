@@ -364,4 +364,15 @@ void  projection_matrix_orthogonal_2d(
 }
 
 
+bool  is_point_in_camera_space_inside_camera_frustum(camera_perspective const&  cam, vector3 const&  point_in_camera_space)
+{
+    std::array<std::pair<vector3, vector3>, 6U>  clip_planes;
+    cam.clip_planes_in_camera_space(clip_planes);
+    for (std::pair<vector3, vector3> const&  point_and_normal : clip_planes)
+        if (dot_product(point_and_normal.second, point_in_camera_space - point_and_normal.first) < 0.0f)
+            return false;
+    return true;
+}
+
+
 }
