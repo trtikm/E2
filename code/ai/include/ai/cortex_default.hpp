@@ -9,7 +9,7 @@ namespace ai {
 
 struct  cortex_default : public cortex
 {
-    cortex_default();
+    cortex_default(agent const*  myself_);
     void  next_round(float_32_bit const  time_step_in_seconds) override;
 
 private:

@@ -8,9 +8,12 @@
 namespace ai {
 
 
-cortex::cortex()
-    : m_motion_desire_props()
-{}
+cortex::cortex(agent const*  myself_)
+    : m_myself(myself_)
+    , m_motion_desire_props()
+{
+    ASSUMPTION(m_myself != nullptr);
+}
 
 
 cortex::mock_input_props::mock_input_props(

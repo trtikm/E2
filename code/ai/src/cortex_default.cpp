@@ -9,7 +9,8 @@ namespace ai {
 
 
 
-cortex_default::cortex_default()
+cortex_default::cortex_default(agent const*  myself_)
+    : cortex(myself_)
 {}
 
 

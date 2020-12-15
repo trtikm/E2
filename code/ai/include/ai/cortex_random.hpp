@@ -10,7 +10,7 @@ namespace ai {
 
 struct  cortex_random : public cortex
 {
-    cortex_random();
+    cortex_random(agent const*  myself_);
     void  next_round(float_32_bit const  time_step_in_seconds);
 private:
     float_32_bit  m_seconds_till_change;

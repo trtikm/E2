@@ -3,6 +3,8 @@
 
 #   include <ai/agent_config.hpp>
 #   include <ai/skeleton_interpolators.hpp>
+#   include <ai/agent_system_state.hpp>
+#   include <ai/agent_system_variables.hpp>
 #   include <ai/agent_state_variables.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/scene_binding.hpp>
@@ -39,6 +41,8 @@ struct  action_execution_context
     explicit  action_execution_context(agent* const  myself_);
 
     motion_desire_props const&  desire() const;
+    agent_system_state&  system_state() const;
+    agent_system_variables&  system_variables() const;
     agent_state_variables&  state_variables() const;
     skeletal_motion_templates  motion_templates() const;
     scene_binding const&  binding() const;
@@ -62,25 +66,6 @@ struct  agent_action
     {
         motion_desire_props  ideal;
         motion_desire_props  weights;
-    };
-
-    struct  effect_config
-    {
-        // Represent an experssion of this form:
-        //      coefinient * (variable.empty() ? 1.0f : read(variable)) * std::pow(dt, dt_exponent)
-        // where dt is the current simulation time step and read(...) function reads the current
-        // value of the variable.
-        struct  derivative_props
-        {
-            std::string  variable;      // When empty, then no variable is used in the expression.
-            float_32_bit  coeficient;
-            float_32_bit  dt_exponent;
-        };
-        std::string  variable;  // Name of the output variable which will be modified in this action effect.
-                                // Must always be a valid variable name, in particular can NOT be empty.
-        std::vector<derivative_props>  derivative;  // Time derivative of the output variable represented in
-                                                    // the form of a sum of derivatives of all variables
-                                                    // involved in the overall derivative.
     };
 
     enum struct AABB_ALIGNMENT : natural_8_bit { CENTER, X_LO, X_HI, Y_LO, Y_HI, Z_LO, Z_HI };
@@ -170,12 +155,14 @@ struct  agent_action
 
     agent&  myself() const { return *m_context->myself; }
     motion_desire_props const&  desire() const { return m_context->desire(); }
+    agent_system_state&  system_state() const { return m_context->system_state(); }
+    agent_system_variables&  system_variables() const { return m_context->system_variables(); }
     agent_state_variables&  state_variables() const { return m_context->state_variables(); }
     skeletal_motion_templates  agent_action::motion_templates() const { return m_context->motion_templates(); }
     scene_binding const&  agent_action::binding() const { return m_context->binding(); }
     com::simulation_context const&  agent_action::ctx() const { return m_context->ctx(); }
 
-    float_32_bit  compute_desire_penalty() const;
+    float_32_bit  compute_desire_penalty(motion_desire_props const&  desire_props) const;
 
     bool  is_cyclic() const { return IS_CYCLIC; }
     bool  is_complete() const;
@@ -186,7 +173,24 @@ struct  agent_action
     std::unordered_map<std::string, transition_config> const&  get_transitions() const { return TRANSITIONS; };
     motion_object_config const&  get_motion_object_config() const { return MOTION_OBJECT_CONFIG; }
 
-    void  apply_effects(float_32_bit const  time_step_in_seconds);
+    virtual void  update_system_state(
+            agent_system_state&  state,
+            motion_desire_props const&  desire_props,
+            float_32_bit const  time_step_in_seconds
+            ) const {}
+    virtual void  update_system_variables(
+            agent_system_variables&  variables,
+            agent_system_state const&  state,
+            motion_desire_props const&  desire_props,
+            float_32_bit const  time_step_in_seconds
+            ) const;
+    virtual void  update_state_variables(
+            agent_state_variables&  variables,
+            agent_system_variables const&  sys_variables,
+            motion_desire_props const&  desire_props,
+            float_32_bit const  time_step_in_seconds
+            ) const;
+
     void  update_time(float_32_bit const  time_step_in_seconds);
     void  update_skeleton_sync();
     void  update_look_at(float_32_bit const  time_step_in_seconds, transition_info const* const  info_ptr = nullptr);
@@ -218,7 +222,7 @@ protected:
 
     std::string  NAME;
     desire_config  DESIRE;
-    std::vector<effect_config>  EFFECTS;
+    std::map<std::string, std::map<std::string, angeo::linear_segment_curve> >  EFFECTS;
     std::string  MOTION_TEMPLATE_NAME;
     bool  ONLY_INTERPOLATE_TO_MOTION_TEMPLATE;
     bool  USE_MOTION_TEMPLATE_FOR_LOCATION_INTERPOLATION;
@@ -260,6 +264,12 @@ struct  action_guesture : public  agent_action
             boost::property_tree::ptree const&  defaults_,
             action_execution_context_ptr const  context_
             );
+    void  update_system_variables(
+            agent_system_variables&  variables,
+            agent_system_state const&  state,
+            motion_desire_props const&  desire_props,
+            float_32_bit const  time_step_in_seconds
+            ) const override;
     void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr) override;
     void  next_round(float_32_bit const  time_step_in_seconds) override;
 };
@@ -284,6 +294,17 @@ struct  action_roller : public  agent_action
             boost::property_tree::ptree const&  defaults_,
             action_execution_context_ptr const  context_
             );
+    void  update_system_state(
+            agent_system_state&  state,
+            motion_desire_props const&  desire_props,
+            float_32_bit const  time_step_in_seconds
+            ) const override;
+    void  update_system_variables(
+            agent_system_variables&  variables,
+            agent_system_state const&  state,
+            motion_desire_props const&  desire_props,
+            float_32_bit const  time_step_in_seconds
+            ) const override;
     void  get_colliders_to_be_ignored_in_empty_space_check(std::unordered_set<com::object_guid>&  ignored_collider_guids) const override;
     void  on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr) override;
     void  next_round(float_32_bit const  time_step_in_seconds) override;
@@ -311,6 +332,10 @@ private:
 };
 
 
+using  agent_action_ptr = std::shared_ptr<agent_action>;
+using  agent_action_const_ptr = std::shared_ptr<agent_action const>;
+
+
 struct  action_controller
 {
     action_controller(agent_config const  config, agent*  const  myself);
@@ -320,14 +345,19 @@ struct  action_controller
 
     void  next_round(float_32_bit const  time_step_in_seconds);
 
-    agent_action const&  get_current_action() const { return *m_current_action; }
+    agent_action_const_ptr  get_current_action() const { return m_current_action; }
+
+    agent_action_const_ptr  choose_best_action(
+            agent_action_const_ptr const  current_action_ptr,
+            motion_desire_props const&  desire_props
+            ) const;
 
 private:
     void  process_action_transitions();
 
     action_execution_context_ptr  m_context;
-    std::shared_ptr<agent_action>  m_current_action;
-    std::unordered_map<std::string, std::shared_ptr<agent_action> >  m_available_actions;
+    agent_action_ptr  m_current_action;
+    std::unordered_map<std::string, agent_action_ptr>  m_available_actions;
 };
 
 

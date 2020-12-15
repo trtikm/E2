@@ -9,6 +9,12 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/agent_state_variables.hpp
     ./src/agent_state_variables.cpp
 
+    ./include/ai/agent_system_variables.hpp
+    ./src/agent_system_variables.cpp
+
+    ./include/ai/agent_system_state.hpp
+    ./src/agent_system_state.cpp
+
     ./include/ai/agent_config.hpp
     ./src/agent_config.cpp
 

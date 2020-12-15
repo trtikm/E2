@@ -1007,7 +1007,7 @@ void  simulator::render_agent_action_transition_contratints()
     for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
     {
         ai::agent const&  agent = m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it));
-        for (auto const&  name_and_config : agent.get_action_controller().get_current_action().get_transitions())
+        for (auto const&  name_and_config : agent.get_action_controller().get_current_action()->get_transitions())
             if (name_and_config.second.perception_guard != nullptr)
             {
                 ai::agent_action::transition_config::location_constraint_config const&  constraint =

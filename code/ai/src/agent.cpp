@@ -72,11 +72,9 @@ static sight_controller::ray_cast_config  make_ray_cast_config(agent_config cons
 }
 
 
-std::shared_ptr<cortex>  make_cortex(agent_config const  config)
+std::shared_ptr<cortex>  make_cortex(agent const*  myself_, agent_config const  config)
 {
-    if (config.use_cortex_mock())
-        return std::make_shared<cortex_mock>();
-    return std::make_shared<cortex>();
+    return std::make_shared<cortex_robot>(myself_, config.use_cortex_mock());
 }
 
 
@@ -85,9 +83,13 @@ agent::agent(
         skeletal_motion_templates const  motion_templates,
         scene_binding_ptr const  binding
         )
-    : m_state_variables(load_agent_state_variables(config))
+    : m_system_state()
+    , m_system_variables()
+    , m_state_variables()
+
     , m_motion_templates(motion_templates)
     , m_binding(binding)
+
     , m_action_controller(config, this)
     , m_sight_controller(
             make_camera_config(),
@@ -95,8 +97,17 @@ agent::agent(
             m_motion_templates,
             m_binding
             )
-    , m_cortex(make_cortex(config))
+    , m_cortex(make_cortex(this, config))
 {
+    load_agent_system_variables(m_system_variables);
+    load_agent_state_variables(m_state_variables, config);
+    ASSUMPTION([this]() ->bool {
+        for (auto const& var_and_ignored : get_system_variables())
+            if (get_state_variables().count(var_and_ignored.first) != 0UL)
+                return false;
+        return true;
+        }());
+
     m_action_controller.initialise();
 }
 
@@ -107,7 +118,25 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds, cortex::mock_i
 
     m_sight_controller.next_round(time_step_in_seconds);
     m_cortex->next_round(time_step_in_seconds, mock_input_ptr);
+    update_system_state();
+    update_system_variables(system_variables_ref(), get_system_state());
     m_action_controller.next_round(time_step_in_seconds);
+
+if (auto const  ptr = std::dynamic_pointer_cast<cortex_robot>(m_cortex)) if (ptr->use_mock())
+{
+for (auto const& var_and_value : get_system_variables()) SLOG(var_and_value.first << ": " << var_and_value.second << "\n");
+for (auto const& var_and_state : get_state_variables()) SLOG(var_and_state.first << ": " << var_and_state.second.get_value() << "\n");
+}
+
+}
+
+
+void  agent::update_system_state()
+{
+    system_state_ref() = {
+            get_binding()->context->frame_explicit_coord_system_in_world_space(get_binding()->frame_guid_of_motion_object),
+            *get_sight_controller().get_camera()->coordinate_system()
+            };
 }
 
 

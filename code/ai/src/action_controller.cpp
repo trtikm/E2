@@ -97,6 +97,18 @@ motion_desire_props const&  action_execution_context::desire() const
 }
 
 
+agent_system_state&  action_execution_context::system_state() const
+{
+    return myself->system_state_ref();
+}
+
+
+agent_system_variables&  action_execution_context::system_variables() const
+{
+    return myself->system_variables_ref();
+}
+
+
 agent_state_variables&  action_execution_context::state_variables() const
 {
     return myself->state_variables_ref();
@@ -211,7 +223,12 @@ void  agent_action::load_effects(
         boost::property_tree::ptree const&  defaults
         )
 {
-    // TODO!
+    for (auto const& var_and_ignored : state_variables())
+        for (auto const&  var_and_curve : get_ptree_or_empty(var_and_ignored.first, ptree, &defaults))
+        {
+            ASSUMPTION(state_variables().count(var_and_curve.first) != 0UL || system_variables().count(var_and_curve.first) != 0UL);
+            angeo::load(EFFECTS[var_and_ignored.first][var_and_curve.first], var_and_curve.second);
+        }
 }
 
 
@@ -327,10 +344,10 @@ void  agent_action::load_transitions(
 }
 
 
-float_32_bit  agent_action::compute_desire_penalty() const
+float_32_bit  agent_action::compute_desire_penalty(motion_desire_props const&  desire_props) const
 {
     std::vector<float_32_bit>  props_vec, ideal_vec, weights_vec;
-    as_vector(desire(), props_vec);
+    as_vector(desire_props, props_vec);
     as_vector(DESIRE.ideal, ideal_vec);
     as_vector(DESIRE.weights, weights_vec);
 
@@ -363,12 +380,48 @@ float_32_bit  agent_action::interpolation_parameter() const
                 1.0f : (m_current_time - m_start_time) / (m_end_interpolation_time - m_start_time);
 }
 
+void  agent_action::update_system_variables(
+        agent_system_variables&  variables,
+        agent_system_state const&  state,
+        motion_desire_props const&  desire_props,
+        float_32_bit const  time_step_in_seconds
+        ) const
+{
+    ai::update_system_variables(variables, state);
+}
 
-void  agent_action::apply_effects(float_32_bit const  time_step_in_seconds)
+
+void  agent_action::update_state_variables(
+        agent_state_variables&  variables,
+        agent_system_variables const&  sys_variables,
+        motion_desire_props const&  desire_props,
+        float_32_bit const  time_step_in_seconds
+        ) const
 {
     TMPROF_BLOCK();
 
-    // TODO!
+    for (auto const&  var_and_derivatives : EFFECTS)
+    {
+        float_32_bit  derivative = 0.0f;
+        for (auto const&  var_and_curve : var_and_derivatives.second)
+        {
+            float_32_bit  var_value;
+            {
+                auto const  system_var_it = system_variables().find(var_and_curve.first);
+                if (system_var_it != system_variables().end())
+                    var_value = system_var_it->second;
+                else
+                {
+                    auto const  state_var_it = state_variables().find(var_and_curve.first);
+                    ASSUMPTION(state_var_it != state_variables().end());
+                    var_value = state_var_it->second.get_value();
+                }
+            }
+            derivative += var_and_curve.second(var_value);
+        }
+
+        state_variables().at(var_and_derivatives.first).add_to_value(derivative * time_step_in_seconds);
+    }
 }
 
 
@@ -377,7 +430,7 @@ void  agent_action::update_time(float_32_bit const  time_step_in_seconds)
     if (m_current_time >= m_end_time)
         return;
 
-    m_current_time += (is_ghost_complete() ? state_variables().at("animation_speed").get_value() : 1.0f) * time_step_in_seconds;
+    m_current_time += (is_ghost_complete() ? system_variables().at("sys_animation_speed") : 1.0f) * time_step_in_seconds;
     m_current_time += m_context->time_buffer;
     m_context->time_buffer = 0.0f;
 
@@ -1088,7 +1141,10 @@ void  agent_action::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    apply_effects(time_step_in_seconds);
+    update_system_state(system_state(), desire(), time_step_in_seconds);
+    update_system_variables(system_variables(), system_state(), desire(), time_step_in_seconds);
+    update_state_variables(state_variables(), system_variables(), desire(), time_step_in_seconds);
+
     update_time(time_step_in_seconds);
     update_skeleton_sync();
     update_animation(time_step_in_seconds);
@@ -1111,6 +1167,19 @@ action_guesture::action_guesture(
 }
 
 
+void  action_guesture::update_system_variables(
+        agent_system_variables&  variables,
+        agent_system_state const&  state,
+        motion_desire_props const&  desire_props,
+        float_32_bit const  time_step_in_seconds
+        ) const
+{
+    agent_action::update_system_variables(variables, state, desire_props, time_step_in_seconds);
+
+    system_variables().at("sys_animation_speed") = 1.0f;
+}
+
+
 void  action_guesture::on_transition(agent_action* const  from_action_ptr, transition_info const* const  info_ptr)
 {
     agent_action::on_transition(from_action_ptr, info_ptr);
@@ -1120,7 +1189,6 @@ void  action_guesture::on_transition(agent_action* const  from_action_ptr, trans
             com::to_string(com::OBJECT_KIND::RIGID_BODY),
             vector3_zero()
             );
-    state_variables().at("animation_speed").set_value(1.0f);
 }
 
 
@@ -1208,6 +1276,45 @@ bool  action_roller::roller_object_config::operator==(roller_object_config const
 {
     return  are_equal(roller_radius, other.roller_radius, 0.001f) &&
             are_equal(roller_mass_inverted, other.roller_mass_inverted, 0.001f);
+}
+
+
+void  action_roller::update_system_state(
+        agent_system_state&  state,
+        motion_desire_props const&  desire_props,
+        float_32_bit const  time_step_in_seconds
+        ) const
+{
+    agent_action::update_system_state(state, desire_props, time_step_in_seconds);
+
+    // TODO!
+}
+
+
+void  action_roller::update_system_variables(
+        agent_system_variables&  variables,
+        agent_system_state const&  state,
+        motion_desire_props const&  desire_props,
+        float_32_bit const  time_step_in_seconds
+        ) const
+{
+    agent_action::update_system_variables(variables, state, desire_props, time_step_in_seconds);
+
+    switch (m_animation_speed_subject)
+    {
+    case ANIMATION_SPEED_SUBJECT::ROLLER: {
+        vector3 const  roller_angular_velocity =
+                (m_desire_move_forward_to_linear_speed(desire_props.move.forward) / ROLLER_CONFIG.roller_radius)
+                    * state.motion_object_frame.basis_vector_x();
+        system_variables().at("sys_animation_speed") = m_angular_speed_to_animation_speed(length(roller_angular_velocity));
+        } break;
+    case ANIMATION_SPEED_SUBJECT::MOTION_OBJECT: {
+        vector3 const  motion_object_angular_velocity =
+                m_desire_move_turn_ccw_to_angular_speed(desire_props.move.turn_ccw) * state.motion_object_frame.basis_vector_z();
+        system_variables().at("sys_animation_speed") = m_angular_speed_to_animation_speed(length(motion_object_angular_velocity));
+        } break;
+    default: { UNREACHABLE(); } break;
+    }
 }
 
 
@@ -1348,29 +1455,16 @@ void  action_roller::next_round(float_32_bit const  time_step_in_seconds)
     angeo::coordinate_system_explicit const&  motion_object_frame =
             ctx().frame_explicit_coord_system_in_world_space(binding().frame_guid_of_motion_object);
 
-    vector3 const  motion_object_angular_velocity =
-            m_desire_move_turn_ccw_to_angular_speed(desire().move.turn_ccw) * motion_object_frame.basis_vector_z();
     ctx().request_set_rigid_body_angular_velocity(
             ctx().folder_content(binding().folder_guid_of_motion_object).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
-            motion_object_angular_velocity
+            m_desire_move_turn_ccw_to_angular_speed(desire().move.turn_ccw) * motion_object_frame.basis_vector_z()
             );
 
-    vector3 const  roller_angular_velocity =
-            (m_desire_move_forward_to_linear_speed(desire().move.forward) / ROLLER_CONFIG.roller_radius)
-                * motion_object_frame.basis_vector_x();
     ctx().request_set_rigid_body_angular_velocity(
             ctx().folder_content(m_roller_folder_guid).content.at(com::to_string(com::OBJECT_KIND::RIGID_BODY)),
-            roller_angular_velocity
+            (m_desire_move_forward_to_linear_speed(desire().move.forward) / ROLLER_CONFIG.roller_radius)
+                    * motion_object_frame.basis_vector_x()
             );
-
-    vector3  angular_velocity_for_animation_speed;
-    switch (m_animation_speed_subject)
-    {
-    case ANIMATION_SPEED_SUBJECT::ROLLER: angular_velocity_for_animation_speed = roller_angular_velocity; break;
-    case ANIMATION_SPEED_SUBJECT::MOTION_OBJECT: angular_velocity_for_animation_speed = motion_object_angular_velocity; break;
-    default: { UNREACHABLE(); } break;
-    }
-    state_variables().at("animation_speed").set_value(m_angular_speed_to_animation_speed(length(angular_velocity_for_animation_speed)));
 }
 
 
@@ -1450,8 +1544,6 @@ action_controller::action_controller(agent_config const  config, agent*  const  
     , m_current_action(nullptr) // loaded below
     , m_available_actions() // loaded below
 {
-    if (m_context->state_variables().count("animation_speed") == 0UL)
-        m_context->state_variables().insert({ "animation_speed", { "animation_speed", 1.0f, 0.5f, 2.0f } });
     for (auto const&  name_and_ptree : config.actions())
     {
         ASSUMPTION(name_and_ptree.second->size() == 1UL);
@@ -1515,16 +1607,19 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
-void  action_controller::process_action_transitions()
+agent_action_const_ptr  action_controller::choose_best_action(
+        agent_action_const_ptr const  current_action_ptr,
+        motion_desire_props const&  desire_props
+        ) const
 {
-    std::shared_ptr<agent_action>  best_action;
+    agent_action_const_ptr  best_action;
     {
-        best_action = m_current_action;
-        float_32_bit  best_penalty = m_current_action->compute_desire_penalty();
-        for (auto const&  name_and_props : m_current_action->get_transitions())
+        best_action = current_action_ptr;
+        float_32_bit  best_penalty = current_action_ptr->compute_desire_penalty(desire_props);
+        for (auto const&  name_and_props : current_action_ptr->get_transitions())
         {
-            std::shared_ptr<agent_action> const  action_ptr = m_available_actions.at(name_and_props.first);
-            float_32_bit const  penalty = action_ptr->compute_desire_penalty();
+            agent_action_const_ptr const  action_ptr = m_available_actions.at(name_and_props.first);
+            float_32_bit const  penalty = action_ptr->compute_desire_penalty(desire_props);
             if (best_action == nullptr || penalty < best_penalty)
             {
                 best_action = action_ptr;
@@ -1532,6 +1627,14 @@ void  action_controller::process_action_transitions()
             }
         }
     }
+    return best_action;
+}
+
+
+void  action_controller::process_action_transitions()
+{
+    agent_action_ptr  best_action =
+            std::const_pointer_cast<agent_action>(choose_best_action(m_current_action, m_context->desire()));
 
     agent_action::transition_info  info;
     if (m_current_action != best_action && !best_action->collect_transition_info(&*m_current_action, info))

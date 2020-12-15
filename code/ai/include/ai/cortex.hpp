@@ -2,10 +2,15 @@
 #   define AI_CORTEX_HPP_INCLUDED
 
 #   include <ai/motion_desire_props.hpp>
+#   include <ai/agent_system_state.hpp>
+#   include <ai/agent_system_variables.hpp>
+#   include <ai/agent_state_variables.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <osi/window_props.hpp>
 #   include <osi/keyboard_props.hpp>
 #   include <osi/mouse_props.hpp>
+
+namespace ai { struct  agent; }
 
 namespace ai {
 
@@ -24,9 +29,10 @@ struct  cortex
         osi::window_props const*  window;
     };
 
-    cortex();
+    cortex(agent const*  myself_);
     virtual ~cortex() {}
 
+    agent const&  myself() const { return *m_myself; }
     motion_desire_props const&  get_motion_desire_props() const { return m_motion_desire_props; }
     motion_desire_props&  motion_desire_props_ref() { return m_motion_desire_props; }
 
@@ -39,6 +45,7 @@ struct  cortex
     { next_round(time_step_in_seconds); }
 
 private:
+    agent const*  m_myself;
     motion_desire_props  m_motion_desire_props;
 };
 

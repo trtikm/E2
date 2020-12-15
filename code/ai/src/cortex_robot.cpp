@@ -9,7 +9,8 @@ namespace ai {
 
 
 
-cortex_robot::cortex_robot()
+cortex_robot::cortex_robot(agent const*  myself_, bool const  use_mock_)
+    : cortex_mock_optional(myself_, use_mock_)
 {}
 
 

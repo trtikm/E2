@@ -3,6 +3,8 @@
 
 #   include <ai/agent_id.hpp>
 #   include <ai/agent_config.hpp>
+#   include <ai/agent_system_state.hpp>
+#   include <ai/agent_system_variables.hpp>
 #   include <ai/agent_state_variables.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/scene_binding.hpp>
@@ -28,8 +30,14 @@ struct agent
         scene_binding_ptr const  binding
         );
 
-    agent_state_variables const&  get_state_variables() const { return *m_state_variables; }
-    agent_state_variables&  state_variables_ref() { return *m_state_variables; }
+    agent_state_variables const&  get_state_variables() const { return m_state_variables; }
+    agent_state_variables&  state_variables_ref() { return m_state_variables; }
+
+    agent_system_variables const&  get_system_variables() const { return m_system_variables; }
+    agent_system_variables&  system_variables_ref() { return m_system_variables; }
+
+    agent_system_state const&  get_system_state() const { return m_system_state; }
+    agent_system_state&  system_state_ref() { return m_system_state; }
 
     skeletal_motion_templates  get_motion_templates() const { return m_motion_templates; }
     scene_binding_ptr  get_binding() const { return m_binding; }
@@ -42,7 +50,12 @@ struct agent
     void  next_round(float_32_bit const  time_step_in_seconds, cortex::mock_input_props const* const  mock_input_ptr);
 
 private:
-    agent_state_variables_ptr  m_state_variables;
+    void  update_system_state();
+
+    agent_system_state  m_system_state;
+    agent_system_variables  m_system_variables;
+    agent_state_variables  m_state_variables;
+
     skeletal_motion_templates  m_motion_templates;
     scene_binding_ptr  m_binding;
 
