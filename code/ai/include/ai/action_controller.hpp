@@ -162,7 +162,10 @@ struct  agent_action
     scene_binding const&  agent_action::binding() const { return m_context->binding(); }
     com::simulation_context const&  agent_action::ctx() const { return m_context->ctx(); }
 
+    desire_config const&  get_desire_config() const { return DESIRE; }
     float_32_bit  compute_desire_penalty(motion_desire_props const&  desire_props) const;
+
+    std::string const&  get_name() const { return NAME; }
 
     bool  is_cyclic() const { return IS_CYCLIC; }
     bool  is_complete() const;
@@ -346,6 +349,7 @@ struct  action_controller
     void  next_round(float_32_bit const  time_step_in_seconds);
 
     agent_action_const_ptr  get_current_action() const { return m_current_action; }
+    std::unordered_map<std::string, agent_action_ptr> const&  get_available_actions() const { return m_available_actions; }
 
     agent_action_const_ptr  choose_best_action(
             agent_action_const_ptr const  current_action_ptr,

@@ -21,8 +21,9 @@ agent_state_variable::agent_state_variable(
 {}
 
 
-void  load_agent_state_variables(agent_state_variables&  variables, agent_config const  config)
+agent_state_variables  load_agent_state_variables(agent_config const  config)
 {
+    agent_state_variables  variables;
     for (auto const&  name_and_ptree : config.state_variables())
         variables.insert({
                 name_and_ptree.first,
@@ -34,6 +35,7 @@ void  load_agent_state_variables(agent_state_variables&  variables, agent_config
                     name_and_ptree.second->get<float_32_bit>("ideal_value")
                     }
                 });
+    return variables;
 }
 
 

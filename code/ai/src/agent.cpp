@@ -84,8 +84,8 @@ agent::agent(
         scene_binding_ptr const  binding
         )
     : m_system_state()
-    , m_system_variables()
-    , m_state_variables()
+    , m_system_variables(load_agent_system_variables())
+    , m_state_variables(load_agent_state_variables(config))
 
     , m_motion_templates(motion_templates)
     , m_binding(binding)
@@ -99,8 +99,6 @@ agent::agent(
             )
     , m_cortex(make_cortex(this, config))
 {
-    load_agent_system_variables(m_system_variables);
-    load_agent_state_variables(m_state_variables, config);
     ASSUMPTION([this]() ->bool {
         for (auto const& var_and_ignored : get_system_variables())
             if (get_state_variables().count(var_and_ignored.first) != 0UL)

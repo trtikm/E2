@@ -10,9 +10,9 @@
 namespace ai {
 
 
-void  load_agent_system_variables(agent_system_variables&  variables)
+agent_system_variables  load_agent_system_variables()
 {
-    variables.swap(agent_system_variables{
+    return agent_system_variables{
             { "sys_zero", 0.0f },
             { "sys_one", 1.0f },
             { "sys_animation_speed", 1.0f },
@@ -21,12 +21,14 @@ void  load_agent_system_variables(agent_system_variables&  variables)
             { "sys_angle_look_attractor_xn", 0.0f },
             { "sys_angle_look_attractor_yp", 0.0f },
             { "sys_angle_look_attractor_yn", 0.0f },
-            });
+            };
 }
 
 
 void  update_system_variables(agent_system_variables&  variables, agent_system_state const&  state)
 {
+    TMPROF_BLOCK();
+
     variables["sys_angle_look_forward"] = // in range <0.0f, PI()/2.0f>
             angle(state.motion_object_frame.basis_vector_y(), state.camera_frame.basis_vector_z());
 

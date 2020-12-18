@@ -407,20 +407,20 @@ void  agent_action::update_state_variables(
         {
             float_32_bit  var_value;
             {
-                auto const  system_var_it = system_variables().find(var_and_curve.first);
-                if (system_var_it != system_variables().end())
+                auto const  system_var_it = sys_variables.find(var_and_curve.first);
+                if (system_var_it != sys_variables.end())
                     var_value = system_var_it->second;
                 else
                 {
-                    auto const  state_var_it = state_variables().find(var_and_curve.first);
-                    ASSUMPTION(state_var_it != state_variables().end());
+                    auto const  state_var_it = variables.find(var_and_curve.first);
+                    ASSUMPTION(state_var_it != variables.end());
                     var_value = state_var_it->second.get_value();
                 }
             }
             derivative += var_and_curve.second(var_value);
         }
 
-        state_variables().at(var_and_derivatives.first).add_to_value(derivative * time_step_in_seconds);
+        variables.at(var_and_derivatives.first).add_to_value(derivative * time_step_in_seconds);
     }
 }
 
@@ -1285,9 +1285,18 @@ void  action_roller::update_system_state(
         float_32_bit const  time_step_in_seconds
         ) const
 {
+    TMPROF_BLOCK();
+
     agent_action::update_system_state(state, desire_props, time_step_in_seconds);
 
-    // TODO!
+    float_32_bit const  linear_speed = m_desire_move_forward_to_linear_speed(desire().move.forward) / ROLLER_CONFIG.roller_radius;
+    float_32_bit const  angular_speed = m_desire_move_turn_ccw_to_angular_speed(desire().move.turn_ccw);
+
+    vector3 const  dp = (-linear_speed * time_step_in_seconds) * state.motion_object_frame.basis_vector_y();
+    quaternion const  dr = angle_axis_to_quaternion(angular_speed * time_step_in_seconds, state.motion_object_frame.basis_vector_z());
+
+    angeo::relocate(state.motion_object_frame, dp, dr);
+    angeo::relocate(state.camera_frame, dp, dr);
 }
 
 
@@ -1298,6 +1307,8 @@ void  action_roller::update_system_variables(
         float_32_bit const  time_step_in_seconds
         ) const
 {
+    TMPROF_BLOCK();
+
     agent_action::update_system_variables(variables, state, desire_props, time_step_in_seconds);
 
     switch (m_animation_speed_subject)

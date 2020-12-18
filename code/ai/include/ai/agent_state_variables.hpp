@@ -50,7 +50,7 @@ private:
 using  agent_state_variables = std::unordered_map<std::string, agent_state_variable>;
 
 
-void  load_agent_state_variables(agent_state_variables&  variables, agent_config const  config);
+agent_state_variables  load_agent_state_variables(agent_config const  config);
 
 
 }

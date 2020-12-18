@@ -13,7 +13,7 @@ namespace ai {
 using  agent_system_variables = std::unordered_map<std::string, float_32_bit>;
 
 
-void  load_agent_system_variables(agent_system_variables&  variables);
+agent_system_variables  load_agent_system_variables();
 void  update_system_variables(agent_system_variables&  variables, agent_system_state const&  state);
 
 
