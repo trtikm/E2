@@ -62,6 +62,11 @@ private:
 
 coordinate_system_explicit const&  get_world_coord_system_explicit();
 
+void  translate(coordinate_system_explicit&  coord_system, vector3 const&  shift);
+void  rotate(coordinate_system_explicit&  coord_system, quaternion const&  rotation);
+void  relocate(coordinate_system_explicit&  coord_system, vector3 const&  shift, quaternion const&  rotation);
+void  relocate(coordinate_system_explicit&  coord_system, quaternion const&  rotation, vector3 const&  shift);
+
 inline void  from_base_matrix(coordinate_system_explicit const&  coord_system, matrix44&  output)
 {
     compose_from_base_matrix(

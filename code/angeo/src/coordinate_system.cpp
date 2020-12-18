@@ -24,6 +24,36 @@ coordinate_system_explicit const&  get_world_coord_system_explicit()
 }
 
 
+void  translate(coordinate_system_explicit&  coord_system, vector3 const&  shift)
+{
+    coord_system.origin_ref() += shift;
+}
+
+
+void  rotate(coordinate_system_explicit&  coord_system, quaternion const&  rotation)
+{
+    relocate(coord_system, vector3_zero(), rotation);
+}
+
+
+void  relocate(coordinate_system_explicit&  coord_system, vector3 const&  shift, quaternion const&  rotation)
+{
+    coordinate_system  cs(coord_system);
+    translate(cs, shift);
+    rotate(cs, rotation);
+    coord_system = cs;
+}
+
+
+void  relocate(coordinate_system_explicit&  coord_system, quaternion const&  rotation, vector3 const&  shift)
+{
+    coordinate_system  cs(coord_system);
+    rotate(cs, rotation);
+    translate(cs, shift);
+    coord_system = cs;
+}
+
+
 coordinate_system_ptr  coordinate_system::create(vector3 const&  origin, quaternion const&  orientation)
 {
     return coordinate_system_ptr( new coordinate_system(origin,orientation) );
