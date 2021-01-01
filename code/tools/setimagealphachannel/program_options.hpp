@@ -14,14 +14,11 @@ public:
     bool helpMode() const { return vm.count("help") > 0; }
     bool versionMode() const { return vm.count("version") > 0; }
     
-    bool  has_colour_input_image() const { return vm.count("colour_image") != 0UL; }
-    std::string  get_colour_input_image() const { return vm["colour_image"].as<std::string>(); }
+    bool  has_input_image() const { return vm.count("input_image") != 0UL; }
+    std::string  get_input_image() const { return vm["input_image"].as<std::string>(); }
 
-    bool  has_alpha_input_image() const { return vm.count("alpha_image") != 0UL; }
-    std::string  get_alpha_input_image() const { return vm["alpha_image"].as<std::string>(); }
-
-    bool  has_resulting_image() const { return vm.count("resulting_image") != 0UL; }
-    std::string  get_resulting_image() const { return vm["resulting_image"].as<std::string>(); }
+    bool  has_output_image() const { return vm.count("output_image") != 0UL; }
+    std::string  get_output_image() const { return vm["output_image"].as<std::string>(); }
 
     std::ostream& operator<<(std::ostream& ostr) const;
 

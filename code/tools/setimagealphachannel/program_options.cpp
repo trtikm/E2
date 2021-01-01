@@ -13,19 +13,12 @@ program_options::program_options(int argc, char* argv[])
     desc.add_options()
         ("help,h","Produces this help message.")
         ("version,v", "Prints the version string.")
-        ("colour_image,c",
+        ("input_image,i",
             bpo::value<std::string>(),
-            "Pathname to the first input PNG image with RGBA colour channels, "
-            "which will directly represent resulting RGB channels.")
-        ("alpha_image,a",
+            "Pathname to an input PNG image.")
+        ("output_image,o",
             bpo::value<std::string>(),
-            "Pathname to the second input PNG image with RGBA colour channels, "
-            "where mean value of RGB channels will represent the resulting\n"
-            "A-channel.")
-        ("resulting_image,r",
-            bpo::value<std::string>(),
-            "Pathname to the resulting PNG image with RGBA channels will be "
-            "computed from RGB channels of the input images.")
+            "Pathname to the output PNG image.")
         ;
 
     bpo::positional_options_description pos_desc;
