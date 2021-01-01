@@ -30,6 +30,14 @@ void  load_png_image(boost::filesystem::path const&  path, image_rgba_8888&  img
 }
 
 
+void  save_png_image(boost::filesystem::path const&  path, image_rgba_8888 const&  img)
+{
+    TMPROF_BLOCK();
+    ASSUMPTION(img.width > 0U && img.height > 0U);
+    lodepng::encode(path.string(), img.data, img.width, img.width, LCT_RGBA, 8U);
+}
+
+
 void  flip_image_vertically(image_rgba_8888&  img)
 {
     for (int lo = 0, hi = (int)img.height - 1; lo < hi; ++lo, --hi)

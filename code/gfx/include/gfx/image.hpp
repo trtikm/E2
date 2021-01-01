@@ -17,6 +17,7 @@ struct image_rgba_8888
 
 
 void  load_png_image(boost::filesystem::path const&  path, image_rgba_8888&  img);
+void  save_png_image(boost::filesystem::path const&  path, image_rgba_8888 const&  img);
 void  flip_image_vertically(image_rgba_8888&  img);
 
 
