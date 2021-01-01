@@ -1,4 +1,4 @@
-font_texture            textures\\fonts\\Liberation_Mono.txt
+font_texture            texture\\font\\Liberation_Mono.txt
 
 min_ascii_code          33
 max_ascii_code          126

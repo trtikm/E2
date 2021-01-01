@@ -21,10 +21,10 @@ void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_p
     while (true)
     {
         if (data_root_dir.empty())
-            throw std::runtime_error(msgstream() << "Cannot find 'fonts' parent directory in path: " << pathname);
+            throw std::runtime_error(msgstream() << "Cannot find 'font' parent directory in path: " << pathname);
         boost::filesystem::path const  current_dir = data_root_dir.filename();
         data_root_dir = data_root_dir.parent_path();
-        if (current_dir == "fonts")
+        if (current_dir == "font")
             break;
     }
 

@@ -47,7 +47,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , font_props(
             [&data_root_dir]() -> gfx::font_mono_props {
                 gfx::font_mono_props  props;
-                gfx::load_font_mono_props(canonical_path(data_root_dir) / "shared" / "gfx" / "fonts" / "Liberation_Mono.txt", props);
+                gfx::load_font_mono_props(canonical_path(data_root_dir) / "font" / "Liberation_Mono.txt", props);
                 return props;
             }()        
             )
