@@ -1,5 +1,6 @@
 #include <setimagealphachannel/program_info.hpp>
 #include <setimagealphachannel/program_options.hpp>
+#include <utility/config.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <boost/filesystem.hpp>
@@ -21,7 +22,9 @@ static void save_crash_report(std::string const& crash_message)
 
 int main(int argc, char* argv[])
 {
+#if BUILD_RELEASE() == 1
     try
+#endif
     {
         initialise_program_options(argc,argv);
         if (get_program_options()->helpMode())
@@ -35,6 +38,7 @@ int main(int argc, char* argv[])
         }
 
     }
+#if BUILD_RELEASE() == 1
     catch(std::exception const& e)
     {
         try { save_crash_report(e.what()); } catch (...) {}
@@ -45,5 +49,6 @@ int main(int argc, char* argv[])
         try { save_crash_report("Unknown exception was thrown."); } catch (...) {}
         return -2;
     }
+#endif
     return 0;
 }
