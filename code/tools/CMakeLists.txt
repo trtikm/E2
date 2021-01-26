@@ -8,3 +8,6 @@ add_subdirectory(./setimagealphachannel)
 
 add_subdirectory(./e2sim)
     message("-- e2sim")
+
+add_subdirectory(./fontcfg)
+    message("-- fontcfg")
