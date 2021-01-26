@@ -38,12 +38,14 @@ install(TARGETS ${THIS_TARGET_NAME} DESTINATION "tools")
 _template_main_cpp = \
 """#include <<%TARGET_NAME%>/program_info.hpp>
 #include <<%TARGET_NAME%>/program_options.hpp>
+#include <utility/config.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <stdexcept>
 #include <iostream>
+<%GFX_ON_WINDOWS%>
 
 
 LOG_INITIALISE(get_program_name() + "_LOG",true,true,warning)
@@ -59,7 +61,9 @@ static void save_crash_report(std::string const& crash_message)
 
 int main(int argc, char* argv[])
 {
+#if BUILD_RELEASE() == 1
     try
+#endif
     {
         initialise_program_options(argc,argv);
         if (get_program_options()->helpMode())
@@ -73,6 +77,7 @@ int main(int argc, char* argv[])
         }
 
     }
+#if BUILD_RELEASE() == 1
     catch(std::exception const& e)
     {
         try { save_crash_report(e.what()); } catch (...) {}
@@ -83,8 +88,16 @@ int main(int argc, char* argv[])
         try { save_crash_report("Unknown exception was thrown."); } catch (...) {}
         return -2;
     }
+#endif
     return 0;
 }
+"""
+
+
+_template_gfx_on_windows = \
+"""#if PLATFORM() == PLATFORM_WINDOWS()
+#   pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup") 
+#endif
 """
 
 
@@ -131,6 +144,7 @@ _template_program_options_hpp = \
 
 #   include <boost/program_options.hpp>
 #   include <boost/noncopyable.hpp>
+#   include <string>
 #   include <ostream>
 #   include <memory>
 
@@ -141,6 +155,7 @@ public:
 
     bool helpMode() const { return vm.count("help") > 0; }
     bool versionMode() const { return vm.count("version") > 0; }
+    std::string  data_root() const { return vm["data"].as<std::string>(); }
     
     // Add more option access/query functions here, if needed.
 
@@ -178,6 +193,9 @@ program_options::program_options(int argc, char* argv[])
     desc.add_options()
         ("help,h","Produces this help message.")
         ("version,v", "Prints the version string.")
+        ("data,D",
+            bpo::value<std::string>()->default_value("../data"),
+            "A root directory under which program's data are stored.")
         // Specify more options here, if needed.
         ;
 
@@ -219,35 +237,109 @@ std::ostream& operator<<(std::ostream& ostr, program_options_ptr options)
 _template_run_cpp = \
 """#include <<%TARGET_NAME%>/program_info.hpp>
 #include <<%TARGET_NAME%>/program_options.hpp>
-#include <angeo/tensor_math.hpp>
+#include <angeo/tensor_math.hpp><%COM_SIMULATOR_INCLUDES%>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 
+<%COM_SIMULATOR_CODE%>
 
 void run(int argc, char* argv[])
 {
     TMPROF_BLOCK();
+<%RUN_IMPLEMENTATION%>
+}
+"""
 
+
+_template_com_simulator_includes = \
+"""
+#include <com/simulator.hpp>
+#include <gfx/image.hpp>"""
+
+
+_template_com_simulator_code = \
+"""
+struct  simulator : public com::simulator
+{
+    simulator() : com::simulator(get_program_options()->data_root()) {}
+
+    void  initialise() override
+    {
+        com::simulator::initialise();
+
+        set_window_title(get_program_name());
+        gfx::image_rgba_8888  img;
+        gfx::load_png_image(context()->get_icon_root_dir() + "E2_icon.png", img);
+        set_window_icon((natural_8_bit)img.width, (natural_8_bit)img.height, img.data);
+        set_window_pos(get_window_props().window_frame_size_left(), get_window_props().window_frame_size_top());
+        set_window_size(1024U, 768U);
+        //maximise_window();
+    }
+
+    void  on_begin_round() override
+    {
+        if (get_window_props().focus_just_lost())
+            simulation_config().paused = true;
+
+        if (!get_window_props().has_focus())
+            return;
+
+        if (get_keyboard_props().keys_just_pressed().count(osi::KEY_PAUSE()) != 0UL)
+            simulation_config().paused = !simulation_config().paused;
+        else if (get_keyboard_props().keys_just_pressed().count(osi::KEY_SPACE()) != 0UL)
+        {
+            simulation_config().paused = false;
+            simulation_config().num_rounds_to_pause = 1U;
+        }
+
+        //bool const  shift = get_keyboard_props().keys_pressed().count(osi::KEY_LSHIFT()) != 0UL ||
+        //                    get_keyboard_props().keys_pressed().count(osi::KEY_RSHIFT()) != 0UL;
+        //bool const  ctrl = get_keyboard_props().keys_pressed().count(osi::KEY_LCTRL()) != 0UL ||
+        //                   get_keyboard_props().keys_pressed().count(osi::KEY_RCTRL()) != 0UL;
+        //bool const  alt = get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
+        //                  get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL;
+
+        // TODO: Implement tool's functionality here.
+    }
+
+    void  on_begin_render() override
+    {
+        if (get_keyboard_props().keys_pressed().count(osi::KEY_F1()) != 0UL)
+        {
+            SLOG("\\n=== HELP ===\\n");
+        }
+
+        // TODO: Implement tool's custom render here.
+    }
+};
+"""
+
+
+_template_com_simulator_call = \
+"""    osi::run(std::make_unique<simulator>());"""
+
+
+_template_run_todo_message = \
+"""
     // TODO: Implement tool's functionality here.
     //       Program options are already parsed. You
     //       thus do not have to access argc or argv.
     //       Simply call 'get_program_options()' to
     //       access the options.
-
-}
 """
+
 
 def get_list_of_E2_libraries():
     return sorted([
+        "ai",
         "angeo",
-        "netexp",
+        "com",
+        "gfx",
         "netlab",
-        "netview",
-        "plot",
-        "qtgl",
+        "osi",
         "utility",
         
         # Obsolete libraries:
@@ -256,14 +348,19 @@ def get_list_of_E2_libraries():
         "efloop",
         "envlab",
         "ode",
+        "netexp",
+        "netview",
         "paralab",
-        "pycellab"
+        "plot",
+        "qtgl",
+        "scene"
         ])
 
-def get_list_of_E2_libraries_dependent_on_QT_or_GL():
+def get_list_of_E2_libraries_dependent_on_OS_or_GL():
     return sorted([
-        "netview",
-        "qtgl"
+        "com",
+        "gfx",
+        "osi"
         ])
         
 
@@ -288,10 +385,12 @@ def parse_cmd_line():
                         help="A space-separated list of names of E2 libraries the tool should be "
                              "linked with. Use quotes if library's name contains spaces. The library 'utility' "
                              "is always included automatically. Here is a list of poosible libraries: "
-                             "netlab, netexp, netview, qtgl.\nNOTE: 3rd libraries must be added to the "
-                             "CMakeLists.txt file of the tool manually. Only libraries Boost, Qt, and  "
-                             "OpenGL are added automatically with E2 libraries dependent on them. "
-                             "Header only libraries, like Eigen, should not be listed here.")
+                             "ai, angeo, com, gfx, netlab, osi.\nNOTE: 3rd libraries must be added to the "
+                             "CMakeLists.txt file of the tool manually. Only libraries Boost, GLAD, GLFW, LODPNG, "
+                             "and OpenGL are added automatically with E2 libraries dependent on them. "
+                             "Header only libraries, like Eigen, should not be specified.")
+    parser.add_argument("--console", type=bool, default=False,
+                        help="When specified a console window will also appear when starting gfx application.")
     args = parser.parse_args()
     return args
 
@@ -310,7 +409,6 @@ def scriptMain():
         print("ERROR: The disk path '" + dir_name + "' already exists.")
         return
 
-    add_qt = False
     add_gl = False
     libs_list = ""
     automoc_text = ""
@@ -318,17 +416,18 @@ def scriptMain():
         if not libname in get_list_of_E2_libraries():
             print("ERROR: '" + libname + "' is not recognised as E2 library.")
             return
-        if libname in get_list_of_E2_libraries_dependent_on_QT_or_GL():
-            add_qt = True
+        if libname in get_list_of_E2_libraries_dependent_on_OS_or_GL():
             add_gl = True
         libs_list += libname + "\n    "
+    if "angeo" not in args.link_libs and any(x in args.link_libs for x in ["com", "gfx", "ai"]):
+        libs_list += "angeo\n    "
     if "utility" not in args.link_libs:
         libs_list += "utility\n    "
-    if add_qt:
-        libs_list += "${QT5_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
-        automoc_text = "set(CMAKE_AUTOMOC ON)\nset(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} ${QT5_CXX_FLAGS}\")"
     if add_gl:
         libs_list += "${OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
+        libs_list += "${GLAD_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
+        libs_list += "${GLFW_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
+        libs_list += "${LODEPNG_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
     libs_list = libs_list.strip()
 
     os.mkdir(dir_name)
@@ -342,6 +441,7 @@ def scriptMain():
 
     out_file = open(dir_name + "/main.cpp","w")
     out_text = _template_main_cpp.replace("<%TARGET_NAME%>",args.target_name)
+    out_text = out_text.replace("<%GFX_ON_WINDOWS%>", "" if args.console is True else _template_gfx_on_windows)
     out_file.write(out_text)
     out_file.close()
 
@@ -368,6 +468,15 @@ def scriptMain():
 
     out_file = open(dir_name + "/run.cpp","w")
     out_text = _template_run_cpp.replace("<%TARGET_NAME%>",args.target_name)
+    if "com" in args.link_libs:
+        out_text = out_text.replace("<%COM_SIMULATOR_INCLUDES%>", _template_com_simulator_includes)
+        out_text = out_text.replace("<%COM_SIMULATOR_CODE%>", _template_com_simulator_code)
+        out_text = out_text.replace("<%RUN_IMPLEMENTATION%>", _template_com_simulator_call)
+    else:
+        out_text = out_text.replace("<%COM_SIMULATOR_INCLUDES%>", "")
+        out_text = out_text.replace("<%COM_SIMULATOR_CODE%>", "")
+        out_text = out_text.replace("<%RUN_IMPLEMENTATION%>", _template_run_todo_message)
+    
     out_file.write(out_text)
     out_file.close()
 
