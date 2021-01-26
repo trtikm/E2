@@ -1,6 +1,7 @@
 /build
 /dist
 /temp
+/code/tools/testapps 
 .idea
 .vscode
 .vs
