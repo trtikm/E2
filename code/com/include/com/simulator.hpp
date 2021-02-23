@@ -131,6 +131,7 @@ struct  simulator : public osi::simulator
         virtual void  on_end_camera_update() {}
 
         virtual void  on_begin_render() {}
+        virtual void  custom_render() {}
         virtual void  on_end_render() {}
 
     virtual void  on_end_round() {}

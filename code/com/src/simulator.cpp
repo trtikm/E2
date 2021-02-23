@@ -520,6 +520,8 @@ void  simulator::render()
     if (cfg.render_agent_action_transition_contratints)
         render_agent_action_transition_contratints();
 
+    custom_render();
+
     if (cfg.render_text)
         render_text();
 }
