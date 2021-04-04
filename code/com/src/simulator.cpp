@@ -464,6 +464,8 @@ void  simulator::render()
              batch_it != batch_end; ++batch_it)
         {
             object_guid const  batch_guid = *batch_it;
+            if (!do_render_batch(batch_guid))
+                continue;
 
             gfx::batch const  batch = ctx.from_batch_guid_to_batch(batch_guid);
             if (!batch.loaded_successfully())

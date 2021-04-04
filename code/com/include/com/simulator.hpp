@@ -131,6 +131,7 @@ struct  simulator : public osi::simulator
         virtual void  on_end_camera_update() {}
 
         virtual void  on_begin_render() {}
+        virtual bool  do_render_batch(object_guid const  batch_guid) const { return true; }
         virtual void  custom_render() {}
         virtual void  on_end_render() {}
 
