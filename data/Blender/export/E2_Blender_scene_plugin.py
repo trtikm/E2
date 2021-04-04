@@ -451,6 +451,7 @@ class E2ObjectProps(bpy.types.PropertyGroup):
         ("FOLDER", "FOLDER", "A folder.", 1),
         ("BATCH", "BATCH", "A render batch.", 2),
         ("COLLIDER", "COLLIDER", "A collider.", 3),
+        ("IMPORT", "IMPORT", "A scene import.", 4),
         # === Object kinds below are embedded to a FOLDER ===
         #("FRAME", "FRAME", "A frame.", 4),
         #("RIGID_BODY", "RIGID_BODY", "A rigid body.", 5),
@@ -469,14 +470,6 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     #====================================================
     # FOLDER PROPS
     
-    folder_imported_from_dir: bpy.props.StringProperty(
-            name="Imported from",
-            description=("A directory from which the folder and all its conted\n"+
-                         "were imported from. Empty path means not imported"),
-            default="",
-            maxlen=1000,
-            subtype='DIR_PATH'
-            )
     folder_defines_frame: bpy.props.BoolProperty(
             name="Add 'frame' to the folder.",
             description="Whether to add folder's coord system as a frame record\ninto the folder or not",
@@ -744,6 +737,17 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             default="TODO"
             )
 
+    #====================================================
+    # IMPORT PROPS
+
+    import_dir: bpy.props.StringProperty(
+            name="Import dir",
+            description="A directory from which to import hierarchy.py fille.",
+            default=".",
+            maxlen=1000,
+            subtype='DIR_PATH'
+            )
+
 
 class E2ObjectPropertiesPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_e2_object_props_panel"
@@ -769,19 +773,15 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             self.draw_batch(layout, object, object_props)
         elif object_props.object_kind == "COLLIDER":
             self.draw_collider(layout, object, object_props)
+        elif object_props.object_kind == "IMPORT":
+            self.draw_import(layout, object, object_props)
 
     def draw_folder(self, layout, object, object_props):
         self.warn_root_folder_has_non_folder_content(object, object_props, layout)
         self.warn_root_folder_is_relocated(object, layout)
         self.warn_root_object_is_not_folder(object, layout)
-        self.warn_root_is_imported(object_props, layout)
         self.warn_parent_is_not_folder(object, layout)
         self.warn_object_is_scaled(object, layout, "folder")
-
-        row = layout.row()
-        row.prop(object_props, "folder_imported_from_dir")
-        if len(object_props.folder_imported_from_dir) > 0:
-            return
 
         row = layout.row()
         row.prop(object_props, "folder_defines_frame")
@@ -1106,6 +1106,19 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(object_props, "agent_kind")
 
+    def draw_import(self, layout, object, object_props):
+        self.warn_parent_is_not_folder(object, layout)
+        self.warn_object_is_scaled(object, layout, "import")
+        self.warn_not_valid_import_dir(object_props.import_dir, layout, "Import dir")
+
+        row = layout.row()
+        row.prop(object_props, "folder_defines_frame")
+        if object_props.folder_defines_frame is True:
+            self.draw_frame(layout.box(), object, object_props)
+
+        row = layout.row()
+        row.prop(object_props, "import_dir")
+
     # == warnings ======================================================================
     
     def warn_object_is_not_set(self, object, layout, property_name):
@@ -1343,9 +1356,6 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             row.label(text="!!! WARNING: The object's name contains '/' or '\\' !!!")
 
     def warn_agent_inside_folder_with_wrong_content(self, object, object_props, layout):
-        if len(object_props.folder_imported_from_dir) > 0:
-            row = layout.row()
-            row.label(text="!!! WARNING: The agent is defined in an imported folder !!!")
         if object_props.folder_defines_frame is False:
             row = layout.row()
             row.label(text="!!! WARNING: Agent's folder does not define a frame !!!")
@@ -1440,26 +1450,27 @@ class E2SceneExportOperator(bpy.types.Operator):
         if not os.path.isdir(output_dir):
             raise Exception("The export directory '" + output_dir + "' does not exist.")
         root_folders = []
+        root_imports = []
         if "E2_ROOT" in objects and objects["E2_ROOT"].e2_custom_props.object_kind == "FOLDER":
             for object in objects:
-                if object.parent is objects["E2_ROOT"] and object.e2_custom_props.object_kind == "FOLDER":
-                    root_folders.append(object)
-        result = { "folders":{}, "imports": {} }
+                if object.parent is objects["E2_ROOT"]:
+                    if object.e2_custom_props.object_kind == "FOLDER":
+                        root_folders.append(object)
+                    elif object.e2_custom_props.object_kind == "IMPORT":
+                        root_imports.append(object)
+        result = { "folders":{}, "imports": [] }
         for folder in root_folders:
-            if len(folder.e2_custom_props.folder_imported_from_dir) > 0:
-                result["imports"][folder.name] = normalise_disk_path(
-                        folder.e2_custom_props.folder_imported_from_dir,
-                        data_root_dir)
-            else:
-                result["folders"][folder.name] = self.export_folder(folder, data_root_dir)
-        result = self.clean_result(result)    
+            result["folders"][folder.name] = self.export_folder(folder, data_root_dir)
+        for imp in root_imports:
+            result["imports"].append(self.export_import(imp, data_root_dir))
+        result = self.clean_result(result)
         #print(json.dumps(result, indent=4, sort_keys=True))
         with open(os.path.join(output_dir, "hierarchy.json"), "w") as f:
             json.dump(result, f, indent=4, sort_keys=True)
 
     def export_folder(self, folder, data_root_dir):
         self.log(folder)
-        result = { "content":{}, "folders":{}, "imports": {} }
+        result = { "content":{}, "folders":{}, "imports": [] }
         if folder.e2_custom_props.folder_defines_agent is True:
             result["content"]["AGENT"] = self.export_agent(folder, data_root_dir)
             result["folders"]["motion_object"] = { "content": { "FRAME": self.export_frame(folder) } }
@@ -1471,18 +1482,17 @@ class E2SceneExportOperator(bpy.types.Operator):
             for child in folder.children:
                 child_props = child.e2_custom_props
                 if child_props.object_kind == "FOLDER":
-                    if len(child_props.folder_imported_from_dir) > 0:
-                        result["imports"][child.name] = normalise_disk_path(
-                                child.e2_custom_props.folder_imported_from_dir,
-                                data_root_dir)
-                    else:
-                        result["folders"][child.name] = self.export_folder(child, data_root_dir)
+                    result["folders"][child.name] = self.export_folder(child, data_root_dir)
                 elif child_props.object_kind == "BATCH":
                     result["content"][child.name] = self.export_batch(child, data_root_dir)
                 elif child_props.object_kind == "COLLIDER":
                     result["content"][child.name] = self.export_collider(child, data_root_dir)
                     if child_props.collider_defines_sensor is True:
                         result["content"]["SENSOR." + child.name] = self.export_sensor(child, data_root_dir)
+                elif child_props.object_kind == "IMPORTS":
+                    result["imports"].append(self.export_import(child, data_root_dir))
+                else:
+                    print("WARNING: In folder '" + folder.name + "': Object '" + child.name + "' is of unknown kind.")
             if folder.e2_custom_props.folder_defines_timer is True:
                 result["content"]["TIMER"] = self.export_timer(folder, data_root_dir)
         return self.clean_result(result)
@@ -1742,6 +1752,17 @@ class E2SceneExportOperator(bpy.types.Operator):
         batch_props = self.export_batch(object.children[0], data_root_dir)
         result["skeleton_batch_disk_path"] = batch_props["path"]
         result["skeleton_batch_skin"] = batch_props["skin"]
+        return result
+
+    def export_import(self, object, data_root_dir):
+        object_props = object.e2_custom_props
+        result = {
+            "import_dir": normalise_disk_path(object_props.import_dir, os.path.join(data_root_dir, "import"))
+        }
+        if object_props.folder_defines_frame is True:
+            frame = self.export_frame(object)
+            result["origin"] = frame["origin"]
+            result["orientation"] = frame["orientation"]
         return result
 
     def clean_result(self, result):
