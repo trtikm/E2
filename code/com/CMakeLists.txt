@@ -12,7 +12,13 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/com/simulation_context.hpp
     ./src/simulation_context.cpp
-    
+
+    ./include/com/console.hpp
+    ./src/console.cpp
+
+    ./include/com/detail/console_render_props.hpp
+    ./src/detail/console_render_props.cpp
+
     ./include/com/simulator.hpp
     ./src/simulator.cpp
 

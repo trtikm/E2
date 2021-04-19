@@ -61,6 +61,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/gfx/camera_utils.hpp
     ./src/camera_utils.cpp
 
+    ./include/gfx/viewport.hpp
+    ./src/viewport.cpp
+
     ./include/gfx/free_fly.hpp
     ./src/free_fly.cpp
 

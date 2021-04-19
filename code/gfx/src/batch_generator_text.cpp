@@ -55,6 +55,8 @@ batch  create_text(
         std::string const&  text,
         font_mono_props const&  props,
         float_32_bit const  max_text_width,
+        text_info* const  out_info_ptr,
+        natural_8_bit const  cursor_char,
         std::string const&  id
         )
 {
@@ -66,10 +68,23 @@ batch  create_text(
         xyz.reserve(text.size() * 6UL);        
         uv.reserve(text.size() * 6UL);
 
+        natural_32_bit  row = 0U;
         natural_32_bit  column = 0U;
+        natural_32_bit  max_column = 0U;
         vector2  cursor{ 0.0f, 0.0f};
         for (natural_8_bit  character : text)
         {
+            if (character == cursor_char)
+            {
+                if (out_info_ptr != nullptr)
+                {
+                    out_info_ptr->cursor_pos = cursor;
+                    out_info_ptr->cursor_row = row;
+                    out_info_ptr->cursor_column = column;
+                }
+                continue;
+            }
+
             switch (character)
             {
             case ' ':
@@ -84,6 +99,7 @@ batch  create_text(
                         cursor(0) = 0.0f;
                         cursor(1) -= props.char_height + props.char_separ_dist_y;
                         column = 0U;
+                        ++row;
                     }
                     cursor(0) += props.space_size + props.char_separ_dist_x;
                     ++column;
@@ -97,6 +113,7 @@ batch  create_text(
                 cursor(0) = 0.0f;
                 cursor(1) -= props.char_height + props.char_separ_dist_y;
                 column = 0U;
+                ++row;
                 continue;
             default:
                 if (character < props.min_ascii_code || character > props.max_ascii_code)
@@ -113,6 +130,7 @@ batch  create_text(
                 cursor(0) = 0.0f;
                 cursor(1) -= props.char_height + props.char_separ_dist_y;
                 column = 0U;
+                ++row;
             }
 
             vector2 const  hi_xy{ cursor(0) + props.char_width, cursor(1) + props.char_height };
@@ -141,6 +159,8 @@ batch  create_text(
             cursor(0) += props.char_width + props.char_separ_dist_x;
             ++column;
         }
+        if (out_info_ptr != nullptr)
+            out_info_ptr->num_rows = row + 1U;
     }
 
     if (xyz.empty())

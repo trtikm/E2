@@ -2815,7 +2815,8 @@ object_guid  simulation_context::from_absolute_path(std::string const&  path) co
             continue;
         if (name == "..")
         {
-            ASSUMPTION(!names.empty());
+            if (names.empty())
+                return invalid_object_guid();
             names.pop_back();
             continue;
         }
@@ -2823,8 +2824,12 @@ object_guid  simulation_context::from_absolute_path(std::string const&  path) co
     }
 
     object_guid  guid = root_folder();
-    INVARIANT(!names.empty());
     bool const  is_folder_path = is_path_to_folder(path);
+    if (names.empty())
+    {
+        INVARIANT(is_folder_path);
+        return guid;
+    }
     for (natural_32_bit  i = 0U, n = (natural_32_bit)names.size() - 1U; i <= n; ++i)
     {
         std::string const&  name = names.at(i);
@@ -2832,7 +2837,8 @@ object_guid  simulation_context::from_absolute_path(std::string const&  path) co
         folder_content_type::names_to_guids_map const&  guids_map = (i == n && !is_folder_path) ? fct.content : fct.child_folders;
 
         auto  it = guids_map.find(name);
-        ASSUMPTION(it != guids_map.end());
+        if (it == guids_map.end())
+            return invalid_object_guid();
         guid = it->second;
     }
     return guid;

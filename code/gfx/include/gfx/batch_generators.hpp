@@ -345,10 +345,22 @@ struct  font_mono_props
 void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_props&  output);
 
 
+struct  text_info
+{
+    text_info() : num_rows(0U), cursor_row(0U), cursor_column(0U), cursor_pos(vector2_zero()) {}
+    natural_32_bit  num_rows;
+    natural_32_bit  cursor_row;
+    natural_32_bit  cursor_column;
+    vector2  cursor_pos;
+};
+
+
 batch  create_text(
         std::string const&  text,
         font_mono_props const&  props,
         float_32_bit const  max_text_width = 0.0f, // When positive, the text will be wrapped not to exceed that width.
+        text_info* const  out_info_ptr = nullptr,
+        natural_8_bit const  cursor_char = 0xffU,
         std::string const&  id = ""
         );
 

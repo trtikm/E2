@@ -1,6 +1,7 @@
 #include <com/simulator.hpp>
 #include <gfx/draw.hpp>
 #include <gfx/image.hpp>
+#include <gfx/viewport.hpp>
 #include <ai/cortex_mock.hpp>
 #include <ai/sight_controller.hpp>
 #include <osi/opengl.hpp>
@@ -37,6 +38,7 @@ simulator::simulation_configuration::simulation_configuration()
 
     , paused(true)
     , num_rounds_to_pause(0U)
+    , is_viewport_active(false)
 {}
 
 
@@ -88,6 +90,8 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , render_sight_contacts_random(true)
     , render_sight_image(false)
     , render_agent_action_transition_contratints(true)
+    , show_console(false)
+    , console_window_left_param(0.5f)
     , sight_image_scale(5.0f)
     , colour_of_rigid_body_collider{ 0.75f, 0.75f, 1.0f, 1.0f }
     , colour_of_field_collider{ 1.0f, 0.5f, 0.25f, 1.0f }
@@ -109,7 +113,14 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
                         ),
                 0.25f,
                 500.0f,
-                wnd_props
+                gfx::viewport{
+                    0.0f,
+                    (float_32_bit)wnd_props.window_width(),
+                    0.0f,
+                    (float_32_bit)wnd_props.window_height(),
+                    wnd_props.pixel_width_mm(),
+                    wnd_props.pixel_height_mm()
+                    }
                 )
         )
     , matrix_from_world_to_camera()
@@ -156,6 +167,7 @@ simulator::simulator(std::string const&  data_root_dir)
             m_ai_simulator_ptr,
             data_root_dir
             ))
+    , m_console()
 
     , m_simulation_config()
     , m_render_config(get_window_props(), m_context->get_data_root_dir())
@@ -246,6 +258,10 @@ void  simulator::round()
 
         on_begin_simulation();
             context()->process_pending_late_requests();
+            simulation_config().is_viewport_active =
+                    render_config().show_console ?
+                        (get_mouse_props().cursor_x() < get_window_props().window_width() * render_config().console_window_left_param):
+                        true;
             if (!simulation_config().paused)
             {
                 simulate();
@@ -275,6 +291,8 @@ void  simulator::round()
         on_begin_render();
             render();
         on_end_render();
+
+        update_console();
 
     on_end_round();
 }
@@ -429,18 +447,27 @@ void  simulator::update_collider_locations_of_relocated_frames()
 
 void  simulator::camera_update()
 {
-    gfx::adjust(*render_config().camera, get_window_props());
-    switch (render_config().camera_controller_type)
-    {
-    case CAMERA_CONTROLLER_TYPE::FREE_FLY:
-        gfx::free_fly(*render_config().camera->coordinate_system(), render_config().free_fly_config,
-                      round_seconds(), get_mouse_props(), get_keyboard_props());
-        break;
-    case CAMERA_CONTROLLER_TYPE::CUSTOM_CONTROL:
-        custom_camera_update();
-        break;
-    default: break;
-    }
+    gfx::viewport const  window_info{
+        0.0f,
+        (float_32_bit)get_window_props().window_width() * (render_config().show_console ? render_config().console_window_left_param : 1.0f),
+        0.0f,
+        (float_32_bit)get_window_props().window_height(),
+        get_window_props().pixel_width_mm(),
+        get_window_props().pixel_height_mm()
+    };
+    gfx::adjust(*render_config().camera, window_info);
+    if (simulation_config().is_viewport_active)
+        switch (render_config().camera_controller_type)
+        {
+        case CAMERA_CONTROLLER_TYPE::FREE_FLY:
+            gfx::free_fly(*render_config().camera->coordinate_system(), render_config().free_fly_config,
+                          round_seconds(), get_mouse_props(), get_keyboard_props());
+            break;
+        case CAMERA_CONTROLLER_TYPE::CUSTOM_CONTROL:
+            custom_camera_update();
+            break;
+        default: break;
+        }
     render_config().camera->to_camera_space_matrix(render_config().matrix_from_world_to_camera);
     render_config().camera->projection_matrix(render_config().matrix_from_camera_to_clipspace);
     render_config().directional_light_direction_in_camera_space =
@@ -488,7 +515,12 @@ void  simulator::render()
 
     glClearColor(cfg.clear_colour(0), cfg.clear_colour(1), cfg.clear_colour(2), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    glViewport(0, 0, get_window_props().window_width(), get_window_props().window_height());
+    glViewport(
+            0,
+            0,
+            (GLsizei)(get_window_props().window_width() * (render_config().show_console ? render_config().console_window_left_param : 1.0f)),
+            get_window_props().window_height()
+            );
     glPolygonMode(GL_FRONT_AND_BACK, cfg.render_in_wireframe ? GL_LINE : GL_FILL);
 
     for (auto const&  id_and_task : render_tasks_opaque)
@@ -1247,6 +1279,121 @@ gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_gui
             return gfx::create_lines3d(lines, colours_of_lines);
         }
     default: UNREACHABLE(); break;
+    }
+}
+
+
+void  simulator::update_console()
+{
+    if (render_config().show_console == false)
+    {
+        m_console.render_props.last_show_console = false;
+        return;
+    }
+
+    console_render_props&  render_props = m_console.render_props;
+
+    std::string const  text = !render_props.last_show_console || simulation_config().is_viewport_active ?
+            render_props.tid.text :
+            m_console.console.update(*this)
+            ;
+
+    render_props.last_show_console = true;
+
+    if (text.empty())
+        return;
+
+    render_configuration&  cfg = render_config();
+
+    natural_16_bit const  left_pixel =
+        (natural_16_bit)(get_window_props().window_width() * render_config().console_window_left_param + 0.5f);
+    natural_16_bit const  right_pixel = get_window_props().window_width();
+
+    console_render_props::text_id  tid(
+            text,
+            cfg.text_scale,
+            0.001f * (right_pixel - left_pixel) * get_window_props().pixel_width_mm()
+            );
+
+    if (tid != render_props.tid)
+    {
+        render_props.tid = tid;
+        render_props.text_batch = gfx::create_text(
+                text,
+                cfg.font_props,
+                render_props.tid.width / render_props.tid.scale,
+                &render_props.text_info
+                );
+        render_props.cursor_countdown_seconds = 1.0f;
+        render_props.cursor_visible = true;
+    }
+    else
+    {
+        render_props.cursor_countdown_seconds -= round_seconds();
+        if (render_props.cursor_countdown_seconds <= 0.0f)
+        {
+            render_props.cursor_countdown_seconds = render_props.cursor_visible ? 0.5f : 1.0f;
+            render_props.cursor_visible = !render_props.cursor_visible;
+        }
+    }
+
+    if (render_props.cursor_batch.empty() || render_props.cursor_scale != render_props.tid.scale)
+    {
+        render_props.cursor_scale = render_props.tid.scale;
+        render_props.cursor_batch = gfx::create_lines3d(
+                std::vector<std::pair<vector3,vector3> >{
+                        { { 0.0f, 0.0f, 0.0f }, { 0.0f, cfg.font_props.char_height, 0.0f } }
+                        },
+                std::vector<vector4>{
+                        { { 1.0f, 0.0f, 0.0f, 1.0f } }
+                        }
+                );
+        render_props.cursor_countdown_seconds = 1.0f;
+        render_props.cursor_visible = true;
+    }
+
+    float_32_bit  left_m = 0.001f * left_pixel * get_window_props().pixel_width_mm();
+    float_32_bit  right_m = 0.001f * right_pixel * get_window_props().pixel_width_mm();
+    float_32_bit  bottom_m = 0.001f * -(get_window_props().window_height() / 2.0f) * get_window_props().pixel_width_mm();
+    float_32_bit  top_m = 0.001f * (get_window_props().window_height() / 2.0f) * get_window_props().pixel_width_mm();
+
+    vector3 const  pos{
+            left_m,
+            bottom_m + render_props.tid.scale *
+                       (cfg.font_props.char_height + cfg.font_props.char_separ_dist_y) *
+                       (render_props.text_info.num_rows - 1U),
+            0.0f
+    };
+    //vector3 const  pos{ left_m, top_m - render_props.tid.scale * cfg.font_props.char_height, 0.0f };
+
+    matrix44 ortho_projection;
+    gfx::projection_matrix_orthogonal(-1.0f, 1.0f, left_m, right_m, bottom_m, top_m, ortho_projection);
+
+    glViewport(left_pixel, 0, get_window_props().window_width() - left_pixel, get_window_props().window_height());
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    if (gfx::make_current(render_props.text_batch, cfg.draw_state))
+    {
+        gfx::render_batch(
+            render_props.text_batch,
+            pos,
+            render_props.tid.scale,
+            ortho_projection,
+            vector3{ 1.0f, 1.0f, 1.0f }
+            );
+        cfg.draw_state = render_props.text_batch.get_draw_state();
+    }
+
+    if (render_props.cursor_visible && gfx::make_current(render_props.cursor_batch, cfg.draw_state))
+    {
+        gfx::render_batch(
+            render_props.cursor_batch,
+            pos + render_props.tid.scale * expand23(render_props.text_info.cursor_pos, 0.0f),
+            render_props.tid.scale,
+            ortho_projection,
+            vector3{ 1.0f, 1.0f, 1.0f }
+            );
+        cfg.draw_state = render_props.cursor_batch.get_draw_state();
     }
 }
 

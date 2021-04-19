@@ -2,6 +2,8 @@
 #   define COM_SIMULATOR_HPP_INCLUDED
 
 #   include <com/simulation_context.hpp>
+#   include <com/console.hpp>
+#   include <com/detail/console_render_props.hpp>
 #   include <osi/simulator.hpp>
 #   include <gfx/camera.hpp>
 #   include <gfx/free_fly.hpp>
@@ -33,6 +35,7 @@ struct  simulator : public osi::simulator
 
         bool  paused;
         natural_32_bit  num_rounds_to_pause;
+        bool  is_viewport_active;  // True, if the mouse in the viewport of the simulation, and false otherwise.
     };
 
     enum struct CAMERA_CONTROLLER_TYPE : natural_8_bit { CAMERA_IS_LOCKED, FREE_FLY, CUSTOM_CONTROL };
@@ -83,6 +86,9 @@ struct  simulator : public osi::simulator
         bool  render_sight_contacts_random;
         bool  render_sight_image;
         bool  render_agent_action_transition_contratints;
+        bool  show_console;
+        float_32_bit  console_window_left_param; // A parameter in (0,1) to the left side of the console viewport
+                                                 // from the left side of the whole app window.
         float_32_bit  sight_image_scale;
         vector4  colour_of_rigid_body_collider;
         vector4  colour_of_field_collider;
@@ -190,12 +196,20 @@ private:
 
     gfx::batch  create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled);
 
+    void  update_console();
+
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::shared_ptr<com::device_simulator>  m_device_simulator_ptr;
     std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
 
     simulation_context_ptr  m_context;
+
+    struct  console_props {
+        console_props() : console(), render_props() { render_props.tid.text = console.text(); }
+        console  console;
+        console_render_props  render_props;
+    }  m_console;
 
     simulation_configuration  m_simulation_config;
     render_configuration  m_render_config;

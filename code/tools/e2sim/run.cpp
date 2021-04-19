@@ -41,6 +41,11 @@ struct  simulator : public com::simulator
         if (!get_window_props().has_focus())
             return;
 
+        if (get_keyboard_props().keys_just_pressed().count(osi::KEY_LAPOSTROPH()) != 0UL)
+            render_config().show_console = !render_config().show_console;
+        if (render_config().show_console && !simulation_config().is_viewport_active)
+            return;
+
         if (get_keyboard_props().keys_just_pressed().count(osi::KEY_PAUSE()) != 0UL)
             simulation_config().paused = !simulation_config().paused;
         else if (get_keyboard_props().keys_just_pressed().count(osi::KEY_SPACE()) != 0UL)
@@ -138,6 +143,8 @@ struct  simulator : public com::simulator
     {
         if (render_config().camera_controller_type == CAMERA_CONTROLLER_TYPE::CAMERA_IS_LOCKED)
             SLOG("CAMERA IS LOCKED\n");
+        if (render_config().show_console && !simulation_config().is_viewport_active)
+            return;
         if (get_keyboard_props().keys_pressed().count(osi::KEY_F1()) != 0UL)
         {
             SLOG("\n=== HELP BEGIN ===\n");
