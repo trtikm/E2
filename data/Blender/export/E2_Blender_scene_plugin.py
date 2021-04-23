@@ -726,15 +726,12 @@ class E2ObjectProps(bpy.types.PropertyGroup):
     #====================================================
     # AGENT PROPS
 
-    AGENT_KIND=[
-        # Python ident, UI name, description, UID
-        ("TODO", "TODO", "TODO: Read agent kinds from the disk.", 1),
-    ]
-    agent_kind: bpy.props.EnumProperty(
-            name="Agent kind",
-            description="Defines what actions and cortex agent has.",
-            items=AGENT_KIND,
-            default="TODO"
+    agent_dir: bpy.props.StringProperty(
+            name="Agent dir",
+            description="Directory with agent's actions and cortex setup.",
+            default=".",
+            maxlen=1000,
+            subtype="DIR_PATH"
             )
 
     #====================================================
@@ -1104,7 +1101,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
     def draw_agent(self, layout, object, object_props):
         self.warn_agent_inside_folder_with_wrong_content(object, object_props, layout)
         row = layout.row()
-        row.prop(object_props, "agent_kind")
+        row.prop(object_props, "agent_dir")
 
     def draw_import(self, layout, object, object_props):
         self.warn_parent_is_not_folder(object, layout)
@@ -1745,9 +1742,14 @@ class E2SceneExportOperator(bpy.types.Operator):
 
     def export_agent(self, object, data_root_dir):
         object_props = object.e2_custom_props
+        
+        
+        print(object_props.agent_dir)
+        print(os.path.join(data_root_dir, "ai"))
+
         result = {
             "object_kind": "AGENT",
-            "kind": object_props.agent_kind
+            "kind": os.path.relpath(object_props.agent_dir, os.path.join(data_root_dir, "ai"))
         }
         batch_props = self.export_batch(object.children[0], data_root_dir)
         result["skeleton_batch_disk_path"] = batch_props["path"]
