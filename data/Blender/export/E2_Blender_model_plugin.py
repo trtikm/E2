@@ -595,18 +595,18 @@ class render_buffers:
                 if tangent is not None:
                     tangent = vector3_normalised(vector3_perpendicular(tangent, elem.normal_coords()))
                     elem.set_tangent_coords(vector3_add(elem.tangent_coords(), tangent))
-                else:
-                    print("WARNING: Degenerated uv-triangle detected:")
-                    for name, idx in [("A", 0), ("B", 1), ("C", 2)]:
-                        print("         " + name + "=" + str(points[start_point_idx + idx]) + ", uv=" + str(texels[start_point_idx + idx]))
-                    print("         Skipping tangent computation.")
+                #else:
+                #    print("WARNING: Degenerated uv-triangle detected:")
+                #    for name, idx in [("A", 0), ("B", 1), ("C", 2)]:
+                #        print("         " + name + "=" + str(points[start_point_idx + idx]) + ", uv=" + str(texels[start_point_idx + idx]))
+                #    print("         Skipping tangent computation.")
         for elem_idx in range(self.num_elements()):
             elem = self.element_at_index(elem_idx)
             tangent = vector3_perpendicular(elem.tangent_coords(), elem.normal_coords())
             if vector3_length(tangent) < 0.001:
-                print("WARNING: The main algorithm for tangent space computation has FAILED at point:")
-                print("         " + str(elem.vertex_coords()))
-                print("         => Generating a randomly chosen tangent space at that point.")
+                #print("WARNING: The main algorithm for tangent space computation has FAILED at point:")
+                #print("         " + str(elem.vertex_coords()))
+                #print("         => Generating a randomly chosen tangent space at that point.")
                 tangent = vector3_perpendicular(vector3_any_linear_independent(elem.normal_coords()), elem.normal_coords())
             tangent = vector3_normalised(tangent)
             bitangent = vector3_cross(elem.normal_coords(), tangent)
@@ -737,9 +737,9 @@ def build_render_buffers(
             if mtl_index < len(mesh.materials) and mesh.materials[mtl_index] is not None:
                 material = mesh.materials[mtl_index]
                 has_normal_map = False
-                for node in material.node_tree.nodes:
-                    if node.type == "TEX_IMAGE" and node.texture_mapping.vector_type == "NORMAL":
-                        texture_kind_name = "normal"
+                for link in material.node_tree.links:
+                    if (isinstance(link.from_node, bpy.types.ShaderNodeTexImage) and
+                        isinstance(link.to_node, bpy.types.ShaderNodeNormalMap)):
                         has_normal_map = True
                         break
                 if has_normal_map is True:
@@ -969,19 +969,17 @@ def save_textures(
         for mat_idx in range(len(materials)):
             if materials[mat_idx] is None:
                 continue
-            for node in materials[mat_idx].node_tree.nodes:
-                if node.type != "TEX_IMAGE":
-                    continue
 
-                if node.texture_mapping.vector_type == "POINT":
-                    texture_kind_name = "diffuse"
-                elif node.texture_mapping.vector_type == "NORMAL":
-                    texture_kind_name = "normal"
-                else:
-                    print("WARNING: Unsupported texture kind in node '" + str(node.name) +
-                          "' in material '" + materials[mat_idx].name + "'. Skipping the texture.")
+            tex_nodes = []
+            for link in materials[mat_idx].node_tree.links:
+                if not isinstance(link.from_node, bpy.types.ShaderNodeTexImage):
                     continue
-                    
+                if isinstance(link.to_node, bpy.types.ShaderNodeNormalMap):
+                    tex_nodes.append(("normal", link.from_node))
+                elif isinstance(link.to_node, bpy.types.ShaderNodeBsdfPrincipled):
+                    tex_nodes.append(("diffuse", link.from_node))
+
+            for texture_kind_name, node in tex_nodes:
                 image = node.image
 
                 texture_output_dir = os.path.join(
