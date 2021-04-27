@@ -622,7 +622,7 @@ struct  simulation_context
     void  request_late_insert_agent(
             object_guid const  under_folder_guid,
             ai::agent_config const  config,
-            gfx::batch const  skeleton_attached_batch
+            std::vector<std::pair<std::string, gfx::batch> > const&  skeleton_attached_batches
             ) const;
     void  request_erase_agent(object_guid const  agent_guid) const;
     // Disabled (not const) for modules.
@@ -631,7 +631,7 @@ struct  simulation_context
             object_guid const  under_folder_guid,
             ai::agent_config const  config,
             ai::skeletal_motion_templates const  motion_templates,
-            gfx::batch const  skeleton_attached_batch
+            std::vector<std::pair<std::string, gfx::batch> > const&  skeleton_attached_batches
             );
     void  erase_agent(object_guid const  agent_guid);
 
@@ -1076,7 +1076,7 @@ private:
     {
         object_guid  under_folder_guid;
         ai::agent_config  config;
-        gfx::batch  skeleton_attached_batch;
+        std::vector<std::pair<std::string, gfx::batch> >  skeleton_attached_batches;
         ai::skeletal_motion_templates  motion_templates;
     };
 

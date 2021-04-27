@@ -2495,15 +2495,15 @@ simulation_context::agent_guid_iterator  simulation_context::agents_end() const
 void  simulation_context::request_late_insert_agent(
         object_guid const  under_folder_guid,
         ai::agent_config const  config,
-        gfx::batch const  skeleton_attached_batch
+        std::vector<std::pair<std::string, gfx::batch> > const&  skeleton_attached_batches
         ) const
 {
-    ASSUMPTION(is_valid_folder_guid(under_folder_guid));
+    ASSUMPTION(is_valid_folder_guid(under_folder_guid) && !skeleton_attached_batches.empty());
 
     m_requests_late_insert_agent.push_back({ 
             under_folder_guid,
             config,
-            skeleton_attached_batch,
+            skeleton_attached_batches,
             ai::skeletal_motion_templates()
             });
 }
@@ -2530,7 +2530,7 @@ object_guid  simulation_context::insert_agent(
         object_guid const  under_folder_guid,
         ai::agent_config const  config,
         ai::skeletal_motion_templates const  motion_templates,
-        gfx::batch const  skeleton_attached_batch
+        std::vector<std::pair<std::string, gfx::batch> > const&  skeleton_attached_batches
         )
 {
     ASSUMPTION(
@@ -2548,8 +2548,16 @@ object_guid  simulation_context::insert_agent(
             return true;
             }()) &&
         motion_templates.loaded_successfully() &&
-        skeleton_attached_batch.loaded_successfully() &&
-        skeleton_attached_batch.is_attached_to_skeleton()
+        [&skeleton_attached_batches]() -> bool {
+            for (auto const&  name_and_batch : skeleton_attached_batches)
+            {
+                if (!name_and_batch.second.loaded_successfully())
+                    return false;
+                if (!name_and_batch.second.is_attached_to_skeleton())
+                    return false;
+            }
+            return true;
+            }()
         );
 
     ai::scene_binding_ptr const  binding = ai::scene_binding::create(
@@ -2560,11 +2568,12 @@ object_guid  simulation_context::insert_agent(
 
     ai::agent_id const  id = m_ai_simulator_ptr->insert_agent(config, motion_templates, binding);
 
+    for (auto const&  name_and_batch : skeleton_attached_batches)
     {
         std::vector<matrix44>  to_bone_matrices;
         {
             matrix44 alignment_matrix;
-            angeo::from_base_matrix(skeleton_attached_batch.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
+            angeo::from_base_matrix(name_and_batch.second.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
 
             to_bone_matrices.resize(motion_templates.pose_frames().size());
             for (natural_32_bit  bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
@@ -2577,7 +2586,13 @@ object_guid  simulation_context::insert_agent(
                 to_bone_matrices.at(bone) = to_bone_matrices.at(bone) * alignment_matrix;
         }
 
-        insert_batch(under_folder_guid, "BATCH.agent", skeleton_attached_batch, binding->frame_guids_of_bones, to_bone_matrices);
+        insert_batch(
+                under_folder_guid,
+                name_and_batch.first,
+                name_and_batch.second,
+                binding->frame_guids_of_bones,
+                to_bone_matrices
+                );
     }
     object_guid const  agent_guid = {
             OBJECT_KIND::AGENT,
@@ -3317,16 +3332,22 @@ void  simulation_context::process_pending_late_requests()
 
     m_requests_late_insert_agent.update(
             [this](request_data_insert_agent&  request) {
-                if (!request.skeleton_attached_batch.is_load_finished())
-                    return false;
-                if (!request.skeleton_attached_batch.loaded_successfully())
-                    return true;
+                ASSUMPTION(!request.skeleton_attached_batches.empty());
+                for (auto const&  name_and_batch : request.skeleton_attached_batches)
+                {
+                    if (!name_and_batch.second.is_load_finished())
+                        return false;
+                    if (!name_and_batch.second.loaded_successfully())
+                        return true;
+                }
                 if (request.motion_templates.empty())
                 {
-                    ASSUMPTION(request.skeleton_attached_batch.get_available_resources().skeletal() != nullptr);
+                    ASSUMPTION(!request.skeleton_attached_batches.empty());
+                    gfx::batch const&  first_batch = request.skeleton_attached_batches.front().second;
+                    ASSUMPTION(first_batch.get_available_resources().skeletal() != nullptr);
                     request.motion_templates = ai::skeletal_motion_templates(
                             boost::filesystem::path(get_data_root_dir())
-                                / request.skeleton_attached_batch.get_available_resources().skeletal()->animation_dir(),
+                                / first_batch.get_available_resources().skeletal()->animation_dir(),
                             1U,
                             nullptr
                             );
@@ -3346,13 +3367,14 @@ void  simulation_context::process_pending_late_requests()
                                "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
                     return;
                 }
-                if (!request.skeleton_attached_batch.loaded_successfully())
-                {
-                    LOG(error, "Failed to import skeleton attached batch '" <<
-                               request.skeleton_attached_batch.key().get_unique_id() << "' " <<
-                               "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
-                    return;
-                }
+                for (auto const&  name_and_batch : request.skeleton_attached_batches)
+                    if (!name_and_batch.second.loaded_successfully())
+                    {
+                        LOG(error, "Failed to import skeleton attached batch '" <<
+                                   name_and_batch.second.key().get_unique_id() << "' " <<
+                                   "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
+                        return;
+                    }
                 if (!request.config.empty())
                     m_cache_of_imported_agent_configs.insert({ request.config.key(), request.config });
                 if (!request.motion_templates.empty())
@@ -3361,7 +3383,7 @@ void  simulation_context::process_pending_late_requests()
                         request.under_folder_guid,
                         request.config,
                         request.motion_templates,
-                        request.skeleton_attached_batch
+                        request.skeleton_attached_batches
                         );
             });
 }

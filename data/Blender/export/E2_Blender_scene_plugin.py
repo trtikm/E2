@@ -1742,17 +1742,18 @@ class E2SceneExportOperator(bpy.types.Operator):
 
     def export_agent(self, object, data_root_dir):
         object_props = object.e2_custom_props
-        
-        
-        print(object_props.agent_dir)
-        print(os.path.join(data_root_dir, "ai"))
-
         result = {
             "object_kind": "AGENT",
             "kind": os.path.relpath(object_props.agent_dir, os.path.join(data_root_dir, "ai"))
         }
         batch_props = self.export_batch(object.children[0], data_root_dir)
-        result["skeleton_batch_disk_path"] = batch_props["path"]
+        if len(object.children) == 0:
+            print("ERROR: No agent batch under: " + object.name)
+            result["skeleton_batch_disk_path"] = "ERROR: NOT SPECIFIED!"
+        elif len(object.children) == 1:
+            result["skeleton_batch_disk_path"] = batch_props["path"]
+        else:
+            result["skeleton_batch_disk_path"] = os.path.dirname(batch_props["path"])
         result["skeleton_batch_skin"] = batch_props["skin"]
         return result
 

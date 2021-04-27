@@ -454,12 +454,24 @@ static void  import_agent(
 {
     ASSUMPTION(name == to_string(OBJECT_KIND::AGENT));
 
-    gfx::batch const  agent_batch(
-            boost::filesystem::path(ctx.get_data_root_dir()) / "batch" / hierarchy.get<std::string>("skeleton_batch_disk_path"),
-            gfx::default_effects_config(),
-            hierarchy.get<std::string>("skeleton_batch_skin")
-            );
-    ctx.insert_imported_batch_to_cache(agent_batch);
+    std::vector<std::pair<std::string, gfx::batch> >  skeleton_attached_batches;
+    {
+        std::string const  skin = hierarchy.get<std::string>("skeleton_batch_skin");
+        boost::filesystem::path const  batch_path =
+            boost::filesystem::path(ctx.get_data_root_dir()) / "batch" / hierarchy.get<std::string>("skeleton_batch_disk_path")
+            ;
+        auto const  add_batch_for_path = [&ctx, &skin, &skeleton_attached_batches](boost::filesystem::path const&  p) -> void {
+            gfx::batch const  agent_batch(p, gfx::default_effects_config(), skin);
+            ctx.insert_imported_batch_to_cache(agent_batch);
+            skeleton_attached_batches.push_back({ "BATCH." + p.filename().replace_extension("").string(), agent_batch});
+        };
+        if (boost::to_lower_copy(boost::filesystem::extension(batch_path)) == ".txt")
+            add_batch_for_path(batch_path);
+        else
+            for (boost::filesystem::directory_entry const& entry : boost::filesystem::directory_iterator(batch_path))
+                if (boost::to_lower_copy(entry.path().filename().extension().string()) == ".txt")
+                    add_batch_for_path(entry.path());
+    }
 
     ctx.request_late_insert_agent(
             folder_guid,
@@ -468,7 +480,7 @@ static void  import_agent(
                     1U,
                     nullptr
                     ),
-            agent_batch
+            skeleton_attached_batches
             );
 }
 
