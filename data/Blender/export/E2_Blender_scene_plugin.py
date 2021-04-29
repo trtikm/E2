@@ -3,7 +3,7 @@ import mathutils
 import math
 import os
 import json
-
+import traceback
 
 ######################################################
 # UTILITIES
@@ -1362,7 +1362,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         if object_props.folder_defines_timer is True:
             row = layout.row()
             row.label(text="!!! WARNING: Agent's folder defines also a timer !!!")
-        if len(object.children) != 1:
+        if len(object.children) == 0:
             row = layout.row()
             row.label(text="!!! WARNING: Agent's folder does not have a 'BATCH' child !!!")
         else:
@@ -1441,6 +1441,7 @@ class E2SceneExportOperator(bpy.types.Operator):
             print("E2 Scene exporter: Finished successfully.")
         except Exception as e:
             print("E2 Scene exporter: Export has FAILED. Details:\n" + str(e))
+            traceback.print_exc(file=sys.stdout)
         return{'FINISHED'}
 
     def export_scene(self, objects, output_dir, data_root_dir):
@@ -1794,6 +1795,7 @@ class E2SceneImportOperator(bpy.types.Operator):
             print("E2 Scene importer: Finished successfully.")
         except Exception as e:
             print("E2 Scene importer: Import has FAILED. Details:\n" + str(e))
+            traceback.print_exc(file=sys.stdout)
         return{'FINISHED'}
 
 
