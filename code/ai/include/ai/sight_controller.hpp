@@ -7,7 +7,9 @@
 #   include <angeo/tensor_math.hpp>
 #   include <gfx/camera.hpp>
 #   include <com/object_guid.hpp>
+#   include <com/simulation_context.hpp>
 #   include <utility/random.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <unordered_map>
 #   include <functional>
 #   include <unordered_set>
@@ -29,6 +31,7 @@ struct  sight_controller
         float_32_bit  far_plane;
         float_32_bit  origin_z_shift;
 
+        camera_config(boost::property_tree::ptree const&  config);
         camera_config(
                 float_32_bit const  horizontal_fov_angle_ = PI() / 3.0f,
                 float_32_bit const  vertical_fov_angle_ = PI() / 4.0f,
@@ -59,6 +62,7 @@ struct  sight_controller
         std::function<bool(com::object_guid, angeo::COLLISION_CLASS)>  collider_filter;
         std::function<float_32_bit(float_32_bit)>  depth_image_func;    // Mapping of ray cast params to depth values.
 
+        ray_cast_config(boost::property_tree::ptree const&  config, com::simulation_context const* const  context);
         ray_cast_config(
                 bool const  do_directed_ray_casts_ = true,
                 natural_32_bit const  num_random_ray_casts_per_second_ = 2U * 32U * 32U,

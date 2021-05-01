@@ -1,12 +1,15 @@
 #include <ai/sight_controller.hpp>
+#include <ai/utils_ptree.hpp>
 #include <angeo/coordinate_system.hpp>
 #include <angeo/skeleton_kinematics.hpp>
+#include <angeo/collision_class.hpp>
 #include <com/simulation_context.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
+#include <unordered_set>
 #include <algorithm>
 
 namespace ai { namespace detail { namespace {
@@ -40,9 +43,61 @@ vector2  generate_random_ray_cast_camera_coordinates(
 }
 
 
+std::function<float_32_bit(float_32_bit)>  parse_function(std::string const&  expr)
+{
+    if (expr == "x")
+        return [](float_32_bit const  x) -> float_32_bit { return x; };
+    else if (expr == "x*x")
+        return [](float_32_bit const  x) -> float_32_bit { return x * x; };
+    UNREACHABLE();
+}
+
+
+
+
+
+std::function<bool(com::object_guid, angeo::COLLISION_CLASS)>  parse_filter(
+        boost::property_tree::ptree const&  config,
+        bool const  ignore_disabled_sensors,
+        com::simulation_context const* const  context
+        )
+{
+    ASSUMPTION(context != nullptr);
+    std::unordered_set<angeo::COLLISION_CLASS> classes;
+    for (auto const&  name_and_props : config)
+        classes.insert(angeo::read_collison_class_from_string(get_value<std::string>(name_and_props.second)));
+    return [classes, ignore_disabled_sensors, context](com::object_guid const  collider_guid, angeo::COLLISION_CLASS const  cc) {
+                if (classes.count(cc) != 0UL)
+                    return false;
+                switch (cc)
+                {
+                case angeo::COLLISION_CLASS::SENSOR_WIDE_RANGE:
+                case angeo::COLLISION_CLASS::SENSOR_NARROW_RANGE:
+                case angeo::COLLISION_CLASS::SENSOR_DEDICATED:
+                case angeo::COLLISION_CLASS::RAY_CAST_TARGET:
+                    return !ignore_disabled_sensors || context->is_collider_enabled(collider_guid);
+                default:
+                    return true;
+                }
+            };
+    UNREACHABLE();
+}
+
+
 }}}
 
 namespace ai {
+
+
+sight_controller::camera_config::camera_config(boost::property_tree::ptree const&  config)
+    : camera_config(
+            get_value<float_32_bit>("horizontal_fov_angle", config),
+            get_value<float_32_bit>("vertical_fov_angle", config),
+            get_value<float_32_bit>("near_plane", config),
+            get_value<float_32_bit>("far_plane", config),
+            get_value<float_32_bit>("origin_z_shift", config)
+            )
+{}
 
 
 sight_controller::camera_config::camera_config(
@@ -57,6 +112,27 @@ sight_controller::camera_config::camera_config(
     , near_plane(near_plane_)
     , far_plane(far_plane_)
     , origin_z_shift(origin_z_shift_)
+{}
+
+
+sight_controller::ray_cast_config::ray_cast_config(
+        boost::property_tree::ptree const&  config,
+        com::simulation_context const* const  context
+        )
+    : ray_cast_config(
+            get_value<bool>("do_directed_ray_casts", config),
+            get_value<natural_32_bit>("num_random_ray_casts_per_second", config),
+            get_value<bool>("do_update_depth_image", config),
+            get_value<float_32_bit>("max_ray_cast_info_life_time_in_seconds", config),
+            get_value<natural_16_bit>("num_cells_along_x_axis", config),
+            get_value<natural_16_bit>("num_cells_along_y_axis", config),
+            detail::parse_function(get_value<std::string>("distribution_of_cells_in_camera_space", config)),
+            detail::parse_filter(
+                    get_ptree("collider_filter", config),
+                    get_value<bool>("ignore_disabled_sensors", config),
+                    context),
+            detail::parse_function(get_value<std::string>("depth_image_func", config))
+            )
 {}
 
 
@@ -284,17 +360,7 @@ void  sight_controller::perform_directed_ray_casts(matrix44 const&  from_camera_
 
     auto const  collider_acceptor = 
         [this, &ctx, &to_camera_matrix, &from_camera_matrix](com::object_guid const  collider_guid) -> bool {
-            switch (ctx.collision_class_of(collider_guid))
-            {
-            case angeo::COLLISION_CLASS::SENSOR_WIDE_RANGE:
-            case angeo::COLLISION_CLASS::SENSOR_NARROW_RANGE:
-            case angeo::COLLISION_CLASS::SENSOR_DEDICATED:
-            case angeo::COLLISION_CLASS::RAY_CAST_TARGET:
-                break;
-            default:
-                return true;
-            }
-            if (!ctx.is_collider_enabled(collider_guid))
+            if (!get_ray_cast_config().collider_filter(collider_guid, ctx.collision_class_of(collider_guid)))
                 return true;
             angeo::coordinate_system const&  frame = ctx.frame_coord_system_in_world_space(ctx.frame_of_collider(collider_guid));
             vector3 const  origin = transform_point(frame.origin(), to_camera_matrix);

@@ -17,7 +17,8 @@ agent_config_data::agent_config_data(async::finalise_load_on_destroy_ptr const f
     , m_state_variables()
     , m_initial_action()
     , m_actions()
-    , m_use_cortex_mock()
+    , m_sight()
+    , m_cortex()
 {
     TMPROF_BLOCK();
 
@@ -27,8 +28,6 @@ agent_config_data::agent_config_data(async::finalise_load_on_destroy_ptr const f
 
     boost::property_tree::ptree  root_cfg;
     load_ptree(root_cfg, root_dir / "config.json");
-
-    m_use_cortex_mock = get_value<bool>("use_cortex_mock", root_cfg);
 
     std::vector<boost::filesystem::path>  root_load_dirs{ finaliser->get_key().get_unique_id() };
     if (root_cfg.count("imports") != 0UL)
@@ -42,6 +41,8 @@ agent_config_data::agent_config_data(async::finalise_load_on_destroy_ptr const f
         load_data_from_dir(load_dir);
 
     ASSUMPTION(m_actions.count(m_initial_action) != 0UL);
+    ASSUMPTION(!m_sight.empty());
+    ASSUMPTION(!m_cortex.empty());
 }
 
 
@@ -49,6 +50,10 @@ void  agent_config_data::load_data_from_dir(boost::filesystem::path const&  root
 {
     if (m_defaults.empty() && boost::filesystem::is_regular_file(root_dir / "defaults.json"))
         load_ptree(m_defaults, root_dir / "defaults.json");
+    if (m_sight.empty() && boost::filesystem::is_regular_file(root_dir / "sight.json"))
+        load_ptree(m_sight, root_dir / "sight.json");
+    if (m_cortex.empty() && boost::filesystem::is_regular_file(root_dir / "cortex.json"))
+        load_ptree(m_cortex, root_dir / "cortex.json");
     for (boost::filesystem::directory_entry const&  entry : boost::filesystem::directory_iterator(root_dir))
         if (boost::filesystem::is_directory(entry.path()))
         {
@@ -57,8 +62,6 @@ void  agent_config_data::load_data_from_dir(boost::filesystem::path const&  root
                 load_state_variables_from_dir(entry.path());
             else if (dir_name == "actions")
                 load_actions_from_dir(entry.path());
-            else if (dir_name == "cortex")
-                load_cortex_from_dir(entry.path());
         }
 }
 
@@ -98,16 +101,6 @@ void  agent_config_data::load_actions_from_dir(boost::filesystem::path const&  r
                 if (m_actions.count(name) == 0UL)
                     m_actions[name] = load_ptree(entry.path());
             }
-        }
-}
-
-
-void  agent_config_data::load_cortex_from_dir(boost::filesystem::path const&  root_dir)
-{
-    for (boost::filesystem::directory_entry const&  entry : boost::filesystem::directory_iterator(root_dir))
-        if (boost::filesystem::is_regular_file(entry.path()) && entry.path().filename().extension().string() == ".json")
-        {
-            std::string const  name = entry.path().filename().replace_extension("").string();
         }
 }
 

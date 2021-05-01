@@ -21,13 +21,13 @@ struct  agent_config_data
     std::unordered_map<std::string, std::shared_ptr<boost::property_tree::ptree> >  m_state_variables;
     std::string  m_initial_action;
     std::unordered_map<std::string, std::shared_ptr<boost::property_tree::ptree> >  m_actions;
-    bool  m_use_cortex_mock;
+    boost::property_tree::ptree  m_sight;
+    boost::property_tree::ptree  m_cortex;
 
 private:
     void  load_data_from_dir(boost::filesystem::path const&  root_dir);
     void  load_state_variables_from_dir(boost::filesystem::path const&  root_dir);
     void  load_actions_from_dir(boost::filesystem::path const&  root_dir);
-    void  load_cortex_from_dir(boost::filesystem::path const&  root_dir);
 };
 
 
@@ -58,7 +58,8 @@ struct  agent_config : public async::resource_accessor<detail::agent_config_data
     std::unordered_map<std::string, std::shared_ptr<boost::property_tree::ptree> > const&  state_variables() const { return resource().m_state_variables; }
     std::string const&  initial_action() const { return resource().m_initial_action; }
     std::unordered_map<std::string, std::shared_ptr<boost::property_tree::ptree> > const&  actions() const { return resource().m_actions; }
-    bool  use_cortex_mock() const { return resource().m_use_cortex_mock; }
+    boost::property_tree::ptree const&  sight() const { return resource().m_sight; }
+    boost::property_tree::ptree const&  cortex() const { return resource().m_cortex; }
 };
 
 
