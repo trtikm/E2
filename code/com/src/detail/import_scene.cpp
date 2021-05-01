@@ -372,6 +372,18 @@ static void  import_reques_info(
                 ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("rigid_body")),
                 import_vector3(hierarchy.get_child("angular_velocity"))
                 );
+    else if (kind == "MUL_LINEAR_VELOCITY")
+        ctx.insert_request_info_rigid_body_mul_linear_velocity(
+                { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },
+                ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("rigid_body")),
+                import_vector3(hierarchy.get_child("linear_velocity_scale"))
+                );
+    else if (kind == "MUL_ANGULAR_VELOCITY")
+        ctx.insert_request_info_rigid_body_mul_angular_velocity(
+                { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },
+                ctx.from_relative_path(owner_guid, hierarchy.get<std::string>("rigid_body")),
+                import_vector3(hierarchy.get_child("angular_velocity_scale"))
+                );
     else if (kind == "UPDATE_RADIAL_FORCE_FIELD")
         ctx.insert_request_info_update_radial_force_field(
                 { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },

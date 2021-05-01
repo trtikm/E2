@@ -135,6 +135,8 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
         ("ERASE_FOLDER", "ERASE_FOLDER", "Erase folder.", 7),
         ("SET_LINEAR_VELOCITY", "SET_LINEAR_VELOCITY", "Set linear velocity of a rigid body.", 8),
         ("SET_ANGULAR_VELOCITY", "SET_ANGULAR_VELOCITY", "Set angular velocity of a rigid body.", 9),
+        ("MUL_LINEAR_VELOCITY", "MUL_LINEAR_VELOCITY", "Scale linear velocity of a rigid body.", 12),
+        ("MUL_ANGULAR_VELOCITY", "MUL_ANGULAR_VELOCITY", "Scale angular velocity of a rigid body.", 13),
         ("UPDATE_RADIAL_FORCE_FIELD", "UPDATE_RADIAL_FORCE_FIELD", "Update accel of radial force field acting of a rigid body.", 10),
         ("UPDATE_LINEAR_FORCE_FIELD", "UPDATE_LINEAR_FORCE_FIELD", "Update accel of linear force field acting of a rigid body.", 11),
         ("LEAVE_FORCE_FIELD", "LEAVE_FORCE_FIELD", "Leave force field.", 12),
@@ -242,6 +244,29 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             default=(0.0, 0.0, 0.0),
             unit='VELOCITY',
             subtype='VELOCITY',
+            min=-100.0,
+            max=100.0,
+            step=0.001
+            )
+
+    linear_velocity_scale: bpy.props.FloatVectorProperty(
+            name="Linear velocity scale",
+            description="Scale of rigid body's linear velocity",
+            size=3,
+            default=(1.0, 1.0, 1.0),
+            unit='NONE',
+            subtype='XYZ',
+            min=-100.0,
+            max=100.0,
+            step=0.001
+            )
+    angular_velocity: bpy.props.FloatVectorProperty(
+            name="Angular velocity scale",
+            description="Scale of rigid body's angular velocity",
+            size=3,
+            default=(1.0, 1.0, 1.0),
+            unit='NONE',
+            subtype='XYZ',
             min=-100.0,
             max=100.0,
             step=0.001
@@ -965,6 +990,10 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 self.draw_request_info_set_linear_velocity(layout, object_props, request_info)
             elif request_info.kind == "SET_ANGULAR_VELOCITY":
                 self.draw_request_info_set_angular_velocity(layout, object_props, request_info)
+            elif request_info.kind == "MUL_LINEAR_VELOCITY":
+                self.draw_request_info_mul_linear_velocity(layout, object_props, request_info)
+            elif request_info.kind == "MUL_ANGULAR_VELOCITY":
+                self.draw_request_info_mul_angular_velocity(layout, object_props, request_info)
             elif request_info.kind == "UPDATE_RADIAL_FORCE_FIELD":
                 self.draw_request_info_update_radial_force_field(layout, object, object_props, request_info)
             elif request_info.kind == "UPDATE_LINEAR_FORCE_FIELD":
@@ -1079,6 +1108,24 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(request_info, "folder_of_rigid_body")
         row = layout.row()
         row.prop(request_info, "angular_velocity")
+
+    def draw_request_info_mul_linear_velocity(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        self.warn_folder_does_not_have_rigid_body(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        self.warn_not_under_root_folder(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        row = layout.row()
+        row.prop(request_info, "folder_of_rigid_body")
+        row = layout.row()
+        row.prop(request_info, "linear_velocity_scale")
+
+    def draw_request_info_mul_angular_velocity(self, layout, object_props, request_info):
+        self.warn_object_is_not_set(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        self.warn_folder_does_not_have_rigid_body(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        self.warn_not_under_root_folder(request_info.folder_of_rigid_body, layout, "Rigid body's folder")
+        row = layout.row()
+        row.prop(request_info, "folder_of_rigid_body")
+        row = layout.row()
+        row.prop(request_info, "angular_velocity_scale")
 
     def draw_request_info_update_radial_force_field(self, layout, object, object_props, request_info):
         self.warn_object_is_not_collider_with_sensor(object.name, layout, "This object")
@@ -1647,6 +1694,10 @@ class E2SceneExportOperator(bpy.types.Operator):
                 record = self.export_request_info_set_linear_velocity(info, name)
             elif info.kind == "SET_ANGULAR_VELOCITY":
                 record = self.export_request_info_set_angular_velocity(info, name)
+            elif info.kind == "MUL_LINEAR_VELOCITY":
+                record = self.export_request_info_mul_linear_velocity(info, name)
+            elif info.kind == "MUL_ANGULAR_VELOCITY":
+                record = self.export_request_info_mul_angular_velocity(info, name)
             elif info.kind == "UPDATE_RADIAL_FORCE_FIELD":
                 record = self.export_request_info_update_radial_force_field(info)
             elif info.kind == "UPDATE_LINEAR_FORCE_FIELD":
@@ -1722,6 +1773,20 @@ class E2SceneExportOperator(bpy.types.Operator):
         result = {
             "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body.name, name, "RIGID_BODY"),
             "angular_velocity": self.export_vector(info.angular_velocity)
+        }
+        return result
+
+    def export_request_info_mul_linear_velocity(self, info, name):
+        result = {
+            "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body.name, name, "RIGID_BODY"),
+            "linear_velocity_scale": self.export_vector(info.linear_velocity_scale)
+        }
+        return result
+
+    def export_request_info_mul_angular_velocity(self, info, name):
+        result = {
+            "rigid_body": relative_scene_path_to_content(info.folder_of_rigid_body.name, name, "RIGID_BODY"),
+            "angular_velocity_scale": self.export_vector(info.angular_velocity_scale)
         }
         return result
 

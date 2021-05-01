@@ -36,6 +36,8 @@ struct  device_simulator
 
         RIGID_BODY_SET_LINEAR_VELOCITY      = 7U,
         RIGID_BODY_SET_ANGULAR_VELOCITY     = 8U,
+        RIGID_BODY_MUL_LINEAR_VELOCITY      = 12U,
+        RIGID_BODY_MUL_ANGULAR_VELOCITY     = 13U,          // <----- Current the highest value.
 
         UPDATE_RADIAL_FORCE_FIELD           = 9U,
         UPDATE_LINEAR_FORCE_FIELD           = 10U,
@@ -97,6 +99,8 @@ struct  device_simulator
     request_info_id  insert_request_info_erase_folder(object_guid const  folder_guid);
     request_info_id  insert_request_info_rigid_body_set_linear_velocity(object_guid const  rb_guid, vector3 const&  linear_velocity);
     request_info_id  insert_request_info_rigid_body_set_angular_velocity(object_guid const  rb_guid, vector3 const&  angular_velocity);
+    request_info_id  insert_request_info_rigid_body_mul_linear_velocity(object_guid const  rb_guid, vector3 const&  linear_velocity_scale);
+    request_info_id  insert_request_info_rigid_body_mul_angular_velocity(object_guid const  rb_guid, vector3 const&  angular_velocity_scale);
     request_info_id  insert_request_info_update_radial_force_field(
             float_32_bit const  multiplier = 1.0f,
             float_32_bit const  exponent = 1.0f,
@@ -236,6 +240,8 @@ private:
     dynamic_array<request_info<object_guid>, index_type>  m_request_infos_erase_folder;
     dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_set_linear_velocity;
     dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_set_angular_velocity;
+    dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_mul_linear_velocity;
+    dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_mul_angular_velocity;
     dynamic_array<request_info<request_info_update_radial_force_field>, index_type>  m_request_infos_update_radial_force_field;
     dynamic_array<request_info<std::pair<vector3, bool> >, index_type>  m_request_infos_update_linear_force_field;
     dynamic_array<request_info_base, index_type>  m_request_infos_leave_force_field;

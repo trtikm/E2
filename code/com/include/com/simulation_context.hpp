@@ -465,6 +465,12 @@ struct  simulation_context
     void  request_set_rigid_body_angular_velocity(object_guid const  rigid_body_guid,  vector3 const&  velocity) const;
     void  request_set_rigid_body_angular_velocity(object_guid const  base_folder_guid, std::string const&  relative_path_to_rigid_body,
                                                   vector3 const&  velocity) const;
+    void  request_mul_rigid_body_linear_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity_scale) const;
+    void  request_mul_rigid_body_linear_velocity(object_guid const  base_folder_guid, std::string const&  relative_path_to_rigid_body,
+                                                 vector3 const&  velocity_scale) const;
+    void  request_mul_rigid_body_angular_velocity(object_guid const  rigid_body_guid,  vector3 const&  velocity_scale) const;
+    void  request_mul_rigid_body_angular_velocity(object_guid const  base_folder_guid, std::string const&  relative_path_to_rigid_body,
+                                                  vector3 const&  velocity_scale) const;
     void  request_set_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
                                                                  vector3 const&  acceleration) const;
     void  request_set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
@@ -592,6 +598,10 @@ struct  simulation_context
                                                              vector3 const&  linear_velocity);
     void  insert_request_info_rigid_body_set_angular_velocity(device_request_info_id const&  drid, object_guid const  rb_guid,
                                                               vector3 const&  angular_velocity);
+    void  insert_request_info_rigid_body_mul_linear_velocity(device_request_info_id const&  drid, object_guid const  rb_guid,
+                                                             vector3 const&  linear_velocity_scale);
+    void  insert_request_info_rigid_body_mul_angular_velocity(device_request_info_id const&  drid, object_guid const  rb_guid,
+                                                              vector3 const&  angular_velocity_scale);
     void  insert_request_info_update_radial_force_field(
             device_request_info_id const&  drid,
             float_32_bit const  multiplier = 1.0f,
@@ -954,6 +964,10 @@ private:
         REQUEST_SET_LINEAR_VELOCITY_BY_PATH,
         REQUEST_SET_ANGULAR_VELOCITY,
         REQUEST_SET_ANGULAR_VELOCITY_BY_PATH,
+        REQUEST_MUL_LINEAR_VELOCITY,
+        REQUEST_MUL_LINEAR_VELOCITY_BY_PATH,
+        REQUEST_MUL_ANGULAR_VELOCITY,
+        REQUEST_MUL_ANGULAR_VELOCITY_BY_PATH,
         REQUEST_SET_LINEAR_ACCEL,
         REQUEST_SET_ANGULAR_ACCEL,
         REQUEST_DEL_LINEAR_ACCEL,
@@ -980,6 +994,11 @@ private:
     struct  request_data_set_velocity_by_path {
                 object_guid  base_folder_guid; std::string  relative_path_to_rigid_body;
                 vector3  velocity;
+                };
+    struct  request_data_mul_velocity { object_guid  rb_guid; vector3  velocity_scale; };
+    struct  request_data_mul_velocity_by_path {
+                object_guid  base_folder_guid; std::string  relative_path_to_rigid_body;
+                vector3  velocity_scale;
                 };
     struct  request_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
     struct  request_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
@@ -1027,6 +1046,10 @@ private:
     mutable std::list<request_data_set_velocity_by_path>  m_requests_set_linear_velocity_by_path;
     mutable std::list<request_data_set_velocity>  m_requests_set_angular_velocity;
     mutable std::list<request_data_set_velocity_by_path>  m_requests_set_angular_velocity_by_path;
+    mutable std::list<request_data_mul_velocity>  m_requests_mul_linear_velocity;
+    mutable std::list<request_data_mul_velocity_by_path>  m_requests_mul_linear_velocity_by_path;
+    mutable std::list<request_data_mul_velocity>  m_requests_mul_angular_velocity;
+    mutable std::list<request_data_mul_velocity_by_path>  m_requests_mul_angular_velocity_by_path;
     mutable std::list<request_data_set_acceleration_from_source>  m_requests_set_linear_acceleration_from_source;
     mutable std::list<request_data_set_acceleration_from_source>  m_requests_set_angular_acceleration_from_source;
     mutable std::list<request_data_del_acceleration_from_source>  m_requests_del_linear_acceleration_from_source;

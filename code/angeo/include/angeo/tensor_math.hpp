@@ -73,6 +73,7 @@ scalar  cos_angle_2d(vector2 const& u, vector2 const& v);
 inline scalar  angle_2d(vector2 const& u, vector2 const& v) { return std::acosf(cos_angle_2d(u, v)); }
 inline scalar  min_coord_2d(vector2 const&  u) { return u.minCoeff(); }
 inline scalar  max_coord_2d(vector2 const&  u) { return u.maxCoeff(); }
+inline vector2  mul_components_2d(vector2 const& u, vector2 const& v) { return { u(0)* v(0), u(1)* v(1) }; }
 
 inline vector3  expand23(vector2 const& u, scalar h=scalar(1.0)) { return { u(0), u(1), h }; }
 inline vector2  contract32(vector3 const& u) { return { u(0), u(1) }; }
@@ -106,6 +107,7 @@ scalar  cos_angle(vector3 const& u, vector3 const& v);
 inline scalar  angle(vector3 const& u, vector3 const& v) { return std::acosf(cos_angle(u,v)); }
 inline scalar  min_coord(vector3 const&  u) { return u.minCoeff(); }
 inline scalar  max_coord(vector3 const&  u) { return u.maxCoeff(); }
+inline vector3  mul_components(vector3 const& u, vector3 const& v) { return { u(0)* v(0), u(1)* v(1), u(2)* v(2) }; }
 
 inline vector4  expand34(vector3 const& u, scalar h=scalar(1.0)) { return { u(0), u(1), u(2), h }; }
 inline vector3  contract43(vector4 const& u) { return { u(0), u(1), u(2) }; }
