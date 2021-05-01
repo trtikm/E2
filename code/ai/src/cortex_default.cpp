@@ -9,8 +9,8 @@ namespace ai {
 
 
 
-cortex_default::cortex_default(agent const*  myself_)
-    : cortex(myself_)
+cortex_default::cortex_default(agent const*  myself_, bool const  use_mock_)
+    : cortex_mock_optional(myself_, use_mock_)
 {}
 
 

@@ -42,8 +42,8 @@ vector3  gen_random_unit_vector(
 namespace ai {
 
 
-cortex_random::cortex_random(agent const*  myself_)
-    : cortex(myself_)
+cortex_random::cortex_random(agent const*  myself_, bool const  use_mock_)
+    : cortex_mock_optional(myself_, use_mock_)
     , m_seconds_till_change(0.0f)
     , m_generator()
 {}
