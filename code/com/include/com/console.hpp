@@ -21,6 +21,7 @@ private:
     std::string  scene_path_to_string() const;
     void  validate_scene_path(simulator const&  sim);
     void  push_to_history(std::string const&  txt);
+    void  push_to_commnad_history(std::string const&  txt);
     bool  on_tab(simulator const&  sim);
     void  on_double_tab(simulator const&  sim);
     void  execute_command_line(simulator&  sim);
@@ -32,6 +33,8 @@ private:
     std::string  m_command_line;
     std::vector<std::string>  m_scene_path;
     std::deque<std::string>  m_history;
+    std::deque<std::string>  m_command_history;
+    integer_32_bit  m_command_history_index;
     float_32_bit  m_seconds_since_last_tab_key;
 };
 

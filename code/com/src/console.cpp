@@ -88,6 +88,8 @@ console::console()
     , m_command_line()
     , m_scene_path()
     , m_history()
+    , m_command_history()
+    , m_command_history_index(-1)
     , m_seconds_since_last_tab_key(-1.0f)
 {
 }
@@ -130,6 +132,30 @@ std::string  console::update(simulator&  sim)
                     on_double_tab(sim);
                     m_seconds_since_last_tab_key = -1.0f;
                 }
+            }
+        }
+        else if (kb.keys_just_pressed().count(osi::KEY_UP()))
+        {
+            if (m_command_history_index + 1 < (integer_32_bit)m_command_history.size())
+            {
+                ++m_command_history_index;
+                m_command_line = m_command_history.at(m_command_history_index);
+                m_cursor = (natural_32_bit)m_command_line.size();
+            }
+        }
+        else if (kb.keys_just_pressed().count(osi::KEY_DOWN()))
+        {
+            if (m_command_history_index > 0)
+            {
+                --m_command_history_index;
+                m_command_line = m_command_history.at(m_command_history_index);
+                m_cursor = (natural_32_bit)m_command_line.size();
+            }
+            else if (m_command_history_index == 0)
+            {
+                m_command_history_index = -1;
+                m_command_line.clear();
+                m_cursor = 0U;
             }
         }
         else if (kb.keys_just_pressed().count(osi::KEY_LEFT()) && m_cursor > 0U)
@@ -200,6 +226,20 @@ void  console::push_to_history(std::string const&  txt)
     m_history.push_front(txt);
     if (m_history.size() > 100ULL)
         m_history.pop_back();
+}
+
+
+void  console::push_to_commnad_history(std::string const&  txt)
+{
+    std::deque<std::string>  tmp;
+    tmp.swap(m_command_history);
+    m_command_history.push_back(txt);
+    for (std::string const&  cmd : tmp)
+        if (cmd != txt)
+            m_command_history.push_back(cmd);
+    while (m_command_history.size() > 10ULL)
+        m_command_history.pop_back();
+    m_command_history_index = -1;
 }
 
 
@@ -290,6 +330,8 @@ void  console::execute_command_line(simulator&  sim)
         execute_cd(words, sim);
     else
         push_to_history(msgstream() << "Unknown command '" << words.front() << "'. Use the command 'help'.");
+
+    push_to_commnad_history(m_command_line);
 }
 
 
@@ -312,7 +354,13 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
     push_to_history("                       time window, then folders of the typed");
     push_to_history("                       path are printed. This works only for");
     push_to_history("                       commands ls and cd.");
-    //push_to_history("");
+    push_to_history("UP                     Overwrites the current command line by");
+    push_to_history("                       the text of the previosly executed");
+    push_to_history("                       command, if there was any. More times you");
+    push_to_history("                       press the key, older command is used from");
+    push_to_history("                       the commands history.");
+    push_to_history("DOWN                   Same as the key UP, but it moves in the");
+    push_to_history("                       commands hostory in the opposite direction.");
 }
 
 
