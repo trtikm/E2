@@ -1025,7 +1025,8 @@ void  simulator::render_sight_image()
                 m_sight_image_render_data->batch,
                 5U,
                 5U,
-                get_window_props().window_width(),
+                (natural_32_bit)(get_window_props().window_width() *
+                                 (render_config().show_console ? render_config().console_window_left_param : 1.0f)),
                 get_window_props().window_height(),
                 std::max(0.01f, render_config().sight_image_scale)
                 );
