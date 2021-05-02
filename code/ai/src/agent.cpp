@@ -3,6 +3,7 @@
 #include <ai/cortex_random.hpp>
 #include <ai/cortex_default.hpp>
 #include <ai/cortex_robot.hpp>
+#include <ai/cortex_netlab.hpp>
 #include <ai/utils_ptree.hpp>
 #include <angeo/collision_class.hpp>
 #include <com/simulation_context.hpp>
@@ -30,6 +31,8 @@ std::shared_ptr<cortex>  make_cortex(agent const*  myself_, boost::property_tree
         return std::make_shared<cortex_random>(myself_, allow_mock);
     else if (type == "robot")
         return std::make_shared<cortex_robot>(myself_, allow_mock);
+    else if (type == "netlab")
+        return std::make_shared<cortex_netlab>(myself_, allow_mock);
 
     UNREACHABLE();
 }

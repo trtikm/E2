@@ -19,6 +19,7 @@ target_link_libraries(${THIS_TARGET_NAME}
     osi
     com
     gfx
+    netlab
     utility
     ${OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH}
     ${GLAD_LIST_OF_LIBRARIES_TO_LINK_WITH}

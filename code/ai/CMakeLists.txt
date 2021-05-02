@@ -32,6 +32,8 @@ add_library(${THIS_TARGET_NAME}
     ./src/cortex_default.cpp
     ./include/ai/cortex_robot.hpp
     ./src/cortex_robot.cpp
+    ./include/ai/cortex_netlab.hpp
+    ./src/cortex_netlab.cpp
 
     ./include/ai/motion_desire_props.hpp
     ./src/motion_desire_props.cpp
