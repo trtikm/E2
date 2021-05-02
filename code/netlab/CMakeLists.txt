@@ -1,43 +1,6 @@
 set(THIS_TARGET_NAME netlab)
 
 add_library(${THIS_TARGET_NAME}
-    ./include/netlab/cortex.hpp
-    ./src/cortex.cpp
-
-    ./include/netlab/initialiser_of_movement_area_centers.hpp
-    ./include/netlab/initialiser_of_ships_in_movement_areas.hpp
-    ./include/netlab/extra_data_for_spikers.hpp
-    ./include/netlab/access_to_movement_area_centers.hpp
-
-    ./include/netlab/ship_controller.hpp
-    ./src/ship_controller.cpp
-
-    ./include/netlab/network_layer_props.hpp
-    ./src/network_layer_props.cpp
-
-    ./include/netlab/network_props.hpp
-    ./src/network_props.cpp
-
-    ./include/netlab/network_layer_arrays_of_objects.hpp
-    ./src/network_layer_arrays_of_objects.cpp
-
-    ./include/netlab/network_layers_factory.hpp
-
-    ./include/netlab/network_indices.hpp
-    ./src/network_indices.cpp
-
-    ./include/netlab/statistics_of_densities_of_ships_in_layers.hpp
-    ./src/statistics_of_densities_of_ships_in_layers.cpp
-
-    ./include/netlab/network.hpp
-    ./src/network.cpp
-
-    ./include/netlab/utility.hpp
-    ./src/utility.cpp
-
-    ./include/netlab/tracked_object_stats.hpp
-    ./src/tracked_object_stats.cpp
-
     ./include/netlab/simple_network.hpp
     ./include/netlab/simple_network_uid.hpp
     ./src/simple_network.cpp

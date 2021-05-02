@@ -84,18 +84,6 @@ else()
     message(SEND_ERROR "The installation directory of Boost was not FOUND!")
 endif()
 
-# find and add Python
-message("Searching for Python ...")
-set(Python_ADDITIONAL_VERSIONS 3.4)
-find_package(PythonLibs 3.4 REQUIRED)
-include_directories(${PYTHON_INCLUDE_DIRS})
-link_directories(${PYTHON_LIBRARIES})
-set(PYTHON_LIST_OF_LIBRARIES_TO_LINK_WITH
-        ${PYTHON_LIBRARIES}
-    )
-message("Python includes were found in directory: " ${PYTHON_INCLUDE_DIRS})
-message("Python libraries were found in directory: " ${PYTHON_LIBRARIES})
-
 # find and add Eigen math library
 message("Searching for Eigen ...")
 if(NOT DEFINED EIGEN_INSTALL_DIR)
@@ -221,31 +209,6 @@ else()
         message(FATAL_ERROR "Specify a correct path to the LODEPNG install directory -DLODEPNG_INSTALL_DIR=<path-to-LODEPNG-install-dir>.")
     endif()
 endif()
-
-# Find the QtWidgets library
-message("Searching for Qt5Widgets ...")
-if(NOT DEFINED QT5_INSTALL_DIR)
-    set(QT5_INSTALL_DIR "Specify QT5's installation directory." CACHE STRING "Specify QT5's installation directory." FORCE)
-endif()
-if(EXISTS "${QT5_INSTALL_DIR}" AND IS_DIRECTORY "${QT5_INSTALL_DIR}")
-    set(CMAKE_PREFIX_PATH  ${QT5_INSTALL_DIR})
-endif()
-find_package(Qt5Widgets REQUIRED)
-include_directories(${Qt5Widgets_INCLUDE_DIRS})
-link_directories(${Qt5Widgets_LIBRARY_DIRS})
-add_definitions(${Qt5Widgets_DEFINITIONS})
-set(QT5_CXX_FLAGS ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS})
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    if(QT5_CXX_FLAGS)
-        string(REPLACE "-fPIC" "     " QT5_CXX_FLAGS ${QT5_CXX_FLAGS})
-    endif()
-    set(QT5_CXX_FLAGS "${QT5_CXX_FLAGS} /wd4373")
-endif()
-set(QT5_LIST_OF_LIBRARIES_TO_LINK_WITH
-        ${Qt5Widgets_LIBRARIES}
-    )
-message("Qt5Widgets includes was found in directory: " ${Qt5Widgets_INCLUDE_DIRS})
-message("Qt5Widgets libraries was found in directory: " ${Qt5Widgets_LIBRARY_DIRS})
 
 
 # Add project specific code
