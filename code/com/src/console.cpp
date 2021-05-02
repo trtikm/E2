@@ -297,11 +297,22 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
 {
     push_to_history("Available commands:");
     push_to_history("help                   Print this help message.");
-    push_to_history("ls                     List current scene folder.");
+    push_to_history("ls [<path>]            Lists content of the folder given the");
+    push_to_history("                       passed <path>. If no path is passed,");
+    push_to_history("                       the <path> is set to the path '.'.");
     push_to_history("cd <path>              Change the current scene folder based");
     push_to_history("                       on the passed <path>, which may be");
     push_to_history("                       either absolute (starting with '/')");
     push_to_history("                       or relative.");
+    push_to_history("");
+    push_to_history("Special keys:");
+    push_to_history("TAB                    Auto-complete of paths in commands");
+    push_to_history("                       ls and cd based on the typed prefix.");
+    push_to_history("TAB+TAB                When TAB key is pressed twice in short");
+    push_to_history("                       time window, then folders of the typed");
+    push_to_history("                       path are printed. This works only for");
+    push_to_history("                       commands ls and cd.");
+    //push_to_history("");
 }
 
 
