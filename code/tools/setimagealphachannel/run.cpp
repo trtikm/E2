@@ -10,6 +10,7 @@
 #include <utility/invariants.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <iostream>
 
 
 void run(int argc, char* argv[])

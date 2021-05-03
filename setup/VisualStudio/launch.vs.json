@@ -5,21 +5,21 @@
         {
             "type": "default",
             "project": "CMakeLists.txt",
-            "name": "AAA gfxtuner Debug @ !training_ground",
-            "projectTarget": "gfxtuner_Windows_Debug.exe (Install)",
+            "name": "e2sim Debug @ <scene-name>",
+            "projectTarget": "e2sim_Windows_Debug.exe (Install)",
             "args": [
                 "--scene",
-                "gfxtuner/!training_ground"
+                "<scene-name>"
             ]
         },
         {
             "type": "default",
             "project": "CMakeLists.txt",
-            "name": "AAA gfxtuner RelWithDebInfo @ !training_ground",
-            "projectTarget": "gfxtuner_Windows_RelWithDebInfo.exe (Install)",
+            "name": "e2sim RelWithDebInfo @ <scene-name>",
+            "projectTarget": "e2sim_Windows_RelWithDebInfo.exe (Install)",
             "args": [
                 "--scene",
-                "gfxtuner/!training_ground"
+                "<scene-name>"
             ]
         }
     ]

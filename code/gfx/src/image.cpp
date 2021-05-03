@@ -5,7 +5,7 @@
 #include <utility/timeprof.hpp>
 #include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
-#include <lodepng/lodepng.h>
+#include <lodepng.h>
 #include <algorithm>
 #include <stdexcept>
 
