@@ -1,10 +1,10 @@
-#ifndef NETLAB_SIMPLE_NETWORK_UID_HPP_INCLUDED
-#   define NETLAB_SIMPLE_NETWORK_UID_HPP_INCLUDED
+#ifndef NETLAB_NETWORK_UID_HPP_INCLUDED
+#   define NETLAB_NETWORK_UID_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
 #   include <functional>
 
-namespace netlab { namespace simple {
+namespace netlab {
 
 
 struct uid
@@ -45,17 +45,17 @@ inline bool operator<(uid const  left, uid const  right) noexcept
 }
 
 
-}}
+}
 
 namespace std {
 
 
 template<>
-struct hash<netlab::simple::uid>
+struct hash<netlab::uid>
 {
-    size_t  operator()(netlab::simple::uid const  id) const
+    size_t  operator()(netlab::uid const  id) const
     {
-        return std::hash<natural_32_bit>()(netlab::simple::uid::as_number(id));
+        return std::hash<natural_32_bit>()(netlab::uid::as_number(id));
     }
 };
 

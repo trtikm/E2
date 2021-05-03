@@ -1,9 +1,9 @@
-#include <netlab/simple_network.hpp>
+#include <netlab/network.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 
-namespace netlab { namespace simple {
+namespace netlab {
 
 
 network::statistics::config::config(
@@ -160,4 +160,4 @@ void  network::statistics::on_disconnect(
 }
 
 
-}}
+}

@@ -1,6 +1,6 @@
-#include <netlab/simple_network.hpp>
+#include <netlab/network.hpp>
 
-namespace netlab { namespace simple {
+namespace netlab {
 
 
 const std::array<network::config::data, network::config::NUM_CONFIGURATIONS>  network::config::configurations {
@@ -43,4 +43,4 @@ network_layer::config::configurations_of_sockets{
 
 
 
-}}
+}

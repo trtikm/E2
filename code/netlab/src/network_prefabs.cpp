@@ -1,6 +1,6 @@
-#include <netlab/simple_network.hpp>
+#include <netlab/network.hpp>
 
-namespace netlab { namespace simple {
+namespace netlab {
 
 
 const std::array<network::prefab::data, network::prefab::NUM_PREFABS>  network::prefab::prefabs {
@@ -29,4 +29,4 @@ const std::array<network::prefab::data, network::prefab::NUM_PREFABS>  network::
 };
 
 
-}}
+}

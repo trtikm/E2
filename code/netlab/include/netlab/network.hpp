@@ -1,7 +1,7 @@
-#ifndef NETLAB_SIMPLE_NETWORK_HPP_INCLUDED
-#   define NETLAB_SIMPLE_NETWORK_HPP_INCLUDED
+#ifndef NETLAB_NETWORK_HPP_INCLUDED
+#   define NETLAB_NETWORK_HPP_INCLUDED
 
-#   include <netlab/simple_network_uid.hpp>
+#   include <netlab/network_uid.hpp>
 #   include <utility/random.hpp>
 #   include <vector>
 #   include <array>
@@ -9,7 +9,7 @@
 #   include <unordered_map>
 #   include <unordered_set>
 
-namespace netlab { namespace simple {
+namespace netlab {
 
 
 struct  input_socket                                                // Note: Instances do not apper in units of input layers.
@@ -296,7 +296,7 @@ private:
 };
 
 
-}}
+}
 
 
 #endif

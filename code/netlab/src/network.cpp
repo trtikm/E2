@@ -1,9 +1,9 @@
-#include <netlab/simple_network.hpp>
+#include <netlab/network.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 
-namespace netlab { namespace simple {
+namespace netlab {
 
 
 network::network(
@@ -381,4 +381,4 @@ void  network::insert_input_event(uid const  input_unit_id)
 }
 
 
-}}
+}
