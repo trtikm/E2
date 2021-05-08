@@ -1,5 +1,5 @@
-#ifndef NETLAB_NETWORK_UID_HPP_INCLUDED
-#   define NETLAB_NETWORK_UID_HPP_INCLUDED
+#ifndef NETLAB_UID_HPP_INCLUDED
+#   define NETLAB_UID_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
 #   include <functional>
@@ -23,6 +23,7 @@ struct uid
 
     static inline uid  as_layer(uid const  id) { return { id.layer, 0U, 0U }; }
     static inline uid  as_unit(uid const  id) { return { id.layer, id.unit, 0U }; }
+    static inline uid  as_socket(uid  unit_id, natural_16_bit const  socket_idx) { unit_id.socket = socket_idx; return unit_id; }
 
     static inline natural_32_bit  as_number(uid const  id) noexcept { return *reinterpret_cast<natural_32_bit const*>(&id); }
 

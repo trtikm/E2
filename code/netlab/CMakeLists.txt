@@ -1,12 +1,17 @@
 set(THIS_TARGET_NAME netlab)
 
 add_library(${THIS_TARGET_NAME}
+    ./include/netlab/uid.hpp
+ 
+    ./include/netlab/sockets.hpp
+    ./include/netlab/unit.hpp
+    ./include/netlab/layer.hpp
+
     ./include/netlab/network.hpp
-    ./include/netlab/network_uid.hpp
     ./src/network.cpp
-    ./src/network_configurations.cpp
-    ./src/network_prefabs.cpp
-    ./src/network_statistics.cpp
+    
+    ./include/netlab/statistics.hpp
+    ./src/statistics.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
