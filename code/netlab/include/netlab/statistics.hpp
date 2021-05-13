@@ -52,6 +52,12 @@ struct  statistics
     // FUNCTIONS:
 
     statistics();
+    statistics(
+        natural_32_bit const  NUM_ROUNDS_PER_SNAPSHOT_,
+        natural_32_bit const  SNAPSHOTS_HISTORY_SIZE_,
+        float_32_bit const  RATIO_OF_PROBED_UNITS_PER_LAYER_
+        );
+
     bool  enabled() const { return NUM_ROUNDS_PER_SNAPSHOT != 0U; }
     void  on_next_round();
     void  on_spike_received(uid const  id);

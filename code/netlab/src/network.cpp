@@ -6,6 +6,42 @@
 namespace netlab {
 
 
+network::network()
+    : network(1.0f, 1U, 1U, 0U, {})
+{}
+
+
+network::network(
+        float_32_bit const  SPIKE_MAGNITUDE_,
+        natural_8_bit const  NUM_INPUT_LAYERS_,
+        natural_8_bit const  NUM_OUTPUT_LAYERS_,
+        natural_32_bit const  random_generator_seed,
+        statistics const&  stats_
+        )
+    : SPIKE_MAGNITUDE(SPIKE_MAGNITUDE_)
+    , NUM_INPUT_LAYERS(NUM_INPUT_LAYERS_)
+    , NUM_OUTPUT_LAYERS(NUM_OUTPUT_LAYERS_)
+
+    , layers()
+
+    , open_inputs()
+    , open_outputs()
+    , open_io_mutex()
+
+    , spiking_units()
+    , spiking_output_units()
+    , spiking_mutex()
+
+    , random_generator()
+
+    , stats(stats_.NUM_ROUNDS_PER_SNAPSHOT, stats_.SNAPSHOTS_HISTORY_SIZE, stats_.RATIO_OF_PROBED_UNITS_PER_LAYER)
+{
+    ASSUMPTION(SPIKE_MAGNITUDE > 0.0f);
+    reset(random_generator, random_generator_seed);
+    builder(this).run();
+}
+
+
 void  network::set_spiking_input_unit(uid const  input_unit_id)
 {
     ASSUMPTION(input_unit_id.socket == 0U);

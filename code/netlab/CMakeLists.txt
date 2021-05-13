@@ -10,6 +10,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/netlab/network.hpp
     ./src/network.cpp
     
+    ./include/netlab/builder.hpp
+    ./src/builder.cpp
+
     ./include/netlab/statistics.hpp
     ./src/statistics.cpp
     )

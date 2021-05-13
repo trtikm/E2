@@ -6,6 +6,8 @@
 #   include <netlab/unit.hpp>
 #   include <netlab/layer.hpp>
 #   include <netlab/statistics.hpp>
+#   include <netlab/builder.hpp>
+#   include <utility/basic_numeric_types.hpp>
 #   include <utility/random.hpp>
 #   include <vector>
 #   include <array>
@@ -16,6 +18,15 @@ namespace netlab {
 
 struct  network
 {
+    network();
+    network(
+        float_32_bit const  SPIKE_MAGNITUDE_,
+        natural_8_bit const  NUM_INPUT_LAYERS_,
+        natural_8_bit const  NUM_OUTPUT_LAYERS_,
+        natural_32_bit const  random_generator_seed,
+        statistics const&  stats_
+        );
+
     void  set_spiking_input_unit(uid const  input_unit_id);
     std::vector<uid> const&  get_spiking_output_units() const { return spiking_output_units; }
     statistics const&  get_statisitcs() const { return stats; }
@@ -41,15 +52,17 @@ private:
             uid const  output_socket_id
             );
 
+    friend struct  netlab::builder;
+
     // CONSTANTS:
 
     float_32_bit  SPIKE_MAGNITUDE;          // Must be > 0.0f
-    natural_8_bit  NUM_INPUT_LAYERS;
-    natural_8_bit  NUM_OUTPUT_LAYERS;
+    natural_8_bit  NUM_INPUT_LAYERS;        // Input layers are: 0,...,NUM_INPUT_LAYERS-1
+    natural_8_bit  NUM_OUTPUT_LAYERS;       // Output layers are: layers.size()-NUM_OUTPUT_LAYERS,...,layers.size()-1
 
     // DATA:
 
-    std::vector<network_layer>  layers;     // Cannot be empty.
+    std::vector<network_layer>  layers;
 
     std::vector<uid>  open_inputs;
     std::vector<uid>  open_outputs;

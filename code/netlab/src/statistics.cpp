@@ -24,15 +24,26 @@ statistics::overall::overall()
 
 
 statistics::statistics()
-    : NUM_ROUNDS_PER_SNAPSHOT(0U)
-    , SNAPSHOTS_HISTORY_SIZE(0U)
-    , RATIO_OF_PROBED_UNITS_PER_LAYER(0.0f)
+    : statistics(0U, 0U, 0.0f)
+{}
+
+
+statistics::statistics(
+        natural_32_bit const  NUM_ROUNDS_PER_SNAPSHOT_,
+        natural_32_bit const  SNAPSHOTS_HISTORY_SIZE_,
+        float_32_bit const  RATIO_OF_PROBED_UNITS_PER_LAYER_
+        )
+    : NUM_ROUNDS_PER_SNAPSHOT(NUM_ROUNDS_PER_SNAPSHOT_)
+    , SNAPSHOTS_HISTORY_SIZE(SNAPSHOTS_HISTORY_SIZE_)
+    , RATIO_OF_PROBED_UNITS_PER_LAYER(RATIO_OF_PROBED_UNITS_PER_LAYER_)
 
     , num_passed_rounds(0U)
     , num_passed_rounds_in_current_snapshot(0U)
     , probes_history()
     , overall_history({})
 {
+    ASSUMPTION(RATIO_OF_PROBED_UNITS_PER_LAYER >= 0.0f);
+
 //    for (natural_8_bit  layer_idx = 0U; layer_idx < layers_configs.size(); ++layer_idx)
 //    {
 //        network_layer::config const&  layer_config = layers_configs.at(layer_idx);
