@@ -7,7 +7,7 @@ namespace netlab {
 
 
 network::network()
-    : network(1.0f, 1U, 1U, 0U, {})
+    : network(1.0f, 0U, 0U, 0U, {})
 {}
 
 

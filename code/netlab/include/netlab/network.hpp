@@ -33,6 +33,15 @@ struct  network
 
     void  next_round();
 
+    network_layer const&  get_layer(uid const  id) const { return layers.at(id.layer); }
+    network_layer&  layer_ref(uid const  id) { return layers.at(id.layer); }
+    computation_unit const&  get_unit(uid const  id) const { return get_layer(id).units.at(id.unit); }
+    computation_unit&  unit_ref(uid const  id) { return layer_ref(id).units.at(id.unit); }
+    input_socket const&  get_input_socket(uid const  id) const { return get_unit(id).inputs.at(id.socket); }
+    input_socket&  input_socket_ref(uid const  id) { return unit_ref(id).inputs.at(id.socket); }
+    output_socket const&  get_output_socket(uid const  id) const { return get_unit(id).outputs.at(id.socket); }
+    output_socket&  output_socket_ref(uid const  id) { return unit_ref(id).outputs.at(id.socket); }
+
 private:
 
     void  update_input_sockets_of_spiking_units();
