@@ -126,9 +126,9 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
     shader_compose_result_type  result{ "", effects};
 
-    if (effects.get_fog_type() != FOG_TYPE::NONE)
+    if (effects.get_fog_type() == FOG_TYPE::INTERPOLATED)
     {
-        result.first = E2_GFX_ERROR_MESSAGE_PREFIX() + "The fog type is not FOG_TYPE::NONE (fog is not supported yet).";
+        result.first = E2_GFX_ERROR_MESSAGE_PREFIX() + "The fog type is FOG_TYPE::INTERPOLATED - not supported yet. Disabling fog.";
         result.second.set_fog_type(FOG_TYPE::NONE);
         return result;
     }
@@ -307,37 +307,42 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "}",
                             };
                         }
-                        //if (effects.use_fog())
-                        //{
-                        //    fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                        //        "#version 420",
+                        if (effects.get_fog_type() == FOG_TYPE::DETAILED)
+                        {
+                            fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                "#version 420",
 
-                        //        varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
-                        //        varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+                                varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
-                        //        "void main() {",
-                        //        "    const vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
-                        //        "    const float FOG_NEAR = 10.0f;",
-                        //        "    const float FOG_FAR = 50.0f;",
-                        //        "    const float FOG_DECAY_COEF = 2.0f;",
+                                uniform(FS_UNIFORM::FOG_COLOUR, fs_uniforms),
+                                uniform(FS_UNIFORM::FOG_NEAR, fs_uniforms),
+                                uniform(FS_UNIFORM::FOG_FAR, fs_uniforms),
 
-                        //        //"    const float z = 1.0f / gl_FragCoord.w;",
-                        //        //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+                                "void main() {",
+                                //"    const vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
+                                //"    const float FOG_NEAR = 10.0f;",
+                                //"    const float FOG_FAR = 50.0f;",
+                                //"    const float FOG_DECAY_COEF = 2.0f;",
 
-                        //        //"    const vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
-                        //        //"    const float distance = length(u);",
-                        //        //"    const float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
-                        //        //"    const float coef = pow(D, FOG_DECAY_COEF);",
+                                //"    const float z = 1.0f / gl_FragCoord.w;",
+                                //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
 
-                        //        "    const float z = 1.0f / gl_FragCoord.w;",
-                        //        "    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+                                //"    const vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
+                                //"    const float distance = length(u);",
+                                //"    const float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
+                                //"    const float coef = pow(D, FOG_DECAY_COEF);",
 
-                        //        "    out_colour = (1.0f - coef) * in_colour + coef * FOG_COLOUR;",
-                        //        "}",
-                        //    };
-                        //}
-                        //else
-                        if (skin.alpha_testing().use_alpha_testing())
+                                "    const float z = 1.0f / gl_FragCoord.w;",
+                                //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+
+                                //"    out_colour = (1.0f - coef) * in_colour + coef * FOG_COLOUR;",
+                                "    const float z01 = min(max(0.0f, (z - FOG_NEAR) / FOG_FAR), 1.0f);",
+                                "    out_colour = mix(in_colour, FOG_COLOUR, z01);",
+                                "}",
+                            };
+                        }
+                        else if (skin.alpha_testing().use_alpha_testing())
                         {
                             fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                 "#version 420",
@@ -818,37 +823,42 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                             }
-                                            //if (effects.use_fog())
-                                            //{
-                                            //    fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                            //        "#version 420",
+                                            if (effects.get_fog_type() == FOG_TYPE::DETAILED)
+                                            {
+                                                fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                    "#version 420",
 
-                                            //        varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
-                                            //        varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+                                                    varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
-                                            //        "void main() {",
-                                            //        "    const vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
-                                            //        "    const float FOG_NEAR = 10.0f;",
-                                            //        "    const float FOG_FAR = 50.0f;",
-                                            //        "    const float FOG_DECAY_COEF = 2.0f;",
+                                                    uniform(FS_UNIFORM::FOG_COLOUR, fs_uniforms),
+                                                    uniform(FS_UNIFORM::FOG_NEAR, fs_uniforms),
+                                                    uniform(FS_UNIFORM::FOG_FAR, fs_uniforms),
 
-                                            //        //"    const float z = 1.0f / gl_FragCoord.w;",
-                                            //        //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+                                                    "void main() {",
+                                                    //"    const vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
+                                                    //"    const float FOG_NEAR = 10.0f;",
+                                                    //"    const float FOG_FAR = 50.0f;",
+                                                    //"    const float FOG_DECAY_COEF = 2.0f;",
 
-                                            //        //"    const vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
-                                            //        //"    const float distance = length(u);",
-                                            //        //"    const float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
-                                            //        //"    const float coef = pow(D, FOG_DECAY_COEF);",
+                                                    //"    const float z = 1.0f / gl_FragCoord.w;",
+                                                    //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
 
-                                            //        "    const float z = 1.0f / gl_FragCoord.w;",
-                                            //        "    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+                                                    //"    const vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
+                                                    //"    const float distance = length(u);",
+                                                    //"    const float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
+                                                    //"    const float coef = pow(D, FOG_DECAY_COEF);",
 
-                                            //        "    out_colour = (1.0f - coef) * in_colour + coef * FOG_COLOUR;",
-                                            //        "}",
-                                            //    };
-                                            //}
-                                            //else
-                                            if (skin.alpha_testing().use_alpha_testing())
+                                                    "    const float z = 1.0f / gl_FragCoord.w;",
+                                                    //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+
+                                                    //"    out_colour = (1.0f - coef) * in_colour + coef * FOG_COLOUR;",
+                                                    "    const float z01 = min(max(0.0f, (z - FOG_NEAR) / FOG_FAR), 1.0f);",
+                                                    "    out_colour = mix(in_colour, FOG_COLOUR, z01);",
+                                                    "}",
+                                                };
+                                            }
+                                            else if (skin.alpha_testing().use_alpha_testing())
                                             {
                                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                                     "#version 420",

@@ -41,7 +41,7 @@ batch  create_lines3d(
             SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
             {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
             fog_type_,
-            SHADER_PROGRAM_TYPE::VERTEX // fog algo location
+            fog_type_ == FOG_TYPE::DETAILED ? SHADER_PROGRAM_TYPE::FRAGMENT : SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
         draw_state(nullptr),
         modelspace(),
