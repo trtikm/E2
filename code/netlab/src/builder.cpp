@@ -18,7 +18,7 @@ builder::builder(network* const  net_)
 
 builder&  builder::insert_layer_info(layer_info const&  info)
 {
-    ASSUMPTION(info.num_units > 0U && info.num_sockets_per_unit > 0U && info.layer.units.empty());
+    ASSUMPTION(info.num_units > 0U && info.layer.units.empty());
     network_layer const&  layer = info.layer;
     ASSUMPTION(layer.SPIKE_SIGN == 1.0f || layer.SPIKE_SIGN == -1.0f);
     ASSUMPTION(layer.CHARGE_SPIKE > 0.0f);
@@ -29,7 +29,7 @@ builder&  builder::insert_layer_info(layer_info const&  info)
     ASSUMPTION(layer.WEIGHT_CONNECTION > 0.0f);
     ASSUMPTION(layer.WEIGHT_DISCONNECTION >= 0.0f && layer.WEIGHT_DISCONNECTION < layer.WEIGHT_CONNECTION);
     ASSUMPTION(layer.WEIGHT_MAXIMAL > layer.WEIGHT_CONNECTION);
-    ASSUMPTION(layer.INPUT_SPIKE_MAGNITUDE > 0.0f);
+    ASSUMPTION(layer.SPIKE_MAGNITUDE > 0.0f);
     layers.push_back(info);
     return *this;
 }

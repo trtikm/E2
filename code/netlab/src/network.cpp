@@ -7,19 +7,17 @@ namespace netlab {
 
 
 network::network()
-    : network(1.0f, 0U, 0U, 0U, {})
+    : network(0U, 0U, 0U, {})
 {}
 
 
 network::network(
-        float_32_bit const  SPIKE_MAGNITUDE_,
         natural_8_bit const  NUM_INPUT_LAYERS_,
         natural_8_bit const  NUM_OUTPUT_LAYERS_,
         natural_32_bit const  random_generator_seed,
         statistics const&  stats_
         )
-    : SPIKE_MAGNITUDE(SPIKE_MAGNITUDE_)
-    , NUM_INPUT_LAYERS(NUM_INPUT_LAYERS_)
+    : NUM_INPUT_LAYERS(NUM_INPUT_LAYERS_)
     , NUM_OUTPUT_LAYERS(NUM_OUTPUT_LAYERS_)
 
     , layers()
@@ -36,7 +34,6 @@ network::network(
 
     , stats(stats_.NUM_ROUNDS_PER_SNAPSHOT, stats_.SNAPSHOTS_HISTORY_SIZE, stats_.RATIO_OF_PROBED_UNITS_PER_LAYER)
 {
-    ASSUMPTION(SPIKE_MAGNITUDE > 0.0f);
     reset(random_generator, random_generator_seed);
     builder(this).run();
 }
@@ -205,7 +202,7 @@ void  network::propagate_charge_of_spikes()
             stats.on_spike_received(id);
 
             // WARNING: Concurrent access to 'other_unit.charge' - synchronisation required!
-            other_unit.charge += other_layer.INPUT_SPIKE_MAGNITUDE;
+            other_unit.charge += layer.SPIKE_SIGN * other_layer.SPIKE_MAGNITUDE;
         }
     }
 }

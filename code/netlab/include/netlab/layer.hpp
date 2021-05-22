@@ -23,7 +23,7 @@ struct  network_layer
     float_32_bit  WEIGHT_CONNECTION;                    // Must be > 0.0f
     float_32_bit  WEIGHT_DISCONNECTION;                 // Must be >= 0.0f and < WEIGHT_CONNECTION
     float_32_bit  WEIGHT_MAXIMAL;                       // Must be > WEIGHT_CONNECTION
-    float_32_bit  INPUT_SPIKE_MAGNITUDE;                // Must be > 0.0f
+    float_32_bit  SPIKE_MAGNITUDE;                      // Must be > 0.0f
 
     // DATA:
 

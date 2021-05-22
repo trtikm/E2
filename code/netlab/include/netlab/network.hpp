@@ -20,7 +20,6 @@ struct  network
 {
     network();
     network(
-        float_32_bit const  SPIKE_MAGNITUDE_,
         natural_8_bit const  NUM_INPUT_LAYERS_,
         natural_8_bit const  NUM_OUTPUT_LAYERS_,
         natural_32_bit const  random_generator_seed,
@@ -65,7 +64,6 @@ private:
 
     // CONSTANTS:
 
-    float_32_bit  SPIKE_MAGNITUDE;          // Must be > 0.0f
     natural_8_bit  NUM_INPUT_LAYERS;        // Input layers are: 0,...,NUM_INPUT_LAYERS-1
     natural_8_bit  NUM_OUTPUT_LAYERS;       // Output layers are: layers.size()-NUM_OUTPUT_LAYERS,...,layers.size()-1
 
