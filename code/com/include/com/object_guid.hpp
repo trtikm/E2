@@ -39,7 +39,7 @@ struct  object_guid
     using  index_type = natural_16_bit;
 
     object_guid() : kind(OBJECT_KIND::NONE), index(std::numeric_limits<object_guid::index_type>::max()) {}
-    object_guid(OBJECT_KIND const kind_, index_type const  index_) : kind(kind_), index(index_) {}
+    object_guid(OBJECT_KIND const kind_, integer_32_bit const  index_);
 
     OBJECT_KIND  kind;
     index_type  index;

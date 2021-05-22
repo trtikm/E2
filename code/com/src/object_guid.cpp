@@ -7,6 +7,14 @@
 namespace com {
 
 
+object_guid::object_guid(OBJECT_KIND const kind_, integer_32_bit const  index_)
+    : kind(kind_)
+    , index((index_type)index_)
+{
+    ASSUMPTION(index_ < std::numeric_limits<object_guid::index_type>::max());
+}
+
+
 OBJECT_KIND  as_object_kind(natural_8_bit  const  okind)
 {
     ASSUMPTION(okind < get_num_object_kinds());
