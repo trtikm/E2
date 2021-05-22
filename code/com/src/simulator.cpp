@@ -61,7 +61,7 @@ simulator::render_configuration::render_configuration(osi::window_props const&  
     , directional_light_colour{ 1.0f, 1.0f, 1.0f }
     , fog_colour{ 0.25f, 0.25f, 0.25f, 2.0f }
     , fog_near(0.25f)
-    , fog_far(1000.0f)
+    , fog_far(500.0f)
     , text_scale(1.0f)
     , text_shift{ 0.0f, -1.0f, 0.0f }
     , text_ambient_colour{ 1.0f, 0.0f, 1.0f }
