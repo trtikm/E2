@@ -111,6 +111,27 @@ void  render_sprite_batch(
         );
 
 
+void  render_batch(
+        batch const  batch_,
+        std::vector<matrix44> const&  world_matrices_,
+        std::vector<matrix44> const&  to_bone_space_matrices_,  // Not used for batches without skeleton.
+        matrix44 const&  matrix_from_world_to_camera_,
+        matrix44 const&  matrix_from_camera_to_clipspace_,
+        vector4 const&  diffuse_colour_,
+        vector3 const&  ambient_colour_,
+        vector4 const&  specular_colour_,
+        vector3 const&  directional_light_direction_, // In world space or in camera space based on the boolean flag below.
+        vector3 const&  directional_light_colour_,
+        bool const  is_directional_light_direction_in_camera_space_, // When false, then it is assumed in world space.
+        vector4 const&  fog_colour_,
+        float const  fog_near_,
+        float const  fog_far_,
+        draw_state*  draw_state_ptr_ = nullptr  // The draw state of the previously rendered batch.
+                                                // If not null, it will be updated by the currently rendered batch (if successfuly rendered).
+                                                // It is recommended to keep track of the draw state though.
+        );
+
+
 }
 
 #endif

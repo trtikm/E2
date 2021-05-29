@@ -85,6 +85,7 @@ struct vertex_shader_uniform_data_provider_base
     {
         return get_batch().get_buffers_binding().num_matrices_per_vertex();
     }
+    virtual std::vector<matrix44>&  MATRICES_FROM_MODEL_TO_CAMERA_ref() = 0;
 
     virtual vector3 const&  get_AMBIENT_COLOUR() const = 0;
     virtual vector4 const&  get_DIFFUSE_COLOUR() const = 0;
@@ -122,6 +123,7 @@ struct vertex_shader_uniform_data_provider : public vertex_shader_uniform_data_p
     matrix44 const&  get_MATRIX_FROM_MODEL_TO_CAMERA() const override { return m_matrices_from_model_to_camera.front(); }
     matrix44 const&  get_MATRIX_FROM_CAMERA_TO_CLIPSPACE() const override { return m_matrix_from_camera_to_clipspace; }
     std::vector<matrix44> const&  get_MATRICES_FROM_MODEL_TO_CAMERA() const override { return m_matrices_from_model_to_camera; }
+    std::vector<matrix44>&  MATRICES_FROM_MODEL_TO_CAMERA_ref() override { return m_matrices_from_model_to_camera; }
 
     vector3 const&  get_AMBIENT_COLOUR() const override { return m_ambient_colour; }
     vector4 const&  get_DIFFUSE_COLOUR() const override { return m_diffuse_colour; }

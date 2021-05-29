@@ -406,4 +406,102 @@ void  render_sprite_batch(
 }
 
 
+void  render_batch(
+        batch const  batch_,
+        std::vector<matrix44> const&  world_matrices_,
+        std::vector<matrix44> const&  to_bone_space_matrices_,  // Not used for batches without skeleton.
+        matrix44 const&  matrix_from_world_to_camera_,
+        matrix44 const&  matrix_from_camera_to_clipspace_,
+        vector4 const&  diffuse_colour_,
+        vector3 const&  ambient_colour_,
+        vector4 const&  specular_colour_,
+        vector3 const&  directional_light_direction_, // In world space or in camera space based on the boolean flag below.
+        vector3 const&  directional_light_colour_,
+        bool const  is_directional_light_direction_in_camera_space_, // When false, then it is assumed in world space.
+        vector4 const&  fog_colour_,
+        float const  fog_near_,
+        float const  fog_far_,
+        draw_state*  draw_state_ptr_
+        )
+{
+    if (world_matrices_.empty())
+        return;
+
+    bool const  use_instancing = world_matrices_.size() > 1UL && !batch_.is_attached_to_skeleton() && batch_.has_instancing_data();
+
+    if (!make_current(batch_, draw_state_ptr_ == nullptr ? draw_state() : *draw_state_ptr_, use_instancing))
+        return;
+
+    vertex_shader_uniform_data_provider  vs_uniform_data_provider(
+            batch_,
+            {},
+            matrix_from_camera_to_clipspace_,
+            diffuse_colour_,
+            ambient_colour_,
+            specular_colour_,
+            is_directional_light_direction_in_camera_space_ ?
+                    directional_light_direction_ : transform_vector(directional_light_direction_, matrix_from_world_to_camera_),
+            directional_light_colour_,
+            fog_colour_,
+            fog_near_,
+            fog_far_
+            );
+
+    std::vector<matrix44>&  vs_matrices = vs_uniform_data_provider.MATRICES_FROM_MODEL_TO_CAMERA_ref();
+
+    fragment_shader_uniform_data_provider const  fs_uniform_data_provider(
+            vs_uniform_data_provider.get_DIFFUSE_COLOUR(),
+            vs_uniform_data_provider.get_AMBIENT_COLOUR(),
+            vs_uniform_data_provider.get_SPECULAR_COLOUR(),
+            vs_uniform_data_provider.get_DIRECTIONAL_LIGHT_DIRECTION(),
+            vs_uniform_data_provider.get_DIRECTIONAL_LIGHT_COLOUR(),
+            vs_uniform_data_provider.get_FOG_COLOUR(),
+            vs_uniform_data_provider.get_FOG_NEAR(),
+            vs_uniform_data_provider.get_FOG_FAR()
+            );
+
+    if (use_instancing)
+    {
+        vertex_shader_instanced_data_provider  instanced_data_provider(batch_);
+        for (matrix44 const&  world_matrix : world_matrices_)
+            instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera_ * world_matrix);
+        gfx::render_batch(batch_, instanced_data_provider, vs_uniform_data_provider, fs_uniform_data_provider);
+        if (draw_state_ptr_ != nullptr)
+            *draw_state_ptr_ = batch_.get_draw_state();
+    }
+    else if (batch_.is_attached_to_skeleton())
+    {
+        INVARIANT(
+                !to_bone_space_matrices_.empty() &&
+                world_matrices_.size() >= to_bone_space_matrices_.size() &&
+                world_matrices_.size() % to_bone_space_matrices_.size() == 0U
+                );
+        vs_matrices.reserve(to_bone_space_matrices_.size());
+
+        natural_32_bit const  n = (natural_32_bit)world_matrices_.size();
+        natural_32_bit const  m = (natural_32_bit)to_bone_space_matrices_.size();
+        for (natural_32_bit  i = 0U; i != n; )
+        {
+            vs_matrices.clear();
+            for (natural_32_bit  j = 0U; j != m; ++j, ++i)
+                vs_matrices.push_back(matrix_from_world_to_camera_ * world_matrices_.at(i) * to_bone_space_matrices_.at(j));
+            gfx::render_batch(batch_, vs_uniform_data_provider, fs_uniform_data_provider);
+            if (draw_state_ptr_ != nullptr)
+                *draw_state_ptr_ = batch_.get_draw_state();
+        }
+    }
+    else
+    {
+        vs_matrices.push_back({});
+        for (matrix44 const&  world_matrix : world_matrices_)
+        {
+            vs_matrices.front() = matrix_from_world_to_camera_ * world_matrix;
+            render_batch(batch_, vs_uniform_data_provider, fs_uniform_data_provider);
+            if (draw_state_ptr_ != nullptr)
+                *draw_state_ptr_ = batch_.get_draw_state();
+        }
+    }
+}
+
+
 }
