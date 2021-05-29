@@ -29,7 +29,6 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/com/detail/import_scene.hpp
     ./src/detail/import_scene.cpp
-    ./src/detail/import_gfxtuner_scene.cpp
 
     ./include/com/age/simulator.hpp
     ./src/age/simulator.cpp

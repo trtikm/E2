@@ -648,21 +648,8 @@ void  apply_initial_velocities_to_imported_rigid_bodies(
 }
 
 
-extern void  import_gfxtuner_scene(
-        simulation_context&  ctx,
-        imported_scene const  scene,
-        import_scene_props const&  props
-        );
-
-
 void  import_scene(simulation_context&  ctx, imported_scene const  scene, import_scene_props const&  props)
 {
-    if (scene.hierarchy().count("@pivot") != 0UL)
-    {
-        import_gfxtuner_scene(ctx, scene, props);
-        return;
-    }
-
     delayed_import_tasks  delayed_tasks;
     auto const  folders = scene.hierarchy().find("folders");
     if (folders != scene.hierarchy().not_found())
