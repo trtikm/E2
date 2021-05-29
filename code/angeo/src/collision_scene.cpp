@@ -76,11 +76,13 @@ collision_scene::collision_scene()
     , m_boxes_bbox()
     , m_boxes_material()
     , m_boxes_collision_class()
+    , m_boxes_density_multipliers()
 
     , m_capsules_geometry()
     , m_capsules_bbox()
     , m_capsules_material()
     , m_capsules_collision_class()
+    , m_capsules_density_multipliers()
 
     , m_lines_geometry()
     , m_lines_bbox()
@@ -94,6 +96,7 @@ collision_scene::collision_scene()
     , m_spheres_geometry()
     , m_spheres_material()
     , m_spheres_collision_class()
+    , m_spheres_density_multipliers()
 
     , m_triangles_geometry()
     , m_triangles_bbox()
@@ -112,12 +115,14 @@ collision_object_id  collision_scene::insert_box(
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         bool const  is_dynamic
         )
 {
     TMPROF_BLOCK();
 
-    collision_object_id const  coid = insert_box_data(half_sizes_along_axes, from_base_matrix, material, collision_class);
+    collision_object_id const  coid =
+            insert_box_data(half_sizes_along_axes, from_base_matrix, material, collision_class, density_multiplier);
 
     insert_object(coid, is_dynamic);
 
@@ -131,7 +136,8 @@ collision_object_id  collision_scene::insert_box_data(
         vector3 const&  half_sizes_along_axes,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
-        COLLISION_CLASS const  collision_class
+        COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier
         )
 {
     ASSUMPTION(half_sizes_along_axes(0) > 0.0001f && half_sizes_along_axes(1) > 0.0001f && half_sizes_along_axes(1) > 0.0001f);
@@ -167,6 +173,7 @@ collision_object_id  collision_scene::insert_box_data(
             m_boxes_bbox.push_back(bbox);
             m_boxes_material.push_back(material);
             m_boxes_collision_class.push_back(collision_class);
+            m_boxes_density_multipliers.push_back(density_multiplier);
         }
         else
         {
@@ -176,6 +183,7 @@ collision_object_id  collision_scene::insert_box_data(
             m_boxes_bbox.at(invalid_ids.back()) = bbox;
             m_boxes_material.at(invalid_ids.back()) = material;
             m_boxes_collision_class.at(invalid_ids.back()) = collision_class;
+            m_boxes_density_multipliers.at(invalid_ids.back()) = density_multiplier;
 
             invalid_ids.pop_back();
         }
@@ -190,6 +198,7 @@ collision_object_id  collision_scene::insert_capsule(
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         bool const  is_dynamic
         )
 {
@@ -201,7 +210,8 @@ collision_object_id  collision_scene::insert_capsule(
                     thickness_from_central_line,
                     from_base_matrix,
                     material,
-                    collision_class
+                    collision_class,
+                    density_multiplier
                     );
 
     insert_object(coid, is_dynamic);
@@ -217,7 +227,8 @@ collision_object_id  collision_scene::insert_capsule_data(
         float_32_bit const  thickness_from_central_line,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
-        COLLISION_CLASS const  collision_class
+        COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier
         )
 {
     collision_object_id  coid;
@@ -247,6 +258,7 @@ collision_object_id  collision_scene::insert_capsule_data(
             m_capsules_bbox.push_back(bbox);
             m_capsules_material.push_back(material);
             m_capsules_collision_class.push_back(collision_class);
+            m_capsules_density_multipliers.push_back(density_multiplier);
         }
         else
         {
@@ -256,6 +268,7 @@ collision_object_id  collision_scene::insert_capsule_data(
             m_capsules_bbox.at(invalid_ids.back()) = bbox;
             m_capsules_material.at(invalid_ids.back()) = material;
             m_capsules_collision_class.at(invalid_ids.back()) = collision_class;
+            m_capsules_density_multipliers.at(invalid_ids.back()) = density_multiplier;
 
             invalid_ids.pop_back();
         }
@@ -397,12 +410,13 @@ collision_object_id  collision_scene::insert_sphere(
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         bool const  is_dynamic
         )
 {
     TMPROF_BLOCK();
 
-    collision_object_id const  coid = insert_sphere_data(radius, from_base_matrix, material, collision_class);
+    collision_object_id const  coid = insert_sphere_data(radius, from_base_matrix, material, collision_class, density_multiplier);
 
     insert_object(coid, is_dynamic);
 
@@ -416,7 +430,8 @@ collision_object_id  collision_scene::insert_sphere_data(
         float_32_bit const  radius,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
-        COLLISION_CLASS const  collision_class
+        COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier
         )
 {
     collision_object_id  coid;
@@ -431,6 +446,7 @@ collision_object_id  collision_scene::insert_sphere_data(
             m_spheres_geometry.push_back(geometry);
             m_spheres_material.push_back(material);
             m_spheres_collision_class.push_back(collision_class);
+            m_spheres_density_multipliers.push_back(density_multiplier);
         }
         else
         {
@@ -439,6 +455,7 @@ collision_object_id  collision_scene::insert_sphere_data(
             m_spheres_geometry.at(invalid_ids.back()) = geometry;
             m_spheres_material.at(invalid_ids.back()) = material;
             m_spheres_collision_class.at(invalid_ids.back()) = collision_class;
+            m_spheres_density_multipliers.at(invalid_ids.back()) = density_multiplier;
 
             invalid_ids.pop_back();
         }
@@ -1049,7 +1066,8 @@ void  collision_scene::find_contacts_with_box(
                     half_sizes_along_axes,
                     from_base_matrix,
                     COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,  // does not matter
-                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT             // does not matter
+                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT,            // does not matter
+                    1.0f                                                // does not matter
                     );
     find_contacts_with_collider(coid, search_static, search_dynamic, acceptor, collider_filter);
     erase_object_data(coid);
@@ -1072,7 +1090,8 @@ void  collision_scene::find_contacts_with_capsule(
                     thickness_from_central_line,
                     from_base_matrix,
                     COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,  // does not matter
-                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT             // does not matter
+                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT,            // does not matter
+                    1.0f                                                // does not matter
                     );
     find_contacts_with_collider(coid, search_static, search_dynamic, acceptor, collider_filter);
     erase_object_data(coid);
@@ -1093,7 +1112,8 @@ void  collision_scene::find_contacts_with_sphere(
                     radius,
                     from_base_matrix,
                     COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,  // does not matter
-                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT             // does not matter
+                    COLLISION_CLASS::COMMON_MOVEABLE_OBJECT,            // does not matter
+                    1.0f                                                // does not matter
                     );
     find_contacts_with_collider(coid, search_static, search_dynamic, acceptor, collider_filter);
     erase_object_data(coid);
@@ -1479,6 +1499,28 @@ COLLISION_MATERIAL_TYPE  collision_scene::get_material(collision_object_id const
         return m_spheres_material.at(get_instance_index(coid));
     case COLLISION_SHAPE_TYPE::TRIANGLE:
         return m_triangles_material.at(get_instance_index(coid));
+    default:
+        UNREACHABLE();
+    }
+}
+
+
+float_32_bit  collision_scene::get_density_multiplier(collision_object_id const  coid) const
+{
+    switch (get_shape_type(coid))
+    {
+    case COLLISION_SHAPE_TYPE::BOX:
+        return m_boxes_density_multipliers.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::CAPSULE:
+        return m_capsules_density_multipliers.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::LINE:
+        return 1.0f;
+    case COLLISION_SHAPE_TYPE::POINT:
+        return 1.0f;
+    case COLLISION_SHAPE_TYPE::SPHERE:
+        return m_spheres_density_multipliers.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::TRIANGLE:
+        return 1.0f;
     default:
         UNREACHABLE();
     }

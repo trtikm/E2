@@ -339,12 +339,14 @@ struct  simulation_context
     float_32_bit  collider_capsule_thickness_from_central_line(object_guid const  collider_guid) const;
     float_32_bit  collider_sphere_radius(object_guid const  collider_guid) const;
     bool  is_collider_enabled(object_guid const  collider_guid) const;
+    float_32_bit  collider_density_multiplier(object_guid const  collider_guid) const;
     collision_scene_index  collider_scene_index(object_guid const  collider_guid) const;
     object_guid  insert_collider_box(
             object_guid const  under_folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             collision_scene_index const  scene_index
             ) const;
     object_guid  insert_collider_capsule(
@@ -353,6 +355,7 @@ struct  simulation_context
             float_32_bit const  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             collision_scene_index const  scene_index
             ) const;
     object_guid  insert_collider_sphere(
@@ -360,6 +363,7 @@ struct  simulation_context
             float_32_bit const  radius,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             collision_scene_index const  scene_index
             ) const;
     object_guid  insert_collider_triangle_mesh(
@@ -390,6 +394,7 @@ struct  simulation_context
             vector3 const&  half_sizes_along_axes,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             collision_scene_index const  scene_index
             ) const;
     void  request_insert_collider_capsule(
@@ -398,6 +403,7 @@ struct  simulation_context
             float_32_bit const  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             collision_scene_index const  scene_index
             ) const;
     void  request_insert_collider_sphere(
@@ -405,6 +411,7 @@ struct  simulation_context
             float_32_bit const  radius,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             angeo::COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             collision_scene_index const  scene_index
             ) const;
     void  request_erase_collider(object_guid const  collider_guid) const;
@@ -1025,6 +1032,7 @@ private:
         std::string  name;
         angeo::COLLISION_MATERIAL_TYPE  material;
         angeo::COLLISION_CLASS  collision_class;
+        float_32_bit  density_multiplier;
         collision_scene_index  scene_index;
     };
     struct  request_data_insert_collider_box : public request_data_insert_collider_base

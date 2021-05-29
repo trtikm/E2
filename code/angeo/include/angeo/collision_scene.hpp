@@ -76,6 +76,7 @@ struct  collision_scene
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
             COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             bool const  is_dynamic
             );
 
@@ -88,6 +89,7 @@ struct  collision_scene
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
             COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             bool const  is_dynamic
             );
 
@@ -118,6 +120,7 @@ struct  collision_scene
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
             COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier,
             bool const  is_dynamic
             );
 
@@ -256,6 +259,8 @@ struct  collision_scene
     COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
     COLLISION_CLASS  get_collision_class(collision_object_id const  coid) const;
 
+    float_32_bit  get_density_multiplier(collision_object_id const  coid) const;
+
     struct  statistics
     {
         statistics(
@@ -332,14 +337,16 @@ private:
             vector3 const&  half_sizes_along_axes,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
-            COLLISION_CLASS const  collision_class
+            COLLISION_CLASS const  collision_class,
+            float_32_bit  density_multiplier
             );
     collision_object_id  insert_capsule_data(
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
-            COLLISION_CLASS const  collision_class
+            COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier
             );
     collision_object_id  insert_line_data(
             float_32_bit const  half_distance_between_end_points,
@@ -356,7 +363,8 @@ private:
             float_32_bit const  radius,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
-            COLLISION_CLASS const  collision_class
+            COLLISION_CLASS const  collision_class,
+            float_32_bit const  density_multiplier
             );
     void  insert_triangle_mesh_data(
             natural_32_bit const  num_triangles,
@@ -454,6 +462,7 @@ private:
     std::vector<axis_aligned_bounding_box>  m_boxes_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_boxes_material;
     std::vector<COLLISION_CLASS>  m_boxes_collision_class;
+    std::vector<float_32_bit> m_boxes_density_multipliers;
 
     /////////////////////////////////////////////////////////////////////////////////
     // CAPSULES
@@ -476,6 +485,7 @@ private:
     std::vector<axis_aligned_bounding_box>  m_capsules_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_capsules_material;
     std::vector<COLLISION_CLASS>  m_capsules_collision_class;
+    std::vector<float_32_bit> m_capsules_density_multipliers;
 
     /////////////////////////////////////////////////////////////////////////////////
     // LINES
@@ -516,6 +526,7 @@ private:
     std::vector<sphere_geometry>  m_spheres_geometry;
     std::vector<COLLISION_MATERIAL_TYPE>  m_spheres_material;
     std::vector<COLLISION_CLASS>  m_spheres_collision_class;
+    std::vector<float_32_bit> m_spheres_density_multipliers;
 
     /////////////////////////////////////////////////////////////////////////////////
     // TRIANGLES

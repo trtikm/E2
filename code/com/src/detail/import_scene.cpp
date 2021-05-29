@@ -209,6 +209,7 @@ static void  import_collider(
                 import_vector3(hierarchy.get_child("half_sizes_along_axes")),
                 angeo::read_collison_material_from_string(hierarchy.get<std::string>("collision_material")),
                 angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class")),
+                std::stof(hierarchy.get<std::string>("density_multiplier")),
                 (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     else if (collider_kind == "CAPSULE")
@@ -219,6 +220,7 @@ static void  import_collider(
                 hierarchy.get<float_32_bit>("thickness_from_central_line"),
                 angeo::read_collison_material_from_string(hierarchy.get<std::string>("collision_material")),
                 angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class")),
+                std::stof(hierarchy.get<std::string>("density_multiplier")),
                 (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     else if (collider_kind == "SPHERE")
@@ -228,6 +230,7 @@ static void  import_collider(
                 hierarchy.get<float_32_bit>("radius"),
                 angeo::read_collison_material_from_string(hierarchy.get<std::string>("collision_material")),
                 angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class")),
+                std::stof(hierarchy.get<std::string>("density_multiplier")),
                 (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     else if (collider_kind == "TRIANGLE_MESH")

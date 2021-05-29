@@ -1227,6 +1227,14 @@ bool  simulation_context::is_collider_enabled(object_guid const  collider_guid) 
 }
 
 
+float_32_bit  simulation_context::collider_density_multiplier(object_guid const  collider_guid) const
+{
+    ASSUMPTION(is_valid_collider_guid(collider_guid));
+    folder_element_collider const&  collider = m_colliders.at(collider_guid.index);
+    return m_collision_scenes_ptr->at(collider.scene_index)->get_density_multiplier(collider.id.front());
+}
+
+
 simulation_context::collision_scene_index  simulation_context::collider_scene_index(object_guid const  collider_guid) const
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid));
@@ -1239,14 +1247,15 @@ object_guid  simulation_context::insert_collider_box(
         vector3 const&  half_sizes_along_axes,
         angeo::COLLISION_MATERIAL_TYPE const  material,
         angeo::COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         collision_scene_index const  scene_index
         ) const
 {
     return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name, scene_index,
-        [this, &half_sizes_along_axes, material, collision_class, scene_index]
+        [this, &half_sizes_along_axes, material, collision_class, density_multiplier, scene_index]
         (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
             coids.push_back(m_collision_scenes_ptr->at(scene_index)->insert_box(
-                half_sizes_along_axes, W, material, collision_class, is_dynamic));
+                half_sizes_along_axes, W, material, collision_class, density_multiplier, is_dynamic));
         });
 }
 
@@ -1257,14 +1266,15 @@ object_guid  simulation_context::insert_collider_capsule(
         float_32_bit const  thickness_from_central_line,
         angeo::COLLISION_MATERIAL_TYPE const  material,
         angeo::COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         collision_scene_index const  scene_index
         ) const
 {
     return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name, scene_index,
-        [this, half_distance_between_end_points, thickness_from_central_line, material, collision_class, scene_index]
+        [this, half_distance_between_end_points, thickness_from_central_line, material, collision_class, density_multiplier, scene_index]
             (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
             coids.push_back(m_collision_scenes_ptr->at(scene_index)->insert_capsule(half_distance_between_end_points, thickness_from_central_line,
-                                                                  W, material, collision_class, is_dynamic));
+                                                                  W, material, collision_class, density_multiplier, is_dynamic));
         });
 }
 
@@ -1274,13 +1284,16 @@ object_guid  simulation_context::insert_collider_sphere(
         float_32_bit const  radius,
         angeo::COLLISION_MATERIAL_TYPE const  material,
         angeo::COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         collision_scene_index const  scene_index
         ) const
 {
     return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name, scene_index,
-        [this, radius, material, collision_class, scene_index]
+        [this, radius, material, collision_class, density_multiplier, scene_index]
         (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
-            coids.push_back(m_collision_scenes_ptr->at(scene_index)->insert_sphere(radius, W, material, collision_class, is_dynamic));
+            coids.push_back(m_collision_scenes_ptr->at(scene_index)->insert_sphere(
+                    radius, W, material, collision_class, density_multiplier, is_dynamic
+                    ));
         });
 }
 
@@ -1366,6 +1379,7 @@ void  simulation_context::request_insert_collider_box(
         vector3 const&  half_sizes_along_axes,
         angeo::COLLISION_MATERIAL_TYPE const  material,
         angeo::COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         collision_scene_index const  scene_index
         ) const
 {
@@ -1375,6 +1389,7 @@ void  simulation_context::request_insert_collider_box(
     box.half_sizes_along_axes = half_sizes_along_axes;
     box.material = material;
     box.collision_class = collision_class;
+    box.density_multiplier = density_multiplier;
     box.scene_index = scene_index;
     m_requests_insert_collider_box.push_back(box);
     m_pending_requests.push_back(REQUEST_INSERT_COLLIDER_BOX);
@@ -1387,6 +1402,7 @@ void  simulation_context::request_insert_collider_capsule(
         float_32_bit const  thickness_from_central_line,
         angeo::COLLISION_MATERIAL_TYPE const  material,
         angeo::COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         collision_scene_index const  scene_index
         ) const
 {
@@ -1397,6 +1413,7 @@ void  simulation_context::request_insert_collider_capsule(
     capsule.thickness_from_central_line = thickness_from_central_line;
     capsule.material = material;
     capsule.collision_class = collision_class;
+    capsule.density_multiplier = density_multiplier;
     capsule.scene_index = scene_index;
     m_requests_insert_collider_capsule.push_back(capsule);
     m_pending_requests.push_back(REQUEST_INSERT_COLLIDER_CAPSULE);
@@ -1408,6 +1425,7 @@ void  simulation_context::request_insert_collider_sphere(
         float_32_bit const  radius,
         angeo::COLLISION_MATERIAL_TYPE const  material,
         angeo::COLLISION_CLASS const  collision_class,
+        float_32_bit const  density_multiplier,
         collision_scene_index const  scene_index
         ) const
 {
@@ -1417,6 +1435,7 @@ void  simulation_context::request_insert_collider_sphere(
     sphere.radius = radius;
     sphere.material = material;
     sphere.collision_class = collision_class;
+    sphere.density_multiplier = density_multiplier;
     sphere.scene_index = scene_index;
     m_requests_insert_collider_sphere.push_back(sphere);
     m_pending_requests.push_back(REQUEST_INSERT_COLLIDER_SPHERE);
@@ -1541,7 +1560,7 @@ object_guid  simulation_context::insert_collider(
     if (rigid_body_guid != invalid_object_guid())
         m_rigid_bodies.at(rigid_body_guid.index).colliders.push_back(collider_guid);
 
-    if (is_moveable_via_rigid_body)
+    if (is_moveable_via_rigid_body && scene_index == 0U)
         m_rigid_bodies_with_invalidated_shape.insert(rigid_body_guid);
 
     return collider_guid;
@@ -1571,7 +1590,7 @@ void  simulation_context::erase_collider(object_guid const  collider_guid)
         auto const  self_it = std::find(rb_colliders.begin(), rb_colliders.end(), collider_guid);
         ASSUMPTION(self_it != rb_colliders.end());
         rb_colliders.erase(self_it);
-        if (is_rigid_body_moveable(elem.rigid_body))
+        if (is_rigid_body_moveable(elem.rigid_body)&& elem.scene_index == 0U)
             m_rigid_bodies_with_invalidated_shape.insert(elem.rigid_body);
     }
     for (angeo::collision_object_id  coid : elem.id)
@@ -3120,6 +3139,8 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
         angeo::mass_and_inertia_tensor_builder  builder;
         for (object_guid  collider_guid : m_rigid_bodies.at(rb_guid.index).colliders)
         {
+            if (collider_scene_index(collider_guid) != 0U)
+                continue;
             switch (collision_class_of(collider_guid))
             {
             //case angeo::COLLISION_CLASS::STATIC_OBJECT:
@@ -3137,7 +3158,7 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
                         collider_box_half_sizes_along_axes(collider_guid),
                         frame_world_matrix(frame_of_collider(collider_guid)),
                         collision_material_of(collider_guid),
-                        1.0f // TODO!
+                        collider_density_multiplier(collider_guid)
                         );
                 break;
             case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
@@ -3146,7 +3167,7 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
                         collider_capsule_thickness_from_central_line(collider_guid),
                         frame_world_matrix(frame_of_collider(collider_guid)),
                         collision_material_of(collider_guid),
-                        1.0f // TODO!
+                        collider_density_multiplier(collider_guid)
                         );
                 break;
             case angeo::COLLISION_SHAPE_TYPE::SPHERE:
@@ -3154,7 +3175,7 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
                         translation_vector(frame_world_matrix(frame_of_collider(collider_guid))),
                         collider_sphere_radius(collider_guid),
                         collision_material_of(collider_guid),
-                        1.0f // TODO!
+                        collider_density_multiplier(collider_guid)
                         );
                 break;
             default:
@@ -3305,17 +3326,19 @@ void  simulation_context::process_pending_requests()
         case REQUEST_INSERT_COLLIDER_BOX: {
             auto  cursor = make_request_cursor_to(m_requests_insert_collider_box);
             insert_collider_box(cursor->under_folder_guid, cursor->name, cursor->half_sizes_along_axes,
-                                cursor->material, cursor->collision_class, cursor->scene_index);
+                                cursor->material, cursor->collision_class, cursor->density_multiplier,
+                                cursor->scene_index);
             } break;
         case REQUEST_INSERT_COLLIDER_CAPSULE: {
             auto  cursor = make_request_cursor_to(m_requests_insert_collider_capsule);
             insert_collider_capsule(cursor->under_folder_guid, cursor->name, cursor->half_distance_between_end_points,
-                                    cursor->thickness_from_central_line, cursor->material, cursor->collision_class, cursor->scene_index);
+                                    cursor->thickness_from_central_line, cursor->material, cursor->collision_class,
+                                    cursor->density_multiplier, cursor->scene_index);
             } break;
         case REQUEST_INSERT_COLLIDER_SPHERE: {
             auto  cursor = make_request_cursor_to(m_requests_insert_collider_sphere);
             insert_collider_sphere(cursor->under_folder_guid, cursor->name, cursor->radius, cursor->material,
-                                   cursor->collision_class, cursor->scene_index);
+                                   cursor->collision_class, cursor->density_multiplier, cursor->scene_index);
             } break;
         case REQUEST_ERASE_COLLIDER:
             erase_collider(*make_request_cursor_to(m_requests_erase_collider));

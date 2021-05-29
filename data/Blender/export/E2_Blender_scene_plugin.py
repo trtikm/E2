@@ -631,6 +631,15 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             default=False
             )
 
+    collider_density_multiplier: bpy.props.FloatProperty(
+            name="Density mult.",
+            description="Multiplier of the density given by the material.",
+            default=1.0,
+            min=0.1,
+            max=10.0,
+            step=0.001
+            )
+
     collider_scene_index: bpy.props.IntProperty(
             name="Scene idx",
             description="An index of collision scene for this collider.",
@@ -917,6 +926,9 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 row.prop(object, "scale")
             else:
                 row.prop(object, "dimensions")
+
+        row = layout.row()
+        row.prop(object_props, "collider_density_multiplier")
 
         row = layout.row()
         row.prop(object_props, "collider_scene_index")
@@ -1626,6 +1638,7 @@ class E2SceneExportOperator(bpy.types.Operator):
         result = {
             "object_kind": object.e2_custom_props.object_kind,
             "collider_kind": object.e2_custom_props.collider_kind,
+            "density_multiplier": num2str(object.e2_custom_props.collider_density_multiplier),
             "collision_scene_index": num2str(object.e2_custom_props.collider_scene_index)
         }
         if object.e2_custom_props.collider_kind == "TRIANGLE_MESH":

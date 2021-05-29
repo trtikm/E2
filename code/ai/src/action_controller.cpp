@@ -37,6 +37,7 @@ void  insert_collider_to_context(
                 aabb_half_size,
                 collision_material,
                 collision_class,
+                1.0f,
                 0U
                 );
         break;
@@ -48,6 +49,7 @@ void  insert_collider_to_context(
                 min_coord(aabb_half_size),
                 collision_material,
                 collision_class,
+                1.0f,
                 0U
                 );
         break;
@@ -58,6 +60,7 @@ void  insert_collider_to_context(
                 min_coord(aabb_half_size),
                 collision_material,
                 collision_class,
+                1.0f,
                 0U
                 );
         break;
@@ -1373,13 +1376,13 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
                 ROLLER_CONFIG.roller_mass_inverted,
                 matrix33_zero()
                 );
-        ctx().request_insert_collider_sphere(
+        insert_collider_to_context(
+                ctx(),
                 m_roller_folder_guid,
-                com::to_string(com::OBJECT_KIND::COLLIDER),
-                ROLLER_CONFIG.roller_radius,
+                angeo::COLLISION_SHAPE_TYPE::SPHERE,
+                { ROLLER_CONFIG.roller_radius, ROLLER_CONFIG.roller_radius, ROLLER_CONFIG.roller_radius },
                 MOTION_OBJECT_CONFIG.collision_material,
-                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT,
-                0U
+                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
                 );
         ctx().request_enable_colliding(
                 binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
@@ -1432,13 +1435,13 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
                 ROLLER_CONFIG.roller_mass_inverted,
                 matrix33_zero()
                 );
-        ctx().request_insert_collider_sphere(
+        insert_collider_to_context(
+                ctx(),
                 m_roller_folder_guid,
-                com::to_string(com::OBJECT_KIND::COLLIDER),
-                ROLLER_CONFIG.roller_radius,
+                angeo::COLLISION_SHAPE_TYPE::SPHERE,
+                { ROLLER_CONFIG.roller_radius, ROLLER_CONFIG.roller_radius, ROLLER_CONFIG.roller_radius },
                 MOTION_OBJECT_CONFIG.collision_material,
-                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT,
-                0U
+                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
                 );
         ctx().request_enable_colliding(
                 binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),

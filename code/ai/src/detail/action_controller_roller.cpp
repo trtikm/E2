@@ -117,6 +117,7 @@ action_controller_roller::action_controller_roller(
             m_config.ROLLER_RADIUS,
             m_config.ROLLER_MATERIAL,
             m_config.ROLLER_COLLISION_CLASS,
+            1.0f,
             0U
             );
 
@@ -145,6 +146,7 @@ action_controller_roller::action_controller_roller(
             m_config.ROLLER_RADIUS, // Yes, roller, because it is the same radius used for the capsule too.
             m_config.BODY_MATERIAL,
             m_config.BODY_COLLISION_CLASS,
+            1.0f,
             0U
             );
 
