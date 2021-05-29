@@ -831,7 +831,8 @@ std::string const&  simulation_context::name_of_batch(object_guid const  batch_g
 
 object_guid  simulation_context::to_batch_guid(gfx::batch const  batch) const
 {
-    return m_batches_to_guids.at(batch.uid());
+    auto const  it = m_batches_to_guids.find(batch.uid());
+    return it == m_batches_to_guids.end() ? invalid_object_guid() : it->second;
 }
 
 

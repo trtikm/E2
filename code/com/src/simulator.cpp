@@ -540,7 +540,7 @@ void  simulator::render()
                 it = tasks.insert({ batch_id, { batch, {} } }).first;
 
             for (object_guid  frame_guid : ctx.frames_of_batch(batch_guid))
-                it->second.frame_guids.push_back(frame_guid);
+                it->second.world_matrices.push_back(ctx.frame_world_matrix(frame_guid));
         }
 
     // Here we start the actual rendering of batches collected above.
@@ -593,177 +593,49 @@ void  simulator::render()
 }
 
 
-void  simulator::render_task(render_task_info const&  task)
-{
-    if (task.frame_guids.empty() && task.world_matrices.empty())
-        return;
-
-    simulation_context&  ctx = *context();
-    render_configuration&  cfg = render_config();
-
-    bool const  use_instancing =
-            task.frame_guids.size() + task.world_matrices.size() > 1UL &&
-            !task.batch.is_attached_to_skeleton() &&
-            task.batch.has_instancing_data()
-            ;
-
-    if (!gfx::make_current(task.batch, cfg.draw_state, use_instancing))
-        return;
-
-    gfx::fragment_shader_uniform_data_provider const  fs_uniform_data_provider(
-            cfg.diffuse_colour,
-            cfg.ambient_colour,
-            cfg.specular_colour,
-            cfg.directional_light_direction_in_camera_space,
-            cfg.directional_light_colour,
-            cfg.fog_colour,
-            cfg.fog_near,
-            cfg.fog_far
-            );
-
-    if (use_instancing)
-    {
-        gfx::vertex_shader_instanced_data_provider  instanced_data_provider(task.batch);
-        for (object_guid  frame_guid : task.frame_guids)
-            instanced_data_provider.insert_from_model_to_camera_matrix(
-                    cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(frame_guid)
-                    );
-        for (matrix44 const&  world_matrix : task.world_matrices)
-            instanced_data_provider.insert_from_model_to_camera_matrix(cfg.matrix_from_world_to_camera * world_matrix);
-        gfx::render_batch(
-                task.batch,
-                instanced_data_provider,
-                gfx::vertex_shader_uniform_data_provider(
-                        task.batch,
-                        {},
-                        cfg.matrix_from_camera_to_clipspace,
-                        cfg.diffuse_colour,
-                        cfg.ambient_colour,
-                        cfg.specular_colour,
-                        cfg.directional_light_direction_in_camera_space,
-                        cfg.directional_light_colour,
-                        cfg.fog_colour,
-                        cfg.fog_near,
-                        cfg.fog_far
-                        ),
-                fs_uniform_data_provider
-                );    
-        cfg.draw_state = task.batch.get_draw_state();
-    }
-    else if (task.batch.is_attached_to_skeleton())
-    {
-        std::vector<matrix44> const&  to_bone_matrices = ctx.matrices_to_pose_bones_of_batch(ctx.to_batch_guid(task.batch));
-        INVARIANT(
-                !to_bone_matrices.empty() &&
-                task.frame_guids.empty() != task.world_matrices.empty() &&
-                task.frame_guids.size() + task.world_matrices.size() >= to_bone_matrices.size() &&
-                (task.frame_guids.size() + task.world_matrices.size()) % to_bone_matrices.size() == 0U
-                );
-        std::vector<matrix44>  frames_of_bones;
-        frames_of_bones.reserve(to_bone_matrices.size());
-        natural_32_bit const  n = (natural_32_bit)task.frame_guids.size();
-        natural_32_bit const  m = (natural_32_bit)to_bone_matrices.size();
-        for (natural_32_bit  i = 0U; i != n; )
-        {
-            frames_of_bones.clear();
-            for (natural_32_bit  j = 0U; j != m; ++j, ++i)
-                frames_of_bones.push_back(
-                        cfg.matrix_from_world_to_camera *
-                        (task.frame_guids.empty() ? task.world_matrices.at(i) :
-                                                    ctx.frame_world_matrix(task.frame_guids.at(i))) *
-                        to_bone_matrices.at(j)
-                        );
-            gfx::render_batch(
-                    task.batch,
-                    gfx::vertex_shader_uniform_data_provider(
-                            task.batch,
-                            frames_of_bones,
-                            cfg.matrix_from_camera_to_clipspace,
-                            cfg.diffuse_colour,
-                            cfg.ambient_colour,
-                            cfg.specular_colour,
-                            cfg.directional_light_direction_in_camera_space,
-                            cfg.directional_light_colour,
-                            cfg.fog_colour,
-                            cfg.fog_near,
-                            cfg.fog_far
-                            ),
-                    fs_uniform_data_provider
-                    );
-            cfg.draw_state = task.batch.get_draw_state();
-        }
-    }
-    else
-    {
-        auto const  render = [this, &task, &cfg, &fs_uniform_data_provider](matrix44 const&  world_matrix) {
-            gfx::render_batch(
-                    task.batch,
-                    gfx::vertex_shader_uniform_data_provider(
-                            task.batch,
-                            { cfg.matrix_from_world_to_camera * world_matrix },
-                            cfg.matrix_from_camera_to_clipspace,
-                            cfg.diffuse_colour,
-                            cfg.ambient_colour,
-                            cfg.specular_colour,
-                            cfg.directional_light_direction_in_camera_space,
-                            cfg.directional_light_colour,
-                            cfg.fog_colour,
-                            cfg.fog_near,
-                            cfg.fog_far
-                            ),
-                    fs_uniform_data_provider
-                    );
-            cfg.draw_state = task.batch.get_draw_state();
-        };
-        for (object_guid  frame_guid : task.frame_guids)
-            render(ctx.frame_world_matrix(frame_guid));
-        for (matrix44 const&  world_matrix : task.world_matrices)
-            render(world_matrix);
-    }
-}
-
-
-void  simulator::render_grid()
+void  simulator::render_batch(gfx::batch  batch, std::vector<matrix44> const&  world_matrices)
 {
     simulation_context&  ctx = *context();
     render_configuration&  cfg = render_config();
-
-    if (!gfx::make_current(cfg.batch_grid, cfg.draw_state))
-        return;
-
+    object_guid const  batch_guid = ctx.to_batch_guid(batch);
+    static std::vector<matrix44> const  _no_to_pose_bone_matrices;
     gfx::render_batch(
-        cfg.batch_grid,
-        gfx::vertex_shader_uniform_data_provider(
-            cfg.batch_grid,
-            { cfg.matrix_from_world_to_camera },
+            batch,
+            world_matrices,
+            batch_guid == invalid_object_guid() ? _no_to_pose_bone_matrices : ctx.matrices_to_pose_bones_of_batch(batch_guid),
+            cfg.matrix_from_world_to_camera,
             cfg.matrix_from_camera_to_clipspace,
             cfg.diffuse_colour,
             cfg.ambient_colour,
             cfg.specular_colour,
             cfg.directional_light_direction_in_camera_space,
             cfg.directional_light_colour,
+            true,
             cfg.fog_colour,
             cfg.fog_near,
-            cfg.fog_far
-            )
-        );
+            cfg.fog_far,
+            &cfg.draw_state
+            );
+}
 
-    cfg.draw_state = cfg.batch_grid.get_draw_state();
+
+void  simulator::render_task(render_task_info const&  task)
+{
+    render_batch(task.batch, task.world_matrices);
+}
+
+
+void  simulator::render_grid()
+{
+    render_batch(render_config().batch_grid, { matrix44_identity() });
 }
 
 
 void  simulator::render_frames()
 {
     simulation_context&  ctx = *context();
-
     if (ctx.frames_begin() == ctx.frames_end())
         return;
-
-    render_configuration&  cfg = render_config();
-
-    if (!gfx::make_current(cfg.batch_frame, cfg.draw_state, true))
-        return;
-
     std::unordered_set<object_guid>  skeleton_frames;
     if (!render_config().render_skeleton_frames)
         for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
@@ -772,33 +644,12 @@ void  simulator::render_frames()
                     m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it)).get_binding()->frame_guids_of_bones;
             skeleton_frames.insert(bone_frame_guids.begin(), bone_frame_guids.end());
         }
-
-    gfx::vertex_shader_instanced_data_provider  instanced_data_provider(cfg.batch_frame);
+    render_task_info  task{ render_config().batch_frame, {} };
     for (simulation_context::frame_guid_iterator  frame_it = ctx.frames_begin(), frame_end = ctx.frames_end();
-         frame_it != frame_end; ++frame_it)
+            frame_it != frame_end; ++frame_it)
         if (skeleton_frames.count(*frame_it) == 0UL)
-            instanced_data_provider.insert_from_model_to_camera_matrix(
-                    cfg.matrix_from_world_to_camera * ctx.frame_world_matrix(*frame_it)
-                    );
-    gfx::render_batch(
-        cfg.batch_frame,
-        instanced_data_provider,
-        gfx::vertex_shader_uniform_data_provider(
-            cfg.batch_frame,
-            {},
-            cfg.matrix_from_camera_to_clipspace,
-            cfg.diffuse_colour,
-            cfg.ambient_colour,
-            cfg.specular_colour,
-            cfg.directional_light_direction_in_camera_space,
-            cfg.directional_light_colour,
-            cfg.fog_colour,
-            cfg.fog_near,
-            cfg.fog_far
-            )
-        );
-
-    cfg.draw_state = cfg.batch_frame.get_draw_state();
+            task.world_matrices.push_back(ctx.frame_world_matrix(*frame_it));
+    render_task(task);
 }
 
 
@@ -878,7 +729,7 @@ void  simulator::render_colliders()
         auto  it = tasks.find(batch_id);
         if (it == tasks.end())
             it = tasks.insert({ batch_id, { batch, {} } }).first;
-        it->second.frame_guids.push_back(ctx.frame_of_collider(collider_guid));
+        it->second.world_matrices.push_back(ctx.frame_world_matrix(ctx.frame_of_collider(collider_guid)));
     }
 
     m_collider_batches_cache.swap(collider_batches_cache);
@@ -899,8 +750,8 @@ void  simulator::render_colliders()
 void  simulator::render_collision_contacts()
 {
     simulation_context&  ctx = *context();
-    render_task_info  sensory_task{ render_config().batch_sensory_collision_contact, {}, {} };
-    render_task_info  physics_task{ render_config().batch_physics_collision_contact, {}, {} };
+    render_task_info  sensory_task{ render_config().batch_sensory_collision_contact, {} };
+    render_task_info  physics_task{ render_config().batch_physics_collision_contact, {} };
     sensory_task.world_matrices.reserve(ctx.num_collision_contacts());
     physics_task.world_matrices.reserve(ctx.num_collision_contacts());
     for (simulation_context::collision_contacts_iterator  it = ctx.collision_contacts_begin(), end = ctx.collision_contacts_end();
@@ -972,8 +823,8 @@ void  simulator::render_sight_contacts()
 {
     simulation_context&  ctx = *context();
 
-    render_task_info  task_sight_contacts_directed{ render_config().batch_sight_raycast_contact_directed, {}, {} };
-    render_task_info  task_sight_contacts_random{ render_config().batch_sight_raycast_contact_random, {}, {} };
+    render_task_info  task_sight_contacts_directed{ render_config().batch_sight_raycast_contact_directed, {} };
+    render_task_info  task_sight_contacts_random{ render_config().batch_sight_raycast_contact_random, {} };
     for (simulation_context::agent_guid_iterator  agent_it = ctx.agents_begin(), end = ctx.agents_end(); agent_it != end; ++agent_it)
     {
         ai::sight_controller const&  sight = m_ai_simulator_ptr->get_agent(ctx.from_agent_guid(*agent_it)).get_sight_controller();

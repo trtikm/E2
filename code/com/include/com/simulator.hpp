@@ -169,12 +169,13 @@ struct  simulator : public osi::simulator
 
     natural_32_bit  FPS() const { return m_FPS; }
 
+    void  render_batch(gfx::batch  batch, std::vector<matrix44> const&  world_matrices);
+
 private:
 
     struct  render_task_info
     {
         gfx::batch  batch;
-        std::vector<object_guid>  frame_guids;
         std::vector<matrix44>  world_matrices;
     };
     using  render_tasks_map = std::unordered_map<std::string, render_task_info>;
