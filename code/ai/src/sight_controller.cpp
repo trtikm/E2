@@ -430,6 +430,7 @@ bool  sight_controller::perform_ray_cast(
             ray_end,
             true,
             true,
+            0U,
             &result.parameter_to_coid,
             m_ray_cast_config.collider_filter
             );

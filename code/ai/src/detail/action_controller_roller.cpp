@@ -116,7 +116,8 @@ action_controller_roller::action_controller_roller(
             "COLLIDER.roller_sphere",
             m_config.ROLLER_RADIUS,
             m_config.ROLLER_MATERIAL,
-            m_config.ROLLER_COLLISION_CLASS
+            m_config.ROLLER_COLLISION_CLASS,
+            0U
             );
 
     m_roller_frame = ctx().frame_explicit_coord_system_in_world_space(m_roller_frame_guid);
@@ -143,7 +144,8 @@ action_controller_roller::action_controller_roller(
             m_config.BODY_EXCENTRICITY,
             m_config.ROLLER_RADIUS, // Yes, roller, because it is the same radius used for the capsule too.
             m_config.BODY_MATERIAL,
-            m_config.BODY_COLLISION_CLASS
+            m_config.BODY_COLLISION_CLASS,
+            0U
             );
 
     ctx().request_enable_colliding(m_roller_collider_guid, m_body_collider_guid, false);

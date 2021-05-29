@@ -208,7 +208,8 @@ static void  import_collider(
                 name,
                 import_vector3(hierarchy.get_child("half_sizes_along_axes")),
                 angeo::read_collison_material_from_string(hierarchy.get<std::string>("collision_material")),
-                angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class"))
+                angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class")),
+                (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     else if (collider_kind == "CAPSULE")
         ctx.insert_collider_capsule(
@@ -217,7 +218,8 @@ static void  import_collider(
                 hierarchy.get<float_32_bit>("half_distance_between_end_points"),
                 hierarchy.get<float_32_bit>("thickness_from_central_line"),
                 angeo::read_collison_material_from_string(hierarchy.get<std::string>("collision_material")),
-                angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class"))
+                angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class")),
+                (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     else if (collider_kind == "SPHERE")
         ctx.insert_collider_sphere(
@@ -225,7 +227,8 @@ static void  import_collider(
                 name,
                 hierarchy.get<float_32_bit>("radius"),
                 angeo::read_collison_material_from_string(hierarchy.get<std::string>("collision_material")),
-                angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class"))
+                angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class")),
+                (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     else if (collider_kind == "TRIANGLE_MESH")
     {
@@ -281,7 +284,8 @@ static void  import_collider(
                 index_buffer.num_primitives(),
                 collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
                 angeo::read_collison_material_from_string(hierarchy.get<std::string>("collision_material")),
-                angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class"))
+                angeo::read_collison_class_from_string(hierarchy.get<std::string>("collision_class")),
+                (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     }
     else

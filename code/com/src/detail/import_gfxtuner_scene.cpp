@@ -155,7 +155,8 @@ static void  import_gfxtuner_scene_node(
                                 data.get<float_32_bit>("half_size_along_y"),
                                 data.get<float_32_bit>("half_size_along_z")),
                         angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
+                        (natural_8_bit)std::stoul(data.get<std::string>("collision_scene_index"))
                         );
             else if (shape_type == angeo::COLLISION_SHAPE_TYPE::CAPSULE)
                 ctx.insert_collider_capsule(
@@ -163,14 +164,16 @@ static void  import_gfxtuner_scene_node(
                         data.get<float_32_bit>("half_distance_between_end_points"),
                         data.get<float_32_bit>("thickness_from_central_line"),
                         angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
+                        (natural_8_bit)std::stoul(data.get<std::string>("collision_scene_index"))
                         );
             else if (shape_type == angeo::COLLISION_SHAPE_TYPE::SPHERE)
                 ctx.insert_collider_sphere(
                         folder_guid, to_string(OBJECT_KIND::COLLIDER) + ".sphere",
                         data.get<float_32_bit>("radius"),
                         angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
+                        (natural_8_bit)std::stoul(data.get<std::string>("collision_scene_index"))
                         );
             else if (shape_type == angeo::COLLISION_SHAPE_TYPE::TRIANGLE)
             {
@@ -224,7 +227,8 @@ static void  import_gfxtuner_scene_node(
                         index_buffer.num_primitives(),
                         collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
                         angeo::read_collison_material_from_string(data.get<std::string>("material")),
-                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class"))
+                        angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
+                        (natural_8_bit)std::stoul(data.get<std::string>("collision_scene_index"))
                         );
             }
             else

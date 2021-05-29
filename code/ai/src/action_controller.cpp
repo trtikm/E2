@@ -36,7 +36,8 @@ void  insert_collider_to_context(
                 com::to_string(com::OBJECT_KIND::COLLIDER),
                 aabb_half_size,
                 collision_material,
-                collision_class
+                collision_class,
+                0U
                 );
         break;
     case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
@@ -46,7 +47,8 @@ void  insert_collider_to_context(
                 max_coord(aabb_half_size) - min_coord(aabb_half_size),
                 min_coord(aabb_half_size),
                 collision_material,
-                collision_class
+                collision_class,
+                0U
                 );
         break;
     case angeo::COLLISION_SHAPE_TYPE::SPHERE:
@@ -55,7 +57,8 @@ void  insert_collider_to_context(
                 com::to_string(com::OBJECT_KIND::COLLIDER),
                 min_coord(aabb_half_size),
                 collision_material,
-                collision_class
+                collision_class,
+                0U
                 );
         break;
     default: { UNREACHABLE(); break; }
@@ -818,7 +821,7 @@ bool  agent_action::is_empty_space(
     switch (shape_type)
     {
     case angeo::COLLISION_SHAPE_TYPE::BOX:
-        return ctx().compute_contacts_with_box(aabb_half_size, world_matrix, true, true, acceptor, filter) == 0U;
+        return ctx().compute_contacts_with_box(aabb_half_size, world_matrix, true, true, 0U, acceptor, filter) == 0U;
     case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
         return ctx().compute_contacts_with_capsule(
                     max_coord(aabb_half_size) - min_coord(aabb_half_size),
@@ -826,11 +829,12 @@ bool  agent_action::is_empty_space(
                     world_matrix,
                     true,
                     true,
+                    0U,
                     acceptor,
                     filter
                     ) == 0U;
     case angeo::COLLISION_SHAPE_TYPE::SPHERE:
-        return ctx().compute_contacts_with_sphere(min_coord(aabb_half_size), world_matrix, true, true, acceptor, filter) == 0U;
+        return ctx().compute_contacts_with_sphere(min_coord(aabb_half_size), world_matrix, true, true, 0U, acceptor, filter) == 0U;
     default: { UNREACHABLE(); break; }
     }
     return true;
@@ -1374,7 +1378,8 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
                 com::to_string(com::OBJECT_KIND::COLLIDER),
                 ROLLER_CONFIG.roller_radius,
                 MOTION_OBJECT_CONFIG.collision_material,
-                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
+                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT,
+                0U
                 );
         ctx().request_enable_colliding(
                 binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),
@@ -1432,7 +1437,8 @@ void  action_roller::on_transition(agent_action* const  from_action_ptr, transit
                 com::to_string(com::OBJECT_KIND::COLLIDER),
                 ROLLER_CONFIG.roller_radius,
                 MOTION_OBJECT_CONFIG.collision_material,
-                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT
+                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT,
+                0U
                 );
         ctx().request_enable_colliding(
                 binding().folder_guid_of_motion_object, com::to_string(com::OBJECT_KIND::COLLIDER),

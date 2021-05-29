@@ -50,7 +50,7 @@ using  simulation_context_const_ptr = std::shared_ptr<simulation_context const>;
 struct  simulation_context
 {
     static simulation_context_ptr  create(
-            std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
+            std::shared_ptr<std::vector<std::shared_ptr<angeo::collision_scene> > > const  collision_scenes_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
             std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
@@ -320,6 +320,7 @@ struct  simulation_context
     /////////////////////////////////////////////////////////////////////////////////////
 
     using  collider_guid_iterator = object_guid_iterator<OBJECT_KIND::COLLIDER>;
+    using  collision_scene_index = natural_8_bit;
 
     bool  is_valid_collider_guid(object_guid const  collider_guid) const;
     object_guid  folder_of_collider(object_guid const  collider_guid) const;
@@ -338,37 +339,43 @@ struct  simulation_context
     float_32_bit  collider_capsule_thickness_from_central_line(object_guid const  collider_guid) const;
     float_32_bit  collider_sphere_radius(object_guid const  collider_guid) const;
     bool  is_collider_enabled(object_guid const  collider_guid) const;
+    collision_scene_index  collider_scene_index(object_guid const  collider_guid) const;
     object_guid  insert_collider_box(
             object_guid const  under_folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            angeo::COLLISION_CLASS const  collision_class
+            angeo::COLLISION_CLASS const  collision_class,
+            collision_scene_index const  scene_index
             ) const;
     object_guid  insert_collider_capsule(
             object_guid const  under_folder_guid, std::string const&  name,
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            angeo::COLLISION_CLASS const  collision_class
+            angeo::COLLISION_CLASS const  collision_class,
+            collision_scene_index const  scene_index
             ) const;
     object_guid  insert_collider_sphere(
             object_guid const  under_folder_guid, std::string const&  name,
             float_32_bit const  radius,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            angeo::COLLISION_CLASS const  collision_class
+            angeo::COLLISION_CLASS const  collision_class,
+            collision_scene_index const  scene_index
             ) const;
     object_guid  insert_collider_triangle_mesh(
             object_guid const  under_folder_guid, std::string const&  name_prefix,
             natural_32_bit const  num_triangles,
             std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            angeo::COLLISION_CLASS const  collision_class
+            angeo::COLLISION_CLASS const  collision_class,
+            collision_scene_index const  scene_index
             ) const;
     object_guid  ray_cast_to_nearest_collider(
             vector3 const&  ray_origin,
             vector3 const&  ray_end,
             bool const  search_static,
             bool const  search_dynamic,
+            collision_scene_index const  scene_index,
             float_32_bit* const  ray_parameter_to_nearest_collider = nullptr,
             std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
                     [](object_guid, angeo::COLLISION_CLASS) { return true; }
@@ -382,20 +389,23 @@ struct  simulation_context
             object_guid const  under_folder_guid, std::string const&  name,
             vector3 const&  half_sizes_along_axes,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            angeo::COLLISION_CLASS const  collision_class
+            angeo::COLLISION_CLASS const  collision_class,
+            collision_scene_index const  scene_index
             ) const;
     void  request_insert_collider_capsule(
             object_guid const  under_folder_guid, std::string const&  name,
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            angeo::COLLISION_CLASS const  collision_class
+            angeo::COLLISION_CLASS const  collision_class,
+            collision_scene_index const  scene_index
             ) const;
     void  request_insert_collider_sphere(
             object_guid const  under_folder_guid, std::string const&  name,
             float_32_bit const  radius,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            angeo::COLLISION_CLASS const  collision_class
+            angeo::COLLISION_CLASS const  collision_class,
+            collision_scene_index const  scene_index
             ) const;
     void  request_erase_collider(object_guid const  collider_guid) const;
     // Disabled (not const) for modules.
@@ -404,7 +414,7 @@ struct  simulation_context
     std::vector<angeo::collision_object_id> const&  from_collider_guid(object_guid const  collider_guid);
     void  relocate_collider(object_guid const  collider_guid, matrix44 const&  world_matrix);
     object_guid  insert_collider(
-            object_guid const  under_folder_guid, std::string const&  name,
+            object_guid const  under_folder_guid, std::string const&  name, collision_scene_index const  scene_index,
             std::function<void(matrix44 const&, bool, std::vector<angeo::collision_object_id>&)> const&  coids_builder
             );
     void  erase_collider(object_guid const  collider_guid);
@@ -662,6 +672,7 @@ struct  simulation_context
             matrix44 const&  from_base_matrix,
             bool const  search_static,
             bool const  search_dynamic,
+            collision_scene_index const  scene_index,
             std::function<bool(collision_contact const&)> const&  contact_acceptor =
                     [](collision_contact const&) { return false; },
             std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
@@ -673,6 +684,7 @@ struct  simulation_context
             matrix44 const&  from_base_matrix,
             bool const  search_static,
             bool const  search_dynamic,
+            collision_scene_index const  scene_index,
             std::function<bool(collision_contact const&)> const&  contact_acceptor =
                     [](collision_contact const&) { return false; },
             std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
@@ -683,6 +695,7 @@ struct  simulation_context
             matrix44 const&  from_base_matrix,
             bool const  search_static,
             bool const  search_dynamic,
+            collision_scene_index const  scene_index,
             std::function<bool(collision_contact const&)> const&  contact_acceptor =
                     [](collision_contact const&) { return false; },
             std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
@@ -802,18 +815,22 @@ private:
             : base_type()
             , frame(invalid_object_guid())
             , owner(invalid_object_guid())
+            , scene_index(std::numeric_limits<collision_scene_index>::max())
         {}
         folder_element_collider(module_specific_id const&  id_, index_type const  folder_index_, std::string const&  name,
-                object_guid const  frame_, object_guid const  owner_, object_guid const  rigid_body_
+                object_guid const  frame_, object_guid const  owner_, object_guid const  rigid_body_,
+                collision_scene_index const  scene_index_
                 )
             : base_type(id_, folder_index_, name)
             , frame(frame_)
             , owner(owner_)
             , rigid_body(rigid_body_)
+            , scene_index(scene_index_)
         {}
         object_guid  frame;
         object_guid  owner; // Can be either a rigid body, a device, or an agent.
         object_guid  rigid_body; // Can also be equal to the 'invalid_object_guid()'.
+        collision_scene_index  scene_index;
     };
 
     struct  folder_element_rigid_body : public folder_element<angeo::rigid_body_id>
@@ -875,7 +892,7 @@ private:
     dynamic_array<folder_element_agent, index_type>  m_agents;
 
     frames_provider  m_frames_provider;
-    std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
+    std::shared_ptr<std::vector<std::shared_ptr<angeo::collision_scene> > >  m_collision_scenes_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::shared_ptr<com::device_simulator>  m_device_simulator_ptr;
     std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
@@ -1008,6 +1025,7 @@ private:
         std::string  name;
         angeo::COLLISION_MATERIAL_TYPE  material;
         angeo::COLLISION_CLASS  collision_class;
+        collision_scene_index  scene_index;
     };
     struct  request_data_insert_collider_box : public request_data_insert_collider_base
     { vector3  half_sizes_along_axes; };
@@ -1111,7 +1129,7 @@ private:
     /////////////////////////////////////////////////////////////////////////////////////
 
     simulation_context(
-            std::shared_ptr<angeo::collision_scene> const  collision_scene_ptr_,
+            std::shared_ptr<std::vector<std::shared_ptr<angeo::collision_scene> > > const  collision_scenes_ptr_,
             std::shared_ptr<angeo::rigid_body_simulator> const  rigid_body_simulator_ptr_,
             std::shared_ptr<com::device_simulator> const  device_simulator_ptr_,
             std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,

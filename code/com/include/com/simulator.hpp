@@ -143,8 +143,11 @@ struct  simulator : public osi::simulator
 
     virtual void  on_end_round() {}
 
-    std::shared_ptr<angeo::collision_scene>  collision_scene() { return m_collision_scene_ptr; }
-    std::shared_ptr<angeo::collision_scene const>  collision_scene() const { return m_collision_scene_ptr; }
+    //std::shared_ptr<angeo::collision_scene>  collision_scene() { return m_collision_scenes_ptr->front(); }
+    //std::shared_ptr<angeo::collision_scene const>  collision_scene() const { return m_collision_scenes_ptr->front(); }
+
+    std::shared_ptr<angeo::collision_scene>  collision_scene(natural_8_bit const  idx) { return m_collision_scenes_ptr->at(idx); }
+    std::shared_ptr<angeo::collision_scene const>  collision_scene(natural_8_bit const  idx) const { return m_collision_scenes_ptr->at(idx); }
 
     std::shared_ptr<angeo::rigid_body_simulator>  rigid_body_simulator() { return m_rigid_body_simulator_ptr; }
     std::shared_ptr<angeo::rigid_body_simulator const>  rigid_body_simulator() const { return m_rigid_body_simulator_ptr; }
@@ -198,7 +201,7 @@ private:
 
     void  update_console();
 
-    std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
+    std::shared_ptr<std::vector<std::shared_ptr<angeo::collision_scene> > >  m_collision_scenes_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::shared_ptr<com::device_simulator>  m_device_simulator_ptr;
     std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;

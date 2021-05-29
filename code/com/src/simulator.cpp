@@ -155,13 +155,19 @@ struct  simulator::sight_image_render_data
 
 
 simulator::simulator(std::string const&  data_root_dir)
-    : m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
+    : m_collision_scenes_ptr(
+            [](){
+                auto  vec_ptr = std::make_shared<std::vector<std::shared_ptr<angeo::collision_scene> > >();
+                vec_ptr->push_back(std::make_shared<angeo::collision_scene>());
+                return vec_ptr;
+                }()
+            )
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
     , m_device_simulator_ptr(std::make_shared<com::device_simulator>())
     , m_ai_simulator_ptr(std::make_shared<ai::simulator>())
 
     , m_context(simulation_context::create(
-            m_collision_scene_ptr,
+            m_collision_scenes_ptr,
             m_rigid_body_simulator_ptr,
             m_device_simulator_ptr,
             m_ai_simulator_ptr,
@@ -189,7 +195,8 @@ simulator::~simulator()
     m_ai_simulator_ptr.reset();
     m_device_simulator_ptr.reset();
     m_rigid_body_simulator_ptr.reset();
-    m_collision_scene_ptr.reset();
+    for (auto  ptr : *m_collision_scenes_ptr)
+        ptr.reset();
 
     m_context.reset();
 }
@@ -357,64 +364,89 @@ void  simulator::update_collision_contacts_and_constraints()
 
     simulation_context&  ctx = *context();
 
-    collision_scene()->compute_contacts_of_all_dynamic_objects(
-            [this, &ctx](
-                angeo::contact_id const&  cid,
-                vector3 const&  contact_point,
-                vector3 const&  unit_normal,
-                float_32_bit  penetration_depth) -> bool {
-                    angeo::collision_object_id const  coid_1 = angeo::get_object_id(angeo::get_first_collider_id(cid));
-                    angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
+    for (natural_8_bit  i = 0U; i < (natural_8_bit)m_collision_scenes_ptr->size(); ++i)
+    {
+        if (m_collision_scenes_ptr->at(i) == nullptr)
+            continue;
+        if (i == 0U)
+            m_collision_scenes_ptr->at(i)->compute_contacts_of_all_dynamic_objects(
+                [this, &ctx](
+                    angeo::contact_id const&  cid,
+                    vector3 const&  contact_point,
+                    vector3 const&  unit_normal,
+                    float_32_bit  penetration_depth) -> bool {
+                        angeo::collision_object_id const  coid_1 = angeo::get_object_id(angeo::get_first_collider_id(cid));
+                        angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
 
-                    object_guid const  collider_1_guid = ctx.to_collider_guid(coid_1);
-                    object_guid const  collider_2_guid = ctx.to_collider_guid(coid_2);
+                        object_guid const  collider_1_guid = ctx.to_collider_guid(coid_1);
+                        object_guid const  collider_2_guid = ctx.to_collider_guid(coid_2);
 
-                    ctx.insert_collision_contact({ collider_1_guid, collider_2_guid, contact_point, unit_normal, penetration_depth });
+                        ctx.insert_collision_contact({ 0U, collider_1_guid, collider_2_guid, contact_point, unit_normal, penetration_depth });
 
-                    object_guid const  rb_1_guid = ctx.rigid_body_of_collider(collider_1_guid);
-                    object_guid const  rb_2_guid = ctx.rigid_body_of_collider(collider_2_guid);
+                        object_guid const  rb_1_guid = ctx.rigid_body_of_collider(collider_1_guid);
+                        object_guid const  rb_2_guid = ctx.rigid_body_of_collider(collider_2_guid);
 
-                    if (!detail::should_compute_contact_response_for_rigid_body_guids(rb_1_guid, rb_2_guid))
-                        return true;
+                        if (!detail::should_compute_contact_response_for_rigid_body_guids(rb_1_guid, rb_2_guid))
+                            return true;
 
-                    INVARIANT(ctx.is_rigid_body_moveable(rb_1_guid) || ctx.is_rigid_body_moveable(rb_2_guid));
+                        INVARIANT(ctx.is_rigid_body_moveable(rb_1_guid) || ctx.is_rigid_body_moveable(rb_2_guid));
 
-                    angeo::COLLISION_MATERIAL_TYPE const  material_1 = ctx.collision_material_of(collider_1_guid);
-                    angeo::COLLISION_MATERIAL_TYPE const  material_2 = ctx.collision_material_of(collider_2_guid);
+                        angeo::COLLISION_MATERIAL_TYPE const  material_1 = ctx.collision_material_of(collider_1_guid);
+                        angeo::COLLISION_MATERIAL_TYPE const  material_2 = ctx.collision_material_of(collider_2_guid);
 
-                    bool const  use_friction =
-                            material_1 != angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING &&
-                            material_2 != angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING ;
-                    angeo::rigid_body_simulator::contact_friction_constraints_info  friction_info;
-                    if (use_friction)
-                    {
-                        friction_info.m_unit_tangent_plane_vectors.resize(2UL);
-                        angeo::compute_tangent_space_of_unit_vector(
+                        bool const  use_friction =
+                                material_1 != angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING &&
+                                material_2 != angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING ;
+                        angeo::rigid_body_simulator::contact_friction_constraints_info  friction_info;
+                        if (use_friction)
+                        {
+                            friction_info.m_unit_tangent_plane_vectors.resize(2UL);
+                            angeo::compute_tangent_space_of_unit_vector(
+                                    unit_normal,
+                                    friction_info.m_unit_tangent_plane_vectors.front(),
+                                    friction_info.m_unit_tangent_plane_vectors.back()
+                                    );
+                            friction_info.m_suppress_negative_directions = false;
+                            friction_info.m_max_tangent_relative_speed_for_static_friction = 0.001f;
+                        }
+                        std::vector<angeo::motion_constraint_system::constraint_id>  output_constraint_ids;
+                        m_rigid_body_simulator_ptr->insert_contact_constraints(
+                                ctx.from_rigid_body_guid(rb_1_guid),
+                                ctx.from_rigid_body_guid(rb_2_guid),
+                                cid,
+                                contact_point,
                                 unit_normal,
-                                friction_info.m_unit_tangent_plane_vectors.front(),
-                                friction_info.m_unit_tangent_plane_vectors.back()
+                                material_1,
+                                material_2,
+                                use_friction ? &friction_info : nullptr,
+                                penetration_depth,
+                                20.0f
                                 );
-                        friction_info.m_suppress_negative_directions = false;
-                        friction_info.m_max_tangent_relative_speed_for_static_friction = 0.001f;
-                    }
-                    std::vector<angeo::motion_constraint_system::constraint_id>  output_constraint_ids;
-                    m_rigid_body_simulator_ptr->insert_contact_constraints(
-                            ctx.from_rigid_body_guid(rb_1_guid),
-                            ctx.from_rigid_body_guid(rb_2_guid),
-                            cid,
-                            contact_point,
-                            unit_normal,
-                            material_1,
-                            material_2,
-                            use_friction ? &friction_info : nullptr,
-                            penetration_depth,
-                            20.0f
-                            );
 
-                    return true;
-                },
-            true
-            );
+                        return true;
+                    },
+                true
+                );
+        else
+            m_collision_scenes_ptr->at(i)->compute_contacts_of_all_dynamic_objects(
+                [this, &ctx, i](
+                    angeo::contact_id const&  cid,
+                    vector3 const&  contact_point,
+                    vector3 const&  unit_normal,
+                    float_32_bit  penetration_depth) -> bool {
+                        angeo::collision_object_id const  coid_1 = angeo::get_object_id(angeo::get_first_collider_id(cid));
+                        angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
+
+                        object_guid const  collider_1_guid = ctx.to_collider_guid(coid_1);
+                        object_guid const  collider_2_guid = ctx.to_collider_guid(coid_2);
+
+                        ctx.insert_collision_contact({ i, collider_1_guid, collider_2_guid, contact_point, unit_normal, penetration_depth });
+
+                        return true;
+                    },
+                true
+                );
+    }
 }
 
 
@@ -1214,14 +1246,17 @@ gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_gui
         {
             matrix44 const  to_node_matrix = inverse44(ctx.frame_world_matrix(ctx.frame_of_collider(collider_guid)));
 
+            simulation_context::collision_scene_index const  scene_idx = ctx.collider_scene_index(collider_guid);
+            angeo::collision_scene const&  collision_scene = *m_collision_scenes_ptr->at(scene_idx);
+
             std::vector<std::pair<vector3,vector3> >  lines;
             std::vector<vector4>  colours_of_lines;
             vector4 const  ignored_edge_colour = expand34(0.5f * contract43(colour), 1.0f);
             for (angeo::collision_object_id const  coid : ctx.from_collider_guid(collider_guid))
             {
-                auto const&  getter = m_collision_scene_ptr->get_triangle_points_getter(coid);
-                natural_32_bit const  triangle_index = m_collision_scene_ptr->get_triangle_index(coid);
-                natural_8_bit const  edge_ignore_mask = m_collision_scene_ptr->get_trinagle_edges_ignore_mask(coid);
+                auto const&  getter = collision_scene.get_triangle_points_getter(coid);
+                natural_32_bit const  triangle_index = collision_scene.get_triangle_index(coid);
+                natural_8_bit const  edge_ignore_mask = collision_scene.get_trinagle_edges_ignore_mask(coid);
 
                 std::array<vector3, 3U> const  P = {
                     getter(triangle_index, 0U),
@@ -1241,14 +1276,14 @@ gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_gui
                 if (cfg.include_normals_to_batches_of_trinagle_mesh_colliders)
                     lines.push_back({
                             center,
-                            center + 0.25f * transform_vector(m_collision_scene_ptr->get_triangle_unit_normal_in_world_space(coid),
+                            center + 0.25f * transform_vector(collision_scene.get_triangle_unit_normal_in_world_space(coid),
                                                              to_node_matrix)
                             });
                 colours_of_lines.push_back(colour);
 
                 if (cfg.include_neigbour_lines_to_to_batches_of_trinagle_mesh_colliders)
                     for (natural_32_bit i = 0U; i != 3U; ++i)
-                        if (m_collision_scene_ptr->get_trinagle_neighbour_over_edge(coid, i) != coid)
+                        if (collision_scene.get_trinagle_neighbour_over_edge(coid, i) != coid)
                         {
                             vector3 const  A = 0.5f * (P[i] + P[(i + 1U) % 3U]);
                             vector3  B;
@@ -1258,11 +1293,11 @@ gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_gui
                             {
                                 // This is only for debugging purposes (when suspicious about neighbours somewhere).
                                 angeo::collision_object_id const  neighbour_coid =
-                                        m_collision_scene_ptr->get_trinagle_neighbour_over_edge(coid, i);
+                                        collision_scene.get_trinagle_neighbour_over_edge(coid, i);
                                 auto const& neighbour_getter =
-                                        m_collision_scene_ptr->get_triangle_points_getter(neighbour_coid);
+                                        collision_scene.get_triangle_points_getter(neighbour_coid);
                                 natural_32_bit const  neighbour_triangle_index =
-                                        m_collision_scene_ptr->get_triangle_index(neighbour_coid);
+                                        collision_scene.get_triangle_index(neighbour_coid);
 
                                 std::array<vector3, 3U> const  neighbour_P = {
                                     neighbour_getter(neighbour_triangle_index, 0U),

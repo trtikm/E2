@@ -2,6 +2,7 @@ import bpy
 import mathutils
 import math
 import os
+import sys
 import json
 import traceback
 
@@ -139,7 +140,7 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
         ("MUL_ANGULAR_VELOCITY", "MUL_ANGULAR_VELOCITY", "Scale angular velocity of a rigid body.", 13),
         ("UPDATE_RADIAL_FORCE_FIELD", "UPDATE_RADIAL_FORCE_FIELD", "Update accel of radial force field acting of a rigid body.", 10),
         ("UPDATE_LINEAR_FORCE_FIELD", "UPDATE_LINEAR_FORCE_FIELD", "Update accel of linear force field acting of a rigid body.", 11),
-        ("LEAVE_FORCE_FIELD", "LEAVE_FORCE_FIELD", "Leave force field.", 12),
+        ("LEAVE_FORCE_FIELD", "LEAVE_FORCE_FIELD", "Leave force field.", 14),
     ]
     kind: bpy.props.EnumProperty(
             name="Kind",
@@ -630,6 +631,15 @@ class E2ObjectProps(bpy.types.PropertyGroup):
             default=False
             )
 
+    collider_scene_index: bpy.props.IntProperty(
+            name="Scene idx",
+            description="An index of collision scene for this collider.",
+            default=0,
+            min=0,
+            max=254,
+            step=1
+            )
+
     #====================================================
     # RIGID BODY PROPS
 
@@ -909,6 +919,9 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 row.prop(object, "dimensions")
 
         row = layout.row()
+        row.prop(object_props, "collider_scene_index")
+
+        row = layout.row()
         row.prop(object_props, "collider_defines_sensor")
         if object_props.collider_defines_sensor is True:
             self.draw_sensor(layout.box(), object, object_props)
@@ -999,7 +1012,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
             elif request_info.kind == "UPDATE_LINEAR_FORCE_FIELD":
                 self.draw_request_info_update_linear_force_field(layout, object, object_props, request_info)
             elif request_info.kind == "LEAVE_FORCE_FIELD":
-                self.warn_object_is_not_collider_with_sensor(object.name, layout, "This object")
+                self.warn_object_is_not_collider_with_sensor(object, layout, "This object")
             else:
                 raise Exception("ERROR: Unknown request info kind.")
 
@@ -1139,7 +1152,7 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(request_info, "use_mass")
 
     def draw_request_info_update_linear_force_field(self, layout, object, object_props, request_info):
-        self.warn_object_is_not_collider_with_sensor(object.name, layout, "This object")
+        self.warn_object_is_not_collider_with_sensor(object, layout, "This object")
         row = layout.row()
         row.prop(request_info, "linear_force_field_acceleration")
         row = layout.row()
@@ -1612,7 +1625,8 @@ class E2SceneExportOperator(bpy.types.Operator):
         self.log(object)
         result = {
             "object_kind": object.e2_custom_props.object_kind,
-            "collider_kind": object.e2_custom_props.collider_kind
+            "collider_kind": object.e2_custom_props.collider_kind,
+            "collision_scene_index": num2str(object.e2_custom_props.collider_scene_index)
         }
         if object.e2_custom_props.collider_kind == "TRIANGLE_MESH":
             result["path"] = normalise_disk_path(object.e2_custom_props.collider_triangle_mesh_dir,
