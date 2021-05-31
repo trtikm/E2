@@ -30,6 +30,8 @@ char const*  to_string(COLLISION_MATERIAL_TYPE const  material)
     case COLLISION_MATERIAL_TYPE::RUBBER: return "RUBBER";
     case COLLISION_MATERIAL_TYPE::STEEL: return "STEEL";
     case COLLISION_MATERIAL_TYPE::WOOD: return "WOOD";
+    case COLLISION_MATERIAL_TYPE::WATER: return "WATER";
+    case COLLISION_MATERIAL_TYPE::AIR: return "AIR";
     case COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING: return "NO_FRINCTION_NO_BOUNCING";
     default:
         UNREACHABLE();
@@ -53,6 +55,8 @@ COLLISION_MATERIAL_TYPE  read_collison_material_from_string(std::string const&  
         {"RUBBER", COLLISION_MATERIAL_TYPE::RUBBER},
         {"STEEL", COLLISION_MATERIAL_TYPE::STEEL},
         {"WOOD", COLLISION_MATERIAL_TYPE::WOOD},
+        {"WATER", COLLISION_MATERIAL_TYPE::WATER},
+        {"AIR", COLLISION_MATERIAL_TYPE::AIR},
         {"NO_FRINCTION_NO_BOUNCING", COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING},
     };
     auto const  it = map.find(name);

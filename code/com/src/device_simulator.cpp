@@ -1,5 +1,6 @@
 #include <com/device_simulator.hpp>
 #include <com/simulation_context.hpp>
+#include <angeo/mass_and_inertia_tensor.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -95,6 +96,7 @@ device_simulator::device_simulator()
     , m_request_infos_rigid_body_mul_angular_velocity()
     , m_request_infos_update_radial_force_field()
     , m_request_infos_update_linear_force_field()
+    , m_request_infos_apply_force_field_resistance()
     , m_request_infos_leave_force_field()
 {}
 
@@ -390,14 +392,14 @@ device_simulator::request_info_id  device_simulator::insert_request_info_update_
         float_32_bit const  multiplier,
         float_32_bit const  exponent,
         float_32_bit const  min_radius,
-        bool const  use_mass
+        force_field_flags const  flags
         )
 {
     ASSUMPTION(multiplier > 0.0f && exponent >= 1.0f && min_radius >= 0.001f);
     return {
         REQUEST_KIND::UPDATE_RADIAL_FORCE_FIELD,
         m_request_infos_update_radial_force_field.insert(request_info_update_radial_force_field{
-                multiplier, exponent, min_radius, use_mass
+                multiplier, exponent, min_radius, flags
                 })
     };
 }
@@ -405,13 +407,21 @@ device_simulator::request_info_id  device_simulator::insert_request_info_update_
 
 device_simulator::request_info_id  device_simulator::insert_request_info_update_linear_force_field(
         vector3 const&  acceleration,
-        bool const  use_mass
+        force_field_flags const  flags
         )
 {
     return {
         REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD,
-        m_request_infos_update_linear_force_field.insert(std::pair<vector3, bool>{acceleration, use_mass})
+        m_request_infos_update_linear_force_field.insert(request_info_update_linear_force_field{
+                acceleration, flags
+                })
     };
+}
+
+
+device_simulator::request_info_id  device_simulator::insert_request_info_apply_force_field_resistance(float_32_bit const  resistance_coef)
+{
+    return { REQUEST_KIND::APPLY_FORCE_FIELD_RESISTANCE, m_request_infos_apply_force_field_resistance.insert(resistance_coef) };
 }
 
 
@@ -456,6 +466,8 @@ bool  device_simulator::is_valid_request_info_id(request_info_id const&  rid) co
         return m_request_infos_update_radial_force_field.valid(rid.index);
     case REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD:
         return m_request_infos_update_linear_force_field.valid(rid.index);
+    case REQUEST_KIND::APPLY_FORCE_FIELD_RESISTANCE:
+        return m_request_infos_apply_force_field_resistance.valid(rid.index);
     case REQUEST_KIND::LEAVE_FORCE_FIELD:
         return m_request_infos_leave_force_field.valid(rid.index);
 
@@ -518,6 +530,9 @@ void  device_simulator::erase_request_info(request_info_id const&  rid)
     case REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD:
         m_request_infos_update_linear_force_field.erase(rid.index);
         break;
+    case REQUEST_KIND::APPLY_FORCE_FIELD_RESISTANCE:
+        m_request_infos_apply_force_field_resistance.erase(rid.index);
+        break;
     case REQUEST_KIND::LEAVE_FORCE_FIELD:
         m_request_infos_leave_force_field.erase(rid.index);
         break;
@@ -564,6 +579,8 @@ device_simulator::request_info_base&  device_simulator::request_info_base_of(req
         return m_request_infos_update_radial_force_field.at(rid.index);
     case REQUEST_KIND::UPDATE_LINEAR_FORCE_FIELD:
         return m_request_infos_update_linear_force_field.at(rid.index);
+    case REQUEST_KIND::APPLY_FORCE_FIELD_RESISTANCE:
+        return m_request_infos_apply_force_field_resistance.at(rid.index);
     case REQUEST_KIND::LEAVE_FORCE_FIELD:
         return m_request_infos_leave_force_field.at(rid.index);
 
@@ -579,6 +596,48 @@ void  device_simulator::next_round_of_request_info(
         simulation_context const&  ctx
         )
 {
+    auto const  compute_field_accel_mult_from_flags =
+        [&ctx, self_collider, other_collider](force_field_flags const&  flags, object_guid const  rb_guid) {
+            float_32_bit const  inverted_mass = flags.use_mass ? ctx.inverted_mass_of_rigid_body(rb_guid) : 1.0f;
+
+            float_32_bit  density = flags.use_density ?
+                    (ctx.collider_density_multiplier(self_collider)
+                            * angeo::get_material_density(ctx.collision_material_of(self_collider)))
+                    / (ctx.collider_density_multiplier(other_collider)
+                            * angeo::get_material_density(ctx.collision_material_of(other_collider)))
+                    : 1.0f;
+
+            float_32_bit  depth = 1.0f;
+            if (flags.use_penetration_depth)
+            {
+                float_32_bit  full_depth = -1.0f;
+                switch (ctx.collider_shape_type(other_collider))
+                {
+                    case angeo::COLLISION_SHAPE_TYPE::BOX:
+                        full_depth = max_coord(ctx.collider_box_half_sizes_along_axes(other_collider));
+                        break;
+                    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+                        full_depth = ctx.collider_sphere_radius(other_collider);
+                        break;
+                    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+                        full_depth = ctx.collider_sphere_radius(other_collider);
+                        break;
+                    default: break;
+                }
+                if (full_depth > 0.0f)
+                {
+                    std::vector<collision_contact const*>  contacts;
+                    ctx.collision_contacts_between_colliders(other_collider, self_collider, contacts);
+                    float_32_bit  max_depth = 0.0f;
+                    for (collision_contact const*  contact : contacts)
+                        max_depth = std::max(max_depth, contact->penetration_depth());
+                    depth = std::min(1.0f, std::max(0.0f, max_depth / full_depth));
+                }
+            }
+
+            return inverted_mass * density * depth;
+        };
+
     switch (rid.kind)
     {
     // Locally handled request infos
@@ -648,12 +707,13 @@ void  device_simulator::next_round_of_request_info(
                         distance = data.min_radius;
                     }
 
-                    float_32_bit const  inverted_mass = data.use_mass ? ctx.inverted_mass_of_rigid_body(rb_guid) : 1.0f;
-                    float_32_bit const  magnitude = inverted_mass * data.multiplier * std::powf(distance, data.exponent);
+                    float_32_bit const  magnitude = 
+                            compute_field_accel_mult_from_flags(data.flags, rb_guid) *
+                            data.multiplier * std::powf(distance, data.exponent);
 
                     acceleration = (magnitude / distance) * origin_delta;
                 }
-                ctx.request_set_rigid_body_linear_acceleration_from_source(rb_guid, self_collider, acceleration);
+                ctx.request_set_rigid_body_linear_acceleration_from_source(rb_guid, { self_collider, 0U }, acceleration);
             }
         }
         break;
@@ -662,16 +722,47 @@ void  device_simulator::next_round_of_request_info(
             object_guid const  rb_guid = ctx.rigid_body_of_collider(other_collider);
             if (ctx.is_valid_rigid_body_guid(rb_guid))
             {
-                std::pair<vector3, bool> const&  data = m_request_infos_update_linear_force_field.at(rid.index).data;
-                float_32_bit const  inverted_mass = data.second ? ctx.inverted_mass_of_rigid_body(rb_guid) : 1.0f;
-                ctx.request_set_rigid_body_linear_acceleration_from_source(rb_guid, self_collider, inverted_mass * data.first);
+                request_info_update_linear_force_field const&  data = m_request_infos_update_linear_force_field.at(rid.index).data;
+                float_32_bit const  multiplier = compute_field_accel_mult_from_flags(data.flags, rb_guid);
+                ctx.request_set_rigid_body_linear_acceleration_from_source(rb_guid, {self_collider, 0U}, multiplier * data.acceleration);
+            }
+        }
+        break;
+    case REQUEST_KIND::APPLY_FORCE_FIELD_RESISTANCE:
+        {
+            object_guid const  rb_guid = ctx.rigid_body_of_collider(other_collider);
+            if (ctx.is_valid_rigid_body_guid(rb_guid))
+            {
+                vector3  velocity = ctx.linear_velocity_of_rigid_body(rb_guid);
+                float_32_bit const  v_len = length(velocity);
+                float_32_bit  radius;
+                {
+                    std::vector<collision_contact const*>  contacts;
+                    ctx.collision_contacts_between_colliders(other_collider, self_collider, contacts);
+                    radius = 0.0f;
+                    for (collision_contact const*  contact : contacts)
+                        radius = std::max(radius, contact->penetration_depth());
+                }
+
+                float_32_bit const  circle_area = PI() * radius * radius;
+                float_32_bit const  resistance_coef = m_request_infos_apply_force_field_resistance.at(rid.index).data;
+                float_32_bit const  density = ctx.collider_density_multiplier(self_collider)
+                                                    * angeo::get_material_density(ctx.collision_material_of(self_collider));
+                float_32_bit const  inverted_mass = ctx.inverted_mass_of_rigid_body(rb_guid);
+
+                float_32_bit const  multiplier = inverted_mass * 0.5f * density * circle_area * resistance_coef * v_len;
+
+                ctx.request_set_rigid_body_linear_acceleration_from_source(rb_guid, {self_collider, 1U}, -multiplier * velocity);
             }
         }
         break;
     case REQUEST_KIND::LEAVE_FORCE_FIELD: {
         object_guid const  rb_guid = ctx.rigid_body_of_collider(other_collider);
         if (ctx.is_valid_rigid_body_guid(rb_guid))
-            ctx.request_remove_rigid_body_linear_acceleration_from_source(rb_guid, self_collider);
+        {
+            ctx.request_remove_rigid_body_linear_acceleration_from_source(rb_guid, { self_collider, 0U });
+            ctx.request_remove_rigid_body_linear_acceleration_from_source(rb_guid, { self_collider, 1U });
+        }
         } break;
 
     default: UNREACHABLE(); break;
@@ -711,6 +802,7 @@ void  device_simulator::clear()
     m_request_infos_rigid_body_mul_angular_velocity.clear();
     m_request_infos_update_radial_force_field.clear();
     m_request_infos_update_linear_force_field.clear();
+    m_request_infos_apply_force_field_resistance.clear();
     m_request_infos_leave_force_field.clear();
 }
 

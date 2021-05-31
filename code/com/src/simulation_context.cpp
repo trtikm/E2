@@ -1125,9 +1125,9 @@ std::string const&  simulation_context::name_of_collider(object_guid const  coll
 }
 
 
-object_guid  simulation_context::to_collider_guid(angeo::collision_object_id const  coid) const
+object_guid  simulation_context::to_collider_guid(angeo::collision_object_id const  coid, collision_scene_index const  scene_index) const
 {
-    return m_coids_to_guids.at(coid);
+    return m_coids_to_guids.at({coid, scene_index});
 }
 
 
@@ -1254,6 +1254,8 @@ object_guid  simulation_context::insert_collider_box(
     return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name, scene_index,
         [this, &half_sizes_along_axes, material, collision_class, density_multiplier, scene_index]
         (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            while (m_collision_scenes_ptr->size() < scene_index + 1UL)
+                m_collision_scenes_ptr->push_back(std::make_shared<angeo::collision_scene>());
             coids.push_back(m_collision_scenes_ptr->at(scene_index)->insert_box(
                 half_sizes_along_axes, W, material, collision_class, density_multiplier, is_dynamic));
         });
@@ -1273,6 +1275,8 @@ object_guid  simulation_context::insert_collider_capsule(
     return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name, scene_index,
         [this, half_distance_between_end_points, thickness_from_central_line, material, collision_class, density_multiplier, scene_index]
             (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            while (m_collision_scenes_ptr->size() < scene_index + 1UL)
+                m_collision_scenes_ptr->push_back(std::make_shared<angeo::collision_scene>());
             coids.push_back(m_collision_scenes_ptr->at(scene_index)->insert_capsule(half_distance_between_end_points, thickness_from_central_line,
                                                                   W, material, collision_class, density_multiplier, is_dynamic));
         });
@@ -1291,6 +1295,8 @@ object_guid  simulation_context::insert_collider_sphere(
     return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name, scene_index,
         [this, radius, material, collision_class, density_multiplier, scene_index]
         (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+            while (m_collision_scenes_ptr->size() < scene_index + 1UL)
+                m_collision_scenes_ptr->push_back(std::make_shared<angeo::collision_scene>());
             coids.push_back(m_collision_scenes_ptr->at(scene_index)->insert_sphere(
                     radius, W, material, collision_class, density_multiplier, is_dynamic
                     ));
@@ -1310,6 +1316,8 @@ object_guid  simulation_context::insert_collider_triangle_mesh(
     return const_cast<simulation_context*>(this)->insert_collider(under_folder_guid, name_prefix, scene_index,
             [this, num_triangles, &getter_of_end_points_in_model_space, material, collision_class, scene_index]
             (matrix44 const&  W, bool const  is_dynamic, std::vector<angeo::collision_object_id>&  coids) {
+                while (m_collision_scenes_ptr->size() < scene_index + 1UL)
+                    m_collision_scenes_ptr->push_back(std::make_shared<angeo::collision_scene>());
                 m_collision_scenes_ptr->at(scene_index)->insert_triangle_mesh(num_triangles, getter_of_end_points_in_model_space,
                                                             W, material, collision_class, is_dynamic, coids);
             });
@@ -1334,12 +1342,12 @@ object_guid  simulation_context::ray_cast_to_nearest_collider(
             search_dynamic,
             &nearest_coid,
             ray_parameter_to_nearest_collider,
-            [this,&collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
-                    return collider_filter(to_collider_guid(coid), cc);
+            [this,&collider_filter,scene_index](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
+                    return collider_filter(to_collider_guid(coid, scene_index), cc);
                     }
             ))
         return invalid_object_guid();
-    return m_coids_to_guids.at(nearest_coid);
+    return m_coids_to_guids.at({nearest_coid, scene_index});
 }
 
 
@@ -1544,7 +1552,7 @@ object_guid  simulation_context::insert_collider(
             };
 
     for (angeo::collision_object_id  coid : coids)
-        m_coids_to_guids.insert({ coid, collider_guid });
+        m_coids_to_guids.insert({ {coid,scene_index}, collider_guid });
 
     m_folders.at(under_folder_guid.index).insert_content(OBJECT_KIND::COLLIDER, collider_guid, name);
 
@@ -1597,7 +1605,7 @@ void  simulation_context::erase_collider(object_guid const  collider_guid)
         m_collision_scenes_ptr->at(elem.scene_index)->erase_object(coid);
     m_folders.at(elem.folder_index).erase_content(elem.element_name, OBJECT_KIND::COLLIDER);
     for (angeo::collision_object_id  coid : elem.id)
-        m_coids_to_guids.erase(coid);
+        m_coids_to_guids.erase({coid,elem.scene_index});
     m_colliders.erase(collider_guid.index);
 }
 
@@ -1937,33 +1945,33 @@ void  simulation_context::request_mul_rigid_body_angular_velocity(
 
 
 void  simulation_context::request_set_rigid_body_linear_acceleration_from_source(
-        object_guid const  rigid_body_guid, object_guid const  source_guid, vector3 const&  acceleration) const
+        object_guid const  rigid_body_guid, rigid_body_acceleration_source_id const  source_id, vector3 const&  acceleration) const
 {
-    m_requests_set_linear_acceleration_from_source.push_back({ rigid_body_guid, source_guid, acceleration });
+    m_requests_set_linear_acceleration_from_source.push_back({ rigid_body_guid, source_id, acceleration });
     m_pending_requests.push_back(REQUEST_SET_LINEAR_ACCEL);
 }
 
 
 void  simulation_context::request_set_rigid_body_angular_acceleration_from_source(
-        object_guid const  rigid_body_guid, object_guid const  source_guid, vector3 const&  acceleration) const
+        object_guid const  rigid_body_guid, rigid_body_acceleration_source_id const  source_id, vector3 const&  acceleration) const
 {
-    m_requests_set_angular_acceleration_from_source.push_back({ rigid_body_guid, source_guid, acceleration });
+    m_requests_set_angular_acceleration_from_source.push_back({ rigid_body_guid, source_id, acceleration });
     m_pending_requests.push_back(REQUEST_SET_ANGULAR_ACCEL);
 }
 
 
 void  simulation_context::request_remove_rigid_body_linear_acceleration_from_source(
-        object_guid const  rigid_body_guid, object_guid const  source_guid) const
+        object_guid const  rigid_body_guid, rigid_body_acceleration_source_id const  source_id) const
 {
-    m_requests_del_linear_acceleration_from_source.push_back({ rigid_body_guid, source_guid });
+    m_requests_del_linear_acceleration_from_source.push_back({ rigid_body_guid, source_id });
     m_pending_requests.push_back(REQUEST_DEL_LINEAR_ACCEL);
 }
 
 
 void  simulation_context::request_remove_rigid_body_angular_acceleration_from_source(
-        object_guid const  rigid_body_guid, object_guid const  source_guid) const
+        object_guid const  rigid_body_guid, rigid_body_acceleration_source_id const  source_id) const
 {
-    m_requests_del_angular_acceleration_from_source.push_back({ rigid_body_guid, source_guid });
+    m_requests_del_angular_acceleration_from_source.push_back({ rigid_body_guid, source_id });
     m_pending_requests.push_back(REQUEST_DEL_ANGULAR_ACCEL);
 }
 
@@ -2082,32 +2090,34 @@ void  simulation_context::set_rigid_body_angular_velocity(object_guid const  rig
 
 
 void  simulation_context::set_rigid_body_linear_acceleration_from_source(
-        object_guid const  rigid_body_guid, object_guid const  source_guid, vector3 const&  accel)
+        object_guid const  rigid_body_guid, rigid_body_acceleration_source_id const  source_id, vector3 const&  accel)
 {
     ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
-    m_rigid_body_simulator_ptr->set_linear_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid, accel);
+    m_rigid_body_simulator_ptr->set_linear_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_id, accel);
 }
 
 
-void  simulation_context::set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
-                                                        vector3 const&  accel)
+void  simulation_context::set_rigid_body_angular_acceleration_from_source(
+        object_guid const  rigid_body_guid, rigid_body_acceleration_source_id const  source_id, vector3 const&  accel)
 {
     ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
-    m_rigid_body_simulator_ptr->set_angular_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid, accel);
+    m_rigid_body_simulator_ptr->set_angular_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_id, accel);
 }
 
 
-void  simulation_context::remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid)
+void  simulation_context::remove_rigid_body_linear_acceleration_from_source(
+        object_guid const  rigid_body_guid, rigid_body_acceleration_source_id const  source_id)
 {
     ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
-    m_rigid_body_simulator_ptr->remove_linear_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid);
+    m_rigid_body_simulator_ptr->remove_linear_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_id);
 }
 
 
-void  simulation_context::remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid)
+void  simulation_context::remove_rigid_body_angular_acceleration_from_source(
+        object_guid const  rigid_body_guid, rigid_body_acceleration_source_id const  source_id)
 {
     ASSUMPTION(is_valid_rigid_body_guid(rigid_body_guid));
-    m_rigid_body_simulator_ptr->remove_angular_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_guid);
+    m_rigid_body_simulator_ptr->remove_angular_acceleration_from_source(m_rigid_bodies.at(rigid_body_guid.index).id, source_id);
 }
 
 
@@ -2530,20 +2540,28 @@ void  simulation_context::insert_request_info_rigid_body_mul_angular_velocity(
 
 void  simulation_context::insert_request_info_update_radial_force_field(
         device_request_info_id const&  drid, float_32_bit const  multiplier, float_32_bit const  exponent,
-        float_32_bit const  min_radius, bool const  use_mass
+        float_32_bit const  min_radius, device_simulator::force_field_flags const  flags
         )
 {
     register_request_info(drid, m_device_simulator_ptr->insert_request_info_update_radial_force_field(
-            multiplier, exponent, min_radius, use_mass
+            multiplier, exponent, min_radius, flags
             ));
 }
 
 
 void  simulation_context::insert_request_info_update_linear_force_field(
-        device_request_info_id const&  drid, vector3 const&  acceleration, bool const  use_mass
+        device_request_info_id const&  drid, vector3 const&  acceleration, device_simulator::force_field_flags const  flags
         )
 {
-    register_request_info(drid, m_device_simulator_ptr->insert_request_info_update_linear_force_field(acceleration, use_mass));
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_update_linear_force_field(acceleration, flags));
+}
+
+
+void  simulation_context::insert_request_info_apply_force_field_resistance(
+        device_request_info_id const&  drid, float_32_bit const  resistance_coef
+        )
+{
+    register_request_info(drid, m_device_simulator_ptr->insert_request_info_apply_force_field_resistance(resistance_coef));
 }
 
 
@@ -2767,6 +2785,21 @@ collision_contact const&  simulation_context::get_collision_contact(natural_32_b
 }
 
 
+void  simulation_context::collision_contacts_between_colliders(object_guid const  collider_guid_1, object_guid const  collider_guid_2,
+                                                               std::vector<collision_contact const*>&  output) const
+{
+    std::vector<natural_32_bit> const&  all_indices = collision_contacts_of_collider(collider_guid_1);
+    ASSUMPTION(is_valid_collider_guid(collider_guid_2));
+    for (natural_32_bit idx : all_indices)
+    {
+        ASSUMPTION(is_valid_collision_contact_index(idx));
+        collision_contact const&  contact = m_collision_contacts.at(idx);
+        if (contact.first_collider() == collider_guid_2 || contact.second_collider() == collider_guid_2)
+            output.push_back(&contact);
+    }
+}
+
+
 natural_32_bit  simulation_context::num_collision_contacts() const
 {
     return (natural_32_bit)m_collision_contacts.valid_indices().size();
@@ -2807,15 +2840,15 @@ natural_32_bit  simulation_context::compute_contacts_with_box(
                 vector3 const&  unit_normal,
                 float_32_bit const  penetration_depth) -> bool {
                     angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
-                    object_guid const  collider_2_guid = to_collider_guid(coid_2);
+                    object_guid const  collider_2_guid = to_collider_guid(coid_2, scene_index);
                     collision_contact const  contact{
                             scene_index, invalid_object_guid(), collider_2_guid, contact_point, unit_normal, penetration_depth
                             };
                     ++num_contacts;
                     return contact_acceptor(contact);
                     },
-            [this, &collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
-                return collider_filter(to_collider_guid(coid), cc);
+            [this, &collider_filter,scene_index](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
+                return collider_filter(to_collider_guid(coid, scene_index), cc);
                 }
             );
     return  num_contacts;
@@ -2846,15 +2879,15 @@ natural_32_bit  simulation_context::compute_contacts_with_capsule(
                 vector3 const&  unit_normal,
                 float_32_bit const  penetration_depth) -> bool {
                     angeo::collision_object_id const  coid = angeo::get_object_id(angeo::get_first_collider_id(cid));
-                    object_guid const  collider_guid = to_collider_guid(coid);
+                    object_guid const  collider_guid = to_collider_guid(coid, scene_index);
                     collision_contact const  contact{
                             scene_index, collider_guid, invalid_object_guid(), contact_point, unit_normal, penetration_depth
                             };
                     ++num_contacts;
                     return contact_acceptor(contact);
                     },
-            [this, &collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
-                return collider_filter(to_collider_guid(coid), cc);
+            [this, &collider_filter,scene_index](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
+                return collider_filter(to_collider_guid(coid, scene_index), cc);
                 }
             );
     return  num_contacts;
@@ -2883,15 +2916,15 @@ natural_32_bit  simulation_context::compute_contacts_with_sphere(
                 vector3 const&  unit_normal,
                 float_32_bit const  penetration_depth) -> bool {
                     angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
-                    object_guid const  collider_2_guid = to_collider_guid(coid_2);
+                    object_guid const  collider_2_guid = to_collider_guid(coid_2, scene_index);
                     collision_contact const  contact{
                             scene_index, invalid_object_guid(), collider_2_guid, contact_point, unit_normal, penetration_depth
                             };
                     ++num_contacts;
                     return contact_acceptor(contact);
                     },
-            [this, &collider_filter](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
-                return collider_filter(to_collider_guid(coid), cc);
+            [this, &collider_filter, scene_index](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
+                return collider_filter(to_collider_guid(coid, scene_index), cc);
                 }
             );
     return  num_contacts;
@@ -3394,19 +3427,19 @@ void  simulation_context::process_pending_requests()
             } break;
         case REQUEST_SET_LINEAR_ACCEL: {
             auto  cursor = make_request_cursor_to(m_requests_set_linear_acceleration_from_source);
-            set_rigid_body_linear_acceleration_from_source(cursor->rb_guid, cursor->source_guid, cursor->acceleration);
+            set_rigid_body_linear_acceleration_from_source(cursor->rb_guid, cursor->source_id, cursor->acceleration);
             } break;
         case REQUEST_SET_ANGULAR_ACCEL: {
             auto  cursor = make_request_cursor_to(m_requests_set_angular_acceleration_from_source);
-            set_rigid_body_angular_acceleration_from_source(cursor->rb_guid, cursor->source_guid, cursor->acceleration);
+            set_rigid_body_angular_acceleration_from_source(cursor->rb_guid, cursor->source_id, cursor->acceleration);
             } break;
         case REQUEST_DEL_LINEAR_ACCEL: {
             auto  cursor = make_request_cursor_to(m_requests_del_linear_acceleration_from_source);
-            remove_rigid_body_linear_acceleration_from_source(cursor->rb_guid, cursor->source_guid);
+            remove_rigid_body_linear_acceleration_from_source(cursor->rb_guid, cursor->source_id);
             } break;
         case REQUEST_DEL_ANGULAR_ACCEL: {
             auto  cursor = make_request_cursor_to(m_requests_del_angular_acceleration_from_source);
-            remove_rigid_body_angular_acceleration_from_source(cursor->rb_guid, cursor->source_guid);
+            remove_rigid_body_angular_acceleration_from_source(cursor->rb_guid, cursor->source_id);
             } break;
         case REQUEST_ERASE_TIMER:
             erase_timer(*make_request_cursor_to(m_requests_erase_timer));

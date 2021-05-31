@@ -37,10 +37,11 @@ struct  device_simulator
         RIGID_BODY_SET_LINEAR_VELOCITY      = 7U,
         RIGID_BODY_SET_ANGULAR_VELOCITY     = 8U,
         RIGID_BODY_MUL_LINEAR_VELOCITY      = 12U,
-        RIGID_BODY_MUL_ANGULAR_VELOCITY     = 13U,          // <----- Current the highest value.
+        RIGID_BODY_MUL_ANGULAR_VELOCITY     = 13U,
 
         UPDATE_RADIAL_FORCE_FIELD           = 9U,
         UPDATE_LINEAR_FORCE_FIELD           = 10U,
+        APPLY_FORCE_FIELD_RESISTANCE        = 14U,          // <----- Current the highest value.
         LEAVE_FORCE_FIELD                   = 11U,
     };
 
@@ -51,6 +52,12 @@ struct  device_simulator
 
         bool operator==(request_info_id const&  other) const { return kind == other.kind && index == other.index; }
         bool operator!=(request_info_id const&  other) const { return !(*this == other); }
+    };
+
+    struct  force_field_flags {
+        natural_8_bit  use_mass : 1,
+                       use_density : 1,
+                       use_penetration_depth : 1;
     };
 
     device_simulator();
@@ -105,12 +112,13 @@ struct  device_simulator
             float_32_bit const  multiplier = 1.0f,
             float_32_bit const  exponent = 1.0f,
             float_32_bit const  min_radius = 0.001f,
-            bool const  use_mass = true
+            force_field_flags const  flags = { true, false, false }
             );
     request_info_id  insert_request_info_update_linear_force_field(
             vector3 const&  acceleration = vector3(0.0f, 0.0f, -9.81f),
-            bool const  use_mass = true
+            force_field_flags const  flags = { false, false, false }
             );
+    request_info_id  insert_request_info_apply_force_field_resistance(float_32_bit const  resistance_coef = 1.0f);
     request_info_id  insert_request_info_leave_force_field();
     bool  is_valid_request_info_id(request_info_id const&  rid) const;
     void  erase_request_info(request_info_id const&  rid);
@@ -233,7 +241,13 @@ private:
         float_32_bit  multiplier;
         float_32_bit  exponent;
         float_32_bit  min_radius;
-        bool  use_mass;
+        force_field_flags  flags;
+    };
+
+    struct  request_info_update_linear_force_field
+    {
+        vector3  acceleration;
+        force_field_flags  flags;
     };
 
     dynamic_array<request_info<import_scene_props>, index_type>  m_request_infos_import_scene;
@@ -243,7 +257,8 @@ private:
     dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_mul_linear_velocity;
     dynamic_array<request_info<std::pair<object_guid, vector3> >, index_type>  m_request_infos_rigid_body_mul_angular_velocity;
     dynamic_array<request_info<request_info_update_radial_force_field>, index_type>  m_request_infos_update_radial_force_field;
-    dynamic_array<request_info<std::pair<vector3, bool> >, index_type>  m_request_infos_update_linear_force_field;
+    dynamic_array<request_info<request_info_update_linear_force_field>, index_type>  m_request_infos_update_linear_force_field;
+    dynamic_array<request_info<float_32_bit>, index_type>  m_request_infos_apply_force_field_resistance;
     dynamic_array<request_info_base, index_type>  m_request_infos_leave_force_field;
 };
 

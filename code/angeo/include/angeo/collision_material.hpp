@@ -23,6 +23,9 @@ enum struct  COLLISION_MATERIAL_TYPE : natural_8_bit
     STEEL               = 11,
     WOOD                = 12,
 
+    WATER               = 13,   // Use it only in a force field.
+    AIR                 = 14,   // Use it only in a force field.
+
     NO_FRINCTION_NO_BOUNCING,
 };
 

@@ -325,7 +325,7 @@ struct  simulation_context
     bool  is_valid_collider_guid(object_guid const  collider_guid) const;
     object_guid  folder_of_collider(object_guid const  collider_guid) const;
     std::string const&  name_of_collider(object_guid const  collider_guid) const;
-    object_guid  to_collider_guid(angeo::collision_object_id const  coid) const;
+    object_guid  to_collider_guid(angeo::collision_object_id const  coid, collision_scene_index const  scene_index) const;
     collider_guid_iterator  colliders_begin() const;
     collider_guid_iterator  colliders_end() const;
     object_guid  frame_of_collider(object_guid const  collider_guid) const;
@@ -431,6 +431,7 @@ struct  simulation_context
     /////////////////////////////////////////////////////////////////////////////////////
 
     using  rigid_body_guid_iterator = object_guid_iterator<OBJECT_KIND::RIGID_BODY>;
+    using  rigid_body_acceleration_source_id = std::pair<object_guid, natural_16_bit>;
 
     bool  is_valid_rigid_body_guid(object_guid const  rigid_body_guid) const;
     object_guid  folder_of_rigid_body(object_guid const  rigid_body_guid) const;
@@ -488,12 +489,16 @@ struct  simulation_context
     void  request_mul_rigid_body_angular_velocity(object_guid const  rigid_body_guid,  vector3 const&  velocity_scale) const;
     void  request_mul_rigid_body_angular_velocity(object_guid const  base_folder_guid, std::string const&  relative_path_to_rigid_body,
                                                   vector3 const&  velocity_scale) const;
-    void  request_set_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+    void  request_set_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid,
+                                                                 rigid_body_acceleration_source_id const  source_id,
                                                                  vector3 const&  acceleration) const;
-    void  request_set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+    void  request_set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid,
+                                                                  rigid_body_acceleration_source_id const  source_id,
                                                                   vector3 const&  acceleration) const;
-    void  request_remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid) const;
-    void  request_remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid) const;
+    void  request_remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid,
+                                                                    rigid_body_acceleration_source_id const  source_id) const;
+    void  request_remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid,
+                                                                     rigid_body_acceleration_source_id const  source_id) const;
     void  request_early_insertion_of_custom_constraint_to_physics(
             angeo::custom_constraint_id const  ccid,
             object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
@@ -518,12 +523,16 @@ struct  simulation_context
     void  set_rigid_body_inverted_inertia_tensor(object_guid const  rigid_body_guid, matrix33 const&  inverted_inertia_tensor);
     void  set_rigid_body_linear_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity);
     void  set_rigid_body_angular_velocity(object_guid const  rigid_body_guid, vector3 const&  velocity);
-    void  set_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+    void  set_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid,
+                                                         rigid_body_acceleration_source_id const  source_id,
                                                          vector3 const&  accel);
-    void  set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid,
+    void  set_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid,
+                                                          rigid_body_acceleration_source_id const  source_id,
                                                           vector3 const&  accel);
-    void  remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid);
-    void  remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid, object_guid const  source_guid);
+    void  remove_rigid_body_linear_acceleration_from_source(object_guid const  rigid_body_guid,
+                                                            rigid_body_acceleration_source_id const  source_id);
+    void  remove_rigid_body_angular_acceleration_from_source(object_guid const  rigid_body_guid,
+                                                             rigid_body_acceleration_source_id const  source_id);
     void  insert_custom_constraint_to_physics(
             angeo::custom_constraint_id const  ccid,
             object_guid const  rigid_body_0, vector3 const&  linear_component_0, vector3 const&  angular_component_0,
@@ -624,13 +633,14 @@ struct  simulation_context
             float_32_bit const  multiplier = 1.0f,
             float_32_bit const  exponent = 1.0f,
             float_32_bit const  min_radius = 0.001f,
-            bool const  use_mass = true
+            device_simulator::force_field_flags const  flags = { true, false, false }
             );
     void  insert_request_info_update_linear_force_field(
             device_request_info_id const&  drid,
             vector3 const&  acceleration = vector3(0.0f, 0.0f, -9.81f),
-            bool const  use_mass = true
+            device_simulator::force_field_flags const  flags = { true, false, false }
             );
+    void  insert_request_info_apply_force_field_resistance(device_request_info_id const&  drid, float_32_bit const  resistance_coef = 1.0f);
     void  insert_request_info_leave_force_field(device_request_info_id const&  drid);
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -671,6 +681,8 @@ struct  simulation_context
     bool  is_valid_collision_contact_index(natural_32_bit const  contact_index) const;
     std::vector<natural_32_bit> const&  collision_contacts_of_collider(object_guid const  collider_guid) const;
     collision_contact const&  get_collision_contact(natural_32_bit const  contact_index) const;
+    void  collision_contacts_between_colliders(object_guid const  collider_guid_1, object_guid const  collider_guid_2,
+                                               std::vector<collision_contact const*>&  output) const;
     natural_32_bit  num_collision_contacts() const;
     collision_contacts_iterator  collision_contacts_begin() const;
     collision_contacts_iterator  collision_contacts_end() const;
@@ -906,7 +918,7 @@ private:
 
     std::unordered_map<frame_id, object_guid>  m_frids_to_guids;
     std::unordered_map<std::string, object_guid>  m_batches_to_guids;
-    std::unordered_map<angeo::collision_object_id, object_guid>  m_coids_to_guids;
+    std::unordered_map<std::pair<angeo::collision_object_id, collision_scene_index>, object_guid>  m_coids_to_guids;
     std::unordered_map<angeo::rigid_body_id, object_guid>  m_rbids_to_guids;
     std::unordered_map<com::device_simulator::timer_id, object_guid>  m_tmids_to_guids;
     std::unordered_map<com::device_simulator::sensor_id, object_guid>  m_seids_to_guids;
@@ -1024,8 +1036,12 @@ private:
                 object_guid  base_folder_guid; std::string  relative_path_to_rigid_body;
                 vector3  velocity_scale;
                 };
-    struct  request_data_set_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; vector3  acceleration; };
-    struct  request_data_del_acceleration_from_source { object_guid  rb_guid; object_guid  source_guid; };
+    struct  request_data_set_acceleration_from_source {
+            object_guid  rb_guid; rigid_body_acceleration_source_id const  source_id; vector3  acceleration;
+            };
+    struct  request_data_del_acceleration_from_source {
+            object_guid  rb_guid; rigid_body_acceleration_source_id const  source_id;
+            };
     struct  request_data_insert_collider_base
     {
         object_guid  under_folder_guid;

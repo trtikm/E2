@@ -378,8 +378,8 @@ void  simulator::update_collision_contacts_and_constraints()
                         angeo::collision_object_id const  coid_1 = angeo::get_object_id(angeo::get_first_collider_id(cid));
                         angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
 
-                        object_guid const  collider_1_guid = ctx.to_collider_guid(coid_1);
-                        object_guid const  collider_2_guid = ctx.to_collider_guid(coid_2);
+                        object_guid const  collider_1_guid = ctx.to_collider_guid(coid_1, 0U);
+                        object_guid const  collider_2_guid = ctx.to_collider_guid(coid_2, 0U);
 
                         ctx.insert_collision_contact({ 0U, collider_1_guid, collider_2_guid, contact_point, unit_normal, penetration_depth });
 
@@ -437,8 +437,8 @@ void  simulator::update_collision_contacts_and_constraints()
                         angeo::collision_object_id const  coid_1 = angeo::get_object_id(angeo::get_first_collider_id(cid));
                         angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
 
-                        object_guid const  collider_1_guid = ctx.to_collider_guid(coid_1);
-                        object_guid const  collider_2_guid = ctx.to_collider_guid(coid_2);
+                        object_guid const  collider_1_guid = ctx.to_collider_guid(coid_1, i);
+                        object_guid const  collider_2_guid = ctx.to_collider_guid(coid_2, i);
 
                         ctx.insert_collision_contact({ i, collider_1_guid, collider_2_guid, contact_point, unit_normal, penetration_depth });
 

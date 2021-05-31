@@ -97,6 +97,8 @@ float_32_bit  get_material_density(COLLISION_MATERIAL_TYPE const  material)
     case COLLISION_MATERIAL_TYPE::RUBBER: return 400.0f;
     case COLLISION_MATERIAL_TYPE::STEEL: return 2403.0f;
     case COLLISION_MATERIAL_TYPE::WOOD: return 700.0f;
+    case COLLISION_MATERIAL_TYPE::WATER: return 1000.0f;
+    case COLLISION_MATERIAL_TYPE::AIR: return 1.225f;
     case COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING: return 1000.0f;
     default:
         UNREACHABLE();

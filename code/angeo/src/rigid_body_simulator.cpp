@@ -189,15 +189,15 @@ vector3  rigid_body_simulator::compute_angular_acceleration_from_sources(rigid_b
 
 
 void  rigid_body_simulator::set_linear_acceleration_from_source(
-        rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration
+        rigid_body_id const  id, acceleration_source_id const  source_id, vector3 const&  acceleration
         )
 {
     rigid_body&  rb = m_rigid_bodies.at(id);
     auto&  accels = m_linear_accelerations_from_sources[id];
 
-    auto  it = accels.find(source_guid);
+    auto  it = accels.find(source_id);
     if (it == accels.end())
-        it = accels.insert({ source_guid, acceleration }).first;
+        it = accels.insert({ source_id, acceleration }).first;
     else
     {
         rb.m_acceleration_from_external_forces.m_linear -= it->second;
@@ -209,15 +209,15 @@ void  rigid_body_simulator::set_linear_acceleration_from_source(
 
 
 void  rigid_body_simulator::set_angular_acceleration_from_source(
-        rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration
+        rigid_body_id const  id, acceleration_source_id const  source_id, vector3 const&  acceleration
         )
 {
     rigid_body&  rb = m_rigid_bodies.at(id);
     auto&  accels = m_angular_accelerations_from_sources[id];
 
-    auto  it = accels.find(source_guid);
+    auto  it = accels.find(source_id);
     if (it == accels.end())
-        it = accels.insert({ source_guid, acceleration }).first;
+        it = accels.insert({ source_id, acceleration }).first;
     else
     {
         rb.m_acceleration_from_external_forces.m_angular -= it->second;
@@ -228,13 +228,13 @@ void  rigid_body_simulator::set_angular_acceleration_from_source(
 }
 
 
-void  rigid_body_simulator::remove_linear_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid)
+void  rigid_body_simulator::remove_linear_acceleration_from_source(rigid_body_id const  id, acceleration_source_id const  source_id)
 {
     auto const  accels_it = m_linear_accelerations_from_sources.find(id);
     if (accels_it == m_linear_accelerations_from_sources.end())
         return;
 
-    auto  it = accels_it->second.find(source_guid);
+    auto  it = accels_it->second.find(source_id);
     if (it == accels_it->second.end())
         return;
 
@@ -247,13 +247,13 @@ void  rigid_body_simulator::remove_linear_acceleration_from_source(rigid_body_id
 }
 
 
-void  rigid_body_simulator::remove_angular_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid)
+void  rigid_body_simulator::remove_angular_acceleration_from_source(rigid_body_id const  id, acceleration_source_id const  source_id)
 {
     auto const  accels_it = m_angular_accelerations_from_sources.find(id);
     if (accels_it == m_angular_accelerations_from_sources.end())
         return;
 
-    auto  it = accels_it->second.find(source_guid);
+    auto  it = accels_it->second.find(source_id);
     if (it == accels_it->second.end())
         return;
 

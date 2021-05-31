@@ -397,13 +397,26 @@ static void  import_reques_info(
                 hierarchy.get<float_32_bit>("multiplier"),
                 hierarchy.get<float_32_bit>("exponent"),
                 hierarchy.get<float_32_bit>("min_radius"),
-                hierarchy.get<bool>("use_mass")
+                device_simulator::force_field_flags {
+                        hierarchy.get<bool>("use_mass"),
+                        hierarchy.get<bool>("use_density"),
+                        hierarchy.get<bool>("use_penetration_depth")
+                        }
                 );
     else if (kind == "UPDATE_LINEAR_FORCE_FIELD")
         ctx.insert_request_info_update_linear_force_field(
                 { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },
                 import_vector3(hierarchy.get_child("acceleration")),
-                hierarchy.get<bool>("use_mass")
+                device_simulator::force_field_flags {
+                        hierarchy.get<bool>("use_mass"),
+                        hierarchy.get<bool>("use_density"),
+                        hierarchy.get<bool>("use_penetration_depth")
+                        }
+                );
+    else if (kind == "APPLY_FORCE_FIELD_RESISTANCE")
+        ctx.insert_request_info_apply_force_field_resistance(
+                { owner_guid, to_device_event(hierarchy.get<std::string>("event")) },
+                hierarchy.get<float_32_bit>("resistance_coef")
                 );
     else if (kind == "LEAVE_FORCE_FIELD")
         ctx.insert_request_info_leave_force_field(

@@ -140,6 +140,7 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
         ("MUL_ANGULAR_VELOCITY", "MUL_ANGULAR_VELOCITY", "Scale angular velocity of a rigid body.", 13),
         ("UPDATE_RADIAL_FORCE_FIELD", "UPDATE_RADIAL_FORCE_FIELD", "Update accel of radial force field acting of a rigid body.", 10),
         ("UPDATE_LINEAR_FORCE_FIELD", "UPDATE_LINEAR_FORCE_FIELD", "Update accel of linear force field acting of a rigid body.", 11),
+        ("APPLY_FORCE_FIELD_RESISTANCE", "APPLY_FORCE_FIELD_RESISTANCE", "Apply resistance force in the force field.", 15),                 # <----- Max index
         ("LEAVE_FORCE_FIELD", "LEAVE_FORCE_FIELD", "Leave force field.", 14),
     ]
     kind: bpy.props.EnumProperty(
@@ -317,6 +318,29 @@ class E2_UL_RequestInfoListItem(bpy.types.PropertyGroup):
             description="Whether to use mass of the rigid body or not in the\n"+
                         "computation of the acceleration acting on that body.",
             default=True
+            )
+
+    use_density: bpy.props.BoolProperty(
+            name="Use density?",
+            description="Whether to use density of the rigid body or not in the\n"+
+                        "computation of the acceleration acting on that body.",
+            default=False
+            )
+
+    use_penetration_depth: bpy.props.BoolProperty(
+            name="Use depth?",
+            description="Whether to use penetration depth of the rigid body or not\n"+
+                        "in the computation of the acceleration acting on that body.",
+            default=False
+            )
+
+    resistance_coef: bpy.props.FloatProperty(
+            name="Resistance coef",
+            description="The resistance coefficient of the environment in the force field.",
+            default=1.0,
+            min=0.01,
+            max=100.0,
+            step=0.01
             )
 
     linear_force_field_acceleration: bpy.props.FloatVectorProperty(
@@ -608,6 +632,8 @@ class E2ObjectProps(bpy.types.PropertyGroup):
         ("RUBBER", "RUBBER", "A collision material rubber.", 11),
         ("STEEL", "STEEL", "A collision material steel.", 12),
         ("WOOD", "WOOD", "A collision material wood.", 13),
+        ("WATER", "WATER", "A collision material water. Use only in a force field.", 15),
+        ("AIR", "AIR", "A collision material air. Use only in a force field.", 16),                                                                 # <---- The highest index
         ("NO_FRINCTION_NO_BOUNCING", "NO_FRINCTION_NO_BOUNCING", "A collision material 'no friction no bouncing'.", 14),
     ]
     collider_material_type: bpy.props.EnumProperty(
@@ -1023,6 +1049,8 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
                 self.draw_request_info_update_radial_force_field(layout, object, object_props, request_info)
             elif request_info.kind == "UPDATE_LINEAR_FORCE_FIELD":
                 self.draw_request_info_update_linear_force_field(layout, object, object_props, request_info)
+            elif request_info.kind == "APPLY_FORCE_FIELD_RESISTANCE":
+                self.draw_request_info_apply_force_field_resistance(layout, object, object_props, request_info)
             elif request_info.kind == "LEAVE_FORCE_FIELD":
                 self.warn_object_is_not_collider_with_sensor(object, layout, "This object")
             else:
@@ -1162,6 +1190,10 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(request_info, "radial_force_field_min_radius")
         row = layout.row()
         row.prop(request_info, "use_mass")
+        row = layout.row()
+        row.prop(request_info, "use_density")
+        row = layout.row()
+        row.prop(request_info, "use_penetration_depth")
 
     def draw_request_info_update_linear_force_field(self, layout, object, object_props, request_info):
         self.warn_object_is_not_collider_with_sensor(object, layout, "This object")
@@ -1169,6 +1201,15 @@ class E2ObjectPropertiesPanel(bpy.types.Panel):
         row.prop(request_info, "linear_force_field_acceleration")
         row = layout.row()
         row.prop(request_info, "use_mass")
+        row = layout.row()
+        row.prop(request_info, "use_density")
+        row = layout.row()
+        row.prop(request_info, "use_penetration_depth")
+
+    def draw_request_info_apply_force_field_resistance(self, layout, object, object_props, request_info):
+        self.warn_object_is_not_collider_with_sensor(object, layout, "This object")
+        row = layout.row()
+        row.prop(request_info, "resistance_coef")
 
     def draw_agent(self, layout, object, object_props):
         self.warn_agent_inside_folder_with_wrong_content(object, object_props, layout)
@@ -1729,6 +1770,8 @@ class E2SceneExportOperator(bpy.types.Operator):
                 record = self.export_request_info_update_radial_force_field(info)
             elif info.kind == "UPDATE_LINEAR_FORCE_FIELD":
                 record = self.export_request_info_update_linear_force_field(info)
+            elif info.kind == "APPLY_FORCE_FIELD_RESISTANCE":
+                record = self.export_request_info_apply_force_field_resistance(info)
             elif info.kind == "LEAVE_FORCE_FIELD":
                 record = {}
             else:
@@ -1822,14 +1865,24 @@ class E2SceneExportOperator(bpy.types.Operator):
             "multiplier": num2str(info.radial_force_field_multiplier),
             "exponent": num2str(info.radial_force_field_exponent),
             "min_radius": num2str(info.radial_force_field_min_radius),
-            "use_mass": bool2str(info.use_mass)
+            "use_mass": bool2str(info.use_mass),
+            "use_density": bool2str(info.use_density),
+            "use_penetration_depth": bool2str(info.use_penetration_depth)
         }
         return result
 
     def export_request_info_update_linear_force_field(self, info):
         result = {
             "acceleration": self.export_vector(info.linear_force_field_acceleration),
-            "use_mass": bool2str(info.use_mass)
+            "use_mass": bool2str(info.use_mass),
+            "use_density": bool2str(info.use_density),
+            "use_penetration_depth": bool2str(info.use_penetration_depth)
+        }
+        return result
+
+    def export_request_info_apply_force_field_resistance(self, info):
+        result = {
+            "resistance_coef": num2str(info.resistance_coef)
         }
         return result
 

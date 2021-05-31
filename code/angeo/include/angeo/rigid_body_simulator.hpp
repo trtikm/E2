@@ -33,6 +33,8 @@ struct  rigid_body_simulator
         float_64_bit  m_duration_of_contact_cache_update_in_seconds;
     };
 
+    using  acceleration_source_id = std::pair<com::object_guid, natural_16_bit>;
+
     rigid_body_simulator();
 
     rigid_body_id  insert_rigid_body(
@@ -70,10 +72,10 @@ struct  rigid_body_simulator
     vector3  get_initial_angular_acceleration(rigid_body_id const  id) const { return get_angular_acceleration(id) - compute_angular_acceleration_from_sources(id); }
     vector3  compute_linear_acceleration_from_sources(rigid_body_id const  id) const;
     vector3  compute_angular_acceleration_from_sources(rigid_body_id const  id) const;
-    void  set_linear_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration);
-    void  set_angular_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid, vector3 const&  acceleration);
-    void  remove_linear_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid);
-    void  remove_angular_acceleration_from_source(rigid_body_id const  id, com::object_guid const  source_guid);
+    void  set_linear_acceleration_from_source(rigid_body_id const  id, acceleration_source_id const  source_id, vector3 const&  acceleration);
+    void  set_angular_acceleration_from_source(rigid_body_id const  id, acceleration_source_id const  source_id, vector3 const&  acceleration);
+    void  remove_linear_acceleration_from_source(rigid_body_id const  id, acceleration_source_id const  source_id);
+    void  remove_angular_acceleration_from_source(rigid_body_id const  id, acceleration_source_id const  source_id);
     void  remove_linear_accelerations_from_all_sources(rigid_body_id const  id);
     void  remove_angular_accelerations_from_all_sources(rigid_body_id const  id);
 
@@ -234,8 +236,8 @@ private:
     std::vector<rigid_body>  m_rigid_bodies;
     std::vector<matrix33>  m_inverted_inertia_tensors;  // Always in the local space. Zero matrix means an infinite inertia.
     std::unordered_set<rigid_body_id>  m_invalid_rigid_body_ids;
-    std::unordered_map<rigid_body_id, std::unordered_map<com::object_guid, vector3> >  m_linear_accelerations_from_sources;
-    std::unordered_map<rigid_body_id, std::unordered_map<com::object_guid, vector3> >  m_angular_accelerations_from_sources;
+    std::unordered_map<rigid_body_id, std::unordered_map<acceleration_source_id, vector3> >  m_linear_accelerations_from_sources;
+    std::unordered_map<rigid_body_id, std::unordered_map<acceleration_source_id, vector3> >  m_angular_accelerations_from_sources;
 };
 
 
