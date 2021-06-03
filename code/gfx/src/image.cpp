@@ -34,7 +34,7 @@ void  save_png_image(boost::filesystem::path const&  path, image_rgba_8888 const
 {
     TMPROF_BLOCK();
     ASSUMPTION(img.width > 0U && img.height > 0U);
-    lodepng::encode(path.string(), img.data, img.width, img.width, LCT_RGBA, 8U);
+    lodepng::encode(path.string(), img.data, img.width, img.height, LCT_RGBA, 8U);
 }
 
 
