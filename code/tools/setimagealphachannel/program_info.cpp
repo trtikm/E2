@@ -13,8 +13,8 @@ std::string  get_program_version()
 std::string  get_program_description()
 {
     return
-        "A command-line tool which accepts an input PNG image and each\n"
-        "its pixel with RGB(A) colour (255, 0, 255, *) will be replaced\n"
-        " by RGBA (0, 0, 0, 0)."
+        "A command-line tool which accepts a gray-scale input PNG image\n"
+        "and each its RGB(A) pixel (r, g, b, a) will be replaced\n"
+        "by (255, 255, 255, r)."
         ;        
 }

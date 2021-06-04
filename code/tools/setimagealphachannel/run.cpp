@@ -32,16 +32,15 @@ void run(int argc, char* argv[])
     try
     {
         gfx::image_rgba_8888  img;
-        gfx::load_png_image(get_program_options()->get_input_image(), img);
+        gfx::load_png_image(boost::filesystem::absolute(get_program_options()->get_input_image()), img);
         for (natural_32_bit  i = 0U, n = (natural_32_bit)img.data.size(); i < n; i += 4)
-            if (img.data.at(i + 0U) == 255U && img.data.at(i + 1U) == 0U && img.data.at(i + 2U) == 255U)
-            {
-                img.data.at(i + 0U) = 0U;
-                img.data.at(i + 1U) = 0U;
-                img.data.at(i + 2U) = 0U;
-                img.data.at(i + 3U) = 0U;
-            }
-        gfx::save_png_image(get_program_options()->get_output_image(), img);
+        {
+            img.data.at(i + 3U) = img.data.at(i + 0U);
+            img.data.at(i + 0U) = 255U;
+            img.data.at(i + 1U) = 255U;
+            img.data.at(i + 2U) = 255U;
+        }
+        gfx::save_png_image(boost::filesystem::absolute(get_program_options()->get_output_image()), img);
     }
     catch (std::exception const& e)
     {
