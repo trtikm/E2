@@ -25,6 +25,8 @@ struct  simulator : public com::simulator
         set_window_pos(get_window_props().window_frame_size_left(), get_window_props().window_frame_size_top());
         set_window_size(1024U, 768U);
         //maximise_window();
+        render_config().camera->coordinate_system()->set_origin({ 0.0f, 0.0f, 20.0f });
+        render_config().camera->coordinate_system()->set_orientation(quaternion_identity());
     }
 
     void  on_begin_round() override

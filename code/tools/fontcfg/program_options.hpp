@@ -15,6 +15,7 @@ public:
     bool helpMode() const { return vm.count("help") > 0; }
     bool versionMode() const { return vm.count("version") > 0; }
     std::string  data_root() const { return vm["data"].as<std::string>(); }
+    std::string  font_file_name() const { return vm["font-file"].as<std::string>(); }
     
     // Add more option access/query functions here, if needed.
 

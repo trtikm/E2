@@ -17,9 +17,13 @@ program_options::program_options(int argc, char* argv[])
             bpo::value<std::string>()->default_value("../data"),
             "A root directory under which program's data are stored.")
         // Specify more options here, if needed.
+        ("font-file,f",
+            bpo::value<std::string>(),
+            "A file name (no directories) of a font file (with .txt extension) to be edited.")
         ;
 
     bpo::positional_options_description pos_desc;
+    pos_desc.add("font-file", 1);
 
     bpo::store(bpo::command_line_parser(argc,argv).allow_unregistered().
                options(desc).positional(pos_desc).run(),vm);
