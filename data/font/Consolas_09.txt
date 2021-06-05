@@ -1,0 +1,16 @@
+font_texture texture\\font\\Consolas_09.txt
+min_ascii_code 33
+max_ascii_code 126
+max_chars_in_row 18
+min_u 0.0173417684
+min_v 0.0584534332
+char_uv_width 0.0326084197
+char_uv_height 0.0994954929
+char_separ_u 0.0220604297
+char_separ_v 0.0087874392
+space_size 0.00157634157
+tab_size 4
+char_width 0.00157634157
+char_height 0.00259724702
+char_separ_dist_x -0.000177601789
+char_separ_dist_y 0.000314350211

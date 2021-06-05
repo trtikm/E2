@@ -1,0 +1,16 @@
+font_texture texture\\font\\Consolas_31.txt
+min_ascii_code 33
+max_ascii_code 126
+max_chars_in_row 11
+min_u 0.0195395965
+min_v 0.0296821557
+char_uv_width 0.0491039902
+char_uv_height 0.0820995271
+char_separ_u 0.0407166742
+char_separ_v 0.0112628685
+space_size 0.00469736103
+tab_size 4
+char_width 0.00469736103
+char_height 0.00743940054
+char_separ_dist_x -0.000586465292
+char_separ_dist_y 0.000607743452
