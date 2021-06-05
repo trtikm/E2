@@ -136,3 +136,56 @@ screen_text_logger&  screen_text_logger::instance()
     static screen_text_logger  logger;
     return logger;
 }
+
+
+screen_text_logger::screen_text_logger()
+    : m_text()
+    , m_max_size(25000U)
+{}
+
+
+void  screen_text_logger::set_max_text_size(std::size_t const  max_size)
+{
+    m_max_size = max_size; append("");
+};
+
+
+void  screen_text_logger::append(std::string const&  text)
+{
+    m_text += text;
+    if (m_text.size() > m_max_size)
+        m_text.resize(m_max_size);
+}
+
+
+continuous_text_logger&  continuous_text_logger::instance()
+{
+    static continuous_text_logger  logger;
+    return logger;
+}
+
+
+continuous_text_logger::continuous_text_logger()
+    : m_lines()
+    , m_max_line_size(250U)
+    , m_max_num_line(100U)
+{}
+
+
+void  continuous_text_logger::append(std::string const&  text)
+{
+    m_lines.push_front(text);
+    if (m_lines.front().size() > m_max_line_size)
+        m_lines.front().resize(m_max_line_size);
+    while (m_lines.size() > m_max_num_line)
+        m_lines.pop_back();
+}
+
+
+std::string  continuous_text_logger::text() const
+{
+    std::stringstream  sstr;
+    for (auto  rit = m_lines.rbegin(); rit != m_lines.rend(); ++rit)
+        sstr << *rit << std::endl;
+    return sstr.str();
+}

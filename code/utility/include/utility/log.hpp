@@ -7,6 +7,7 @@
 #   include <boost/log/sources/logger.hpp>
 #   include <boost/log/attributes/constant.hpp>
 #   include <string>
+#   include <deque>
 
 #   define LOG(LVL,MSG) \
         if ((LVL) >= BUILD_RELEASE() * 2 && (LVL) >= get_minimal_severity_level())\
@@ -27,6 +28,7 @@
                                                                   minimal_severity_level);\
         }}}}}
 #   define SLOG(MSG) screen_text_logger::instance().append(msgstream() << MSG)
+#   define CLOG(MSG) continuous_text_logger::instance().append(msgstream() << MSG)
 
 
 enum logging_severity_level
@@ -57,14 +59,38 @@ struct  screen_text_logger
 {
     static screen_text_logger&  instance();
 
-    void  set_max_text_size(unsigned int  max_size);
+    void  set_max_text_size(std::size_t const  max_size);
 
     void  clear() { m_text.clear(); }
-    void  append(std::string const&  text) { m_text += text; }
+    void  append(std::string const&  text);
     std::string const&  text() const { return m_text;}
 
 private:
+    screen_text_logger();
+
     std::string  m_text;
+    std::size_t  m_max_size;
+};
+
+
+struct  continuous_text_logger
+{
+    static continuous_text_logger&  instance();
+
+    void  set_line_max_size(std::size_t const  max_size) { m_max_line_size = max_size; }
+    void  set_max_num_lines(std::size_t const  max_size) { m_max_num_line = max_size; }
+
+    void  clear() { m_lines.clear(); }
+    void  append(std::string const&  line);
+    std::deque<std::string> const&  lines() const { return m_lines; }
+    std::string  text() const;
+
+private:
+    continuous_text_logger();
+
+    std::deque<std::string>  m_lines;
+    std::size_t  m_max_line_size;
+    std::size_t  m_max_num_line;
 };
 
 
