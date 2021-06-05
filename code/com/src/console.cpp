@@ -360,7 +360,7 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
     push_to_history("                       press the key, older command is used from");
     push_to_history("                       the commands history.");
     push_to_history("DOWN                   Same as the key UP, but it moves in the");
-    push_to_history("                       commands hostory in the opposite direction.");
+    push_to_history("                       commands history in the opposite direction.");
 }
 
 
