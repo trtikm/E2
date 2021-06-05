@@ -103,6 +103,8 @@ void swap_states()
     other_state().buttons_just_released.clear();
     other_state().error_msg.clear();
     other_state().has_focus = current_state().has_focus;
+    other_state().wheel_delta_x = 0.0f;
+    other_state().wheel_delta_y = 0.0f;
 }
 
 
