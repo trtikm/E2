@@ -117,18 +117,6 @@ void  text_box::render(draw_state&  dstate) const
     gfx::make_current(vp);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    if (gfx::make_current(m_text_batch, dstate))
-    {
-        gfx::render_batch(
-            m_text_batch,
-            pos,
-            m_tid.scale,
-            ortho_projection,
-            vector3{ 1.0f, 1.0f, 1.0f }
-            );
-        dstate = m_text_batch.get_draw_state();
-    }
-
     if (m_cursor_visible && gfx::make_current(m_cursor_batch, dstate))
     {
         gfx::render_batch(
@@ -139,6 +127,18 @@ void  text_box::render(draw_state&  dstate) const
             vector3{ 1.0f, 1.0f, 1.0f }
             );
         dstate = m_cursor_batch.get_draw_state();
+    }
+
+    if (gfx::make_current(m_text_batch, dstate))
+    {
+        gfx::render_batch(
+            m_text_batch,
+            pos,
+            m_tid.scale,
+            ortho_projection,
+            vector3{ 1.0f, 1.0f, 1.0f }
+            );
+        dstate = m_text_batch.get_draw_state();
     }
 }
 
