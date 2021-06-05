@@ -35,14 +35,16 @@ struct  simulator : public osi::simulator
 
         bool  paused;
         natural_32_bit  num_rounds_to_pause;
-        bool  is_viewport_active;  // True, if the mouse in the viewport of the simulation, and false otherwise.
     };
+
+    enum struct  VIEWPORT_TYPE { SCENE = 0, CONSOLE = 1, OUTPUT = 2 };
 
     enum struct CAMERA_CONTROLLER_TYPE : natural_8_bit { CAMERA_IS_LOCKED, FREE_FLY, CUSTOM_CONTROL };
 
     struct  render_configuration
     {
-        render_configuration(osi::window_props const&  wnd_props, std::string const&  data_root_dir);
+
+        render_configuration(gfx::viewport const&  vp, std::string const&  data_root_dir);
         void  terminate();
         // Global config - fields are only initialised in the constructor and then never changed in this class.
         //                 Feel free to modify these field, ideally in the callback 'on_begin_round()'
@@ -87,8 +89,11 @@ struct  simulator : public osi::simulator
         bool  render_sight_image;
         bool  render_agent_action_transition_contratints;
         bool  show_console;
-        float_32_bit  console_window_left_param; // A parameter in (0,1) to the left side of the console viewport
-                                                 // from the left side of the whole app window.
+        float_32_bit  console_viewport_left_param; // A parameter in (0,1) to the left side of the console viewport
+                                                   // from the left side of the whole app window.
+        bool  show_output;
+        float_32_bit  output_viewport_top_param; // A parameter in (0,1) to the top side of the output viewport
+                                                 // from the top side of the whole app window.
         float_32_bit  sight_image_scale;
         vector4  colour_of_rigid_body_collider;
         vector4  colour_of_field_collider;
@@ -169,6 +174,9 @@ struct  simulator : public osi::simulator
 
     natural_32_bit  FPS() const { return m_FPS; }
 
+    VIEWPORT_TYPE  active_viewport_type() const { return m_active_viewport; }
+    gfx::viewport const&  get_viewport(VIEWPORT_TYPE const  vp_type) const { return m_viewports.at((std::size_t)vp_type); }
+
     void  render_batch(gfx::batch  batch, std::vector<matrix44> const&  world_matrices);
 
 private:
@@ -184,6 +192,8 @@ private:
     void  update_collision_contacts_and_constraints();
     void  update_collider_locations_of_relocated_frames();
 
+    void  update_viewports();
+    gfx::viewport&  viewport_ref(VIEWPORT_TYPE const  vp_type) { return m_viewports.at((std::size_t)vp_type); }
     void  camera_update();
 
     void  render();
@@ -209,14 +219,17 @@ private:
 
     simulation_context_ptr  m_context;
 
+    std::vector<gfx::viewport>  m_viewports;
+    VIEWPORT_TYPE  m_active_viewport;
+
+    simulation_configuration  m_simulation_config;
+    render_configuration  m_render_config;
+
     struct  console_props {
         console_props() : console(), render_props() { render_props.tid.text = console.text(); }
         console  console;
         console_render_props  render_props;
     }  m_console;
-
-    simulation_configuration  m_simulation_config;
-    render_configuration  m_render_config;
 
     natural_32_bit  m_FPS_num_rounds;
     float_32_bit  m_FPS_time;

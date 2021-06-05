@@ -41,9 +41,19 @@ struct  simulator : public com::simulator
         if (!get_window_props().has_focus())
             return;
 
-        if (get_keyboard_props().keys_just_pressed().count(osi::KEY_LAPOSTROPH()) != 0UL)
+        bool const  shift = get_keyboard_props().keys_pressed().count(osi::KEY_LSHIFT()) != 0UL ||
+                            get_keyboard_props().keys_pressed().count(osi::KEY_RSHIFT()) != 0UL;
+        bool const  ctrl = get_keyboard_props().keys_pressed().count(osi::KEY_LCTRL()) != 0UL ||
+                           get_keyboard_props().keys_pressed().count(osi::KEY_RCTRL()) != 0UL;
+        bool const  alt = get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
+                          get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL;
+
+        if (!ctrl && get_keyboard_props().keys_just_pressed().count(osi::KEY_LAPOSTROPH()) != 0UL)
             render_config().show_console = !render_config().show_console;
-        if (render_config().show_console && !simulation_config().is_viewport_active)
+        if (ctrl && get_keyboard_props().keys_just_pressed().count(osi::KEY_LAPOSTROPH()) != 0UL)
+            render_config().show_output = !render_config().show_output;
+
+        if (active_viewport_type() != VIEWPORT_TYPE::SCENE)
             return;
 
         if (get_keyboard_props().keys_just_pressed().count(osi::KEY_PAUSE()) != 0UL)
@@ -53,13 +63,6 @@ struct  simulator : public com::simulator
             simulation_config().paused = false;
             simulation_config().num_rounds_to_pause = 1U;
         }
-
-        bool const  shift = get_keyboard_props().keys_pressed().count(osi::KEY_LSHIFT()) != 0UL ||
-                            get_keyboard_props().keys_pressed().count(osi::KEY_RSHIFT()) != 0UL;
-        bool const  ctrl = get_keyboard_props().keys_pressed().count(osi::KEY_LCTRL()) != 0UL ||
-                           get_keyboard_props().keys_pressed().count(osi::KEY_RCTRL()) != 0UL;
-        bool const  alt = get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
-                          get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL;
 
         if (alt && !ctrl)
         {
@@ -143,7 +146,7 @@ struct  simulator : public com::simulator
     {
         if (render_config().camera_controller_type == CAMERA_CONTROLLER_TYPE::CAMERA_IS_LOCKED)
             SLOG("CAMERA IS LOCKED\n");
-        if (render_config().show_console && !simulation_config().is_viewport_active)
+        if (active_viewport_type() != VIEWPORT_TYPE::SCENE)
             return;
         if (get_keyboard_props().keys_pressed().count(osi::KEY_F1()) != 0UL)
         {
