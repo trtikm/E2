@@ -16,9 +16,6 @@ add_library(${THIS_TARGET_NAME}
     ./include/com/console.hpp
     ./src/console.cpp
 
-    ./include/com/detail/console_render_props.hpp
-    ./src/detail/console_render_props.cpp
-
     ./include/com/simulator.hpp
     ./src/simulator.cpp
 

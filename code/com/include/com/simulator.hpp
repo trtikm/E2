@@ -3,7 +3,6 @@
 
 #   include <com/simulation_context.hpp>
 #   include <com/console.hpp>
-#   include <com/detail/console_render_props.hpp>
 #   include <osi/simulator.hpp>
 #   include <gfx/camera.hpp>
 #   include <gfx/free_fly.hpp>
@@ -240,6 +239,8 @@ private:
         console  console;
         gfx::gui::text_box  text_box;
     }  m_console;
+
+    gfx::gui::text_box  m_output_text_box;
 
     natural_32_bit  m_FPS_num_rounds;
     float_32_bit  m_FPS_time;

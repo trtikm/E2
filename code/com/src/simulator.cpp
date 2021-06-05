@@ -186,6 +186,7 @@ simulator::simulator(std::string const&  data_root_dir)
     , m_render_config(*m_viewports.at((std::size_t)m_active_viewport), m_context->get_data_root_dir())
 
     , m_console(m_render_config.font_props, m_viewports.at((std::size_t)VIEWPORT_TYPE::CONSOLE))
+    , m_output_text_box(m_render_config.font_props, m_viewports.at((std::size_t)VIEWPORT_TYPE::OUTPUT))
 
     , m_FPS_num_rounds(0U)
     , m_FPS_time(0.0f)
@@ -273,6 +274,7 @@ void  simulator::round()
         }
         if (render_config().render_text && render_config().render_fps)
             SLOG(render_config().fps_prefix << FPS() << "\n");
+            //CLOG(render_config().fps_prefix << FPS());
 
         on_begin_simulation();
             context()->process_pending_late_requests();
@@ -1047,11 +1049,18 @@ void  simulator::render_agent_action_transition_contratints()
 
 void  simulator::render_text()
 {
+    render_configuration&  cfg = render_config();
+
+    if (cfg.show_output)
+    {
+        m_output_text_box.set_text(continuous_text_logger::instance().text());
+        m_output_text_box.update(round_seconds());
+        m_output_text_box.render(render_config().draw_state);
+    }
+
     std::string const&  text = screen_text_logger::instance().text();
     if (text.empty())
         return;
-
-    render_configuration&  cfg = render_config();
 
     vector3 const  pos{
         cfg.camera->left() + cfg.text_scale * cfg.text_shift(0) * cfg.font_props->char_width,
@@ -1067,6 +1076,7 @@ void  simulator::render_text()
 
     if (gfx::make_current(m_text_cache.second, cfg.draw_state))
     {
+        gfx::make_current(get_viewport(VIEWPORT_TYPE::SCENE));
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         gfx::render_batch(
             m_text_cache.second,
