@@ -48,9 +48,11 @@ struct  simulator : public com::simulator
         bool const  alt = get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
                           get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL;
 
-        if (!ctrl && get_keyboard_props().keys_just_pressed().count(osi::KEY_LAPOSTROPH()) != 0UL)
+        if (active_viewport_type() != VIEWPORT_TYPE::CONSOLE &&
+            !ctrl && get_keyboard_props().keys_just_pressed().count(osi::KEY_LAPOSTROPH()) != 0UL)
             render_config().show_console = !render_config().show_console;
-        if (ctrl && get_keyboard_props().keys_just_pressed().count(osi::KEY_LAPOSTROPH()) != 0UL)
+        if (active_viewport_type() != VIEWPORT_TYPE::OUTPUT &&
+            ctrl && get_keyboard_props().keys_just_pressed().count(osi::KEY_LAPOSTROPH()) != 0UL)
             render_config().show_output = !render_config().show_output;
 
         if (active_viewport_type() != VIEWPORT_TYPE::SCENE)

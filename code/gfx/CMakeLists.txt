@@ -78,6 +78,11 @@ add_library(${THIS_TARGET_NAME}
     ./include/gfx/skeleton_alignment.hpp
     ./src/skeleton_alignment.cpp
 
+    ./include/gfx/gui/window.hpp 
+    ./src/gui/window.cpp 
+    ./include/gfx/gui/text_box.hpp 
+    ./src/gui/text_box.cpp 
+
     ./include/gfx/detail/as_json.hpp 
     ./include/gfx/detail/from_json.hpp 
     ./src/detail/from_json.cpp 

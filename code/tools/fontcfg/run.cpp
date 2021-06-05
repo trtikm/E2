@@ -66,17 +66,17 @@ struct  simulator : public com::simulator
             m_font_rect.half_size = half_size;
         }
 
-        m_edit_infos.push_back({ &m_font_props.min_u, gfx::create_text("min_u",render_config().font_props), 10000.0f });
-        m_edit_infos.push_back({ &m_font_props.min_v, gfx::create_text("min_v",render_config().font_props), 10000.0f });
-        m_edit_infos.push_back({ &m_font_props.char_uv_width, gfx::create_text("char_uv_width",render_config().font_props), 10000.0f });
-        m_edit_infos.push_back({ &m_font_props.char_uv_height, gfx::create_text("char_uv_height",render_config().font_props), 10000.0f });
-        m_edit_infos.push_back({ &m_font_props.char_separ_u, gfx::create_text("char_separ_u",render_config().font_props), 200000.0f });
-        m_edit_infos.push_back({ &m_font_props.char_separ_v, gfx::create_text("char_separ_v",render_config().font_props), 200000.0f });
-        //m_edit_infos.push_back({ &m_font_props.space_size, gfx::create_text("space_size",render_config().font_props), 10000.0f });
-        m_edit_infos.push_back({ &m_font_props.char_width, gfx::create_text("char_width",render_config().font_props), 200000.0f });
-        m_edit_infos.push_back({ &m_font_props.char_height, gfx::create_text("char_height",render_config().font_props), 200000.0f });
-        m_edit_infos.push_back({ &m_font_props.char_separ_dist_x, gfx::create_text("char_separ_dist_x",render_config().font_props), 200000.0f });
-        m_edit_infos.push_back({ &m_font_props.char_separ_dist_y, gfx::create_text("char_separ_dist_y",render_config().font_props), 200000.0f });
+        m_edit_infos.push_back({ &m_font_props.min_u, gfx::create_text("min_u",*render_config().font_props), 10000.0f });
+        m_edit_infos.push_back({ &m_font_props.min_v, gfx::create_text("min_v",*render_config().font_props), 10000.0f });
+        m_edit_infos.push_back({ &m_font_props.char_uv_width, gfx::create_text("char_uv_width",*render_config().font_props), 10000.0f });
+        m_edit_infos.push_back({ &m_font_props.char_uv_height, gfx::create_text("char_uv_height",*render_config().font_props), 10000.0f });
+        m_edit_infos.push_back({ &m_font_props.char_separ_u, gfx::create_text("char_separ_u",*render_config().font_props), 200000.0f });
+        m_edit_infos.push_back({ &m_font_props.char_separ_v, gfx::create_text("char_separ_v",*render_config().font_props), 200000.0f });
+        //m_edit_infos.push_back({ &m_font_props.space_size, gfx::create_text("space_size",*render_config().font_props), 10000.0f });
+        m_edit_infos.push_back({ &m_font_props.char_width, gfx::create_text("char_width",*render_config().font_props), 200000.0f });
+        m_edit_infos.push_back({ &m_font_props.char_height, gfx::create_text("char_height",*render_config().font_props), 200000.0f });
+        m_edit_infos.push_back({ &m_font_props.char_separ_dist_x, gfx::create_text("char_separ_dist_x",*render_config().font_props), 200000.0f });
+        m_edit_infos.push_back({ &m_font_props.char_separ_dist_y, gfx::create_text("char_separ_dist_y",*render_config().font_props), 200000.0f });
     }
 
     void  on_begin_round() override

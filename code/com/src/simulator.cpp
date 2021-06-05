@@ -46,9 +46,9 @@ simulator::render_configuration::render_configuration(gfx::viewport const&  vp, 
     : free_fly_config(gfx::default_free_fly_config(vp.pixel_width_mm, vp.pixel_height_mm))
     , camera_controller_type(CAMERA_CONTROLLER_TYPE::FREE_FLY)
     , font_props(
-            [&data_root_dir]() -> gfx::font_mono_props {
-                gfx::font_mono_props  props;
-                gfx::load_font_mono_props(canonical_path(data_root_dir) / "font" / "Consolas_16.txt", props);
+            [&data_root_dir]() -> std::shared_ptr<gfx::font_mono_props> {
+                std::shared_ptr<gfx::font_mono_props>  props = std::make_shared<gfx::font_mono_props>();
+                gfx::load_font_mono_props(canonical_path(data_root_dir) / "font" / "Consolas_16.txt", *props);
                 return props;
             }()        
             )
@@ -132,7 +132,7 @@ simulator::render_configuration::render_configuration(gfx::viewport const&  vp, 
 
 void  simulator::render_configuration::terminate()
 {
-    font_props.release();
+    font_props->release();
     batch_grid.release();
     batch_frame.release();
     batch_sensory_collision_contact.release();
@@ -169,23 +169,23 @@ simulator::simulator(std::string const&  data_root_dir)
             ))
 
     , m_viewports {
-            gfx::viewport{ // SCENE
+            std::make_shared<gfx::viewport>( // SCENE
                 0.0f,
                 (float_32_bit)get_window_props().window_width(),
                 0.0f,
                 (float_32_bit)get_window_props().window_height(),
                 get_window_props().pixel_width_mm(),
                 get_window_props().pixel_height_mm()
-                },
-            {}, // CONSOLE
-            {}  // OUTPUT
+                ),
+            std::make_shared<gfx::viewport>(), // CONSOLE
+            std::make_shared<gfx::viewport>()  // OUTPUT
             }
     , m_active_viewport(VIEWPORT_TYPE::SCENE)
 
     , m_simulation_config()
-    , m_render_config(m_viewports.at((std::size_t)m_active_viewport), m_context->get_data_root_dir())
+    , m_render_config(*m_viewports.at((std::size_t)m_active_viewport), m_context->get_data_root_dir())
 
-    , m_console()
+    , m_console(m_render_config.font_props, m_viewports.at((std::size_t)VIEWPORT_TYPE::CONSOLE))
 
     , m_FPS_num_rounds(0U)
     , m_FPS_time(0.0f)
@@ -259,9 +259,9 @@ void  simulator::round()
 
     screen_text_logger::instance().clear();
 
-    on_begin_round();
+    update_viewports();
 
-        update_viewports();
+    on_begin_round();
 
         ++m_FPS_num_rounds;
         m_FPS_time += round_seconds();
@@ -276,6 +276,8 @@ void  simulator::round()
 
         on_begin_simulation();
             context()->process_pending_late_requests();
+            if (render_config().show_console == true)
+                update_console();
             if (!simulation_config().paused)
             {
                 simulate();
@@ -305,8 +307,6 @@ void  simulator::round()
         on_begin_render();
             render();
         on_end_render();
-
-        update_console();
 
     on_end_round();
 }
@@ -494,8 +494,8 @@ void  simulator::update_viewports()
             get_window_props().pixel_width_mm(),
             get_window_props().pixel_height_mm()
             };
-    for (gfx::viewport&  vp : m_viewports)
-        vp = window;
+    for (std::shared_ptr<gfx::viewport>  vp : m_viewports)
+        *vp = window;
     if (render_config().show_console)
     {
         viewport_ref(VIEWPORT_TYPE::SCENE).right *= render_config().console_viewport_left_param;
@@ -620,6 +620,8 @@ void  simulator::render()
 
     if (cfg.render_text)
         render_text();
+    if (cfg.show_console)
+        render_console();
 }
 
 
@@ -1052,15 +1054,15 @@ void  simulator::render_text()
     render_configuration&  cfg = render_config();
 
     vector3 const  pos{
-        cfg.camera->left() + cfg.text_scale * cfg.text_shift(0) * cfg.font_props.char_width,
-        cfg.camera->top() + cfg.text_scale * cfg.text_shift(1)* cfg.font_props.char_height,
+        cfg.camera->left() + cfg.text_scale * cfg.text_shift(0) * cfg.font_props->char_width,
+        cfg.camera->top() + cfg.text_scale * cfg.text_shift(1)* cfg.font_props->char_height,
         -cfg.camera->near_plane()
     };
 
     if (text != m_text_cache.first)
     {
         m_text_cache.first = text;
-        m_text_cache.second = gfx::create_text(text, cfg.font_props, (cfg.camera->right() - pos(0)) / cfg.text_scale);
+        m_text_cache.second = gfx::create_text(text, *cfg.font_props, (cfg.camera->right() - pos(0)) / cfg.text_scale);
     }
 
     if (gfx::make_current(m_text_cache.second, cfg.draw_state))
@@ -1201,116 +1203,15 @@ gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_gui
 
 void  simulator::update_console()
 {
-    if (render_config().show_console == false)
-    {
-        m_console.render_props.last_show_console = false;
-        return;
-    }
+    if (active_viewport_type() == VIEWPORT_TYPE::CONSOLE)
+        m_console.text_box.set_text(m_console.console.update(*this));
+    m_console.text_box.update(round_seconds());
+}
 
-    console_render_props&  render_props = m_console.render_props;
 
-    std::string const  text = !render_props.last_show_console || active_viewport_type() != VIEWPORT_TYPE::CONSOLE ?
-            render_props.tid.text :
-            m_console.console.update(*this)
-            ;
-
-    render_props.last_show_console = true;
-
-    if (text.empty())
-        return;
-
-    render_configuration&  cfg = render_config();
-    gfx::viewport const&  vp = get_viewport(VIEWPORT_TYPE::CONSOLE);
-
-    natural_16_bit const  left_pixel = (natural_16_bit)vp.left;
-    natural_16_bit const  right_pixel = (natural_16_bit)vp.right;
-
-    console_render_props::text_id  tid(
-            text,
-            cfg.text_scale,
-            0.001f * vp.width() * vp.pixel_width_mm
-            );
-
-    if (tid != render_props.tid)
-    {
-        render_props.tid = tid;
-        render_props.text_batch = gfx::create_text(
-                text,
-                cfg.font_props,
-                render_props.tid.width / render_props.tid.scale,
-                &render_props.text_info
-                );
-        render_props.cursor_countdown_seconds = 1.0f;
-        render_props.cursor_visible = true;
-    }
-    else
-    {
-        render_props.cursor_countdown_seconds -= round_seconds();
-        if (render_props.cursor_countdown_seconds <= 0.0f)
-        {
-            render_props.cursor_countdown_seconds = render_props.cursor_visible ? 0.5f : 1.0f;
-            render_props.cursor_visible = !render_props.cursor_visible;
-        }
-    }
-
-    if (render_props.cursor_batch.empty() || render_props.cursor_scale != render_props.tid.scale)
-    {
-        render_props.cursor_scale = render_props.tid.scale;
-        render_props.cursor_batch = gfx::create_lines3d(
-                std::vector<std::pair<vector3,vector3> >{
-                        { { 0.0f, 0.0f, 0.0f }, { 0.0f, cfg.font_props.char_height, 0.0f } }
-                        },
-                std::vector<vector4>{
-                        { { 1.0f, 0.0f, 0.0f, 1.0f } }
-                        }
-                );
-        render_props.cursor_countdown_seconds = 1.0f;
-        render_props.cursor_visible = true;
-    }
-
-    float_32_bit  left_m = 0.001f * left_pixel * vp.pixel_width_mm;
-    float_32_bit  right_m = 0.001f * right_pixel * vp.pixel_width_mm;
-    float_32_bit  bottom_m = 0.001f * -(vp.height() / 2.0f) * vp.pixel_width_mm;
-    float_32_bit  top_m = 0.001f * (vp.height() / 2.0f) * vp.pixel_width_mm;
-
-    vector3 const  pos{
-            left_m,
-            bottom_m + render_props.tid.scale *
-                       (cfg.font_props.char_height + cfg.font_props.char_separ_dist_y) *
-                       (render_props.text_info.num_rows - 1U),
-            0.0f
-    };
-    //vector3 const  pos{ left_m, top_m - render_props.tid.scale * cfg.font_props.char_height, 0.0f };
-
-    matrix44 ortho_projection;
-    gfx::projection_matrix_orthogonal(-1.0f, 1.0f, left_m, right_m, bottom_m, top_m, ortho_projection);
-
-    gfx::make_current(vp);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    if (gfx::make_current(render_props.text_batch, cfg.draw_state))
-    {
-        gfx::render_batch(
-            render_props.text_batch,
-            pos,
-            render_props.tid.scale,
-            ortho_projection,
-            vector3{ 1.0f, 1.0f, 1.0f }
-            );
-        cfg.draw_state = render_props.text_batch.get_draw_state();
-    }
-
-    if (render_props.cursor_visible && gfx::make_current(render_props.cursor_batch, cfg.draw_state))
-    {
-        gfx::render_batch(
-            render_props.cursor_batch,
-            pos + render_props.tid.scale * expand23(render_props.text_info.cursor_pos, 0.0f),
-            render_props.tid.scale,
-            ortho_projection,
-            vector3{ 1.0f, 1.0f, 1.0f }
-            );
-        cfg.draw_state = render_props.cursor_batch.get_draw_state();
-    }
+void  simulator::render_console()
+{
+    m_console.text_box.render(render_config().draw_state);
 }
 
 

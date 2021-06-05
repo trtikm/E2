@@ -7,6 +7,7 @@
 #   include <osi/simulator.hpp>
 #   include <gfx/camera.hpp>
 #   include <gfx/free_fly.hpp>
+#   include <gfx/gui/text_box.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
@@ -50,7 +51,7 @@ struct  simulator : public osi::simulator
         //                 Feel free to modify these field, ideally in the callback 'on_begin_round()'
         gfx::free_fly_config  free_fly_config;
         CAMERA_CONTROLLER_TYPE  camera_controller_type;
-        gfx::font_mono_props  font_props;
+        std::shared_ptr<gfx::font_mono_props>  font_props;
         vector3  clear_colour;
         vector4  diffuse_colour;
         vector3  ambient_colour;
@@ -175,7 +176,7 @@ struct  simulator : public osi::simulator
     natural_32_bit  FPS() const { return m_FPS; }
 
     VIEWPORT_TYPE  active_viewport_type() const { return m_active_viewport; }
-    gfx::viewport const&  get_viewport(VIEWPORT_TYPE const  vp_type) const { return m_viewports.at((std::size_t)vp_type); }
+    gfx::viewport const&  get_viewport(VIEWPORT_TYPE const  vp_type) const { return *m_viewports.at((std::size_t)vp_type); }
 
     void  render_batch(gfx::batch  batch, std::vector<matrix44> const&  world_matrices);
 
@@ -193,7 +194,7 @@ private:
     void  update_collider_locations_of_relocated_frames();
 
     void  update_viewports();
-    gfx::viewport&  viewport_ref(VIEWPORT_TYPE const  vp_type) { return m_viewports.at((std::size_t)vp_type); }
+    gfx::viewport&  viewport_ref(VIEWPORT_TYPE const  vp_type) { return *m_viewports.at((std::size_t)vp_type); }
     void  camera_update();
 
     void  render();
@@ -211,6 +212,7 @@ private:
     gfx::batch  create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled);
 
     void  update_console();
+    void  render_console();
 
     std::shared_ptr<std::vector<std::shared_ptr<angeo::collision_scene> > >  m_collision_scenes_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
@@ -219,16 +221,24 @@ private:
 
     simulation_context_ptr  m_context;
 
-    std::vector<gfx::viewport>  m_viewports;
+    std::vector<std::shared_ptr<gfx::viewport> >  m_viewports;
     VIEWPORT_TYPE  m_active_viewport;
 
     simulation_configuration  m_simulation_config;
     render_configuration  m_render_config;
 
     struct  console_props {
-        console_props() : console(), render_props() { render_props.tid.text = console.text(); }
+        console_props(
+                std::shared_ptr<gfx::font_mono_props> const  font,
+                std::shared_ptr<gfx::viewport> const  viewport
+                )
+            : console()
+            , text_box(font, viewport)
+        {
+            text_box.set_text(console.text());
+        }
         console  console;
-        console_render_props  render_props;
+        gfx::gui::text_box  text_box;
     }  m_console;
 
     natural_32_bit  m_FPS_num_rounds;

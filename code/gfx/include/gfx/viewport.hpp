@@ -23,6 +23,9 @@ struct  viewport
     float_32_bit  width() const { return right - left + 1.0f; }
     float_32_bit  height() const { return top - bottom + 1.0f; }
 
+    float_32_bit  width_mm() const { return width() * pixel_width_mm; }
+    float_32_bit  height_mm() const { return height() * pixel_height_mm; }
+
     float_32_bit  left;
     float_32_bit  right;
     float_32_bit  bottom;
