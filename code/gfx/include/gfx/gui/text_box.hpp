@@ -46,6 +46,9 @@ private:
     gfx::text_info  m_text_info;
     gfx::batch  m_text_batch;
 
+    natural_32_bit  m_bottom_line_index;
+    natural_32_bit  m_scroll_lines_delta;
+
     bool  m_cursor_visible;
     float_32_bit  m_cursor_countdown_seconds;
     float_32_bit  m_cursor_scale;

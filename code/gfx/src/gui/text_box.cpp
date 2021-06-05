@@ -1,7 +1,9 @@
 #include <gfx/gui/text_box.hpp>
 #include <gfx/camera.hpp>
 #include <gfx/draw.hpp>
+#include <osi/provider.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/log.hpp>
 
 namespace gfx { namespace gui {
 
@@ -45,6 +47,9 @@ text_box::text_box(
     , m_text_info()
     , m_text_batch()
 
+    , m_bottom_line_index(0U)
+    , m_scroll_lines_delta(5U)
+
     , m_cursor_visible(true)
     , m_cursor_countdown_seconds(1.0f)
     , m_cursor_scale(1.0f)
@@ -64,6 +69,7 @@ void  text_box::update(float_32_bit const  round_seconds)
         m_text_batch = gfx::create_text(m_text, *m_font, m_tid.width / m_tid.scale, &m_text_info);
         m_cursor_countdown_seconds = 1.0f;
         m_cursor_visible = true;
+        m_bottom_line_index = m_text_info.num_rows == 0U ? 0U : m_text_info.num_rows - 1U;
     }
     else
     {
@@ -74,6 +80,11 @@ void  text_box::update(float_32_bit const  round_seconds)
             m_cursor_visible = !m_cursor_visible;
         }
     }
+
+    float_32_bit  raw_line_idx = (float_32_bit)m_bottom_line_index - osi::wheel_delta_y() * m_scroll_lines_delta;
+    raw_line_idx = std::max(0.0f, std::min((float_32_bit)(m_text_info.num_rows == 0U ? 0U : m_text_info.num_rows - 1U),
+                                           raw_line_idx + 0.5f));
+    m_bottom_line_index = (natural_32_bit)raw_line_idx;
 
     if (m_cursor_batch.empty() || m_cursor_scale != m_tid.scale)
     {
@@ -107,7 +118,7 @@ void  text_box::render(draw_state&  dstate) const
 
     vector3 const  pos{
             left_m,
-            bottom_m + m_tid.scale * (m_font->char_height + m_font->char_separ_dist_y) * (m_text_info.num_rows - 1U),
+            bottom_m + m_tid.scale * (m_font->char_height + m_font->char_separ_dist_y) * m_bottom_line_index,
             0.0f
             };
 
