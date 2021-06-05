@@ -170,14 +170,12 @@ struct  simulator : public com::simulator
                 );
             SLOG(
                 "3. Render\n"
-                "\tALT+B - batches\n"
-                "\tALT+G - grid\n"
+                "\tALT+B/G - batches/grid\n"
                 "\tALT+F(+SHIFT) - frames(of skeleton bones)\n"
                 "\tALT+W - wireframe\n"
-                "\tALT+R/S/A/L/Y - colliders of rigid bodies/\n"
-                "\t\t\tsensors/agents/fields/ray cast targets\n"
-                "\tALT+K - collisions\n"
-                "\tALT+U - sight frustums\n"
+                "\tALT+R/S/A/L/Y/K/U - colliders of rigid bodies/\n"
+                "\t\t\tsensors/agents/fields/ray cast targets/\n"
+                "\t\t\tcollisions/sight frustums\n"
                 "\tALT+H(+SHIFT) - sight directed(/random) contacts\n"
                 "\tALT+I(+SHIFT) - scale-up(down) sight image\n"
                 );
@@ -185,6 +183,11 @@ struct  simulator : public com::simulator
                 "4. Scene\n"
                 "\tCTRL+R - fast reload (use caches)\n"
                 "\tCTRL+SHIFT+R - full reload (clear caches)\n"
+                );
+            SLOG(
+                "5. Viewports\n"
+                "\t` - console\n"
+                "\tCTRL+` - output log\n"
                 );
             SLOG("=== HELP END ===\n");
         }
