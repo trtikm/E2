@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <stdexcept>
+#include <thread>
 
 namespace gfx {
 
@@ -48,6 +49,99 @@ void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_p
     output.char_separ_dist_x = ptree.get<float_32_bit>("char_separ_dist_x");
     output.char_separ_dist_y = ptree.get<float_32_bit>("char_separ_dist_y");
     output.__batch_template__ = batch();
+}
+
+
+void  save_font_mono_props(
+        boost::filesystem::path const&  pathname,
+        boost::filesystem::path const&  data_root_dir,
+        font_mono_props const&  props
+        )
+{
+    boost::property_tree::ptree  ptree;
+    ptree.add("font_texture", boost::filesystem::relative(props.font_texture, data_root_dir).string());
+    ptree.add("min_ascii_code", props.min_ascii_code);
+    ptree.add("max_ascii_code", props.max_ascii_code);
+    ptree.add("max_chars_in_row", props.max_chars_in_row);
+    ptree.add("min_u", props.min_u);
+    ptree.add("min_v", props.min_v);
+    ptree.add("char_uv_width", props.char_uv_width);
+    ptree.add("char_uv_height", props.char_uv_height);
+    ptree.add("char_separ_u", props.char_separ_u);
+    ptree.add("char_separ_v", props.char_separ_v);
+    ptree.add("space_size", props.space_size);
+    ptree.add("tab_size", props.tab_size);
+    ptree.add("char_width", props.char_width);
+    ptree.add("char_height", props.char_height);
+    ptree.add("char_separ_dist_x", props.char_separ_dist_x);
+    ptree.add("char_separ_dist_y", props.char_separ_dist_y);
+    boost::property_tree::write_info(pathname.string(), ptree);
+}
+
+
+void  build_font_batch_template_if_not_built_yet(font_mono_props const&  props, std::string const&  id)
+{
+    if (!props.__batch_template__.empty())
+        return;
+
+    std::vector< std::array<float_32_bit, 3> > const  xyz { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
+    std::vector< std::array<float_32_bit, 2> > const  uv { { 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f } };
+
+    buffers_binding const buffers_binding_(
+        0U,
+        3U,
+        {
+            { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
+            { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+                buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
+        },
+        id.empty() ? id : "/generic/text/buffers_binding/" + id
+        );
+
+    textures_binding_paths_map_type const textures_binding_paths{
+        { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, boost::filesystem::path(props.font_texture) }
+    };
+
+    texcoord_binding const  texcoord_binding_({
+        { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
+        });
+
+    draw_state const  dstate(nullptr, true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    props.__batch_template__ = batch(
+        id.empty() ?
+            async::generate_unique_custom_id(
+                    "/generic/text/batch/__batch_template__<" +
+                    boost::filesystem::path(props.font_texture).filename().string() +
+                    ">")
+            :
+            "/generic/text/batch/" + id,
+        buffers_binding_,
+        textures_binding_paths,
+        texcoord_binding_,
+        effects_config{
+            nullptr,
+            { LIGHT_TYPE::AMBIENT }, // Light types.
+            { { LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE} }, // Lighting data types.
+            SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
+            {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
+            FOG_TYPE::NONE,
+            SHADER_PROGRAM_TYPE::VERTEX // fog algo location
+            },
+        dstate,
+        modelspace(),
+        skeleton_alignment(),
+        batch_available_resources::alpha_testing_props(0.01f)
+        );
+}
+
+
+texture  get_font_texture(font_mono_props const&  props, bool const  wait_for_resource)
+{
+    while (wait_for_resource && !props.__batch_template__.get_textures_binding().is_load_finished())
+        std::this_thread::yield();
+    return props.__batch_template__.get_textures_binding().bindings_map().at(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE);
 }
 
 
@@ -166,59 +260,7 @@ batch  create_text(
     if (xyz.empty())
         return batch();
 
-    if (props.__batch_template__.empty())
-    {
-        std::vector< std::array<float_32_bit, 3> > const  xyz { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
-        std::vector< std::array<float_32_bit, 2> > const  uv { { 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f } };
-
-        buffers_binding const buffers_binding_(
-            0U,
-            3U,
-            {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
-                  buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
-                  buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
-            },
-            id.empty() ? id : "/generic/text/buffers_binding/" + id
-            );
-
-        textures_binding_paths_map_type const textures_binding_paths{
-            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, boost::filesystem::path(props.font_texture) }
-        };
-
-        texcoord_binding const  texcoord_binding_({
-            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
-            });
-
-        draw_state const  dstate(nullptr, true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        props.__batch_template__ = batch(
-            id.empty() ?
-                async::generate_unique_custom_id(
-                        "/generic/text/batch/__batch_template__<" +
-                        boost::filesystem::path(props.font_texture).filename().string() +
-                        ">")
-                :
-                "/generic/text/batch/" + id,
-            buffers_binding_,
-            textures_binding_paths,
-            texcoord_binding_,
-            effects_config{
-                nullptr,
-                { LIGHT_TYPE::AMBIENT }, // Light types.
-                { { LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE} }, // Lighting data types.
-                SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
-                {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
-                FOG_TYPE::NONE,
-                SHADER_PROGRAM_TYPE::VERTEX // fog algo location
-                },
-            dstate,
-            modelspace(),
-            skeleton_alignment(),
-            batch_available_resources::alpha_testing_props(0.01f)
-            );
-    }
+    build_font_batch_template_if_not_built_yet(props, id);
 
     return batch(
         id.empty() ?

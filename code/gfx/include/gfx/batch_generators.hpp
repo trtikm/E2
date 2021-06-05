@@ -304,6 +304,7 @@ batch  create_triangle_mesh(
 
 
 batch  create_sprite(image_rgba_8888 const&  img);
+batch  create_sprite(texture const  t);
 texture  get_sprite_texture(batch const  sprite_batch);
 void  update_sprite(batch const  sprite_batch, image_rgba_8888 const&  img);
 
@@ -343,6 +344,14 @@ struct  font_mono_props
 
 
 void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_props&  output);
+void  save_font_mono_props(
+        boost::filesystem::path const&  pathname,
+        boost::filesystem::path const&  data_root_dir,
+        font_mono_props const&  props
+        );
+void  build_font_batch_template_if_not_built_yet(font_mono_props const&  props, std::string const&  id = "");
+
+texture  get_font_texture(font_mono_props const&  props, bool const  wait_for_resource = true);
 
 
 struct  text_info

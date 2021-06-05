@@ -11,6 +11,14 @@ namespace gfx {
 
 batch  create_sprite(image_rgba_8888 const&  img)
 {
+    texture_file const  texture_props("", GL_RGBA, GL_REPEAT, GL_REPEAT, GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
+    texture_image  image_props(img.width, img.height, img.data.data(), img.data.data() + img.data.size(), GL_RGBA, GL_UNSIGNED_BYTE);
+    return create_sprite(texture(0U, texture_props, image_props));
+}
+
+
+batch  create_sprite(texture const  t)
+{
     static std::vector< std::array<float_32_bit, 3> > const vertices{
         { -1.0f, -1.0f, -1.0f }, {  1.0f, -1.0f, -1.0f }, {  1.0f,  1.0f, -1.0f },
         { -1.0f, -1.0f, -1.0f }, {  1.0f,  1.0f, -1.0f }, { -1.0f,  1.0f, -1.0f }
@@ -20,10 +28,7 @@ batch  create_sprite(image_rgba_8888 const&  img)
         { 0.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f }
     };
 
-    texture_file const  texture_props("", GL_RGBA, GL_REPEAT, GL_REPEAT, GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
-    texture_image  image_props(img.width, img.height, img.data.data(), img.data.data() + img.data.size(), GL_RGBA, GL_UNSIGNED_BYTE);
-
-    return create_triangle_mesh(vertices, texcoords, texture(0U, texture_props, image_props), true);
+    return create_triangle_mesh(vertices, texcoords, t, true);
 }
 
 
