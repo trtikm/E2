@@ -8,9 +8,9 @@ char_uv_width 0.0550206453
 char_uv_height 0.0846430287
 char_separ_u 0.0386066101
 char_separ_v 0.00817436539
-space_size 0.00255998084
+space_size 0.00245998078
 tab_size 4
-char_width 0.00255998084
+char_width 0.00245998078
 char_height 0.00383876613
-char_separ_dist_x -0.000538658001
+char_separ_dist_x -0.000405265077
 char_separ_dist_y -0.000216971399

@@ -22,6 +22,7 @@ struct  simulator : public com::simulator
         , m_font_rect()
         , m_chars_matrix()
         , m_example_text()
+        , m_show_example_text(true)
         , m_edit_infos()
         , m_info_idx(0U)
     {}
@@ -106,6 +107,8 @@ struct  simulator : public com::simulator
         if (ctrl && get_keyboard_props().keys_just_pressed().count(osi::KEY_S()) != 0UL)
             gfx::save_font_mono_props(get_font_pathname(), get_program_options()->data_root(), m_font_props);
 
+        if (get_keyboard_props().keys_just_pressed().count(osi::KEY_T()) != 0UL)
+            m_show_example_text = !m_show_example_text;
         if (get_keyboard_props().keys_just_pressed().count(osi::KEY_UP()) != 0UL && m_info_idx > 0U)
             --m_info_idx;
         if (get_keyboard_props().keys_just_pressed().count(osi::KEY_DOWN()) != 0UL && m_info_idx + 1U < (natural_32_bit)m_edit_infos.size())
@@ -129,7 +132,14 @@ struct  simulator : public com::simulator
     {
         if (get_keyboard_props().keys_pressed().count(osi::KEY_F1()) != 0UL)
         {
-            SLOG("\n=== HELP ===\n");
+            SLOG(
+                "\n=== HELP ===\n"
+                "UP/DOWN - Select property to modify\n"
+                "LEFT/RIGHT - Decrease/Increase the property\n"
+                "T - Toggle show the example text.\n"
+                "CTRL+S - Overwrite the edited font on the disk.\n"
+                "=== END ===\n"
+                );
         }
 
         // TODO: Implement tool's custom render here.
@@ -206,6 +216,9 @@ struct  simulator : public com::simulator
             render_config().draw_state = info.name.get_draw_state();
         }
 
+        if (!m_show_example_text)
+            return;
+
         if (m_example_text.empty())
         {
             gfx::text_info  text_info;
@@ -262,6 +275,7 @@ private:
     font_rect  m_font_rect;
     gfx::batch  m_chars_matrix;
     gfx::batch  m_example_text;
+    bool  m_show_example_text;
     std::vector<edit_info>  m_edit_infos;
     natural_32_bit  m_info_idx;
 };
