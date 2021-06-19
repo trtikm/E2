@@ -12,6 +12,8 @@ namespace gfx { namespace gui {
 
 struct  text_box : public  window
 {
+    using  super = window;
+
     text_box(
         std::shared_ptr<font_mono_props> const  font,
         std::shared_ptr<viewport> const  vp,
@@ -22,7 +24,7 @@ struct  text_box : public  window
 
     void  set_text(std::string const&  text) { m_text = text; }
 
-    void  update(float_32_bit const  round_seconds) override;
+    void  update(float_32_bit const  round_seconds, osi::keyboard_props const&  keyboard, osi::mouse_props const&  mouse) override;
     void  render(draw_state&  dstate) const override;
 
 private:

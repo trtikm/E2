@@ -3,6 +3,8 @@
 
 #   include <gfx/viewport.hpp>
 #   include <gfx/draw_state.hpp>
+#   include <osi/mouse_props.hpp>
+#   include <osi/keyboard_props.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <memory>
 
@@ -25,7 +27,7 @@ struct  window
     bool  resize_with_viewport() const { return m_resize_with_viewport; }
     void  resize_to_viewport();
 
-    virtual void  update(float_32_bit const  round_seconds);
+    virtual void  update(float_32_bit const  round_seconds, osi::keyboard_props const&  keyboard, osi::mouse_props const&  mouse);
     virtual void  render(draw_state&  dstate) const {}
 
 private:

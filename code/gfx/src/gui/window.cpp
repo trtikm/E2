@@ -32,7 +32,7 @@ void  window::resize_to_viewport()
 }
 
 
-void  window::update(float_32_bit const  round_seconds)
+void  window::update(float_32_bit const  round_seconds, osi::keyboard_props const&  keyboard, osi::mouse_props const&  mouse)
 {
     if (m_resize_with_viewport)
         resize_to_viewport();

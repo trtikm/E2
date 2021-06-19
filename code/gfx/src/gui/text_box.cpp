@@ -59,8 +59,10 @@ text_box::text_box(
 }
 
 
-void  text_box::update(float_32_bit const  round_seconds)
+void  text_box::update(float_32_bit const  round_seconds, osi::keyboard_props const&  keyboard, osi::mouse_props const&  mouse)
 {
+    super::update(round_seconds, keyboard, mouse);
+
     text_id const  tid(m_text, 1.0f, 0.001f * get_viewport().width_mm());
 
     if (tid != m_tid)
@@ -81,7 +83,9 @@ void  text_box::update(float_32_bit const  round_seconds)
         }
     }
 
-    float_32_bit  raw_line_idx = (float_32_bit)m_bottom_line_index - osi::wheel_delta_y() * m_scroll_lines_delta;
+    float_32_bit  raw_line_idx = 
+            (float_32_bit)m_bottom_line_index - m_scroll_lines_delta *
+            (get_viewport().is_point_inside({ mouse.cursor_x(), mouse.cursor_y() }) ? mouse.wheel_delta_y() : 0.0f);
     raw_line_idx = std::max(0.0f, std::min((float_32_bit)(m_text_info.num_rows == 0U ? 0U : m_text_info.num_rows - 1U),
                                            raw_line_idx + 0.5f));
     m_bottom_line_index = (natural_32_bit)raw_line_idx;

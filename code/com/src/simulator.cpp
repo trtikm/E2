@@ -1054,7 +1054,7 @@ void  simulator::render_text()
     if (cfg.show_output)
     {
         m_output_text_box.set_text(continuous_text_logger::instance().text());
-        m_output_text_box.update(round_seconds());
+        m_output_text_box.update(round_seconds(), get_keyboard_props(), get_mouse_props());
         m_output_text_box.render(render_config().draw_state);
     }
 
@@ -1215,7 +1215,7 @@ void  simulator::update_console()
 {
     if (active_viewport_type() == VIEWPORT_TYPE::CONSOLE)
         m_console.text_box.set_text(m_console.console.update(*this));
-    m_console.text_box.update(round_seconds());
+    m_console.text_box.update(round_seconds(), get_keyboard_props(), get_mouse_props());
 }
 
 
