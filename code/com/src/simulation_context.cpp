@@ -1334,6 +1334,8 @@ object_guid  simulation_context::ray_cast_to_nearest_collider(
         std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter
         ) const
 {
+    if (m_collision_scenes_ptr->at(scene_index) == nullptr)
+        return invalid_object_guid();
     angeo::collision_object_id  nearest_coid;
     if (!m_collision_scenes_ptr->at(scene_index)->ray_cast(
             ray_origin,

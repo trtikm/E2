@@ -17,6 +17,7 @@ struct  console
     console();
     std::string  update(simulator&  sim);
     std::string  text() const;
+    void  paste_to_command_line(std::string const&  txt);
 private:
     std::string  scene_path_to_string() const;
     void  validate_scene_path(simulator const&  sim);

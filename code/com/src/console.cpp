@@ -199,6 +199,13 @@ std::string  console::text() const
 }
 
 
+void  console::paste_to_command_line(std::string const&  txt)
+{
+    m_command_line = m_command_line.substr(0U, m_cursor) + ' ' + txt + m_command_line.substr(m_cursor);
+    m_cursor += (natural_32_bit)txt.size() + 1U;
+}
+
+
 std::string  console::scene_path_to_string() const
 {
     std::stringstream  sstr;

@@ -179,6 +179,9 @@ struct  simulator : public osi::simulator
 
     void  render_batch(gfx::batch  batch, std::vector<matrix44> const&  world_matrices);
 
+    object_guid  find_collider_under_mouse() const;
+    void  paste_object_path_to_command_line_of_console(object_guid  guid, bool const  prefer_owner_guid = false);
+
 private:
 
     struct  render_task_info

@@ -142,6 +142,26 @@ struct  simulator : public com::simulator
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_NUMERIC_MINUS()) != 0UL)
                 change_camera_speed(0.5f);
         }
+
+        if (get_mouse_props().buttons_just_pressed().count(osi::LEFT_MOUSE_BUTTON()) != 0UL)
+        {
+            com::object_guid const  guid = find_collider_under_mouse();
+            if (guid != com::invalid_object_guid())
+            {
+                CLOG("Object under mouse: " << context()->to_absolute_path(guid));
+                if (ctrl)
+                    paste_object_path_to_command_line_of_console(guid, shift);
+            }
+            else
+            {
+                CLOG("Object under mouse: NONE");
+            }
+        }
+    }
+
+    void  custom_module_round() override
+    {
+        // Nothing to do so far.
     }
 
     void  on_begin_render() override

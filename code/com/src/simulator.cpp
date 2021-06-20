@@ -1211,6 +1211,59 @@ gfx::batch  simulator::create_batch_for_collider(object_guid const  collider_gui
 }
 
 
+object_guid  simulator::find_collider_under_mouse() const
+{
+    gfx::viewport const&  vp = get_viewport(VIEWPORT_TYPE::SCENE);
+    vector2 const  mouse_coords{ get_mouse_props().cursor_x(), vp.top - get_mouse_props().cursor_y() };
+    if (!vp.is_point_inside(mouse_coords))
+        return invalid_object_guid();
+
+    vector2 const  mouse_coords_01{ (mouse_coords(0) - vp.left) / vp.width(), (mouse_coords(1) - vp.bottom) / vp.height() };
+
+    vector3  ray_begin_in_camera, ray_end_in_camera;
+    render_config().camera->ray_points_in_camera_space(mouse_coords_01, ray_begin_in_camera, ray_end_in_camera);
+
+    matrix44  from_camera_matrix;
+    angeo::from_base_matrix(*render_config().camera->coordinate_system(), from_camera_matrix);
+
+    vector3 const  ray_origin_in_world_space = transform_point(ray_begin_in_camera, from_camera_matrix);;
+    vector3 const  ray_end_in_world_space = transform_point(ray_end_in_camera, from_camera_matrix);
+
+    object_guid  best_guid = invalid_object_guid();
+    float_32_bit  min_t = std::numeric_limits<float_32_bit>::max();
+    for (natural_8_bit  i = 0U; i < (natural_8_bit)m_collision_scenes_ptr->size(); ++i)
+    {
+        float_32_bit  param;
+        object_guid const  guid = context()->ray_cast_to_nearest_collider(
+                ray_origin_in_world_space,
+                ray_end_in_world_space,
+                true,
+                true,
+                i,
+                &param
+                );
+        if (guid != com::invalid_object_guid() && (best_guid == com::invalid_object_guid() || param < min_t))
+        {
+            best_guid = guid;
+            min_t = param;
+        }
+    }
+    return  best_guid;
+}
+
+
+void  simulator::paste_object_path_to_command_line_of_console(object_guid  guid, bool const  prefer_owner_guid)
+{
+    if (render_config().show_console == false || guid == invalid_object_guid())
+        return;
+    simulation_context&  ctx = *context();
+    if (prefer_owner_guid && ctx.is_valid_collider_guid(guid) && ctx.owner_of_collider(guid) != invalid_object_guid())
+        guid = ctx.owner_of_collider(guid);
+    m_console.console.paste_to_command_line(ctx.to_absolute_path(ctx.folder_of(guid)));
+    m_console.text_box.set_text(m_console.console.text());
+}
+
+
 void  simulator::update_console()
 {
     if (active_viewport_type() == VIEWPORT_TYPE::CONSOLE)
