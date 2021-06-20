@@ -172,13 +172,14 @@ private:
     void  next_round_of_timers(float_32_bit const  time_step_in_seconds);
     void  next_round_of_sensors(simulation_context const&  ctx);
 
-    void  next_round_of_timer_request_infos(simulation_context const&  ctx);
-    void  next_round_of_sensor_request_infos(simulation_context const&  ctx);
+    void  next_round_of_timer_request_infos(simulation_context const&  ctx, float_32_bit const  time_step_in_seconds);
+    void  next_round_of_sensor_request_infos(simulation_context const&  ctx, float_32_bit const  time_step_in_seconds);
     void  next_round_of_request_info(
             object_guid const  self_collider,
             object_guid const  other_collider,
             request_info_id const&  id,
-            simulation_context const&  ctx
+            simulation_context const&  ctx,
+            float_32_bit const  time_step_in_seconds
             );
 
     void  process_timer_requests_increment_enable_level();

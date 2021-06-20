@@ -593,11 +593,12 @@ void  device_simulator::next_round_of_request_info(
         object_guid const  self_collider,
         object_guid const  other_collider,
         request_info_id const&  rid,
-        simulation_context const&  ctx
+        simulation_context const&  ctx,
+        float_32_bit const  time_step_in_seconds
         )
 {
     auto const  compute_field_accel_mult_from_flags =
-        [&ctx, self_collider, other_collider](force_field_flags const&  flags, object_guid const  rb_guid) {
+        [&ctx, self_collider, other_collider, time_step_in_seconds](force_field_flags const&  flags, object_guid const  rb_guid) {
             float_32_bit const  inverted_mass = flags.use_mass ? ctx.inverted_mass_of_rigid_body(rb_guid) : 1.0f;
 
             float_32_bit  density = flags.use_density ?
@@ -614,7 +615,7 @@ void  device_simulator::next_round_of_request_info(
                 switch (ctx.collider_shape_type(other_collider))
                 {
                     case angeo::COLLISION_SHAPE_TYPE::BOX:
-                        full_depth = max_coord(ctx.collider_box_half_sizes_along_axes(other_collider));
+                        full_depth = min_coord(ctx.collider_box_half_sizes_along_axes(other_collider));
                         break;
                     case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
                         full_depth = ctx.collider_sphere_radius(other_collider);
@@ -628,10 +629,19 @@ void  device_simulator::next_round_of_request_info(
                 {
                     std::vector<collision_contact const*>  contacts;
                     ctx.collision_contacts_between_colliders(other_collider, self_collider, contacts);
-                    float_32_bit  max_depth = 0.0f;
+                    collision_contact const*  max_depth_contact = nullptr;
                     for (collision_contact const*  contact : contacts)
-                        max_depth = std::max(max_depth, contact->penetration_depth());
-                    depth = std::min(1.0f, std::max(0.0f, max_depth / full_depth));
+                        if (max_depth_contact == nullptr || max_depth_contact->penetration_depth() < contact->penetration_depth())
+                            max_depth_contact = contact;
+                    if (max_depth_contact != nullptr && max_depth_contact->penetration_depth() < full_depth)
+                    {
+                        vector3 const  normal = max_depth_contact->unit_normal(other_collider);
+                        vector3 const  velocity = ctx.linear_velocity_of_rigid_body(rb_guid);
+                        float_32_bit const  normal_speed = dot_product(normal, velocity);
+                        float_32_bit const  depth_delta = -normal_speed * time_step_in_seconds;
+                        depth = std::min(1.0f, std::max(0.0f, (max_depth_contact->penetration_depth() + depth_delta) / full_depth));
+                        CLOG(normal(0) << ',' << normal(1) << ',' << normal(2) << " ; " << max_depth_contact->penetration_depth());
+                    }
                 }
             }
 
@@ -729,6 +739,7 @@ void  device_simulator::next_round_of_request_info(
         }
         break;
     case REQUEST_KIND::APPLY_FORCE_FIELD_RESISTANCE:
+        //if (false)
         {
             object_guid const  rb_guid = ctx.rigid_body_of_collider(other_collider);
             if (ctx.is_valid_rigid_body_guid(rb_guid))
@@ -812,8 +823,8 @@ void  device_simulator::next_round(simulation_context const&  ctx, float_32_bit 
     next_round_of_timers(time_step_in_seconds);
     next_round_of_sensors(ctx);
 
-    next_round_of_timer_request_infos(ctx);
-    next_round_of_sensor_request_infos(ctx);
+    next_round_of_timer_request_infos(ctx, time_step_in_seconds);
+    next_round_of_sensor_request_infos(ctx, time_step_in_seconds);
 
     process_timer_requests_increment_enable_level();
     process_timer_requests_decrement_enable_level();
@@ -880,19 +891,19 @@ void  device_simulator::next_round_of_sensors(simulation_context const&  ctx)
 }
 
 
-void  device_simulator::next_round_of_timer_request_infos(simulation_context const&  ctx)
+void  device_simulator::next_round_of_timer_request_infos(simulation_context const&  ctx, float_32_bit const  time_step_in_seconds)
 {
     for (index_type  idx : m_enabled_timers)
     {
         timer const&  t = m_timers.at(idx);
         if (t.is_signalling)
             for (request_info_id const&  id : t.request_infos)
-                next_round_of_request_info(invalid_object_guid(), invalid_object_guid(), id, ctx);
+                next_round_of_request_info(invalid_object_guid(), invalid_object_guid(), id, ctx, time_step_in_seconds);
     }
 }
 
 
-void  device_simulator::next_round_of_sensor_request_infos(simulation_context const&  ctx)
+void  device_simulator::next_round_of_sensor_request_infos(simulation_context const&  ctx, float_32_bit const  time_step_in_seconds)
 {
     for (auto const&  guid_and_idx : m_enabled_sensors)
     {
@@ -900,15 +911,15 @@ void  device_simulator::next_round_of_sensor_request_infos(simulation_context co
 
         for (request_info_id const&  id : s.request_infos_on_touching)
             for (object_guid  other_collider : s.touching)
-                next_round_of_request_info(s.collider, other_collider, id, ctx);
+                next_round_of_request_info(s.collider, other_collider, id, ctx, time_step_in_seconds);
 
         for (request_info_id const&  id : s.request_infos_on_touch_begin)
             for (object_guid  other_collider : s.touch_begin)
-                next_round_of_request_info(s.collider, other_collider, id, ctx);
+                next_round_of_request_info(s.collider, other_collider, id, ctx, time_step_in_seconds);
 
         for (request_info_id const&  id : s.request_infos_on_touch_end)
             for (object_guid  other_collider : s.touch_end)
-                next_round_of_request_info(s.collider, other_collider, id, ctx);
+                next_round_of_request_info(s.collider, other_collider, id, ctx, time_step_in_seconds);
     }
 }
 
