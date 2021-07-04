@@ -11,7 +11,7 @@ namespace ai {
 
 
 scene_binding_ptr  scene_binding::create(
-        com::simulation_context const*  context_,
+        simulation_context_const_ptr  context_,
         com::object_guid  folder_guid_of_agent_,
         skeletal_motion_templates const&  motion_templates
         )
@@ -25,7 +25,7 @@ scene_binding_ptr  scene_binding::create(
 
 
 scene_binding::scene_binding(
-        com::simulation_context const*  context_,
+        simulation_context_const_ptr  context_,
         com::object_guid  folder_guid_of_agent_,
         skeletal_motion_templates const&  motion_templates
         )

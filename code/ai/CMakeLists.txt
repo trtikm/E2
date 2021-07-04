@@ -56,6 +56,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/scene_binding.hpp
     ./src/scene_binding.cpp
 
+    ./include/ai/navigation.hpp
+    ./src/navigation.cpp
+
     ./include/ai/skeleton_utils.hpp
     ./src/skeleton_utils.cpp
     ./include/ai/utils_ptree.hpp

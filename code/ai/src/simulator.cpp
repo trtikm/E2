@@ -8,6 +8,8 @@ namespace ai {
 
 simulator::simulator()
     : m_agents()
+    , m_navsystem(nullptr)
+    , m_naveditor(nullptr)
 {}
 
 
@@ -17,7 +19,8 @@ agent_id  simulator::insert_agent(
         scene_binding_ptr const  binding
         )
 {
-    return m_agents.insert(std::make_shared<agent>(config, motion_templates, binding));
+    ensure_navsystem_exists(binding->context);
+    return m_agents.insert(std::make_shared<agent>(config, motion_templates, m_navsystem, binding));
 }
 
 
@@ -34,9 +37,14 @@ agent const&  simulator::get_agent(agent_id const  id) const
 }
 
 
-void  simulator::clear()
+void  simulator::clear(bool const  also_navsystem)
 {
     m_agents.clear();
+    if (also_navsystem)
+    {
+        m_naveditor = nullptr;
+        m_navsystem = nullptr;
+    }
 }
 
 
@@ -46,6 +54,17 @@ void  simulator::next_round(float_32_bit const  time_step_in_seconds, cortex::mo
 
     for (agent_id  id : m_agents.valid_indices())
         m_agents.at(id)->next_round(time_step_in_seconds, mock_input_ptr);
+}
+
+
+void  simulator::ensure_navsystem_exists(simulation_context_const_ptr const  context_)
+{
+    if (m_navsystem == nullptr)
+    {
+        ASSUMPTION(context_ != nullptr);
+        m_navsystem = std::make_shared<navsystem>(context_);
+        m_naveditor = std::make_shared<naveditor>(m_navsystem);
+    }
 }
 
 

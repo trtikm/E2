@@ -900,6 +900,7 @@ private:
         std::unordered_set<object_guid>  colliders;
     };
 
+    std::weak_ptr<simulation_context const>  m_self_ptr;
     object_guid  m_root_folder;
     dynamic_array<folder_content_type, index_type>  m_folders;
     dynamic_array<folder_element_frame, index_type>  m_frames;

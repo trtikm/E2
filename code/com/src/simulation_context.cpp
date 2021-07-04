@@ -30,13 +30,15 @@ simulation_context_ptr  simulation_context::create(
 {
     ASSUMPTION(collision_scenes_ptr_ != nullptr && !collision_scenes_ptr_->empty() &&
                rigid_body_simulator_ptr_ != nullptr && ai_simulator_ptr_ != nullptr);
-    return std::shared_ptr<simulation_context>(new simulation_context(
+    simulation_context_ptr const  ctx_ptr = std::shared_ptr<simulation_context>(new simulation_context(
                 collision_scenes_ptr_,
                 rigid_body_simulator_ptr_,
                 device_simulator_ptr_,
                 ai_simulator_ptr_,
                 data_root_dir_
                 ));
+    ctx_ptr->m_self_ptr = ctx_ptr;
+    return  ctx_ptr;
 }
 
 
@@ -47,7 +49,8 @@ simulation_context::simulation_context(
         std::shared_ptr<ai::simulator> const  ai_simulator_ptr_,
         std::string const&  data_root_dir_
         )
-    : m_root_folder()
+    : m_self_ptr()
+    , m_root_folder()
     , m_folders()
     , m_frames()
     , m_batches()
@@ -2664,6 +2667,7 @@ object_guid  simulation_context::insert_agent(
         std::vector<std::pair<std::string, gfx::batch> > const&  skeleton_attached_batches
         )
 {
+    ASSUMPTION(!m_self_ptr.expired());
     ASSUMPTION(
         ([this, under_folder_guid]() -> bool {
             folder_content_type const&  fct = folder_content(under_folder_guid);
@@ -2692,7 +2696,7 @@ object_guid  simulation_context::insert_agent(
         );
 
     ai::scene_binding_ptr const  binding = ai::scene_binding::create(
-            this,
+            m_self_ptr.lock(),
             under_folder_guid,
             motion_templates
             );

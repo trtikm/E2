@@ -11,6 +11,7 @@
 #   include <ai/action_controller.hpp>
 #   include <ai/sight_controller.hpp>
 #   include <ai/cortex.hpp>
+#   include <ai/navigation.hpp>
 #   include <osi/window_props.hpp>
 #   include <osi/keyboard_props.hpp>
 #   include <osi/mouse_props.hpp>
@@ -27,6 +28,7 @@ struct agent
     agent(
         agent_config const  config,
         skeletal_motion_templates const  motion_templates,
+        navsystem_const_ptr const  navsystem_,
         scene_binding_ptr const  binding
         );
 
@@ -63,6 +65,8 @@ private:
     sight_controller  m_sight_controller;
 
     std::shared_ptr<cortex>  m_cortex;
+
+    navsystem_const_ptr  m_navsystem;
 };
 
 

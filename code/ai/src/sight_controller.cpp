@@ -117,7 +117,7 @@ sight_controller::camera_config::camera_config(
 
 sight_controller::ray_cast_config::ray_cast_config(
         boost::property_tree::ptree const&  config,
-        com::simulation_context const* const  context
+        simulation_context_const_ptr const  context
         )
     : ray_cast_config(
             get_value<bool>("do_directed_ray_casts", config),
@@ -130,7 +130,7 @@ sight_controller::ray_cast_config::ray_cast_config(
             detail::parse_filter(
                     get_ptree("collider_filter", config),
                     get_value<bool>("ignore_disabled_sensors", config),
-                    context),
+                    context.get()),
             detail::parse_function(get_value<std::string>("depth_image_func", config))
             )
 {}

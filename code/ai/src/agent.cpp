@@ -41,6 +41,7 @@ std::shared_ptr<cortex>  make_cortex(agent const*  myself_, boost::property_tree
 agent::agent(
         agent_config const  config,
         skeletal_motion_templates const  motion_templates,
+        navsystem_const_ptr const  navsystem_,
         scene_binding_ptr const  binding
         )
     : m_system_state()
@@ -58,6 +59,7 @@ agent::agent(
             m_binding
             )
     , m_cortex(make_cortex(this, config.cortex()))
+    , m_navsystem(navsystem_)
 {
     ASSUMPTION([this]() ->bool {
         for (auto const& var_and_ignored : get_system_variables())
@@ -65,6 +67,7 @@ agent::agent(
                 return false;
         return true;
         }());
+    ASSUMPTION(m_navsystem != nullptr);
 
     m_action_controller.initialise();
 }

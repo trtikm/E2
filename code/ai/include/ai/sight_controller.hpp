@@ -62,7 +62,7 @@ struct  sight_controller
         std::function<bool(com::object_guid, angeo::COLLISION_CLASS)>  collider_filter;
         std::function<float_32_bit(float_32_bit)>  depth_image_func;    // Mapping of ray cast params to depth values.
 
-        ray_cast_config(boost::property_tree::ptree const&  config, com::simulation_context const* const  context);
+        ray_cast_config(boost::property_tree::ptree const&  config, simulation_context_const_ptr const  context);
         ray_cast_config(
                 bool const  do_directed_ray_casts_ = true,
                 natural_32_bit const  num_random_ray_casts_per_second_ = 2U * 32U * 32U,
