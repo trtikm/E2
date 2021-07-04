@@ -3,12 +3,15 @@
 
 #   include <ai/scene_binding.hpp>
 #   include <ai/scene_binding.hpp>
-#   include <utility/basic_numeric_types.hpp>
+#   include <angeo/tensor_math.hpp>
+#   include <angeo/coordinate_system.hpp>
 #   include <utility/dynamic_array.hpp>
-#   include <functional>
+#   include <unordered_map>
+#   include <unordered_set>
 #   include <string>
 #   include <array>
 #   include <limits>
+#   include <functional>
 #   include <memory>
 
 namespace ai {
@@ -38,7 +41,6 @@ NAVOBJ_KIND  as_navobj_kind(natural_8_bit  const  kind);
 std::string  to_string(NAVOBJ_KIND const  kind);
 NAVOBJ_KIND  read_navobj_kind_from_string(std::string const&  name);
 
-
 struct  navobj_guid
 {
     navobj_guid() : m_guid(0U) {}
@@ -55,9 +57,13 @@ struct  navobj_guid
     bool  is_waypoint2d() const { return kind() == NAVOBJ_KIND::WAYPOINT2D; }
     bool  is_waypoint3d() const { return kind() == NAVOBJ_KIND::WAYPOINT3D; }
     bool  is_waylink() const { return kind() == NAVOBJ_KIND::WAYLINK; }
+    static  navobj_guid  s_invalid_guid;
 private:
     natural_32_bit  m_guid;
 };
+
+
+inline navobj_guid  invalid_navobj_guid() { return navobj_guid::s_invalid_guid; }
 
 
 inline bool operator==(navobj_guid const  left, navobj_guid const  right) noexcept
@@ -136,6 +142,16 @@ struct  navlink
 
 struct  navcomponent
 {
+    navcomponent();
+    navcomponent(angeo::coordinate_system const&  frame, com::object_guid const  collider_guid);
+
+    dynamic_array<waypoint> const&  get_waypoints_2d() const { return m_waypoints_2d; }
+    dynamic_array<waypoint> const&  get_waypoints_3d() const { return m_waypoints_3d; }
+    dynamic_array<waylink> const&  get_waylinks() const { return m_waylinks; }
+
+    angeo::coordinate_system const&  get_frame() const { return m_frame; }
+    com::object_guid  get_collider_guid() const { return m_collider_guid; }
+
     bool  valid(navobj_guid const  guid) const;
 
 private:
@@ -145,7 +161,8 @@ private:
     dynamic_array<waypoint>  m_waypoints_3d;
     dynamic_array<waylink>  m_waylinks;
 
-    com::object_guid  m_frame_guid;
+    angeo::coordinate_system  m_frame;
+    com::object_guid  m_collider_guid;
 };
 
 
@@ -153,11 +170,21 @@ struct  navsystem
 {
     navsystem(simulation_context_const_ptr const  context_);
 
+    dynamic_array<navcomponent> const&  get_components() const { return m_components; }
+    dynamic_array<navlink> const&  get_navlinks() const { return m_navlinks; }
+
+    std::unordered_set<navobj_guid> const&  get_dynamic_components() const { return m_dynamic_components; }
+
+    simulation_context_const_ptr  get_scene_context() const { return m_context; }
+
 private:
     friend struct  ai::naveditor;
 
     dynamic_array<navcomponent>  m_components;
     dynamic_array<navlink>  m_navlinks;
+
+    std::unordered_map<com::object_guid, navobj_guid>  m_colliders_to_components;
+    std::unordered_set<navobj_guid>  m_dynamic_components;
 
     simulation_context_const_ptr  m_context;
 };
@@ -174,10 +201,37 @@ namespace ai {
 
 struct  naveditor
 {
+    struct  config2d
+    {
+        float_32_bit  m_agent_roller_radius;    // An offset of a waypoint in z coordinate above the collider.
+                                                // Also defines the distance from vertical walls.
+                                                // must be >= 0.
+        vector2  m_waypoint_separation;     // An ideal distance between adjacent waypoints along x and y axes.
+                                            // In other words, defines a density of waypoints on collider's surface.
+                                            // Must be > 0 in both coords.
+    };
+
+    using  callback_navcomponent_updated = std::function<void(navobj_guid)>;
+
     naveditor(navsystem_ptr const  navsystem_);
 
+    navobj_guid  add_navcomponent_2d(com::object_guid const  collider_guid);
+    void  del_navcomponent_2d(com::object_guid const  collider_guid);
+
+    void  next_round(float_32_bit const  time_step_in_seconds);
+
+    void  set_callback_navcomponent_updated(callback_navcomponent_updated const  fn) { m_on_navcomponent_updated = fn; }
+
 private:
+    void  add_waypoints2d_and_waylinks(navobj_guid const  component_guid);
+
+    void  add_navlinks(navobj_guid const  component_guid, std::unordered_set<navobj_guid>* const  updated_components = nullptr);
+    void  del_navlinks(navobj_guid const  component_guid, std::unordered_set<navobj_guid>* const  updated_components = nullptr);
+
     navsystem_ptr  m_navsystem;
+    config2d  m_config2d;
+
+    callback_navcomponent_updated  m_on_navcomponent_updated;
 
     simulation_context_const_ptr  m_context;
 };

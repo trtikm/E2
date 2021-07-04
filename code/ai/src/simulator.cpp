@@ -52,6 +52,8 @@ void  simulator::next_round(float_32_bit const  time_step_in_seconds, cortex::mo
 {
     TMPROF_BLOCK();
 
+    if (m_naveditor != nullptr)
+        m_naveditor->next_round(time_step_in_seconds);
     for (agent_id  id : m_agents.valid_indices())
         m_agents.at(id)->next_round(time_step_in_seconds, mock_input_ptr);
 }
