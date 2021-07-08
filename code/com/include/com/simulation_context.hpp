@@ -644,7 +644,7 @@ struct  simulation_context
     void  insert_request_info_leave_force_field(device_request_info_id const&  drid);
 
     /////////////////////////////////////////////////////////////////////////////////////
-    // AGENTS API
+    // AI AND AGENTS API
     /////////////////////////////////////////////////////////////////////////////////////
 
     using  agent_guid_iterator = object_guid_iterator<OBJECT_KIND::AGENT>;
@@ -671,6 +671,8 @@ struct  simulation_context
             std::vector<std::pair<std::string, gfx::batch> > const&  skeleton_attached_batches
             );
     void  erase_agent(object_guid const  agent_guid);
+    void  generate_navigation2d_data_from_collider(object_guid const  collider_guid_);
+    void  delete_navigation2d_data_generated_from_collider(object_guid const  collider_guid_);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // COLLISION CONTACTS API

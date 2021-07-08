@@ -88,6 +88,7 @@ struct  simulator : public osi::simulator
         bool  render_sight_contacts_random;
         bool  render_sight_image;
         bool  render_agent_action_transition_contratints;
+        bool  render_ai_navigation_data;
         bool  show_console;
         float_32_bit  console_viewport_left_param; // A parameter in (0,1) to the left side of the console viewport
                                                    // from the left side of the whole app window.
@@ -125,8 +126,7 @@ struct  simulator : public osi::simulator
     void  change_camera_speed(float_32_bit const  multiplier);
 
     void  clear_cache_of_collider_batches() { m_collider_batches_cache.clear(); }
-    void  clear_cache_of_agent_sight_batches() { m_agent_sight_frustum_batches_cache.clear(); }
-    void  clear_cache_of_agent_action_transition_contratints() { m_agent_action_transition_contratints_cache.clear(); }
+    void  clear_cache_of_ai_debug_render() { m_ai_debug_draw_data.clear(); }
     void  clear(bool const  also_caches);
 
     void  round() override;
@@ -209,6 +209,7 @@ private:
     void  render_sight_contacts();
     void  render_sight_image();
     void  render_agent_action_transition_contratints();
+    void  render_ai_navigation_data();
     void  render_text();
 
     gfx::batch  create_batch_for_collider(object_guid const  collider_guid, bool const  is_enabled);
@@ -250,12 +251,32 @@ private:
     natural_32_bit  m_FPS;
 
     std::pair<std::string, gfx::batch>  m_text_cache;
+
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // DEBUG DRAW DATA OF LIBRARIES
+    //////////////////////////////////////////////////////////////////////////////////////////
+
     using  cached_collider_batch_state = std::array<gfx::batch, 2U>;
     std::unordered_map<object_guid, cached_collider_batch_state>  m_collider_batches_cache;
-    std::unordered_map<object_guid, gfx::batch>  m_agent_sight_frustum_batches_cache;
-    std::unordered_map<std::string, gfx::batch>  m_agent_action_transition_contratints_cache;
-    struct  sight_image_render_data;
-    std::shared_ptr<sight_image_render_data>  m_sight_image_render_data;
+
+    struct  ai_debug_draw_data
+    {
+        ai_debug_draw_data();
+        void  clear();
+        void  on_navcomponent_updated(ai::navobj_guid const  component_guid);
+
+        std::unordered_map<object_guid, gfx::batch>  m_agent_sight_frustum_batches_cache;
+        std::unordered_map<std::string, gfx::batch>  m_agent_action_transition_contratints_cache;
+        struct  sight_image_render_data;
+        std::shared_ptr<sight_image_render_data>  m_sight_image_render_data;
+        gfx::batch  m_waypoint2d_static_batch;
+        gfx::batch  m_waypoint2d_dynamic_batch;
+        gfx::batch  m_waypoint3d_static_batch;
+        gfx::batch  m_waypoint3d_dynamic_batch;
+        std::unordered_map<ai::navobj_guid, gfx::batch>  m_navcomponent_waylink_batches_cache;
+        gfx::batch  m_navlinks_batch;
+    } m_ai_debug_draw_data;
+
 };
 
 

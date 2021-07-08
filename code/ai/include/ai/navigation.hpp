@@ -121,22 +121,26 @@ struct  naveditor;
 
 struct  waypoint
 {
-    navobj_guid  m_self;
-    std::vector<navobj_guid>  m_links; // if m_self.is_waypoint2d(), then links are stored in CCW order.
+    std::vector<navobj_guid>  links;
+    vector3  position;
 };
 
 
 struct  waylink
 {
-    std::array<navobj_guid, 2>  m_waypoints;
-    float_32_bit  m_length;
+    navobj_guid get_waypoint_guid(natural_32_bit const  idx) const { return waypoints.at(idx); }
+
+    std::array<navobj_guid, 2>  waypoints;
+    float_32_bit  length;
 };
 
 
 struct  navlink
 {
-    waylink  m_waylink;
-    std::array<navobj_guid, 2>  m_components;   // Elements of the array correspond to elements of m_waylink.m_waypoints.
+    navobj_guid get_component_guid(natural_32_bit const  idx) const { return components.at(idx); }
+
+    waylink  link;
+    std::array<navobj_guid, 2>  components;   // Elements of the array correspond to elements of m_waylink.m_waypoints.
 };
 
 
@@ -147,7 +151,15 @@ struct  navcomponent
 
     dynamic_array<waypoint> const&  get_waypoints_2d() const { return m_waypoints_2d; }
     dynamic_array<waypoint> const&  get_waypoints_3d() const { return m_waypoints_3d; }
+    waypoint const&  get_waypoint(navobj_guid const  nav_guid) const;
+    waypoint const&  get_waypoint(waylink const&  link, natural_32_bit const  idx) const;
+    waypoint&  waypoint_ref(waylink const&  link, natural_32_bit const  idx);
+    waypoint&  waypoint_ref(navobj_guid const  nav_guid);
+
     dynamic_array<waylink> const&  get_waylinks() const { return m_waylinks; }
+    waylink const&  get_waylink(navobj_guid const  nav_guid) const;
+    waylink&  waylink_ref(navobj_guid const  nav_guid);
+
 
     angeo::coordinate_system const&  get_frame() const { return m_frame; }
     com::object_guid  get_collider_guid() const { return m_collider_guid; }
@@ -173,9 +185,23 @@ struct  navsystem
     dynamic_array<navcomponent> const&  get_components() const { return m_components; }
     dynamic_array<navlink> const&  get_navlinks() const { return m_navlinks; }
 
+    navcomponent const&  get_component(navobj_guid const  nav_guid) const;
+    navcomponent const&  get_component(navlink const&  link, natural_32_bit const  idx) const;
+    navcomponent&  component_ref(navobj_guid const  nav_guid);
+    navcomponent&  component_ref(navlink const&  link, natural_32_bit const  idx);
+
+    navlink const&  get_navlink(navobj_guid const  nav_guid) const;
+    navlink&  navlink_ref(navobj_guid const  nav_guid);
+
+    waypoint const&  get_waypoint(navlink const&  link, natural_32_bit const  idx) const;
+    waypoint&  waypoint_ref(navlink const&  link, natural_32_bit const  idx);
+
     std::unordered_set<navobj_guid> const&  get_dynamic_components() const { return m_dynamic_components; }
+    bool  is_dynamic_component(navobj_guid const  nav_guid) const { return m_dynamic_components.count(nav_guid) != 0UL; }
 
     simulation_context_const_ptr  get_scene_context() const { return m_context; }
+
+    void  clear();
 
 private:
     friend struct  ai::naveditor;
@@ -206,9 +232,7 @@ struct  naveditor
         float_32_bit  m_agent_roller_radius;    // An offset of a waypoint in z coordinate above the collider.
                                                 // Also defines the distance from vertical walls.
                                                 // must be >= 0.
-        vector2  m_waypoint_separation;     // An ideal distance between adjacent waypoints along x and y axes.
-                                            // In other words, defines a density of waypoints on collider's surface.
-                                            // Must be > 0 in both coords.
+        float_32_bit  m_waypoint_separation;    // An ideal distance between adjacent waypoints. Must be > 0.
     };
 
     using  callback_navcomponent_updated = std::function<void(navobj_guid)>;
@@ -222,8 +246,11 @@ struct  naveditor
 
     void  set_callback_navcomponent_updated(callback_navcomponent_updated const  fn) { m_on_navcomponent_updated = fn; }
 
+    void  clear();
+
 private:
     void  add_waypoints2d_and_waylinks(navobj_guid const  component_guid);
+    void  add_waypoints2d_and_waylinks_from_box(navobj_guid const  component_guid);
 
     void  add_navlinks(navobj_guid const  component_guid, std::unordered_set<navobj_guid>* const  updated_components = nullptr);
     void  del_navlinks(navobj_guid const  component_guid, std::unordered_set<navobj_guid>* const  updated_components = nullptr);

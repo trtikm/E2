@@ -201,9 +201,10 @@ static void  import_collider(
         std::string const&  name
         )
 {
+    object_guid  new_collider_guid = invalid_object_guid();
     std::string const  collider_kind = hierarchy.get<std::string>("collider_kind");
     if (collider_kind == "BOX")
-        ctx.insert_collider_box(
+        new_collider_guid = ctx.insert_collider_box(
                 folder_guid,
                 name,
                 import_vector3(hierarchy.get_child("half_sizes_along_axes")),
@@ -213,7 +214,7 @@ static void  import_collider(
                 (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     else if (collider_kind == "CAPSULE")
-        ctx.insert_collider_capsule(
+        new_collider_guid = ctx.insert_collider_capsule(
                 folder_guid,
                 name,
                 hierarchy.get<float_32_bit>("half_distance_between_end_points"),
@@ -224,7 +225,7 @@ static void  import_collider(
                 (natural_8_bit)std::stoul(hierarchy.get<std::string>("collision_scene_index"))
                 );
     else if (collider_kind == "SPHERE")
-        ctx.insert_collider_sphere(
+        new_collider_guid = ctx.insert_collider_sphere(
                 folder_guid,
                 name,
                 hierarchy.get<float_32_bit>("radius"),
@@ -281,7 +282,7 @@ static void  import_collider(
             gfx::buffer  index_buffer;
         };
 
-        ctx.insert_collider_triangle_mesh(
+        new_collider_guid = ctx.insert_collider_triangle_mesh(
                 folder_guid,
                 name,
                 index_buffer.num_primitives(),
@@ -293,6 +294,26 @@ static void  import_collider(
     }
     else
     { NOT_IMPLEMENTED_YET(); }
+
+    INVARIANT(new_collider_guid != invalid_object_guid());
+
+    bool  generate_ai_navigation2d_data_from_collider;
+    {
+        // TODO: Replace this computation by a flag in the properties of the imported collider specifying
+        //       whether it should be considered for generation AI navigation data or not.
+        switch (ctx.collision_class_of(new_collider_guid))
+        {
+        case angeo::COLLISION_CLASS::STATIC_OBJECT:
+        case angeo::COLLISION_CLASS::HEAVY_MOVEABLE_OBJECT:
+            generate_ai_navigation2d_data_from_collider = true;
+            break;
+        default:
+            generate_ai_navigation2d_data_from_collider = false;
+            break;
+        }
+    }
+    if (generate_ai_navigation2d_data_from_collider)
+        ctx.generate_navigation2d_data_from_collider(new_collider_guid);
 }
 
 

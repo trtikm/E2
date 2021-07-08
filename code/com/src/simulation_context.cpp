@@ -2764,6 +2764,20 @@ void  simulation_context::erase_agent(object_guid const  agent_guid)
 }
 
 
+void  simulation_context::generate_navigation2d_data_from_collider(object_guid const  collider_guid_)
+{
+    ASSUMPTION(is_valid_collider_guid(collider_guid_));
+    m_ai_simulator_ptr->get_naveditor()->add_navcomponent_2d(collider_guid_);
+}
+
+
+void  simulation_context::delete_navigation2d_data_generated_from_collider(object_guid const  collider_guid_)
+{
+    ASSUMPTION(is_valid_collider_guid(collider_guid_));
+    m_ai_simulator_ptr->get_naveditor()->del_navcomponent_2d(collider_guid_);
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 // COLLISION CONTACTS API
 /////////////////////////////////////////////////////////////////////////////////////

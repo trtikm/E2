@@ -40,10 +40,10 @@ agent const&  simulator::get_agent(agent_id const  id) const
 void  simulator::clear(bool const  also_navsystem)
 {
     m_agents.clear();
-    if (also_navsystem)
+    if (also_navsystem && m_navsystem != nullptr)
     {
-        m_naveditor = nullptr;
-        m_navsystem = nullptr;
+        m_naveditor->clear();
+        m_navsystem->clear();
     }
 }
 

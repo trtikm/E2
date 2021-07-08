@@ -69,6 +69,49 @@ navcomponent::navcomponent(angeo::coordinate_system const&  frame, com::object_g
 {}
 
 
+waypoint const&  navcomponent::get_waypoint(navobj_guid const  nav_guid) const
+{
+    switch (nav_guid.kind())
+    {
+    case NAVOBJ_KIND::WAYPOINT2D: return m_waypoints_2d.at(nav_guid.index()); break;
+    case NAVOBJ_KIND::WAYPOINT3D: return m_waypoints_3d.at(nav_guid.index()); break;
+    default: UNREACHABLE(); break;
+    }
+}
+
+
+waylink const&  navcomponent::get_waylink(navobj_guid const  nav_guid) const
+{
+    ASSUMPTION(nav_guid.is_waylink());
+    return m_waylinks.at(nav_guid.index());
+}
+
+
+waypoint const&  navcomponent::get_waypoint(waylink const&  link, natural_32_bit const  idx) const
+{
+    return get_waypoint(link.get_waypoint_guid(idx));
+}
+
+
+waypoint&  navcomponent::waypoint_ref(waylink const&  link, natural_32_bit const  idx)
+{
+    return waypoint_ref(link.get_waypoint_guid(idx));
+}
+
+
+waypoint&  navcomponent::waypoint_ref(navobj_guid const  nav_guid)
+{
+    return const_cast<waypoint&>(get_waypoint(nav_guid));
+}
+
+
+waylink&  navcomponent::waylink_ref(navobj_guid const  nav_guid)
+{
+    ASSUMPTION(nav_guid.is_waylink());
+    return m_waylinks.at(nav_guid.index());
+}
+
+
 navsystem::navsystem(simulation_context_const_ptr const  context_)
     : m_components()
     , m_navlinks()
@@ -82,6 +125,69 @@ navsystem::navsystem(simulation_context_const_ptr const  context_)
 }
 
 
+navcomponent const&  navsystem::get_component(navobj_guid const  nav_guid) const
+{
+    ASSUMPTION(nav_guid.is_navcomponent());
+    return m_components.at(nav_guid.index());
+}
+
+
+navcomponent const&  navsystem::get_component(navlink const&  link, natural_32_bit const  idx) const
+{
+    return get_component(link.get_component_guid(idx));
+}
+
+
+navcomponent&  navsystem::component_ref(navobj_guid const  nav_guid)
+{
+    ASSUMPTION(nav_guid.is_navcomponent());
+    return m_components.at(nav_guid.index());
+}
+
+
+navcomponent&  navsystem::component_ref(navlink const&  link, natural_32_bit const  idx)
+{
+    return component_ref(link.get_component_guid(idx));
+}
+
+
+navlink const&  navsystem::get_navlink(navobj_guid const  nav_guid) const
+{
+    ASSUMPTION(nav_guid.is_navlink());
+    return m_navlinks.at(nav_guid.index());
+}
+
+
+navlink&  navsystem::navlink_ref(navobj_guid const  nav_guid)
+{
+    ASSUMPTION(nav_guid.is_navlink());
+    return m_navlinks.at(nav_guid.index());
+}
+
+
+waypoint const& navsystem::get_waypoint(navlink const& link, natural_32_bit const  idx) const
+{
+    ai::navcomponent const&  component = get_component(link.get_component_guid(idx));
+    return component.get_waypoint(link.link, idx);
+}
+
+
+waypoint& navsystem::waypoint_ref(navlink const& link, natural_32_bit const  idx)
+{
+    ai::navcomponent&  component = component_ref(link.get_component_guid(idx));
+    return component.waypoint_ref(link.link, idx);
+}
+
+
+void  navsystem::clear()
+{
+    m_components.clear();
+    m_navlinks.clear();
+    m_colliders_to_components.clear();
+    m_dynamic_components.clear();
+}
+
+
 }
 
 namespace ai {
@@ -92,7 +198,7 @@ naveditor::naveditor(navsystem_ptr const  navsystem_)
 
     , m_config2d{
             0.25f,              // m_agent_roller_radius
-            { 2.0f, 2.0f}       // m_waypoint_separation
+            2.0f                // m_waypoint_separation
             }
 
     , m_on_navcomponent_updated([](navobj_guid){})
@@ -114,6 +220,8 @@ navobj_guid  naveditor::add_navcomponent_2d(com::object_guid const  collider_gui
                     )
             );
     m_navsystem->m_colliders_to_components.insert({ collider_guid, new_component_guid });
+    if (m_context->collision_class_of(collider_guid) != angeo::COLLISION_CLASS::STATIC_OBJECT)
+        m_navsystem->m_dynamic_components.insert(new_component_guid);
     add_waypoints2d_and_waylinks(new_component_guid);
 
     std::unordered_set<navobj_guid>  updated_components;
@@ -153,7 +261,7 @@ void  naveditor::next_round(float_32_bit const  time_step_in_seconds)
     std::unordered_set<com::object_guid> const&  relocated = m_context->relocated_frame_guids();
     for (navobj_guid  component_guid : m_navsystem->get_dynamic_components())
     {
-        navcomponent&  component = m_navsystem->m_components.at(component_guid.index());
+        navcomponent&  component = m_navsystem->component_ref(component_guid);
         com::object_guid const  frame_guid = m_context->frame_of_collider(component.get_collider_guid());
         if (relocated.count(frame_guid) != 0UL)
         {
@@ -169,9 +277,25 @@ void  naveditor::next_round(float_32_bit const  time_step_in_seconds)
 
 void  naveditor::add_waypoints2d_and_waylinks(navobj_guid const  component_guid)
 {
+    com::object_guid const  collider_guid = m_navsystem->get_component(component_guid).get_collider_guid();
+    switch (m_context->collider_shape_type(collider_guid))
+    {
+    case angeo::COLLISION_SHAPE_TYPE::BOX:
+        add_waypoints2d_and_waylinks_from_box(component_guid);
+        break;
+    default:
+        return; // TODO: At least generation of navdata on triangle mesh should also be supported.
+    }
+}
+
+
+void  naveditor::add_waypoints2d_and_waylinks_from_box(navobj_guid const  component_guid)
+{
     TMPROF_BLOCK();
 
-    // TODO!
+    navcomponent&  component = m_navsystem->component_ref(component_guid);
+    bool const  is_static = !m_navsystem->is_dynamic_component(component_guid);
+    vector3 const&  box_half_sizes = m_context->collider_box_half_sizes_along_axes(component.get_collider_guid());
 }
 
 
@@ -194,6 +318,12 @@ void  naveditor::del_navlinks(navobj_guid const  component_guid, std::unordered_
 
     if (updated_components != nullptr)
         updated_components->insert(component_guid);
+}
+
+
+void  naveditor::clear()
+{
+    // nothing to do, yet.
 }
 
 

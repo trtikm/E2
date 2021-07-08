@@ -89,6 +89,7 @@ simulator::render_configuration::render_configuration(gfx::viewport const&  vp, 
     , render_sight_contacts_random(true)
     , render_sight_image(false)
     , render_agent_action_transition_contratints(true)
+    , render_ai_navigation_data(true)
     , show_console(false)
     , console_viewport_left_param(0.5f)
     , show_output(false)
@@ -141,11 +142,39 @@ void  simulator::render_configuration::terminate()
 }
 
 
-struct  simulator::sight_image_render_data
+struct  simulator::ai_debug_draw_data::sight_image_render_data
 {
     gfx::image_rgba_8888  img;
     gfx::batch  batch;
 };
+
+
+simulator::ai_debug_draw_data::ai_debug_draw_data()
+    : m_agent_sight_frustum_batches_cache()
+    , m_agent_action_transition_contratints_cache()
+    , m_sight_image_render_data(nullptr)
+    , m_waypoint2d_static_batch(gfx::create_solid_diamond(0.05f, { 1.0f, 1.0f, 1.0f, 1.0f }))
+    , m_waypoint2d_dynamic_batch(gfx::create_solid_diamond(0.05f, { 0.5f, 1.0f, 1.0f, 1.0f }))
+    , m_waypoint3d_static_batch(gfx::create_solid_diamond(0.1f, { 1.0f, 1.0f, 1.0f, 1.0f }))
+    , m_waypoint3d_dynamic_batch(gfx::create_solid_diamond(0.1f, { 0.5f, 1.0f, 1.0f, 1.0f }))
+    , m_navcomponent_waylink_batches_cache()
+    , m_navlinks_batch()
+{}
+
+
+void  simulator::ai_debug_draw_data::clear()
+{
+    m_agent_sight_frustum_batches_cache.clear();
+    m_agent_action_transition_contratints_cache.clear();
+    m_sight_image_render_data = nullptr;
+}
+
+
+void  simulator::ai_debug_draw_data::on_navcomponent_updated(ai::navobj_guid const  component_guid)
+{
+    m_navcomponent_waylink_batches_cache.erase(component_guid);
+    m_navlinks_batch.release();
+}
 
 
 simulator::simulator(std::string const&  data_root_dir)
@@ -193,11 +222,17 @@ simulator::simulator(std::string const&  data_root_dir)
     , m_FPS(0U)
 
     , m_text_cache()
-    , m_collider_batches_cache()
-    , m_agent_sight_frustum_batches_cache()
-    , m_agent_action_transition_contratints_cache()
-    , m_sight_image_render_data(nullptr)
-{}
+
+    // Debug draw data
+
+    , m_collider_batches_cache()    
+    , m_ai_debug_draw_data()
+{
+    m_ai_simulator_ptr->initialise_navsystem(m_context);
+    m_ai_simulator_ptr->get_naveditor()->set_callback_navcomponent_updated([this](ai::navobj_guid const cid) {
+        m_ai_debug_draw_data.on_navcomponent_updated(cid);
+    });
+}
 
 
 simulator::~simulator()
@@ -248,9 +283,7 @@ void  simulator::clear(bool const  also_caches)
 {
     context()->clear(also_caches);
     clear_cache_of_collider_batches();
-    clear_cache_of_agent_sight_batches();
-    clear_cache_of_agent_action_transition_contratints();
-    m_sight_image_render_data = nullptr;
+    clear_cache_of_ai_debug_render();
 }
 
 
@@ -617,6 +650,8 @@ void  simulator::render()
         render_sight_image();
     if (cfg.render_agent_action_transition_contratints)
         render_agent_action_transition_contratints();
+    if (cfg.render_ai_navigation_data)
+        render_ai_navigation_data();
 
     custom_render();
 
@@ -825,9 +860,9 @@ void  simulator::render_sight_frustums()
         if (camera_ptr == nullptr)
             continue;
 
-        auto  frustum_it = m_agent_sight_frustum_batches_cache.find(*agent_it);
-        if (frustum_it == m_agent_sight_frustum_batches_cache.end())
-            frustum_it = m_agent_sight_frustum_batches_cache.insert({
+        auto  frustum_it = m_ai_debug_draw_data.m_agent_sight_frustum_batches_cache.find(*agent_it);
+        if (frustum_it == m_ai_debug_draw_data.m_agent_sight_frustum_batches_cache.end())
+            frustum_it = m_ai_debug_draw_data.m_agent_sight_frustum_batches_cache.insert({
                     *agent_it,
                     gfx::create_wireframe_perspective_frustum(
                                         -camera_ptr->near_plane(),
@@ -912,14 +947,15 @@ void  simulator::render_sight_image()
 
     ai::sight_controller const&  sight = mocked_agent->get_sight_controller();
 
-    if (m_sight_image_render_data == nullptr)
+    if (m_ai_debug_draw_data.m_sight_image_render_data == nullptr)
     {
-        m_sight_image_render_data = std::make_shared<sight_image_render_data>();
-        m_sight_image_render_data->img.width = sight.get_ray_cast_config().num_cells_along_x_axis;
-        m_sight_image_render_data->img.height = sight.get_ray_cast_config().num_cells_along_y_axis;
-        natural_32_bit const  n = m_sight_image_render_data->img.width * m_sight_image_render_data->img.height * 4U;
-        m_sight_image_render_data->img.data.resize(n, 255U);
-        m_sight_image_render_data->batch = gfx::create_sprite(m_sight_image_render_data->img);
+        m_ai_debug_draw_data.m_sight_image_render_data = std::make_shared<ai_debug_draw_data::sight_image_render_data>();
+        m_ai_debug_draw_data.m_sight_image_render_data->img.width = sight.get_ray_cast_config().num_cells_along_x_axis;
+        m_ai_debug_draw_data.m_sight_image_render_data->img.height = sight.get_ray_cast_config().num_cells_along_y_axis;
+        natural_32_bit const  n = m_ai_debug_draw_data.m_sight_image_render_data->img.width *
+                                  m_ai_debug_draw_data.m_sight_image_render_data->img.height * 4U;
+        m_ai_debug_draw_data.m_sight_image_render_data->img.data.resize(n, 255U);
+        m_ai_debug_draw_data.m_sight_image_render_data->batch = gfx::create_sprite(m_ai_debug_draw_data.m_sight_image_render_data->img);
     }
 
     ai::sight_controller::ray_casts_image const&  depth_image = sight.get_depth_image();
@@ -927,26 +963,26 @@ void  simulator::render_sight_image()
     {
         natural_8_bit const  value =
                 (natural_8_bit)std::max(0U, std::min(255U,(natural_32_bit)std::roundf(255.0f * depth_image.at(i))));
-        m_sight_image_render_data->img.data.at(j) = value;
+        m_ai_debug_draw_data.m_sight_image_render_data->img.data.at(j) = value;
         ++j;
-        m_sight_image_render_data->img.data.at(j) = value;
+        m_ai_debug_draw_data.m_sight_image_render_data->img.data.at(j) = value;
         ++j;
-        m_sight_image_render_data->img.data.at(j) = value;
+        m_ai_debug_draw_data.m_sight_image_render_data->img.data.at(j) = value;
         ++j;
     }
 
-    gfx::update_sprite(m_sight_image_render_data->batch, m_sight_image_render_data->img);
-    if (gfx::make_current(m_sight_image_render_data->batch, render_config().draw_state, false))
+    gfx::update_sprite(m_ai_debug_draw_data.m_sight_image_render_data->batch, m_ai_debug_draw_data.m_sight_image_render_data->img);
+    if (gfx::make_current(m_ai_debug_draw_data.m_sight_image_render_data->batch, render_config().draw_state, false))
     {
         gfx::render_sprite_batch(
-                m_sight_image_render_data->batch,
+                m_ai_debug_draw_data.m_sight_image_render_data->batch,
                 5U,
                 5U,
                 (natural_32_bit)get_viewport(VIEWPORT_TYPE::SCENE).width(),
                 (natural_32_bit)get_viewport(VIEWPORT_TYPE::SCENE).height(),
                 std::max(0.01f, render_config().sight_image_scale)
                 );
-        render_config().draw_state = m_sight_image_render_data->batch.get_draw_state();
+        render_config().draw_state = m_ai_debug_draw_data.m_sight_image_render_data->batch.get_draw_state();
     }
 }
 
@@ -989,9 +1025,9 @@ void  simulator::render_agent_action_transition_contratints()
                                     cfg.colour_of_agent_action_transition_contratints,
                                     true
                                     );
-                    cache_it = m_agent_action_transition_contratints_cache.find(id_name);
-                    if (cache_it == m_agent_action_transition_contratints_cache.end())
-                        cache_it = m_agent_action_transition_contratints_cache.insert({
+                    cache_it = m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.find(id_name);
+                    if (cache_it == m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.end())
+                        cache_it = m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.insert({
                             id_name,
                             gfx::create_wireframe_box(constraint.aabb_half_size, cfg.colour_of_agent_action_transition_contratints)
                             }).first;
@@ -1004,9 +1040,9 @@ void  simulator::render_agent_action_transition_contratints()
                                     cfg.colour_of_agent_action_transition_contratints,
                                     true
                                     );
-                    cache_it = m_agent_action_transition_contratints_cache.find(id_name);
-                    if (cache_it == m_agent_action_transition_contratints_cache.end())
-                        cache_it = m_agent_action_transition_contratints_cache.insert({
+                    cache_it = m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.find(id_name);
+                    if (cache_it == m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.end())
+                        cache_it = m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.insert({
                             id_name,
                             gfx::create_wireframe_capsule(
                                         max_coord(constraint.aabb_half_size) - min_coord(constraint.aabb_half_size),
@@ -1023,9 +1059,9 @@ void  simulator::render_agent_action_transition_contratints()
                                     cfg.colour_of_agent_action_transition_contratints,
                                     true
                                     );
-                    cache_it = m_agent_action_transition_contratints_cache.find(id_name);
-                    if (cache_it == m_agent_action_transition_contratints_cache.end())
-                        cache_it = m_agent_action_transition_contratints_cache.insert({
+                    cache_it = m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.find(id_name);
+                    if (cache_it == m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.end())
+                        cache_it = m_ai_debug_draw_data.m_agent_action_transition_contratints_cache.insert({
                             id_name,
                             gfx::create_wireframe_sphere(
                                         min_coord(constraint.aabb_half_size),
@@ -1043,6 +1079,93 @@ void  simulator::render_agent_action_transition_contratints()
                 task.world_matrices.push_back(world_matrix);
             }
     }
+    for (auto const&  id_and_task : tasks)
+        render_task(id_and_task.second);
+}
+
+void  simulator::render_ai_navigation_data()
+{
+    simulation_context&  ctx = *context();
+    render_configuration&  cfg = render_config();
+
+    render_tasks_map  tasks;
+    ai::navsystem const&  navsystem = *m_ai_simulator_ptr->get_navsystem();
+    for (auto component_it = navsystem.get_components().begin(); component_it != navsystem.get_components().end(); ++component_it)
+    {
+        ai::navcomponent const&  component = *component_it;
+        ai::navobj_guid const  component_guid(ai::NAVOBJ_KIND::NAVCOMPONENT, component_it.index());
+
+        matrix44  component_world_matrix;
+        angeo::from_base_matrix(component.get_frame(), component_world_matrix);
+
+        bool const  is_static = !navsystem.is_dynamic_component(component_guid);
+
+        if (!component.get_waypoints_2d().empty())
+        {
+            auto&  task = tasks[(is_static ? m_ai_debug_draw_data.m_waypoint2d_static_batch : m_ai_debug_draw_data.m_waypoint2d_dynamic_batch).get_id()];
+            for (ai::waypoint const&  wp : component.get_waypoints_2d())
+            {
+                matrix44  waypoint_matrix;
+                angeo::from_base_matrix({ wp.position, quaternion_identity() }, waypoint_matrix);
+                task.world_matrices.push_back(component_world_matrix * waypoint_matrix);
+            }
+
+        }
+
+        if (!component.get_waypoints_3d().empty())
+        {
+            auto&  task = tasks[(is_static ? m_ai_debug_draw_data.m_waypoint3d_static_batch : m_ai_debug_draw_data.m_waypoint3d_dynamic_batch).get_id()];
+            for (ai::waypoint const&  wp : component.get_waypoints_3d())
+            {
+                matrix44  waypoint_matrix;
+                angeo::from_base_matrix({ wp.position, quaternion_identity() }, waypoint_matrix);
+                task.world_matrices.push_back(component_world_matrix * waypoint_matrix);
+            }
+        }
+
+        {
+            auto  waylinks_it = m_ai_debug_draw_data.m_navcomponent_waylink_batches_cache.find(component_guid);
+            if (waylinks_it == m_ai_debug_draw_data.m_navcomponent_waylink_batches_cache.end())
+            {
+                std::vector<std::pair<vector3,vector3> >  lines;
+                for (ai::waylink const&  waylink : component.get_waylinks())
+                    lines.push_back({
+                            component.get_waypoint(waylink, 0U).position,
+                            component.get_waypoint(waylink, 1U).position,
+                            });
+                if (!lines.empty())
+                    m_ai_debug_draw_data.m_navcomponent_waylink_batches_cache.insert({
+                            component_guid,
+                            gfx::create_lines3d(lines, { 1.0f, 1.0f, 1.0f, 1.0f })
+                            });
+            }
+            else
+                tasks[waylinks_it->second.get_id()].world_matrices.push_back(component_world_matrix);
+        }
+    }
+
+    {
+        if (m_ai_debug_draw_data.m_navlinks_batch.empty())
+        {
+            std::vector<std::pair<vector3,vector3> >  lines;
+            for (ai::navlink const&  navlink : navsystem.get_navlinks())
+                lines.push_back({
+                        point3_from_coordinate_system(
+                                navsystem.get_waypoint(navlink, 0U).position,
+                                navsystem.get_component(navlink, 0U).get_frame()
+                                ),
+                        point3_from_coordinate_system(
+                                navsystem.get_waypoint(navlink, 1U).position,
+                                navsystem.get_component(navlink, 1U).get_frame()
+                                )
+                        });
+            if (!lines.empty())
+                m_ai_debug_draw_data.m_navlinks_batch = gfx::create_lines3d(lines, { 1.0f, 0.5f, 0.75f, 1.0f });
+        }
+        else
+            tasks[m_ai_debug_draw_data.m_navlinks_batch.get_id()].world_matrices.push_back(matrix44_identity());
+    }
+
     for (auto const&  id_and_task : tasks)
         render_task(id_and_task.second);
 }
