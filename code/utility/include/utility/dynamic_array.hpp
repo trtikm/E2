@@ -27,13 +27,15 @@ struct  dynamic_array
         const_iterator() noexcept : indices_it(), data(nullptr) {}
         const_iterator(indices_iterator_type const it, data_vector const* const  data_) noexcept : indices_it(it), data(data_) {}
 
-        reference  operator*() const { return data->at(*indices_it); }
+        reference  operator*() const { return data->at(index()); }
 
         const_iterator&  operator++() { ++indices_it; return *this; }
         const_iterator  operator++(int) { const_iterator  tmp = *this; ++indices_it; return tmp; }
 
         bool  operator==(const_iterator const&  other) const { return indices_it == other.indices_it && data == other.data; }
         bool  operator!=(const_iterator const&  other) const { return !(*this == other); }
+
+        element_index  index() const { return *indices_it; }
 
     private:
 
