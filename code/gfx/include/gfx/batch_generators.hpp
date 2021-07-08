@@ -237,6 +237,21 @@ bool  parse_sphere_info_from_id(
         );
 
 
+inline batch  create_wireframe_diamond(
+        float_32_bit const  radius,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        ) { return create_wireframe_sphere(radius, 1U, colour, fog_type_, id); }
+inline batch  create_solid_diamond(
+        float_32_bit const  radius,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        ) { return create_solid_sphere(radius, 1U, colour, fog_type_, id);}
+
+
+
 batch  create_triangle_mesh(
         gfx::buffer  vertex_buffer,
         gfx::buffer  index_buffer,
