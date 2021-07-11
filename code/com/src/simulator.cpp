@@ -1092,7 +1092,7 @@ void  simulator::render_ai_navigation_data()
     ai::navsystem const&  navsystem = *m_ai_simulator_ptr->get_navsystem();
     for (auto component_it = navsystem.get_components().begin(); component_it != navsystem.get_components().end(); ++component_it)
     {
-        ai::navcomponent const&  component = *component_it;
+        ai::navcomponent const&  component = **component_it;
         ai::navobj_guid const  component_guid(ai::NAVOBJ_KIND::NAVCOMPONENT, component_it.index());
 
         matrix44  component_world_matrix;
@@ -1100,27 +1100,22 @@ void  simulator::render_ai_navigation_data()
 
         bool const  is_static = !navsystem.is_dynamic_component(component_guid);
 
-        if (!component.get_waypoints_2d().empty())
+        if (!component.get_waypoints().empty())
         {
-            auto&  task = tasks[(is_static ? m_ai_debug_draw_data.m_waypoint2d_static_batch : m_ai_debug_draw_data.m_waypoint2d_dynamic_batch).get_id()];
-            for (ai::waypoint const&  wp : component.get_waypoints_2d())
+            gfx::batch const  wp_batch = 
+                    component.is_surface() ?
+                        (is_static ? m_ai_debug_draw_data.m_waypoint2d_static_batch : m_ai_debug_draw_data.m_waypoint2d_dynamic_batch) :
+                        (is_static ? m_ai_debug_draw_data.m_waypoint3d_static_batch : m_ai_debug_draw_data.m_waypoint3d_dynamic_batch) ;
+            auto&  task = tasks[wp_batch.get_id()];
+            if (task.batch.empty())
+                task.batch = wp_batch;
+            for (ai::waypoint const&  wp : component.get_waypoints())
             {
                 matrix44  waypoint_matrix;
                 angeo::from_base_matrix({ wp.position, quaternion_identity() }, waypoint_matrix);
                 task.world_matrices.push_back(component_world_matrix * waypoint_matrix);
             }
 
-        }
-
-        if (!component.get_waypoints_3d().empty())
-        {
-            auto&  task = tasks[(is_static ? m_ai_debug_draw_data.m_waypoint3d_static_batch : m_ai_debug_draw_data.m_waypoint3d_dynamic_batch).get_id()];
-            for (ai::waypoint const&  wp : component.get_waypoints_3d())
-            {
-                matrix44  waypoint_matrix;
-                angeo::from_base_matrix({ wp.position, quaternion_identity() }, waypoint_matrix);
-                task.world_matrices.push_back(component_world_matrix * waypoint_matrix);
-            }
         }
 
         {
@@ -1140,7 +1135,12 @@ void  simulator::render_ai_navigation_data()
                             });
             }
             else
-                tasks[waylinks_it->second.get_id()].world_matrices.push_back(component_world_matrix);
+            {
+                auto&  task = tasks[waylinks_it->second.get_id()];
+                if (task.batch.empty())
+                    task.batch = waylinks_it->second;
+                task.world_matrices.push_back(component_world_matrix);
+            }
         }
     }
 

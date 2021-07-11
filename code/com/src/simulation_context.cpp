@@ -10,6 +10,7 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
+#include <utility/config.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -2767,14 +2768,14 @@ void  simulation_context::erase_agent(object_guid const  agent_guid)
 void  simulation_context::generate_navigation2d_data_from_collider(object_guid const  collider_guid_)
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid_));
-    m_ai_simulator_ptr->get_naveditor()->add_navcomponent_2d(collider_guid_);
+    m_ai_simulator_ptr->get_naveditor()->add_navcomponents_2d(collider_guid_);
 }
 
 
 void  simulation_context::delete_navigation2d_data_generated_from_collider(object_guid const  collider_guid_)
 {
     ASSUMPTION(is_valid_collider_guid(collider_guid_));
-    m_ai_simulator_ptr->get_naveditor()->del_navcomponent_2d(collider_guid_);
+    m_ai_simulator_ptr->get_naveditor()->del_navcomponents_2d(collider_guid_);
 }
 
 
@@ -3516,18 +3517,22 @@ void  simulation_context::process_pending_late_requests()
             [](request_data_imported_scene&  request) { return request.scene.is_load_finished(); },
             [this](request_data_imported_scene&  request) {
                 if (request.scene.loaded_successfully())
+#if BUILD_RELEASE() == 1
                     try
+#endif
                     {
                         detail::import_scene(*this, request.scene, request.props);
                         if (request.props.store_in_cache)
                             m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
                     }
+#if BUILD_RELEASE() == 1
                     catch (std::exception const&  e)
                     {
                         LOG(error, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
                         // To prevent subsequent attempts to load the scene from disk.
                         m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
                     }
+#endif
                 else
                     // To prevent subsequent attempts to load the scene from disk.
                     m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
