@@ -43,6 +43,35 @@ struct  dynamic_array
         data_vector const*  data;
     };
 
+    struct  iterator
+    {
+        using value_type      = element_type;
+        using difference_type = element_index;
+        using pointer         = value_type*;
+        using reference       = value_type&;
+
+        using container_type        = indices_set;
+        using indices_iterator_type = typename container_type::iterator;
+
+        iterator() noexcept : indices_it(), data(nullptr) {}
+        iterator(indices_iterator_type const it, data_vector* const  data_) noexcept : indices_it(it), data(data_) {}
+
+        reference  operator*() { return data->at(index()); }
+
+        iterator&  operator++() { ++indices_it; return *this; }
+        iterator  operator++(int) { iterator  tmp = *this; ++indices_it; return tmp; }
+
+        bool  operator==(iterator const&  other) const { return indices_it == other.indices_it && data == other.data; }
+        bool  operator!=(iterator const&  other) const { return !(*this == other); }
+
+        element_index  index() const { return *indices_it; }
+
+    private:
+
+        indices_iterator_type  indices_it;
+        data_vector*  data;
+    };
+
     element_index  insert(element_type const&  value = element_type());
     void  erase(element_index const  idx) { at(idx) = element_type(); m_valid_indices.erase(idx); m_free_indices.insert(idx); }
     void  clear() { m_data.clear(); m_valid_indices.clear(); m_free_indices.clear(); }
@@ -56,6 +85,9 @@ struct  dynamic_array
 
     const_iterator  begin() const { return const_iterator(m_valid_indices.begin(), &m_data); }
     const_iterator  end() const { return const_iterator(m_valid_indices.end(), &m_data); }
+
+    iterator  begin() { return iterator(m_valid_indices.begin(), &m_data); }
+    iterator  end() { return iterator(m_valid_indices.end(), &m_data); }
 
     data_vector const&  data() const { return m_data; }
     indices_set const&  valid_indices() const { return m_valid_indices; }
