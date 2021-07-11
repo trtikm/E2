@@ -205,7 +205,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
                 alpha_testing_props_
                 ),
             "default",
-            id
+            id.empty() ? to_string(async::key_type("gfx::batch")) : id
             )
     {}
 
@@ -235,7 +235,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
             resources_,
             instancing_data,
             skin_name_,
-            id
+            id.empty() ? to_string(async::key_type("gfx::batch")) : id
             )
     {}
 

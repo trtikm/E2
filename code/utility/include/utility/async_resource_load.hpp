@@ -88,6 +88,7 @@ inline bool  operator>=(key_type const&  left, key_type const&  right) { return 
 
 
 std::ostream&  operator<<(std::ostream&  ostr, key_type const&  key);
+std::string  to_string(key_type const&  key);
 
 
 }}

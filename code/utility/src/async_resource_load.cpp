@@ -42,6 +42,14 @@ std::ostream&  operator<<(std::ostream&  ostr, key_type const&  key)
 }
 
 
+std::string  to_string(key_type const&  key)
+{
+    std::stringstream  sstr;
+    sstr << key;
+    return sstr.str();
+}
+
+
 }}
 
 namespace async { namespace detail {
