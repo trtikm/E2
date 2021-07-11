@@ -113,6 +113,8 @@ struct  simulator : public com::simulator
                     render_config().sight_image_scale = std::min(10.0f, render_config().sight_image_scale + 1.0f);
                 }
             }
+            if (get_keyboard_props().keys_just_pressed().count(osi::KEY_N()) != 0UL)
+                render_config().render_ai_navigation_data = !render_config().render_ai_navigation_data;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_W()) != 0UL)
                 render_config().render_in_wireframe = !render_config().render_in_wireframe;
             if (get_keyboard_props().keys_just_pressed().count(osi::KEY_G()) != 0UL)
@@ -193,9 +195,9 @@ struct  simulator : public com::simulator
                 "\tALT+B/G - batches/grid\n"
                 "\tALT+F(+SHIFT) - frames(of skeleton bones)\n"
                 "\tALT+W - wireframe\n"
-                "\tALT+R/S/A/L/Y/K/U - colliders of rigid bodies/\n"
+                "\tALT+R/S/A/L/Y/K/U/N - colliders of rigid bodies/\n"
                 "\t\t\tsensors/agents/fields/ray cast targets/\n"
-                "\t\t\tcollisions/sight frustums\n"
+                "\t\t\tcollisions/sight frustums/AI navigation data\n"
                 "\tALT+H(+SHIFT) - sight directed(/random) contacts\n"
                 "\tALT+I(+SHIFT) - scale-up(down) sight image\n"
                 );
