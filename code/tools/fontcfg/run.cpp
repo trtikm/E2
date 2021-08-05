@@ -165,13 +165,13 @@ struct  simulator : public com::simulator
         {
             std::vector< std::pair<vector3, vector3> >  lines;
             gfx::font_mono_props const&  fnt = m_font_props;
-            for (natural_8_bit  i = fnt.min_ascii_code, r = 0U; i <= fnt.max_ascii_code; ++r)
+            for (natural_16_bit  i = fnt.min_ascii_code, r = 0U; i <= fnt.max_ascii_code; ++r)
             {
                 float_32_bit const  _y0 = fnt.min_v + r * (fnt.char_uv_height + fnt.char_separ_v);
                 float_32_bit const  _y1 = _y0 + fnt.char_uv_height;
                 float_32_bit const  y0 = (1.0f - _y0) * 2.0f * m_font_rect.half_size(1) - m_font_rect.half_size(1);
                 float_32_bit const  y1 = (1.0f - _y1) * 2.0f * m_font_rect.half_size(1) - m_font_rect.half_size(1);
-                for (natural_8_bit  c = 0U; c != fnt.max_chars_in_row && i <= fnt.max_ascii_code; ++c, ++i)
+                for (natural_16_bit  c = 0U; c != fnt.max_chars_in_row && i <= fnt.max_ascii_code; ++c, ++i)
                 {
                     float_32_bit const  _x0 = fnt.min_u + c * (fnt.char_uv_width + fnt.char_separ_u);
                     float_32_bit const  _x1 = _x0 + fnt.char_uv_width;
