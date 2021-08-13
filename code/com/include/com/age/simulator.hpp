@@ -5,7 +5,9 @@
 #   include <osi/window_props.hpp>
 #   include <osi/keyboard_props.hpp>
 #   include <osi/mouse_props.hpp>
+#   include <gfx/gui/text_box.hpp>
 #   include <utility/std_pair_hash.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <unordered_map>
 #   include <set>
 #   include <vector>
@@ -28,6 +30,7 @@ using  Message = std::string;
 
 extern ObjectId const invalid_object_id;
 
+struct Serialisable;
 
 struct  WorldState;
 
@@ -46,13 +49,24 @@ struct  PlayerInteraction;
 struct  SimulatorState;
 struct  Simulator;
 
-void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState);
-void nextPlayerInteraction(
+
+void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds);
+void renderRound(SimulatorState const& simulatorState, gfx::draw_state& dstate);
+std::shared_ptr<PlayerInteraction const> getPlayerInteraction(SimulatorState const& simulatorState, ObjectId const  playerId);
+
+// save and load methods below return an error message on error and empty string on success.
+
+std::string save(
+        WorldState const& worldState,
+        MessagePassing const& messaging,
         SimulatorState const& simulatorState,
-        simulation_context_ptr const ctx,
-        osi::keyboard_props const& keyboard,
-        osi::mouse_props const& mouse,
-        osi::window_props const& window
+        boost::property_tree::ptree&  ptree
+        );
+std::string load(
+        boost::property_tree::ptree const&  ptree,
+        WorldState& worldState,
+        MessagePassing& messaging,
+        SimulatorState& simulatorState
         );
 
 
@@ -61,7 +75,16 @@ void nextPlayerInteraction(
 namespace  com { namespace age {
 
 
-struct  WorldState
+struct Serialisable
+{
+    // Both methods return an error message on error and empty string on success.
+
+    virtual std::string save(boost::property_tree::ptree&  ptree) const { return ""; }
+    virtual std::string load(boost::property_tree::ptree const&  ptree) const { return ""; }
+};
+
+
+struct  WorldState : public Serialisable
 {
     using EntitiesSet = std::set<ObjectId>;
     using FeaturesSet = std::set<Feature>;
@@ -121,7 +144,7 @@ private:
 };
 
 
-struct  MessagePassing
+struct  MessagePassing : public Serialisable
 {
     struct MessageInfo
     {
@@ -132,7 +155,7 @@ struct  MessagePassing
 
     using MessageVector = std::vector<MessageInfo>;
 
-    MessagePassing() : m_messages(), m_pendingMessages() {}
+    MessagePassing() : Serialisable(), m_messages(), m_pendingMessages() {}
     virtual ~MessagePassing() {}
 
     virtual std::unique_ptr<MessagePassing>  clone() const;
@@ -143,8 +166,7 @@ struct  MessagePassing
     void sendMessage(ObjectId const& sender, ObjectId const& receiver, Message const& message, ObjectId const& location = invalid_object_id);
 
 private:
-
-    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState);
+    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds);
 
     void deliverMessages(ObjectId const& receiver);
 
@@ -154,9 +176,9 @@ private:
 };
 
 
-struct  ActorState
+struct  ActorState : public Serialisable
 {
-    ActorState(ObjectId const&  self_id) : m_self_id(self_id) {}
+    ActorState(ObjectId const&  self_id) : Serialisable(), m_self_id(self_id) {}
     virtual ~ActorState() {}
 
     ObjectId  self_id() const { return m_self_id; }
@@ -168,13 +190,13 @@ private:
 };
 
 
-struct  ActionContext
+struct  ActionContext : public Serialisable
 {
     virtual ~ActionContext() {}
 };
 
 
-struct  RobotAction
+struct  RobotAction : public Serialisable
 {
     virtual ~RobotAction() {}
 
@@ -196,7 +218,7 @@ struct  RobotAction
 };
 
 
-struct  RobotScore
+struct  RobotScore : public Serialisable
 {
     virtual ~RobotScore() {}
 
@@ -209,7 +231,7 @@ struct  RobotScore
 };
 
 
-struct  PlayerAction
+struct  PlayerAction : public Serialisable
 {
     virtual ~PlayerAction() {}
 
@@ -230,8 +252,29 @@ struct  PlayerAction
             ) const = 0;
 };
 
-struct  PlayerInteraction
+struct  PlayerInteraction : public Serialisable
 {
+    struct  TextLocalisation
+    {
+        TextLocalisation(boost::property_tree::ptree const&  ptree);
+        std::string object(ObjectId const&  id) const { return get(objects, id); }
+        std::string feature(Feature const&  f) const { return get(features, f); }
+        std::string relation(Relation const&  r) const { return get(relations, r); }
+        std::string message(Message const&  msg) const { return get(messages, msg); }
+        std::string token(std::string const&  tkn) const { return get(tokens, tkn); }
+    private:
+        static inline std::string get(std::unordered_map<std::string, std::string> const& data, std::string const&  key)
+        {
+            auto const it = data.find(key);
+            return it == data.end() ? key : it->second;
+        }
+        std::unordered_map<std::string, std::string> objects;
+        std::unordered_map<std::string, std::string> features;
+        std::unordered_map<std::string, std::string> relations;
+        std::unordered_map<std::string, std::string> messages;
+        std::unordered_map<std::string, std::string> tokens;
+    };
+
     using ActionAndContext = std::pair<std::shared_ptr<PlayerAction const>, std::unique_ptr<ActionContext const> >;
     using ActionsVector = std::vector<ActionAndContext>;
 
@@ -242,51 +285,82 @@ struct  PlayerInteraction
         std::size_t chosenActionIndex;
     };
 
-    PlayerInteraction();
+    PlayerInteraction(
+            std::shared_ptr<TextLocalisation const> const  localisation_,
+            simulation_context_ptr const ctx_,
+            osi::keyboard_props const& keyboard_,
+            osi::mouse_props const& mouse_,
+            osi::window_props const& window_,
+            std::shared_ptr<gfx::font_mono_props const> const  font_,
+            std::shared_ptr<gfx::viewport const> const  viewport_
+            );
     virtual ~PlayerInteraction() {}
 
+    std::shared_ptr<TextLocalisation const> const  getTextLocalisation() const { return textLocalisation; }
+
     virtual void onNextPlayerActivated() {}
-    virtual void chooseAction() = 0;
-    virtual void reportNoActionAvailable() = 0;
+
+    // Collects data from the scene to be later rendered for the player.
+    virtual void processScene(float_32_bit const round_seconds);
+
+    // This method is used by the default implementation of method processScene above.
+    // You are supposed to convert the scene into a text info for the player. The player
+    // is then supposed to choose his action based on that info. Actions must be referenced
+    // by numbers in range [1,...,actionSelectionProps->actionInfos.size()].
+    virtual void processSceneToText(float_32_bit const round_seconds, std::stringstream& sstr) {}
+
+    // Until the player reads the message return false. Then return true.
+    virtual bool processMessage(MessagePassing::MessageInfo const&  message, float_32_bit const round_seconds);
+
+    // When readActionIndex() below returns an invalid action index, then this method is called
+    // to render corresponding error message. Player's input is passed to the method.
+    // Until the player reads the message return false. Then return true.
+    // The defaut implementation uses token "input_error_wrong_player_action_index" to get the
+    // corresponding text from 'textLocalisation' module. Pressing ENTER means player read the message.
+    virtual bool processMessageInvalidActionIndex(std::string const& input, float_32_bit const round_seconds);
+
+    // Returns std::numeric_limits<std::size_t>::max() until no action is selected.
+    // Once an action is selected, its index in range [0,...,actionSelectionProps->actionInfos.size()-1UL] is returned.
+    // The default implementation reads keyboard input as numbers in range [1,...,actionSelectionProps->actionInfos.size()]
+    // and then subtracts 1.
+    virtual std::size_t readActionIndex(float_32_bit const round_seconds);
+
+    // Renders data processed by methods above to the screen.
+    virtual void render(gfx::draw_state& dstate) const;
 
 protected:
     std::unique_ptr<ActionSelectionProps> actionSelectionProps;
     ActorState const* playerState;
     WorldState const* worldState;
-    MessagePassing::MessageVector const* messages;
+    MessagePassing::MessageVector messages;
     SimulatorState const* simulatorState;
+
+    std::shared_ptr<TextLocalisation const> const  textLocalisation;
 
     simulation_context_ptr ctx;
     osi::keyboard_props const* keyboard;
     osi::mouse_props const* mouse;
     osi::window_props const* window;
 
+    gfx::gui::text_box  textBox;
+    std::string inputText;
+    bool hasInvalidInput;
+
 private:
-    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState);
-    friend void com::age::nextPlayerInteraction(
-            SimulatorState const& simulatorState,
-            simulation_context_ptr const ctx,
-            osi::keyboard_props const& keyboard,
-            osi::mouse_props const& mouse,
-            osi::window_props const& window
-            );
+    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds);
+
+    bool update(float_32_bit const round_seconds);
 
     void onNextPlayerActivated(
             com::age::ActorState const* playerState_,
             com::age::WorldState const* worldState_,
-            MessagePassing::MessageVector const* messages_,
+            MessagePassing::MessageVector const& messages_,
             com::age::SimulatorState const* simulatorState_
-            );
-    void setContextAndDevices(
-            simulation_context_ptr const ctx_,
-            osi::keyboard_props const* keyboard_,
-            osi::mouse_props const* mouse_,
-            osi::window_props const* window_
             );
 };
 
 
-struct  SimulatorState final
+struct  SimulatorState final : public Serialisable
 {
     SimulatorState();
 
@@ -305,15 +379,9 @@ struct  SimulatorState final
     void activateNextActor();
 
 private:
-
-    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState);
-    friend void com::age::nextPlayerInteraction(
-            SimulatorState const& simulatorState,
-            simulation_context_ptr const ctx,
-            osi::keyboard_props const& keyboard,
-            osi::mouse_props const& mouse,
-            osi::window_props const& window
-            );
+    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds);
+    friend void com::age::renderRound(SimulatorState const& simulatorState, gfx::draw_state& dstate);
+    friend std::shared_ptr<PlayerInteraction const> com::age::getPlayerInteraction(SimulatorState const& simulatorState, ObjectId const  playerId);
 
     void activatePreviousActor();
 

@@ -12,7 +12,8 @@ ObjectId const invalid_object_id = "";
 
 
 WorldState::WorldState()
-    : fromEntitiesToFeatures()
+    : Serialisable()
+    , fromEntitiesToFeatures()
     , fromFeaturesToEntities()
     , relationsForward()
     , relationsInverse()
@@ -458,55 +459,166 @@ void MessagePassing::deliverMessages(ObjectId const& receiver)
 MessagePassing::MessageVector const  MessagePassing::emptyMessages;
 
 
-PlayerInteraction::PlayerInteraction()
-    : actionSelectionProps(nullptr)
+PlayerInteraction::TextLocalisation::TextLocalisation(boost::property_tree::ptree const&  ptree)
+    : objects()
+    , features()
+    , relations()
+    , messages()
+    , tokens()
+{}
+
+
+PlayerInteraction::PlayerInteraction(
+        std::shared_ptr<TextLocalisation const> const  localisation_,
+        simulation_context_ptr const ctx_,
+        osi::keyboard_props const& keyboard_,
+        osi::mouse_props const& mouse_,
+        osi::window_props const& window_,
+        std::shared_ptr<gfx::font_mono_props const> const  font_,
+        std::shared_ptr<gfx::viewport const> const  viewport_
+        )
+    : Serialisable()
+    , actionSelectionProps(nullptr)
     , playerState(nullptr)
     , worldState(nullptr)
-    , messages(nullptr)
+    , messages()
     , simulatorState(nullptr)
-    , ctx(nullptr)
-    , keyboard(nullptr)
-    , mouse(nullptr)
-    , window(nullptr)
-{}
+    , textLocalisation(localisation_)
+    , ctx(ctx_)
+    , keyboard(&keyboard_)
+    , mouse(&mouse_)
+    , window(&window_)
+    , textBox(font_, viewport_)
+    , inputText()
+    , hasInvalidInput(false)
+{
+    ASSUMPTION(textLocalisation != nullptr);
+}
+
+
+void PlayerInteraction::processScene(float_32_bit const round_seconds)
+{
+    std::stringstream  sstr;
+
+    processSceneToText(round_seconds, sstr);
+
+    sstr << "\n" << textLocalisation->object(simulatorState->activeActor())
+         << " " << textLocalisation->token("executes_action")
+         << ": " << inputText << "_";
+
+    textBox.set_text(sstr.str());
+    textBox.update(round_seconds, *keyboard, *mouse);
+}
+
+
+bool PlayerInteraction::processMessage(MessagePassing::MessageInfo const&  message, float_32_bit const round_seconds)
+{
+    std::stringstream  sstr;
+    if (message.location != com::age::invalid_object_id)
+        sstr << textLocalisation->token("location") << ":\n  " << textLocalisation->object(message.location) << "\n";
+    sstr << textLocalisation->token("sender") << ":\n  " << textLocalisation->object(message.sender) << "\n"
+         << textLocalisation->token("message") << ":\n  " << textLocalisation->message(message.message) << "\n\n"
+         << textLocalisation->token("press_enter_to_continue");
+    textBox.set_text(sstr.str());
+    textBox.update(round_seconds, *keyboard, *mouse);
+    return keyboard->keys_just_released().count(osi::KEY_RETURN()) != 0UL;
+}
+
+
+bool PlayerInteraction::processMessageInvalidActionIndex(std::string const& input, float_32_bit const round_seconds)
+{
+    std::stringstream  sstr;
+    sstr << textLocalisation->token("inserted_invalid_action_index") << ": " << input << "\n\n"
+         << textLocalisation->token("press_enter_to_continue");
+    textBox.set_text(sstr.str());
+    textBox.update(round_seconds, *keyboard, *mouse);
+    if (keyboard->keys_just_released().count(osi::KEY_RETURN()) != 0UL)
+    {
+        inputText.clear();
+        hasInvalidInput = false;
+        return true;
+    }
+    return false;
+}
+
+
+std::size_t PlayerInteraction::readActionIndex(float_32_bit const round_seconds)
+{
+    ASSUMPTION(!hasInvalidInput);
+    inputText += keyboard->typed_text();
+    if (keyboard->keys_just_pressed().count(osi::KEY_BACKSPACE()) != 0UL && !inputText.empty())
+        inputText.pop_back();
+    if (!inputText.empty() && keyboard->keys_just_released().count(osi::KEY_RETURN()) != 0UL)
+    {
+        if (actionSelectionProps->actionInfos.empty())
+            return 0UL;
+        int const index = std::atoi(inputText.c_str());
+        if (index >= 1 && (std::size_t)index <= actionSelectionProps->actionInfos.size())
+            return (std::size_t)(index - 1UL);
+        hasInvalidInput = true;
+        return actionSelectionProps->actionInfos.size();
+    }
+    return std::numeric_limits<std::size_t>::max();
+}
+
+
+bool PlayerInteraction::update(float_32_bit const round_seconds)
+{
+    if (!messages.empty())
+    {
+        if (processMessage(messages.back(), round_seconds))
+            messages.pop_back();
+    }
+    else if (hasInvalidInput)
+    {
+        processMessageInvalidActionIndex(inputText, round_seconds);
+    }
+    else if (actionSelectionProps->chosenActionIndex == std::numeric_limits<std::size_t>::max())
+    {
+        std::size_t const  idx = readActionIndex(round_seconds);
+        if (idx == std::numeric_limits<std::size_t>::max())
+            processScene(round_seconds);
+        else if (actionSelectionProps->actionInfos.empty() || idx < actionSelectionProps->actionInfos.size())
+        {
+            actionSelectionProps->chosenActionIndex = idx;
+            return true;
+        }
+    }
+    return false;
+}
 
 
 void PlayerInteraction::onNextPlayerActivated(
         com::age::ActorState const* playerState_,
         com::age::WorldState const* worldState_,
-        MessagePassing::MessageVector const* messages_,
+        MessagePassing::MessageVector const& messages_,
         com::age::SimulatorState const* simulatorState_
         )
 {
     playerState = playerState_;
     worldState = worldState_;
+
     messages = messages_;
+    std::reverse(messages.begin(), messages.end());
+
     simulatorState = simulatorState_;
-    ctx = nullptr;
-    keyboard = nullptr;
-    mouse = nullptr;
-    window = nullptr;
+
+    inputText.clear();
+    hasInvalidInput = false;
 
     onNextPlayerActivated();
 }
 
 
-void PlayerInteraction::setContextAndDevices(
-        simulation_context_ptr const ctx_,
-        osi::keyboard_props const* keyboard_,
-        osi::mouse_props const* mouse_,
-        osi::window_props const* window_
-        )
+void PlayerInteraction::render(gfx::draw_state& dstate) const
 {
-    ctx = ctx_;
-    keyboard = keyboard_;
-    mouse = mouse_;
-    window = window_;
+    textBox.render(dstate);
 }
 
 
 SimulatorState::SimulatorState()
-    : robots()
+    : Serialisable()
+    , robots()
     , players()
     , order()
     , activeActorIterator(order.end())
@@ -716,7 +828,7 @@ struct SearchTree
 
 
 
-void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState)
+void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds)
 {
     TMPROF_BLOCK();
 
@@ -745,11 +857,11 @@ void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState
             player.interaction->onNextPlayerActivated(
                     player.playerState.get(),
                     &worldState,
-                    &messaging.messages(player.playerState->self_id()),
+                    messaging.messages(player.playerState->self_id()),
                     &simulatorState
                     );
         }
-        else if (player.interaction->actionSelectionProps->chosenActionIndex != std::numeric_limits<std::size_t>::max())
+        else if (player.interaction->update(round_seconds))
         {
             if (!player.interaction->actionSelectionProps->actionInfos.empty())
             {
@@ -827,27 +939,46 @@ void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState
 }
 
 
-void nextPlayerInteraction(
-        SimulatorState const& simulatorState,
-        simulation_context_ptr const ctx,
-        osi::keyboard_props const& keyboard,
-        osi::mouse_props const& mouse,
-        osi::window_props const& window
-        )
+void renderRound(SimulatorState const& simulatorState, gfx::draw_state& dstate)
 {
     TMPROF_BLOCK();
 
     ObjectId const& actor_id = simulatorState.activeActor();
     if (actor_id == invalid_object_id || simulatorState.players.count(actor_id) == 0UL)
         return;
-    SimulatorState::ActorPlayer const& player = simulatorState.players.at(actor_id);
-    if (player.interaction->actionSelectionProps == nullptr)
-        return;
-    player.interaction->setContextAndDevices(ctx, &keyboard, &mouse, &window);
-    if (player.interaction->actionSelectionProps->actionInfos.empty())
-        player.interaction->reportNoActionAvailable();
-    else
-        player.interaction->chooseAction();
+    simulatorState.players.at(actor_id).interaction->render(dstate);
+}
+
+
+std::shared_ptr<PlayerInteraction const> getPlayerInteraction(SimulatorState const& simulatorState, ObjectId const  playerId)
+{
+    if (playerId == invalid_object_id || simulatorState.players.count(playerId) == 0UL)
+        return nullptr;
+    return simulatorState.players.at(playerId).interaction;
+}
+
+
+std::string save(
+        WorldState const& worldState,
+        MessagePassing const& messaging,
+        SimulatorState const& simulatorState,
+        boost::property_tree::ptree&  ptree
+        )
+{
+    // TODO!
+    return "";
+}
+
+
+std::string load(
+        boost::property_tree::ptree const&  ptree,
+        WorldState& worldState,
+        MessagePassing& messaging,
+        SimulatorState& simulatorState
+        )
+{
+    // TODO!
+    return "";
 }
 
 
