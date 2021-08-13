@@ -221,7 +221,7 @@ simulator::simulator(std::string const&  data_root_dir)
     , m_FPS_time(0.0f)
     , m_FPS(0U)
 
-    , m_text_cache()
+    , m_text_cache { "", gfx::batch(), 0.0f, 0.0f }
 
     // Debug draw data
 
@@ -1181,8 +1181,8 @@ void  simulator::render_text()
         m_output_text_box.render(render_config().draw_state);
     }
 
-    std::string const&  text = screen_text_logger::instance().text();
-    if (text.empty())
+    text_cache  new_text { screen_text_logger::instance().text(), gfx::batch(), cfg.camera->right() - cfg.camera->left(), cfg.text_scale };
+    if (new_text.text.empty())
         return;
 
     vector3 const  pos{
@@ -1191,24 +1191,24 @@ void  simulator::render_text()
         -cfg.camera->near_plane()
     };
 
-    if (text != m_text_cache.first)
+    if (new_text != m_text_cache)
     {
-        m_text_cache.first = text;
-        m_text_cache.second = gfx::create_text(text, *cfg.font_props, (cfg.camera->right() - pos(0)) / cfg.text_scale);
+        m_text_cache = new_text;
+        m_text_cache.batch = gfx::create_text(new_text.text, *cfg.font_props, (cfg.camera->right() - pos(0)) / cfg.text_scale);
     }
 
-    if (gfx::make_current(m_text_cache.second, cfg.draw_state))
+    if (gfx::make_current(m_text_cache.batch, cfg.draw_state))
     {
         gfx::make_current(get_viewport(VIEWPORT_TYPE::SCENE));
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         gfx::render_batch(
-            m_text_cache.second,
+            m_text_cache.batch,
             pos,
             cfg.text_scale,
             cfg.matrix_ortho_projection_for_text,
             cfg.text_ambient_colour
             );
-        cfg.draw_state = m_text_cache.second.get_draw_state();
+        cfg.draw_state = m_text_cache.batch.get_draw_state();
     }
 }
 

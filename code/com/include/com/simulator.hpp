@@ -43,7 +43,6 @@ struct  simulator : public osi::simulator
 
     struct  render_configuration
     {
-
         render_configuration(gfx::viewport const&  vp, std::string const&  data_root_dir);
         void  terminate();
         // Global config - fields are only initialised in the constructor and then never changed in this class.
@@ -175,7 +174,8 @@ struct  simulator : public osi::simulator
     natural_32_bit  FPS() const { return m_FPS; }
 
     VIEWPORT_TYPE  active_viewport_type() const { return m_active_viewport; }
-    gfx::viewport const&  get_viewport(VIEWPORT_TYPE const  vp_type) const { return *m_viewports.at((std::size_t)vp_type); }
+    std::shared_ptr<gfx::viewport const>  get_viewport_ptr(VIEWPORT_TYPE const  vp_type) const { return m_viewports.at((std::size_t)vp_type); }
+    gfx::viewport const&  get_viewport(VIEWPORT_TYPE const  vp_type) const { return *get_viewport_ptr(vp_type); }
 
     void  render_batch(gfx::batch  batch, std::vector<matrix44> const&  world_matrices);
 
@@ -250,7 +250,14 @@ private:
     float_32_bit  m_FPS_time;
     natural_32_bit  m_FPS;
 
-    std::pair<std::string, gfx::batch>  m_text_cache;
+    struct  text_cache {
+        bool  operator==(text_cache const&  other) const { return width == other.width && text == other.text && scale == other.scale; }
+        bool  operator!=(text_cache const&  other) const { return !(*this == other); }
+        std::string  text;
+        gfx::batch  batch;
+        float_32_bit  width;
+        float_32_bit  scale;
+    } m_text_cache;
 
     //////////////////////////////////////////////////////////////////////////////////////////
     // DEBUG DRAW DATA OF LIBRARIES
