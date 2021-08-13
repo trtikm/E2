@@ -15,8 +15,8 @@ struct  text_box : public  window
     using  super = window;
 
     text_box(
-        std::shared_ptr<font_mono_props> const  font,
-        std::shared_ptr<viewport> const  vp,
+        std::shared_ptr<font_mono_props const> const  font,
+        std::shared_ptr<viewport const> const  vp,
         bool const  resize_with_viewport_ = true,
         vector2 const&  lo = { 0.0f, 0.0f },
         vector2 const&  hi = { 1.0f, 1.0f }
@@ -41,7 +41,7 @@ private:
         float_32_bit  width;
     };
 
-    std::shared_ptr<font_mono_props>  m_font;
+    std::shared_ptr<font_mono_props const>  m_font;
 
     std::string  m_text;
     text_id  m_tid;

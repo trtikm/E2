@@ -6,7 +6,7 @@ namespace gfx { namespace gui {
 
 
 window::window(
-        std::shared_ptr<viewport> const  vp,
+        std::shared_ptr<viewport const> const  vp,
         bool const  resize_with_viewport_,
         vector2 const&  lo,
         vector2 const&  hi

@@ -14,7 +14,7 @@ namespace gfx { namespace gui {
 struct  window
 {
     window(
-        std::shared_ptr<viewport> const  vp,
+        std::shared_ptr<viewport const> const  vp,
         bool const  resize_with_viewport_ = true,
         vector2 const&  lo = { 0.0f, 0.0f },
         vector2 const&  hi = { 1.0f, 1.0f }
@@ -31,7 +31,7 @@ struct  window
     virtual void  render(draw_state&  dstate) const {}
 
 private:
-    std::shared_ptr<viewport>  m_viewport;
+    std::shared_ptr<viewport const>  m_viewport;
     vector2  m_lo;
     vector2  m_hi;
     bool  m_resize_with_viewport;

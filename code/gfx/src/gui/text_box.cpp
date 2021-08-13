@@ -33,8 +33,8 @@ bool  text_box::text_id::operator!=(text_id const&  other) const
 
 
 text_box::text_box(
-        std::shared_ptr<font_mono_props> const  font,
-        std::shared_ptr<viewport> const  vp,
+        std::shared_ptr<font_mono_props const> const  font,
+        std::shared_ptr<viewport const> const  vp,
         bool const  resize_with_viewport_,
         vector2 const&  lo,
         vector2 const&  hi
@@ -120,9 +120,12 @@ void  text_box::render(draw_state&  dstate) const
     float_32_bit  bottom_m = 0.001f * -(vp.height() / 2.0f) * vp.pixel_width_mm;
     float_32_bit  top_m = 0.001f * (vp.height() / 2.0f) * vp.pixel_width_mm;
 
+    float_32_bit const  line_dy = m_tid.scale * (m_font->char_height + m_font->char_separ_dist_y);
+    bool const  all_fits_in = top_m - bottom_m >= line_dy * m_text_info.num_rows;
+
     vector3 const  pos{
             left_m,
-            bottom_m + m_tid.scale * (m_font->char_height + m_font->char_separ_dist_y) * m_bottom_line_index,
+            all_fits_in ? top_m - line_dy : bottom_m + line_dy * m_bottom_line_index,
             0.0f
             };
 
