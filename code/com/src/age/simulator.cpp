@@ -2,6 +2,7 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
+#include <boost/algorithm/string.hpp>
 #include <unordered_set>
 #include <deque>
 
@@ -429,6 +430,15 @@ bool MessagePassing::hasMessage(ObjectId const& receiver, ObjectId const& sender
 }
 
 
+MessagePassing::MessageInfo const* MessagePassing::getMessageInfo(ObjectId const& receiver, Message const& message) const
+{
+    for (MessageInfo const&  msg : messages(receiver))
+        if (msg.message == message)
+            return &msg;
+    return nullptr;
+}
+
+
 MessagePassing::MessageVector const& MessagePassing::messages(ObjectId const& receiver) const
 {
     auto it = m_messages.find(receiver);
@@ -442,6 +452,37 @@ void MessagePassing::sendMessage(ObjectId const& sender, ObjectId const& receive
 }
 
 
+MessagePassing::MessageVector const& MessagePassing::history(ObjectId const& receiver) const
+{
+    auto it = m_history.find(receiver);
+    return it == m_history.end() ? emptyMessages : it->second;
+}
+
+
+integer_32_bit  MessagePassing::indexOfReceivedMessage(ObjectId const& receiver, Message const& message) const
+{
+    integer_32_bit  idx = 0;
+    for (MessageInfo const&  msg : history(receiver))
+        if (msg.message == message)
+            return idx;
+        else
+            ++idx;
+    return -1;
+}
+
+
+integer_32_bit  MessagePassing::indexOfReceivedMessage(ObjectId const& receiver, ObjectId const& sender, Message const& message) const
+{
+    integer_32_bit  idx = 0;
+    for (MessageInfo const&  msg : history(receiver))
+        if (msg.sender == sender && msg.message == message)
+            return idx;
+        else
+            ++idx;
+    return -1;
+}
+
+
 void MessagePassing::deliverMessages(ObjectId const& receiver)
 {
     auto const it = m_pendingMessages.find(receiver);
@@ -449,6 +490,10 @@ void MessagePassing::deliverMessages(ObjectId const& receiver)
         m_messages.erase(receiver);
     else
     {
+        MessageVector& history = m_history[it->first];
+        for (MessageInfo const&  msg : it->second)
+            history.push_back(msg);
+
         m_messages[receiver].swap(it->second);
         m_pendingMessages.erase(it);
     }
@@ -459,13 +504,56 @@ void MessagePassing::deliverMessages(ObjectId const& receiver)
 MessagePassing::MessageVector const  MessagePassing::emptyMessages;
 
 
-PlayerInteraction::TextLocalisation::TextLocalisation(boost::property_tree::ptree const&  ptree)
+PlayerInteraction::TextLocalisation::TextLocalisation(std::ifstream& sstr)
     : objects()
     , features()
     , relations()
     , messages()
     , tokens()
-{}
+    , actions()
+{
+    std::unordered_map<std::string, std::string>*  map = nullptr;
+    std::string line;
+    auto processLine = [this, &map](std::string& line) -> void {
+        std::size_t const idx = line.find(':');
+        ASSUMPTION(line.empty() || idx != std::string::npos);
+        std::string key = boost::trim_copy(line.substr(0UL, idx));
+        std::string value = boost::trim_copy(boost::replace_all_copy(line.substr(idx + 1UL),"\\n","\n"));
+        if (key.empty())
+        {} // nothing to do, i.e. skip that line
+        else if (value.empty())
+        {
+            if (key == "objects")
+                map = &objects;
+            else if (key == "features")
+                map = &features;
+            else if (key == "relations")
+                map = &relations;
+            else if (key == "messages")
+                map = &messages;
+            else if (key == "tokens")
+                map = &tokens;
+            else if (key == "actions")
+                map = &actions;
+            else
+                UNREACHABLE();
+        }
+        else
+        {
+            ASSUMPTION(map != nullptr);
+            map->insert({ key, value });
+        }
+        line.clear();
+    };
+    for (auto it = std::istreambuf_iterator<char>(sstr), end = std::istreambuf_iterator<char>(); it != end; ++it)
+    {
+        if (*it == '\n')
+            processLine(line);
+        else if (*it != '\r')
+            line.push_back(*it);
+    }
+    processLine(line);
+}
 
 
 PlayerInteraction::PlayerInteraction(
@@ -502,9 +590,12 @@ void PlayerInteraction::processScene(float_32_bit const round_seconds)
 
     processSceneToText(round_seconds, sstr);
 
-    sstr << "\n" << textLocalisation->object(simulatorState->activeActor())
-         << " " << textLocalisation->token("executes_action")
-         << ": " << inputText << "_";
+    if (actionSelectionProps->actionInfos.empty())
+        sstr << "\n" << textLocalisation->token("press_enter_to_continue");
+    else
+        sstr << "\n" << textLocalisation->object(simulatorState->activeActor())
+             << " " << textLocalisation->token("executes_action")
+             << ": " << inputText << "_";
 
     textBox.set_text(sstr.str());
     textBox.update(round_seconds, *keyboard, *mouse);
@@ -548,15 +639,20 @@ std::size_t PlayerInteraction::readActionIndex(float_32_bit const round_seconds)
     inputText += keyboard->typed_text();
     if (keyboard->keys_just_pressed().count(osi::KEY_BACKSPACE()) != 0UL && !inputText.empty())
         inputText.pop_back();
-    if (!inputText.empty() && keyboard->keys_just_released().count(osi::KEY_RETURN()) != 0UL)
+    if (keyboard->keys_just_released().count(osi::KEY_RETURN()) != 0UL)
     {
         if (actionSelectionProps->actionInfos.empty())
             return 0UL;
-        int const index = std::atoi(inputText.c_str());
-        if (index >= 1 && (std::size_t)index <= actionSelectionProps->actionInfos.size())
-            return (std::size_t)(index - 1UL);
-        hasInvalidInput = true;
-        return actionSelectionProps->actionInfos.size();
+        if (!inputText.empty())
+        {
+            int const index = std::atoi(inputText.c_str());
+            if (index >= 1 && (std::size_t)index <= actionSelectionProps->actionInfos.size())
+            {
+                return (std::size_t)(index - 1UL);
+            }
+            hasInvalidInput = true;
+            return actionSelectionProps->actionInfos.size();
+        }
     }
     return std::numeric_limits<std::size_t>::max();
 }
@@ -603,16 +699,108 @@ void PlayerInteraction::onNextPlayerActivated(
 
     simulatorState = simulatorState_;
 
+    onNextPlayerActivated();
+}
+
+
+void PlayerInteraction::onPlayerLeft()
+{
+    actionSelectionProps = nullptr;
+
     inputText.clear();
     hasInvalidInput = false;
-
-    onNextPlayerActivated();
+    textBox.set_text("");
+    textBox.update(0.0f, *keyboard, *mouse);
 }
 
 
 void PlayerInteraction::render(gfx::draw_state& dstate) const
 {
     textBox.render(dstate);
+}
+
+
+ActionHistory::Record ActionHistory::Record::make(ObjectId const actor_, PlayerAction const& action_, ActionContext const& context_)
+{
+    return make(actor_, typeid(action_).name(), context_);
+}
+
+
+ActionHistory::Record ActionHistory::Record::make(ObjectId const actor_, RobotAction const& action_, ActionContext const& context_)
+{
+    return make(actor_, typeid(action_).name(), context_);
+}
+
+
+ActionHistory::Record ActionHistory::Record::make(ObjectId const actor_, std::string const& action_, ActionContext const& context_)
+{
+    std::vector<ActionContext::AttributeNameAndValue> ctx;
+    context_.dump(ctx);
+    return { actor_, action_, ctx };
+}
+
+
+bool ActionHistory::Record::operator==(Record const& other) const
+{
+    if (actor != other.actor || action != other.action || context.size() != other.context.size())
+        return false;
+    for (std::size_t i = 0UL; i != context.size(); ++i)
+        if (context.at(i) != other.context.at(i))
+            return false;
+    return true;
+}
+
+
+void ActionHistory::addAction(Record const& r)
+{
+    ASSUMPTION(isCurrentInPresent());
+    data.push_back(r);
+    current = data.size();
+}
+
+
+void ActionHistory::moveCurrentToNextRecord()
+{
+    ASSUMPTION(!isCurrentInPresent());
+    ++current;
+}
+
+
+std::string ActionHistory::save(boost::property_tree::ptree& output) const
+{
+
+    boost::property_tree::ptree dat;
+    for (Record const& r : data)
+    {
+        boost::property_tree::ptree rec;
+        rec.put("actor", r.actor);
+        rec.put("action", r.action);
+        boost::property_tree::ptree ctx;
+        for (ActionContext::AttributeNameAndValue const& c : r.context)
+            ctx.put(c.first, c.second);
+        rec.put_child("context", ctx);
+        dat.push_back({ "", rec });
+    }
+    output.put_child("data", dat);
+    return ""; // no error
+}
+
+
+std::string ActionHistory::load(boost::property_tree::ptree const& input)
+{
+    clear();
+    boost::property_tree::ptree const& dat = input.get_child("data");
+    for (auto it = dat.begin(); it != dat.end(); ++it)
+    {
+        boost::property_tree::ptree const& rec = it->second;
+        boost::property_tree::ptree const& ctx = rec.get_child("context");
+
+        Record r { rec.get<std::string>("actor"), rec.get<std::string>("action"), {} };
+        for (auto cit = ctx.begin(); cit != ctx.end(); ++cit)
+            r.context.push_back({ cit->first, cit->second.get_value<std::string>() });
+        data.push_back(r);
+    }
+    return ""; // no error
 }
 
 
@@ -828,7 +1016,13 @@ struct SearchTree
 
 
 
-void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds)
+void nextRound(
+        WorldState& worldState,
+        MessagePassing& messaging,
+        SimulatorState& simulatorState,
+        ActionHistory& history,
+        float_32_bit const  round_seconds
+        )
 {
     TMPROF_BLOCK();
 
@@ -861,16 +1055,29 @@ void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState
                     &simulatorState
                     );
         }
-        else if (player.interaction->update(round_seconds))
+        if (!history.isCurrentInPresent() || player.interaction->update(round_seconds))
         {
             if (!player.interaction->actionSelectionProps->actionInfos.empty())
             {
-                std::pair<std::shared_ptr<PlayerAction const>, std::unique_ptr<ActionContext const> > const&  bestInfo =
-                        player.interaction->actionSelectionProps->actionInfos.at(player.interaction->actionSelectionProps->chosenActionIndex);
-                bestInfo.first->apply(*bestInfo.second, *player.playerState, worldState, messaging, simulatorState);
+                std::pair<std::shared_ptr<PlayerAction const>, std::unique_ptr<ActionContext const> > const*  bestInfo = nullptr;
+                if (history.isCurrentInPresent())
+                {
+                    bestInfo = &player.interaction->actionSelectionProps->actionInfos.at(player.interaction->actionSelectionProps->chosenActionIndex);
+                    history.addAction(actor_id, *bestInfo->first, *bestInfo->second);
+                }
+                else
+                    for (PlayerInteraction::ActionAndContext const& actionInfo : player.interaction->actionSelectionProps->actionInfos)
+                        if (history.isCurrent(actor_id, *actionInfo.first, *actionInfo.second))
+                        {
+                            bestInfo = &actionInfo;
+                            history.moveCurrentToNextRecord();
+                            break;
+                        }
+                ASSUMPTION(bestInfo != nullptr);
+                bestInfo->first->apply(*bestInfo->second, *player.playerState, worldState, messaging, simulatorState);
             }
 
-            player.interaction->actionSelectionProps = nullptr;
+            player.interaction->onPlayerLeft();
 
             simulatorState.activateNextActor();
         }
@@ -930,8 +1137,22 @@ void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState
             INVARIANT(best_node_idx != -1 && tree.parents.at(best_node_idx) != -1);
             while (tree.parents.at(tree.parents.at(best_node_idx)) != -1)
                 best_node_idx = tree.parents.at(best_node_idx);
-            SearchNode const&  bestNode = tree.nodes.at(best_node_idx);
-            bestNode.action->apply(*bestNode.context, *robot.robotState, worldState, messaging, simulatorState);
+            SearchNode const*  bestNode = nullptr;
+            if (history.isCurrentInPresent())
+            {
+                bestNode = &tree.nodes.at(best_node_idx);
+                history.addAction(actor_id, *bestNode->action, *bestNode->context);
+            }
+            else
+                for (SearchNode const& node : tree.nodes)
+                    if (node.depth == 1U && history.isCurrent(actor_id, *node.action, *node.context))
+                    {
+                        bestNode = &node;
+                        history.moveCurrentToNextRecord();
+                        break;
+                    }
+            ASSUMPTION(bestNode != nullptr);
+            bestNode->action->apply(*bestNode->context, *robot.robotState, worldState, messaging, simulatorState);
         }
 
         simulatorState.activateNextActor();

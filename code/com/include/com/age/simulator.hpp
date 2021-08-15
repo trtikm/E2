@@ -1,13 +1,16 @@
 #ifndef COM_AGE_SIMULATOR_HPP_INCLUDED
 #   define COM_AGE_SIMULATOR_HPP_INCLUDED
 
+// This define is here to suppress a warning from internals of boost about deprecation of placeholders at global scope.
+#   define BOOST_BIND_GLOBAL_PLACEHOLDERS
+
 #   include <com/simulation_context.hpp>
 #   include <osi/window_props.hpp>
 #   include <osi/keyboard_props.hpp>
 #   include <osi/mouse_props.hpp>
 #   include <gfx/gui/text_box.hpp>
 #   include <utility/std_pair_hash.hpp>
-#   include <boost/property_tree/ptree.hpp>
+#   include <boost/property_tree/json_parser.hpp>
 #   include <unordered_map>
 #   include <set>
 #   include <vector>
@@ -19,6 +22,7 @@
 #   include <algorithm>
 #   include <typeinfo>
 #   include <typeindex>
+#   include <fstream>
 
 namespace  com { namespace age {
 
@@ -38,6 +42,7 @@ struct  MessagePassing;
 
 struct  ActionContext;
 struct  ActionEffectDescription;
+struct  ActionID;
 
 struct  RobotState;
 struct  RobotAction;
@@ -46,11 +51,18 @@ struct  RobotScore;
 struct  PlayerAction;
 struct  PlayerInteraction;
 
+struct ActionHistory;
+
 struct  SimulatorState;
 struct  Simulator;
 
-
-void nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds);
+void nextRound(
+        WorldState& worldState,
+        MessagePassing& messaging,
+        SimulatorState& simulatorState,
+        ActionHistory& history,
+        float_32_bit const  round_seconds
+        );
 void renderRound(SimulatorState const& simulatorState, gfx::draw_state& dstate);
 std::shared_ptr<PlayerInteraction const> getPlayerInteraction(SimulatorState const& simulatorState, ObjectId const  playerId);
 
@@ -155,23 +167,31 @@ struct  MessagePassing : public Serialisable
 
     using MessageVector = std::vector<MessageInfo>;
 
-    MessagePassing() : Serialisable(), m_messages(), m_pendingMessages() {}
+    MessagePassing() : Serialisable(), m_messages(), m_pendingMessages(), m_history() {}
     virtual ~MessagePassing() {}
 
     virtual std::unique_ptr<MessagePassing>  clone() const;
 
     bool hasMessage(ObjectId const& receiver, Message const& message) const;
     bool hasMessage(ObjectId const& receiver, ObjectId const& sender, Message const& message) const;
+    MessageInfo const* getMessageInfo(ObjectId const& receiver, Message const& message) const;
     MessageVector const& messages(ObjectId const& receiver) const;
     void sendMessage(ObjectId const& sender, ObjectId const& receiver, Message const& message, ObjectId const& location = invalid_object_id);
 
+    MessageVector const& history(ObjectId const& receiver) const;
+    // Methods indexOfReceivedMessage return -1, when the queried message was never received. Otherwise they return
+    // the index of the first (the earliest) message received.
+    integer_32_bit  indexOfReceivedMessage(ObjectId const& receiver, Message const& message) const;
+    integer_32_bit  indexOfReceivedMessage(ObjectId const& receiver, ObjectId const& sender, Message const& message) const;
+
 private:
-    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds);
+    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, ActionHistory& history, float_32_bit const  round_seconds);
 
     void deliverMessages(ObjectId const& receiver);
 
     std::unordered_map<ObjectId, MessageVector> m_messages;
     std::unordered_map<ObjectId, MessageVector> m_pendingMessages;
+    std::unordered_map<ObjectId, MessageVector> m_history;
     static MessageVector const emptyMessages;
 };
 
@@ -192,7 +212,11 @@ private:
 
 struct  ActionContext : public Serialisable
 {
+    using AttributeNameAndValue = std::pair<std::string, std::string>;
+    using AttributesVector = std::vector<AttributeNameAndValue>;
     virtual ~ActionContext() {}
+    // Do not forget to override this method in your subclass (it is important for correct function of history and replay). 
+    virtual void dump(AttributesVector& output) const {}
 };
 
 
@@ -256,12 +280,13 @@ struct  PlayerInteraction : public Serialisable
 {
     struct  TextLocalisation
     {
-        TextLocalisation(boost::property_tree::ptree const&  ptree);
+        TextLocalisation(std::ifstream& sstr);
         std::string object(ObjectId const&  id) const { return get(objects, id); }
         std::string feature(Feature const&  f) const { return get(features, f); }
         std::string relation(Relation const&  r) const { return get(relations, r); }
         std::string message(Message const&  msg) const { return get(messages, msg); }
         std::string token(std::string const&  tkn) const { return get(tokens, tkn); }
+        std::string action(std::string const&  a) const { return get(actions, a); }
     private:
         static inline std::string get(std::unordered_map<std::string, std::string> const& data, std::string const&  key)
         {
@@ -273,6 +298,7 @@ struct  PlayerInteraction : public Serialisable
         std::unordered_map<std::string, std::string> relations;
         std::unordered_map<std::string, std::string> messages;
         std::unordered_map<std::string, std::string> tokens;
+        std::unordered_map<std::string, std::string> actions;
     };
 
     using ActionAndContext = std::pair<std::shared_ptr<PlayerAction const>, std::unique_ptr<ActionContext const> >;
@@ -347,7 +373,7 @@ protected:
     bool hasInvalidInput;
 
 private:
-    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds);
+    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, ActionHistory& history, float_32_bit const  round_seconds);
 
     bool update(float_32_bit const round_seconds);
 
@@ -357,6 +383,58 @@ private:
             MessagePassing::MessageVector const& messages_,
             com::age::SimulatorState const* simulatorState_
             );
+    void onPlayerLeft();
+};
+
+struct ActionHistory final
+{
+    struct Record
+    {
+        static Record make(ObjectId const actor_, PlayerAction const& action_, ActionContext const& context_);
+        static Record make(ObjectId const actor_, RobotAction const& action_, ActionContext const& context_);
+        bool operator==(Record const& other) const;
+        ObjectId actor;
+        std::string action;
+        std::vector<ActionContext::AttributeNameAndValue> context;
+    private:
+        static Record make(ObjectId const actor_, std::string const& action_, ActionContext const& context_);
+    };
+
+    ActionHistory() : data(), current(0UL) {}
+
+    Record const* getCurrent() const { return current == data.size() ? nullptr : &data.at(current); }
+
+    bool isCurrent(ObjectId const actor_, PlayerAction const& action_, ActionContext const& context_) const
+    { return isCurrent(Record::make(actor_, action_, context_)); }
+    
+    bool isCurrent(ObjectId const actor_, RobotAction const& action_, ActionContext const& context_) const
+    { return isCurrent(Record::make(actor_, action_, context_)); }
+
+    bool isCurrent(Record const& r) const { return *getCurrent() == r; }
+
+    bool isCurrentInPresent() const { return getCurrent() == nullptr; }
+
+    void moveCurrentToBegin() { current = 0UL; }
+    void moveCurrentToNextRecord();
+
+    void addAction(ObjectId const actor_, PlayerAction const& action_, ActionContext const& context_)
+    { addAction(Record::make(actor_, action_, context_)); }
+    
+    void addAction(ObjectId const actor_, RobotAction const& action_, ActionContext const& context_)
+    { addAction(Record::make(actor_, action_, context_)); }
+
+    bool empty() const { return data.empty(); }
+
+    void clear() { data.clear(); moveCurrentToBegin(); }
+
+    std::string save(boost::property_tree::ptree& output) const;
+    std::string load(boost::property_tree::ptree const& input);
+
+private:
+    void addAction(Record const& r);
+
+    std::vector<Record> data;
+    std::size_t current;
 };
 
 
@@ -379,7 +457,7 @@ struct  SimulatorState final : public Serialisable
     void activateNextActor();
 
 private:
-    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, float_32_bit const  round_seconds);
+    friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, ActionHistory& history, float_32_bit const  round_seconds);
     friend void com::age::renderRound(SimulatorState const& simulatorState, gfx::draw_state& dstate);
     friend std::shared_ptr<PlayerInteraction const> com::age::getPlayerInteraction(SimulatorState const& simulatorState, ObjectId const  playerId);
 
