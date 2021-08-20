@@ -1027,7 +1027,7 @@ void nextRound(
     TMPROF_BLOCK();
 
     ObjectId const&  actor_id = simulatorState.activeActor();
-    if (actor_id == invalid_object_id)
+    if (actor_id == invalid_object_id || (history.getCurrent() != nullptr && history.getCurrent()->actor != actor_id))
     {
         simulatorState.activateNextActor();
         return;
