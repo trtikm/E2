@@ -344,6 +344,11 @@ struct  PlayerInteraction : public Serialisable
     // Until the player reads the message return false. Then return true.
     virtual bool processMessage(MessagePassing::MessageInfo const&  message, float_32_bit const round_seconds);
 
+    // This method is used by the default implementation of method processMessage above.
+    // You are supposed to convert the message into a text for the player. The player
+    // is then asked to press key ENTER to continue.
+    virtual void processMessageToText(MessagePassing::MessageInfo const&  message, float_32_bit const round_seconds, std::stringstream& sstr);
+
     // When readActionIndex() below returns an invalid action index, then this method is called
     // to render corresponding error message. Player's input is passed to the method.
     // Until the player reads the message return false. Then return true.

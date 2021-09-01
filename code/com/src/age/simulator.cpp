@@ -629,14 +629,27 @@ void PlayerInteraction::processScene(float_32_bit const round_seconds)
 bool PlayerInteraction::processMessage(MessagePassing::MessageInfo const&  message, float_32_bit const round_seconds)
 {
     std::stringstream  sstr;
-    if (message.location != com::age::invalid_object_id)
-        sstr << textLocalisation->token("location") << ":\n  " << textLocalisation->object(message.location) << "\n";
-    sstr << textLocalisation->token("sender") << ":\n  " << textLocalisation->object(message.sender) << "\n"
-         << textLocalisation->token("message") << ":\n  " << textLocalisation->message(message.message) << "\n\n"
-         << textLocalisation->token("press_enter_to_continue");
+
+    processMessageToText(message, round_seconds, sstr);
+
+    sstr << "\n" << textLocalisation->token("press_enter_to_continue");
     textBox.set_text(sstr.str());
     textBox.update(round_seconds, *keyboard, *mouse);
     return keyboard->keys_just_released().count(osi::KEY_RETURN()) != 0UL;
+}
+
+
+void PlayerInteraction::processMessageToText(
+        MessagePassing::MessageInfo const&  message,
+        float_32_bit const round_seconds,
+        std::stringstream& sstr
+        )
+{
+    if (message.location != com::age::invalid_object_id)
+        sstr << textLocalisation->token("location") << ":\n  " << textLocalisation->object(message.location) << "\n";
+    sstr << textLocalisation->token("sender") << ":\n  " << textLocalisation->object(message.sender) << "\n"
+         << textLocalisation->token("message") << ":\n  " << textLocalisation->message(message.message) << "\n"
+         ;
 }
 
 
