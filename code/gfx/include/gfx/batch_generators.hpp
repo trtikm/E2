@@ -385,6 +385,8 @@ batch  create_text(
         float_32_bit const  max_text_width = 0.0f, // When positive, the text will be wrapped not to exceed that width.
         text_info* const  out_info_ptr = nullptr,
         natural_8_bit const  cursor_char = 0xffU,
+        bool const  wrap_whole_words = true, // Used only if max_text_width > 0.0f
+        bool const  do_char_escaping = true,
         std::string const&  id = ""
         );
 

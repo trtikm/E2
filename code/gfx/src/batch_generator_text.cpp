@@ -151,6 +151,8 @@ batch  create_text(
         float_32_bit const  max_text_width,
         text_info* const  out_info_ptr,
         natural_8_bit const  cursor_char,
+        bool const  wrap_whole_words,
+        bool const  do_char_escaping,
         std::string const&  id
         )
 {
@@ -159,75 +161,142 @@ batch  create_text(
     std::vector< std::array<float_32_bit, 3> >  xyz;
     std::vector< std::array<float_32_bit, 2> >  uv;
     {
-        xyz.reserve(text.size() * 6UL);        
+        xyz.reserve(text.size() * 6UL);
         uv.reserve(text.size() * 6UL);
 
-        natural_32_bit  row = 0U;
-        natural_32_bit  column = 0U;
-        natural_32_bit  max_column = 0U;
-        vector2  cursor{ 0.0f, 0.0f};
-        for (natural_8_bit  character : text)
+        natural_32_bit const  max_chars_per_line = max_text_width > 0.0f ?
+                (natural_32_bit)((max_text_width + props.char_separ_dist_x) / (props.char_width + props.char_separ_dist_x)) :
+                std::numeric_limits<natural_32_bit>::max();
+
+        struct  text_scan_info
         {
+            natural_32_bit  row = 0U;
+            natural_32_bit  column = 0U;
+            vector2  cursor{ 0.0f, 0.0f};
+            natural_32_bit  index = 0U;
+            bool escape = false;
+        };
+
+        text_scan_info  info, last_white_char_info;
+        for (natural_32_bit  text_size = (natural_32_bit)text.size(); info.index < text_size; ++info.index)
+        {
+            natural_8_bit  character = text.at(info.index);
+
             if (character == cursor_char)
             {
                 if (out_info_ptr != nullptr)
                 {
-                    out_info_ptr->cursor_pos = cursor;
-                    out_info_ptr->cursor_row = row;
-                    out_info_ptr->cursor_column = column;
+                    out_info_ptr->cursor_pos = info.cursor;
+                    out_info_ptr->cursor_row = info.row;
+                    out_info_ptr->cursor_column = info.column;
                 }
                 continue;
+            }
+
+            if (do_char_escaping)
+            {
+                if (info.escape)
+                {
+                    switch (character)
+                    {
+                    case 't':
+                    case 'T':
+                        character = '\t';
+                        break;
+                    case 'r':
+                    case 'R':
+                        character = '\r';
+                        break;
+                    case 'n':
+                    case 'N':
+                        character = '\n';
+                        break;
+                    default:
+                        break;
+                    }
+                    info.escape = false;
+                }
+                else if (character == '\\')
+                {
+                    info.escape = true;
+                    continue;
+                }
             }
 
             switch (character)
             {
             case ' ':
-                cursor(0) += props.space_size + props.char_separ_dist_x;
-                ++column;
+                info.cursor(0) += props.space_size + props.char_separ_dist_x;
+                ++info.column;
+                last_white_char_info = info;
                 continue;
             case '\t':
-                for (natural_32_bit  i = 0U, n = props.tab_size - (column % props.tab_size); i != n; ++i)
+                for (natural_32_bit  i = 0U, n = props.tab_size - (info.column % props.tab_size); i != n; ++i)
                 {
-                    if (max_text_width > 0.0f && cursor(0) + props.char_width > max_text_width)
+                    if (max_text_width > 0.0f && info.cursor(0) + props.char_width > max_text_width)
                     {
-                        cursor(0) = 0.0f;
-                        cursor(1) -= props.char_height + props.char_separ_dist_y;
-                        column = 0U;
-                        ++row;
+                        info.cursor(0) = 0.0f;
+                        info.cursor(1) -= props.char_height + props.char_separ_dist_y;
+                        info.column = 0U;
+                        ++info.row;
                     }
-                    cursor(0) += props.space_size + props.char_separ_dist_x;
-                    ++column;
+                    info.cursor(0) += props.space_size + props.char_separ_dist_x;
+                    ++info.column;
                 }
+                last_white_char_info = info;
                 continue;
             case '\r':
-                cursor(0) = 0.0f;
-                column = 0U;
+                info.cursor(0) = 0.0f;
+                info.column = 0U;
+                last_white_char_info = info;
                 continue;
             case '\n':
-                cursor(0) = 0.0f;
-                cursor(1) -= props.char_height + props.char_separ_dist_y;
-                column = 0U;
-                ++row;
+                info.cursor(0) = 0.0f;
+                info.cursor(1) -= props.char_height + props.char_separ_dist_y;
+                info.column = 0U;
+                ++info.row;
+                last_white_char_info = info;
                 continue;
             default:
                 if (character < props.min_ascii_code || character > props.max_ascii_code)
                 {
-                    cursor(0) += props.space_size + props.char_separ_dist_x;
-                    ++column;
+                    info.cursor(0) += props.space_size + props.char_separ_dist_x;
+                    ++info.column;
+                    last_white_char_info = info;
                     continue;
                 }
                 break;
             }
 
-            if (max_text_width > 0.0f && cursor(0) + props.char_width > max_text_width)
+            if (max_text_width > 0.0f && info.cursor(0) + props.char_width > max_text_width)
             {
-                cursor(0) = 0.0f;
-                cursor(1) -= props.char_height + props.char_separ_dist_y;
-                column = 0U;
-                ++row;
+                natural_32_bit const  index_delta = info.index - last_white_char_info.index ;
+                if (index_delta > 1U && index_delta < max_chars_per_line)
+                {
+                    for (natural_32_bit  i = 1U; i < index_delta; ++i)
+                    {
+                        // Low triangle
+                        xyz.pop_back(); xyz.pop_back(); xyz.pop_back();
+                        uv.pop_back(); uv.pop_back(); uv.pop_back();
+                        // High triangle
+                        xyz.pop_back(); xyz.pop_back(); xyz.pop_back();
+                        uv.pop_back(); uv.pop_back(); uv.pop_back();
+                    }
+                    info = last_white_char_info;
+                    info.cursor(0) = 0.0f;
+                    info.cursor(1) -= props.char_height + props.char_separ_dist_y;
+                    info.column = 0U;
+                    ++info.row;
+                    continue;
+                }
+
+                info.cursor(0) = 0.0f;
+                info.cursor(1) -= props.char_height + props.char_separ_dist_y;
+                info.column = 0U;
+                ++info.row;
             }
 
-            vector2 const  hi_xy{ cursor(0) + props.char_width, cursor(1) + props.char_height };
+            vector2 const  hi_xy{ info.cursor(0) + props.char_width, info.cursor(1) + props.char_height };
 
             // Coords of the character in the characters-matrix in the texture.
             natural_32_bit const  char_row = (character - props.min_ascii_code) / props.max_chars_in_row;
@@ -241,20 +310,20 @@ batch  create_text(
             vector2 const  hi_uv{ lo_uv(0) + props.char_uv_width, lo_uv(1) + props.char_uv_height };
 
             // Low triangle
-            xyz.push_back({ cursor(0), cursor(1), 0.0f }); uv.push_back({ lo_uv(0), lo_uv(1) });
-            xyz.push_back({  hi_xy(0), cursor(1), 0.0f }); uv.push_back({ hi_uv(0), lo_uv(1) });
-            xyz.push_back({  hi_xy(0),  hi_xy(1), 0.0f }); uv.push_back({ hi_uv(0), hi_uv(1) });
+            xyz.push_back({ info.cursor(0), info.cursor(1), 0.0f }); uv.push_back({ lo_uv(0), lo_uv(1) });
+            xyz.push_back({ hi_xy(0),  info.cursor(1), 0.0f }); uv.push_back({ hi_uv(0), lo_uv(1) });
+            xyz.push_back({ hi_xy(0),  hi_xy(1), 0.0f }); uv.push_back({ hi_uv(0), hi_uv(1) });
 
             // High triangle
-            xyz.push_back({ cursor(0), cursor(1), 0.0f }); uv.push_back({ lo_uv(0), lo_uv(1) });
-            xyz.push_back({  hi_xy(0),  hi_xy(1), 0.0f }); uv.push_back({ hi_uv(0), hi_uv(1) });
-            xyz.push_back({ cursor(0),  hi_xy(1), 0.0f }); uv.push_back({ lo_uv(0), hi_uv(1) });
+            xyz.push_back({ info.cursor(0), info.cursor(1), 0.0f }); uv.push_back({ lo_uv(0), lo_uv(1) });
+            xyz.push_back({ hi_xy(0),  hi_xy(1), 0.0f }); uv.push_back({ hi_uv(0), hi_uv(1) });
+            xyz.push_back({ info.cursor(0),  hi_xy(1), 0.0f }); uv.push_back({ lo_uv(0), hi_uv(1) });
 
-            cursor(0) += props.char_width + props.char_separ_dist_x;
-            ++column;
+            info.cursor(0) += props.char_width + props.char_separ_dist_x;
+            ++info.column;
         }
         if (out_info_ptr != nullptr)
-            out_info_ptr->num_rows = row + 1U;
+            out_info_ptr->num_rows = info.row + 1U;
     }
 
     if (xyz.empty())
