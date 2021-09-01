@@ -483,6 +483,30 @@ integer_32_bit  MessagePassing::indexOfReceivedMessage(ObjectId const& receiver,
 }
 
 
+bool MessagePassing::hasMessages() const
+{
+    return !m_messages.empty();
+}
+
+
+bool MessagePassing::hasMessages(ObjectId const& receiver) const
+{
+    return m_messages.find(receiver) != m_messages.end();
+}
+
+
+bool MessagePassing::hasPendingMessages() const
+{
+    return !m_pendingMessages.empty();
+}
+
+
+bool MessagePassing::hasPendingMessages(ObjectId const& receiver) const
+{
+    return m_pendingMessages.find(receiver) != m_pendingMessages.end();
+}
+
+
 void MessagePassing::deliverMessages(ObjectId const& receiver)
 {
     auto const it = m_pendingMessages.find(receiver);
@@ -908,6 +932,15 @@ void SimulatorState::activateNextActor()
     ++activeActorIterator;
     if (activeActorIterator == order.end())
         activeActorIterator = order.begin();
+}
+
+
+bool SimulatorState::hasPlayerInteractionMessages() const
+{
+    for (auto const&  id_and_player : players)
+        if (!id_and_player.second.interaction->getMessages().empty())
+            return true;
+    return false;
 }
 
 

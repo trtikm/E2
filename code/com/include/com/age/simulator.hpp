@@ -184,6 +184,12 @@ struct  MessagePassing : public Serialisable
     integer_32_bit  indexOfReceivedMessage(ObjectId const& receiver, Message const& message) const;
     integer_32_bit  indexOfReceivedMessage(ObjectId const& receiver, ObjectId const& sender, Message const& message) const;
 
+    bool hasMessages() const;
+    bool hasMessages(ObjectId const& receiver) const;
+
+    bool hasPendingMessages() const;
+    bool hasPendingMessages(ObjectId const& receiver) const;
+
 private:
     friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, ActionHistory& history, float_32_bit const  round_seconds);
 
@@ -354,6 +360,8 @@ struct  PlayerInteraction : public Serialisable
     // Renders data processed by methods above to the screen.
     virtual void render(gfx::draw_state& dstate) const;
 
+    MessagePassing::MessageVector const& getMessages() const { return messages; }
+
 protected:
     std::unique_ptr<ActionSelectionProps> actionSelectionProps;
     ActorState const* playerState;
@@ -455,6 +463,8 @@ struct  SimulatorState final : public Serialisable
     void setActiveActor(ObjectId const& actor);
     ObjectId const& activeActor() const;
     void activateNextActor();
+
+    bool hasPlayerInteractionMessages() const;
 
 private:
     friend void com::age::nextRound(WorldState& worldState, MessagePassing& messaging, SimulatorState& simulatorState, ActionHistory& history, float_32_bit const  round_seconds);
