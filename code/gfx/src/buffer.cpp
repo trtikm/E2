@@ -124,7 +124,6 @@ buffer_file_data::buffer_file_data(async::finalise_load_on_destroy_ptr const  fi
             (has_integer_components ? sizeof(natural_32_bit) : sizeof(float_32_bit))
             );
     auto  buffer_data_cursor = buffer_data.data();
-    float_32_bit  radius_squared = 0.0f;
     vector3  lo_corner =
         !compute_boundary ? vector3_zero() : vector3(std::numeric_limits<float_32_bit>::max(),
                                                      std::numeric_limits<float_32_bit>::max(),
@@ -244,7 +243,6 @@ buffer_file_data::buffer_file_data(
         bool const  do_compute_boundary
         )
 {
-    float_32_bit  radius_squared = 0.0f;
     vector3  lo_corner;
     vector3  hi_corner;
     if (do_compute_boundary)

@@ -293,6 +293,9 @@ struct  PlayerInteraction : public Serialisable
         std::string message(Message const&  msg) const { return get(messages, msg); }
         std::string token(std::string const&  tkn) const { return get(tokens, tkn); }
         std::string action(std::string const&  a) const { return get(actions, a); }
+        std::string description(std::string const&  a) const { return get(descriptions, a); }
+        void clear();
+        void load(std::ifstream& sstr);
     private:
         static inline std::string get(std::unordered_map<std::string, std::string> const& data, std::string const&  key)
         {
@@ -305,6 +308,7 @@ struct  PlayerInteraction : public Serialisable
         std::unordered_map<std::string, std::string> messages;
         std::unordered_map<std::string, std::string> tokens;
         std::unordered_map<std::string, std::string> actions;
+        std::unordered_map<std::string, std::string> descriptions;
     };
 
     using ActionAndContext = std::pair<std::shared_ptr<PlayerAction const>, std::unique_ptr<ActionContext const> >;
@@ -365,6 +369,9 @@ struct  PlayerInteraction : public Serialisable
     // Renders data processed by methods above to the screen.
     virtual void render(gfx::draw_state& dstate) const;
 
+    ActorState const& getPlayerState() const { return *playerState; }
+    WorldState const& getWorldState() const { return *worldState; }
+    SimulatorState const& getSimulatorState() const { return *simulatorState; }
     MessagePassing::MessageVector const& getMessages() const { return messages; }
 
 protected:

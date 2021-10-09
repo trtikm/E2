@@ -706,8 +706,6 @@ natural_32_bit  closest_points_of_triangle_and_line(
 
     bool  is_dot_Tnormal_T1L1_outdated = false;
     bool  is_dot_Tnormal_T1L2_outdated = false;
-    scalar  min_line_param = 0.0f;
-    scalar  max_line_param = 1.0f;
     if (dot_Tnormal_T1L1 < distance_epsilon)
     {
         if (dot_Tnormal_T1L2 < distance_epsilon)
@@ -2929,7 +2927,6 @@ bool  collision_box_box(
                     continue;
 
                 std::vector<vector2> const*  raw_collision_points_in_box_space;
-                std::vector<collision_shape_feature_id> const*  raw_feature_ids = &feature_ids;
                 if (type == POINT_SET_TYPE::FULL)
                 {
                     raw_collision_points_in_box_space = &polyhedron.polygons.at(i);

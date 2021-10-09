@@ -1117,12 +1117,6 @@ void  agent_action::on_transition(agent_action* const  from_action_ptr, transiti
             com::object_guid const  under_folder_guid =
                     ctx().from_relative_path(binding().folder_guid_of_agent, name_and_props.second.under_folder);
             com::object_guid const  folder_guid = ctx().insert_folder(under_folder_guid, name_and_props.first, false);
-            com::object_guid const  frame_guid = ctx().insert_frame(
-                    folder_guid,
-                    ctx().find_closest_frame(under_folder_guid, true),
-                    name_and_props.second.frame.origin(),
-                    name_and_props.second.frame.orientation()
-                    );
             insert_collider_to_context(
                     ctx(),
                     folder_guid,

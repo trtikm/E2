@@ -117,8 +117,8 @@ void  text_box::render(draw_state&  dstate) const
 
     float_32_bit  left_m = 0.001f * left_pixel * vp.pixel_width_mm;
     float_32_bit  right_m = 0.001f * right_pixel * vp.pixel_width_mm;
-    float_32_bit  bottom_m = 0.001f * -(vp.height() / 2.0f) * vp.pixel_width_mm;
-    float_32_bit  top_m = 0.001f * (vp.height() / 2.0f) * vp.pixel_width_mm;
+    float_32_bit  bottom_m = 0.001f * -(vp.height() / 2.0f) * vp.pixel_height_mm;
+    float_32_bit  top_m = 0.001f * (vp.height() / 2.0f) * vp.pixel_height_mm;
 
     float_32_bit const  line_dy = m_tid.scale * (m_font->char_height + m_font->char_separ_dist_y);
     bool const  all_fits_in = top_m - bottom_m >= line_dy * m_text_info.num_rows;

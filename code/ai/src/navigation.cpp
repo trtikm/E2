@@ -335,7 +335,6 @@ void  naveditor::add_navcomponents_2d_from_box(
     {
         if (is_static)
         {
-            vector3 const   normal_in_world = angeo::vector3_from_coordinate_system(side.normal, frame);
             vector3 const   force_field_dir = -vector3_unit_z(); // TODO: We should read this vector from somewhere!
             if (dot_product(angeo::vector3_from_coordinate_system(side.normal, frame), force_field_dir) > cos_of_incline_angle)
                 continue;

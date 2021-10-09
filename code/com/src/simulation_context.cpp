@@ -99,8 +99,8 @@ simulation_context::simulation_context(
     , m_requests_enable_colliding()
     , m_requests_enable_colliding_by_path()
     , m_requests_insert_collider_box()
-    , m_requests_insert_collider_sphere()
     , m_requests_insert_collider_capsule()
+    , m_requests_insert_collider_sphere()
     , m_requests_erase_collider()
     , m_requests_insert_rigid_body()
     , m_requests_erase_rigid_body()
@@ -3251,7 +3251,6 @@ void  simulation_context::process_rigid_bodies_with_invalidated_shape()
         object_guid const  rb_frame_guid = frame_of_rigid_body(rb_guid);
         matrix44 const&  W = frame_world_matrix(rb_frame_guid);
         vector3 const  origin_shift_in_world_space = center_of_mass_in_world_space - translation_vector(W);
-        vector3 const  origin_shift_in_local_space = transform_vector(origin_shift_in_world_space, inverse44(W));
         frame_translate(rb_frame_guid, origin_shift_in_world_space);
         std::vector<object_guid>  child_frame_guids;
         direct_children_frames(rb_frame_guid, child_frame_guids);

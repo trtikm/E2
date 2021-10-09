@@ -74,7 +74,6 @@ void  skeleton_interpolator_animation::commit(
 skeleton_interpolator_look_at::skeleton_interpolator_look_at()
     : m_joint_rotations()
     , m_look_at_target_in_local_space(vector3_zero())
-    , m_target_pose_reached(true)
 {}
 
 

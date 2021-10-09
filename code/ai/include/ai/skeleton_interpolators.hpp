@@ -46,7 +46,6 @@ struct  skeleton_interpolator_look_at
 private:
     angeo::joint_rotation_states_of_bones  m_joint_rotations;
     vector3  m_look_at_target_in_local_space;
-    bool  m_target_pose_reached;
 };
 
 

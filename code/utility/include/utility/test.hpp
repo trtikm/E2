@@ -1,5 +1,5 @@
 #ifndef UTILITY_TEST_HPP_INCLUDED
-#   define UTILITY_TETS_HPP_INCLUDED
+#   define UTILITY_TEST_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/log.hpp>

@@ -607,7 +607,7 @@ void  collision_scene::insert_triangle_mesh_data(
             };
             for (natural_8_bit  i = 0U; i != 3U; ++i)
                 edges[{ std::min(indices[i], indices[i + 1]), std::max(indices[i], indices[i + 1]) }].push_back(
-                        { coid, i, (i + 2U) % 3U }
+                        { coid, i, (natural_8_bit)((i + 2U) % 3U) }
                         );
         }
         for (auto const&  elem : edges)
@@ -1254,6 +1254,8 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
                     ))
                 return acceptor(coid, t);
         }
+        break;
+    default:
         break;
     }
     return true;
@@ -1961,8 +1963,8 @@ bool  collision_scene::compute_contacts__box_vs_line(
 {
     TMPROF_BLOCK();
 
-    box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
-    line_geometry const& geometry_2 = m_lines_geometry.at(get_instance_index(coid_2));
+    //box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
+    //line_geometry const& geometry_2 = m_lines_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -1976,8 +1978,8 @@ bool  collision_scene::compute_contacts__box_vs_point(
 {
     TMPROF_BLOCK();
 
-    box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
-    vector3 const& point_2 = m_points_geometry.at(get_instance_index(coid_2));
+    //box_geometry const&  geometry_1 = m_boxes_geometry.at(get_instance_index(coid_1));
+    //vector3 const& point_2 = m_points_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2207,8 +2209,8 @@ bool  collision_scene::compute_contacts__capsule_vs_line(
 {
     TMPROF_BLOCK();
 
-    capsule_geometry const&  geometry_1 = m_capsules_geometry.at(get_instance_index(coid_1));
-    line_geometry const&  geometry_2 = m_lines_geometry.at(get_instance_index(coid_2));
+    //capsule_geometry const&  geometry_1 = m_capsules_geometry.at(get_instance_index(coid_1));
+    //line_geometry const&  geometry_2 = m_lines_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2221,8 +2223,8 @@ bool  collision_scene::compute_contacts__capsule_vs_point(
 {
     TMPROF_BLOCK();
 
-    capsule_geometry const&  geometry_1 = m_capsules_geometry.at(get_instance_index(coid_1));
-    vector3 const&  point_2 = m_points_geometry.at(get_instance_index(coid_2));
+    //capsule_geometry const&  geometry_1 = m_capsules_geometry.at(get_instance_index(coid_1));
+    //vector3 const&  point_2 = m_points_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2364,8 +2366,8 @@ bool  collision_scene::compute_contacts__line_vs_line(
 {
     TMPROF_BLOCK();
 
-    line_geometry const&  geometry_1 = m_lines_geometry.at(get_instance_index(coid_1));
-    line_geometry const&  geometry_2 = m_lines_geometry.at(get_instance_index(coid_2));
+    //line_geometry const&  geometry_1 = m_lines_geometry.at(get_instance_index(coid_1));
+    //line_geometry const&  geometry_2 = m_lines_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2378,8 +2380,8 @@ bool  collision_scene::compute_contacts__line_vs_point(
 {
     TMPROF_BLOCK();
 
-    line_geometry const&  geometry_1 = m_lines_geometry.at(get_instance_index(coid_1));
-    vector3 const&  point_2 = m_points_geometry.at(get_instance_index(coid_2));
+    //line_geometry const&  geometry_1 = m_lines_geometry.at(get_instance_index(coid_1));
+    //vector3 const&  point_2 = m_points_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2392,8 +2394,8 @@ bool  collision_scene::compute_contacts__line_vs_sphere(
 {
     TMPROF_BLOCK();
 
-    line_geometry const&  geometry_1 = m_lines_geometry.at(get_instance_index(coid_1));
-    sphere_geometry const&  geometry_2 = m_spheres_geometry.at(get_instance_index(coid_2));
+    //line_geometry const&  geometry_1 = m_lines_geometry.at(get_instance_index(coid_1));
+    //sphere_geometry const&  geometry_2 = m_spheres_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2406,8 +2408,8 @@ bool  collision_scene::compute_contacts__line_vs_triangle(
 {
     TMPROF_BLOCK();
 
-    line_geometry const&  geometry_1 = m_lines_geometry.at(get_instance_index(coid_1));
-    triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
+    //line_geometry const&  geometry_1 = m_lines_geometry.at(get_instance_index(coid_1));
+    //triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2421,8 +2423,8 @@ bool  collision_scene::compute_contacts__point_vs_point(
 {
     TMPROF_BLOCK();
 
-    vector3 const&  point_1 = m_points_geometry.at(get_instance_index(coid_1));
-    vector3 const&  point_2 = m_points_geometry.at(get_instance_index(coid_2));
+    //vector3 const&  point_1 = m_points_geometry.at(get_instance_index(coid_1));
+    //vector3 const&  point_2 = m_points_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2435,8 +2437,8 @@ bool  collision_scene::compute_contacts__point_vs_sphere(
 {
     TMPROF_BLOCK();
 
-    vector3 const&  point_1 = m_points_geometry.at(get_instance_index(coid_1));
-    sphere_geometry const&  geometry_2 = m_spheres_geometry.at(get_instance_index(coid_2));
+    //vector3 const&  point_1 = m_points_geometry.at(get_instance_index(coid_1));
+    //sphere_geometry const&  geometry_2 = m_spheres_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2449,8 +2451,8 @@ bool  collision_scene::compute_contacts__point_vs_triangle(
 {
     TMPROF_BLOCK();
 
-    vector3 const&  point_1 = m_points_geometry.at(get_instance_index(coid_1));
-    triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
+    //vector3 const&  point_1 = m_points_geometry.at(get_instance_index(coid_1));
+    //triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }
@@ -2556,8 +2558,8 @@ bool  collision_scene::compute_contacts__triangle_vs_triangle(
 {
     TMPROF_BLOCK();
 
-    triangle_geometry const&  geometry_1 = m_triangles_geometry.at(get_instance_index(coid_1));
-    triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
+    //triangle_geometry const&  geometry_1 = m_triangles_geometry.at(get_instance_index(coid_1));
+    //triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
 
     NOT_IMPLEMENTED_YET();
 }

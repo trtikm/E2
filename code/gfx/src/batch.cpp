@@ -136,6 +136,8 @@ batch_data::batch_data(
             case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
                 instancing_data.m_buffers.insert(location);
                 break;
+            default:
+                break;
             }
         }
         if (!instancing_data.m_buffers.empty())
@@ -358,6 +360,8 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
             case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
             case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
                 instancing_data.m_buffers.insert(location);
+                break;
+            default:
                 break;
             }
         }

@@ -9,6 +9,7 @@
 #include <boost/property_tree/info_parser.hpp>
 #include <stdexcept>
 #include <thread>
+#include <sstream>
 
 namespace gfx {
 
@@ -358,6 +359,46 @@ batch  create_text(
         props.__batch_template__.get_skin_name(),
         nullptr
         );
+}
+
+
+natural_8_bit to_lower(natural_8_bit const  c)
+{
+    if ((c >= 0x41U && c <= 0x5AU) || (c >= 0xC0U && c <= 0xDEU))
+        return c + 0x20U;
+    else if (c >= 0xA1U && c <= 0xAFU)
+        return c + 0x10U;
+    else
+        return c;
+}
+
+
+std::string to_lower(std::string const& s)
+{
+    std::stringstream  sstr;
+    for (auto c : s)
+        sstr << (char)to_lower(c);
+    return sstr.str();
+}
+
+
+natural_8_bit to_upper(natural_8_bit const  c)
+{
+    if ((c >= 0x61U && c <= 0x7AU) || (c >= 0xE0U && c <= 0xFEU))
+        return c - 0x20U;
+    else if (c >= 0xB1U && c <= 0xBFU)
+        return c - 0x10U;
+    else
+        return c;
+}
+
+
+std::string to_upper(std::string const& s)
+{
+    std::stringstream  sstr;
+    for (auto c : s)
+        sstr << (char)to_upper(c);
+    return sstr.str();
 }
 
 

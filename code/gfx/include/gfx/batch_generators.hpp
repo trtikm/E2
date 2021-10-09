@@ -391,6 +391,13 @@ batch  create_text(
         );
 
 
+natural_8_bit to_lower(natural_8_bit const  c);
+std::string to_lower(std::string const& s);
+
+natural_8_bit to_upper(natural_8_bit const  c);
+std::string to_upper(std::string const& s);
+
+
 }
 
 #endif

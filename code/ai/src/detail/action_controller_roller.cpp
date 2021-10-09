@@ -557,8 +557,6 @@ void  action_controller_roller::insert_roller_and_body_spin_motor() const
         bias = m_config.SPIN_ANGULAR_SPEED * coef;
     }
 
-    float_32_bit constexpr  MAX_FORCE_MAGNITUDE = 1000000.0f;
-
     ctx().request_early_insertion_of_custom_constraint_to_physics(
             m_ccid_body_spin,
             m_roller_rigid_body_guid,

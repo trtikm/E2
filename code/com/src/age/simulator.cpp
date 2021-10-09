@@ -535,10 +535,35 @@ PlayerInteraction::TextLocalisation::TextLocalisation(std::ifstream& sstr)
     , messages()
     , tokens()
     , actions()
+    , descriptions()
+{
+    load(sstr);
+}
+
+
+void PlayerInteraction::TextLocalisation::clear()
+{
+    objects.clear();
+    features.clear();
+    relations.clear();
+    messages.clear();
+    tokens.clear();
+    actions.clear();
+    descriptions.clear();
+}
+
+
+void PlayerInteraction::TextLocalisation::load(std::ifstream& sstr)
 {
     std::unordered_map<std::string, std::string>*  map = nullptr;
     std::string line;
     auto processLine = [this, &map](std::string& line) -> void {
+        boost::trim(line);
+        if (boost::starts_with(line, "//"))
+        {
+            line.clear();
+            return;
+        }
         std::size_t const idx = line.find(':');
         ASSUMPTION(line.empty() || idx != std::string::npos);
         std::string key = boost::trim_copy(line.substr(0UL, idx));
@@ -559,6 +584,8 @@ PlayerInteraction::TextLocalisation::TextLocalisation(std::ifstream& sstr)
                 map = &tokens;
             else if (key == "actions")
                 map = &actions;
+            else if (key == "descriptions")
+                map = &descriptions;
             else
                 UNREACHABLE();
         }
@@ -617,9 +644,7 @@ void PlayerInteraction::processScene(float_32_bit const round_seconds)
     if (actionSelectionProps->actionInfos.empty())
         sstr << "\n" << textLocalisation->token("press_enter_to_continue");
     else
-        sstr << "\n" << textLocalisation->object(simulatorState->activeActor())
-             << " " << textLocalisation->token("executes_action")
-             << ": " << inputText << "_";
+        sstr << "\n" << textLocalisation->token("choose_action_to_execute") << ": " << inputText << "_";
 
     textBox.set_text(sstr.str());
     textBox.update(round_seconds, *keyboard, *mouse);

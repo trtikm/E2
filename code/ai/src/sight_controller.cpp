@@ -414,10 +414,10 @@ bool  sight_controller::perform_ray_cast(
         ray_cast_info&  result
         ) const
 {
-    result.cell_x = std::max(0U, std::min(m_ray_cast_config.num_cells_along_x_axis - 1U,
-                        (natural_32_bit)(camera_coords_01(0) * (m_ray_cast_config.num_cells_along_x_axis - 1U) + 0.5f)));
-    result.cell_y = std::max(0U, std::min(m_ray_cast_config.num_cells_along_y_axis - 1U,
-                        (natural_32_bit)(camera_coords_01(1) * (m_ray_cast_config.num_cells_along_y_axis - 1U) + 0.5f)));
+    result.cell_x = std::min(m_ray_cast_config.num_cells_along_x_axis - 1U,
+                             (natural_32_bit)(camera_coords_01(0) * (m_ray_cast_config.num_cells_along_x_axis - 1U) + 0.5f));
+    result.cell_y = std::min(m_ray_cast_config.num_cells_along_y_axis - 1U,
+                             (natural_32_bit)(camera_coords_01(1) * (m_ray_cast_config.num_cells_along_y_axis - 1U) + 0.5f));
 
     vector3  ray_begin_in_camera, ray_end_in_camera;
     get_camera()->ray_points_in_camera_space(camera_coords_01, ray_begin_in_camera, ray_end_in_camera);

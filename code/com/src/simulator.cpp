@@ -961,8 +961,7 @@ void  simulator::render_sight_image()
     ai::sight_controller::ray_casts_image const&  depth_image = sight.get_depth_image();
     for (natural_32_bit  i = 0U, j = 0U, n = (natural_32_bit)depth_image.size(); i != n; ++i, ++j)
     {
-        natural_8_bit const  value =
-                (natural_8_bit)std::max(0U, std::min(255U,(natural_32_bit)std::roundf(255.0f * depth_image.at(i))));
+        natural_8_bit const  value = (natural_8_bit)std::min(255U,(natural_32_bit)std::roundf(255.0f * depth_image.at(i)));
         m_ai_debug_draw_data.m_sight_image_render_data->img.data.at(j) = value;
         ++j;
         m_ai_debug_draw_data.m_sight_image_render_data->img.data.at(j) = value;
@@ -1085,9 +1084,6 @@ void  simulator::render_agent_action_transition_contratints()
 
 void  simulator::render_ai_navigation_data()
 {
-    simulation_context&  ctx = *context();
-    render_configuration&  cfg = render_config();
-
     render_tasks_map  tasks;
     ai::navsystem const&  navsystem = *m_ai_simulator_ptr->get_navsystem();
     for (auto component_it = navsystem.get_components().begin(); component_it != navsystem.get_components().end(); ++component_it)

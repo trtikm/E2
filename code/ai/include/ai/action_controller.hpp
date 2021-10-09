@@ -158,9 +158,9 @@ struct  agent_action
     agent_system_state&  system_state() const { return m_context->system_state(); }
     agent_system_variables&  system_variables() const { return m_context->system_variables(); }
     agent_state_variables&  state_variables() const { return m_context->state_variables(); }
-    skeletal_motion_templates  agent_action::motion_templates() const { return m_context->motion_templates(); }
-    scene_binding const&  agent_action::binding() const { return m_context->binding(); }
-    com::simulation_context const&  agent_action::ctx() const { return m_context->ctx(); }
+    skeletal_motion_templates  motion_templates() const { return m_context->motion_templates(); }
+    scene_binding const&  binding() const { return m_context->binding(); }
+    com::simulation_context const&  ctx() const { return m_context->ctx(); }
 
     desire_config const&  get_desire_config() const { return DESIRE; }
     float_32_bit  compute_desire_penalty(motion_desire_props const&  desire_props) const;

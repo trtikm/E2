@@ -31,6 +31,15 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     #add_definitions("/Wall")
     add_definitions("-D_ENABLE_EXTENDED_ALIGNED_STORAGE")
     message("Compiler = MSVC")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_definitions("
+        -Wno-dangling-else
+        -Wno-overloaded-virtual
+        -Wno-unused-lambda-capture
+        -Wno-potentially-evaluated-expression
+        -Wno-#pragma-messages
+        ")
+    message("Compiler = Clang/LLVM")
 else()
     message(SEND_ERROR "Unknown (unsupported) compiler detected. Supported is only GCC (on Linux) and MSVC (on Windows).")
 endif()

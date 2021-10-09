@@ -127,11 +127,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             finaliser
             );
 
-    auto const  load_linear_segment_function = [](boost::property_tree::ptree const&  ptree, std::vector<vector2>&  points) {
-        for (boost::property_tree::ptree::value_type const&  void_and_data : ptree)
-            points.push_back({ void_and_data.second.get<float_32_bit>("x") , void_and_data.second.get<float_32_bit>("y") });
-    };
-
     std::unordered_set<std::string>  visited;
     std::deque<boost::filesystem::path>  work_list{ finaliser->get_key().get_unique_id() };
     do

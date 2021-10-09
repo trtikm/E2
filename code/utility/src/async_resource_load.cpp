@@ -7,7 +7,7 @@ namespace async { namespace detail {
 
 natural_64_bit  key_type::generate_next_unique_id()
 {
-    static std::atomic<natural_64_bit>  s_fresh_key_id = 0ULL;
+    static std::atomic<natural_64_bit>  s_fresh_key_id{0ULL};
     return ++s_fresh_key_id;
 }
 

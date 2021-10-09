@@ -430,8 +430,6 @@ void  rigid_body_simulator::insert_custom_constraint(
 {
     TMPROF_BLOCK();
 
-    rigid_body const&  rb0 = m_rigid_bodies.at(rb_0);
-    rigid_body const&  rb1 = m_rigid_bodies.at(rb_1);
     motion_constraint_system::constraint_id const  cid =
             get_constraint_system().insert_constraint(
                     rb_0,

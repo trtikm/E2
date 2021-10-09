@@ -50,7 +50,7 @@ batch  create_triangle_mesh(
             fog_type_,
             fog_type_ == FOG_TYPE::DETAILED ? SHADER_PROGRAM_TYPE::FRAGMENT : SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
-        draw_state(nullptr),
+        draw_state((async::finalise_load_on_destroy_ptr)nullptr),
         modelspace(),
         skeleton_alignment(),
         batch_available_resources::alpha_testing_props()
@@ -109,7 +109,7 @@ batch  create_triangle_mesh(
             fog_type_,
             fog_type_ == FOG_TYPE::DETAILED ? SHADER_PROGRAM_TYPE::FRAGMENT : SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
-        draw_state(nullptr),
+        draw_state((async::finalise_load_on_destroy_ptr)nullptr),
         modelspace(),
         skeleton_alignment(),
         batch_available_resources::alpha_testing_props()
@@ -155,7 +155,7 @@ batch  create_triangle_mesh(
             fog_type_,
             fog_type_ == FOG_TYPE::DETAILED ? SHADER_PROGRAM_TYPE::FRAGMENT : SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
-        draw_state(nullptr),
+        draw_state((async::finalise_load_on_destroy_ptr)nullptr),
         modelspace(),
         skeleton_alignment(),
         batch_available_resources::alpha_testing_props()
@@ -255,7 +255,7 @@ batch  create_triangle_mesh(
             fog_type_,
             fog_type_ == FOG_TYPE::DETAILED ? SHADER_PROGRAM_TYPE::FRAGMENT : SHADER_PROGRAM_TYPE::VERTEX // fog algo location
         },
-        draw_state(nullptr),
+        draw_state((async::finalise_load_on_destroy_ptr)nullptr),
         modelspace(),
         skeleton_alignment(),
         batch_available_resources::alpha_testing_props()
@@ -318,7 +318,7 @@ batch  create_triangle_mesh(
             fog_type_,
             fog_type_ == FOG_TYPE::DETAILED ? SHADER_PROGRAM_TYPE::FRAGMENT : SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
-        draw_state(nullptr),
+        draw_state((async::finalise_load_on_destroy_ptr)nullptr),
         modelspace(),
         skeleton_alignment(),
         batch_available_resources::alpha_testing_props()

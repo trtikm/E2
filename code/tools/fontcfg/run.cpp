@@ -96,12 +96,12 @@ struct  simulator : public com::simulator
             simulation_config().num_rounds_to_pause = 1U;
         }
 
-        bool const  shift = get_keyboard_props().keys_pressed().count(osi::KEY_LSHIFT()) != 0UL ||
-                            get_keyboard_props().keys_pressed().count(osi::KEY_RSHIFT()) != 0UL;
+        //bool const  shift = get_keyboard_props().keys_pressed().count(osi::KEY_LSHIFT()) != 0UL ||
+        //                    get_keyboard_props().keys_pressed().count(osi::KEY_RSHIFT()) != 0UL;
         bool const  ctrl = get_keyboard_props().keys_pressed().count(osi::KEY_LCTRL()) != 0UL ||
                            get_keyboard_props().keys_pressed().count(osi::KEY_RCTRL()) != 0UL;
-        bool const  alt = get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
-                          get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL;
+        //bool const  alt = get_keyboard_props().keys_pressed().count(osi::KEY_LALT()) != 0UL ||
+        //                  get_keyboard_props().keys_pressed().count(osi::KEY_RALT()) != 0UL;
 
         // TODO: Implement tool's functionality here.
         if (ctrl && get_keyboard_props().keys_just_pressed().count(osi::KEY_S()) != 0UL)
@@ -237,7 +237,6 @@ struct  simulator : public com::simulator
                     right_m - left_m,
                     &text_info
                     );
-            text_info=text_info;
         }
         if (gfx::make_current(m_example_text, render_config().draw_state))
         {
