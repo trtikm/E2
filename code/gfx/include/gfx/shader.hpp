@@ -36,13 +36,6 @@ struct  vertex_shader_data
     std::vector<std::string> const&  get_lines_of_shader_code() const
     { return m_lines_of_shader_code; }
 
-    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store);
-
     std::string  create_gl_shader();
     void  destroy_gl_shader();
 
@@ -101,30 +94,6 @@ struct  vertex_shader : public async::resource_accessor<detail::vertex_shader_da
     std::vector<std::string> const&  get_lines_of_shader_code() const
     { return resource().get_lines_of_shader_code(); }
 
-    template<typename value_type>
-    bool  set_uniform_variable(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name, value_type const&  value_to_store)
-    {
-        return set_uniform_variable(name(symbolic_name), value_to_store);
-    }
-
-    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-
-    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-
-    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-
     std::string  create_gl_shader() { return resource().create_gl_shader(); }
     void  destroy_gl_shader() { resource().destroy_gl_shader(); }
 };
@@ -157,14 +126,6 @@ struct  fragment_shader_data
     { return m_symbolic_names_of_used_uniforms; }
     std::vector<std::string> const&  get_lines_of_shader_code() const
     { return m_lines_of_shader_code; }
-
-    bool  set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store);
-    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store);
 
     std::string  create_gl_shader();
     void  destroy_gl_shader();
@@ -220,33 +181,6 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
     std::vector<std::string> const&  get_lines_of_shader_code() const
     { return resource().get_lines_of_shader_code(); }
 
-    template<typename value_type>
-    bool  set_uniform_variable(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name, value_type const&  value_to_store)
-    {
-        return set_uniform_variable(name(symbolic_name), value_to_store);
-    }
-
-    bool  set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
-    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
-    { return resource().set_uniform_variable(variable_name, value_to_store); }
-
     std::string  create_gl_shader() { return resource().create_gl_shader(); }
     void  destroy_gl_shader() { resource().destroy_gl_shader(); }
 };
@@ -275,10 +209,18 @@ struct shaders_binding_data
     vertex_shader  get_vertex_shader() const { return m_vertex_shader; }
     fragment_shader  get_fragment_shader() const { return m_fragment_shader; }
 
+    bool  set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store);
+
     bool  ready() const { return m_ready; }
     void  set_ready() { m_ready = true; }
 
-    void  create_gl_binding();
+    std::string  create_gl_binding();
     void  destroy_gl_binding();
 
 private:
@@ -328,13 +270,40 @@ struct  shaders_binding : public async::resource_accessor<detail::shaders_bindin
     vertex_shader  get_vertex_shader() const { return resource().get_vertex_shader(); }
     fragment_shader  get_fragment_shader() const { return resource().get_fragment_shader(); }
 
+    template<typename value_type>
+    bool  set_uniform_variable(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name, value_type const&  value_to_store)
+    {
+        return set_uniform_variable(name(symbolic_name), value_to_store);
+    }
+
+    bool  set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+
     bool  ready() const;
     bool  make_current() const;
 
 private:
 
     void  set_ready() { resource().set_ready(); }
-    void  create_gl_binding() { return resource().create_gl_binding(); }
+    std::string  create_gl_binding() { return resource().create_gl_binding(); }
     void  destroy_gl_binding() { return resource().destroy_gl_binding(); }
 };
 

@@ -7,9 +7,9 @@
 namespace gfx { namespace detail {
 
 
-GLuint  create_opengl_shader_program(GLenum shader_type,
-                                     std::vector<GLchar const*> const&  line_pointers,
-                                     std::string&  error_message)
+GLuint  create_opengl_shader(GLenum shader_type,
+                             std::vector<GLchar const*> const&  line_pointers,
+                             std::string&  error_message)
 {
     TMPROF_BLOCK();
 
@@ -19,9 +19,9 @@ GLuint  create_opengl_shader_program(GLenum shader_type,
         return 0U;
     }
 
-    static std::string const  shader_type_name = shader_type == GL_VERTEX_SHADER   ? "GL_VERTEX_SHADER"    :
-                                                 shader_type == GL_FRAGMENT_SHADER ? "GL_FRAGMENT_SHADER"  :
-                                                                                     "GL_??_SHADER"        ;
+    std::string const  shader_type_name = shader_type == GL_VERTEX_SHADER   ? "GL_VERTEX_SHADER"    :
+                                          shader_type == GL_FRAGMENT_SHADER ? "GL_FRAGMENT_SHADER"  :
+                                                                              "GL_??_SHADER"        ;
 
     GLuint const  shader = glCreateShader(shader_type);
     {
@@ -32,7 +32,9 @@ GLuint  create_opengl_shader_program(GLenum shader_type,
             return 0U;
         }
         glShaderSource(shader,(GLsizei)line_pointers.size(),(GLchar const**)&line_pointers.at(0),nullptr);
+        INVARIANT(glGetError() == 0U);
         glCompileShader(shader);
+        INVARIANT(glGetError() == 0U);
         {
             int  is_build_successfull;
             glGetShaderiv(shader, GL_COMPILE_STATUS, &is_build_successfull);
@@ -55,19 +57,45 @@ GLuint  create_opengl_shader_program(GLenum shader_type,
         }
     }
 
+    return shader;
+}
+
+
+GLuint  create_opengl_program(GLuint const  vertex_shader, GLuint const  fragment_shader, std::string&  error_message)
+{
+    TMPROF_BLOCK();
+
+    if (vertex_shader == 0U)
+    {
+        error_message = "The vertex shader is not valid.";
+        return 0U;
+    }
+    if (fragment_shader == 0U)
+    {
+        error_message = "The fragment shader is not valid.";
+        return 0U;
+    }
+    if (!error_message.empty())
+    {
+        error_message = "The error_message string is initially not empty.";
+        return 0U;
+    }
+
     GLuint const  shader_program = glCreateProgram();
     {
         if (shader_program == 0U)
         {
-            error_message = "Cannot create opengl shader program object after compiling a shader of type " + shader_type_name;
-            glDeleteShader(shader);
+            error_message = "Cannot create opengl program.";
             INVARIANT(glGetError() == 0U);
             return 0U;
         }
-        glProgramParameteri(shader_program,GL_PROGRAM_SEPARABLE,GL_TRUE);
-        glAttachShader(shader_program,shader);
+        glAttachShader(shader_program,vertex_shader);
+        INVARIANT(glGetError() == 0U);
+        glAttachShader(shader_program,fragment_shader);
+        INVARIANT(glGetError() == 0U);
 
         glLinkProgram(shader_program);
+        INVARIANT(glGetError() == 0U);
         {
             int  is_build_successfull;
             glGetProgramiv(shader_program, GL_LINK_STATUS, &is_build_successfull);
@@ -76,25 +104,26 @@ GLuint  create_opengl_shader_program(GLenum shader_type,
                 int  log_length;
                 glGetProgramiv(shader_program, GL_INFO_LOG_LENGTH, &log_length);
                 if (log_length <= 0)
-                    error_message = "Linking of shader program of shader of type " + shader_type_name + " has failed. "
-                                    "Cannot receive the error message, because the build log has negative length.";
+                    error_message = "Linking of program has failed. Cannot receive the error message, "
+                                    "because the build log has negative length.";
                 else
                 {
                     error_message.resize(log_length + 1U, 0U);
                     glGetProgramInfoLog(shader_program, log_length, &log_length, &error_message.at(0U));
                 }
-                glDetachShader(shader_program, shader);
+                glDetachShader(shader_program, vertex_shader);
+                glDetachShader(shader_program, fragment_shader);
                 glDeleteProgram(shader_program);
-                glDeleteShader(shader);
                 INVARIANT(glGetError() == 0U);
                 return 0U;
             }
         }
 
-        glDetachShader(shader_program,shader);
+        glDetachShader(shader_program, vertex_shader);
+        INVARIANT(glGetError() == 0U);
+        glDetachShader(shader_program, fragment_shader);
+        INVARIANT(glGetError() == 0U);
     }
-
-    glDeleteShader(shader);
 
     INVARIANT(glGetError() == 0U);
 
@@ -133,110 +162,6 @@ vertex_shader_data::~vertex_shader_data()
 }
 
 
-bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform1ui(id(),layout_location,value_to_store);
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-
-bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform1f(id(),layout_location,value_to_store);
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(), variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform3fv(id(), layout_location, 1U, value_to_store.data());
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(), variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform4fv(id(), layout_location, 1U, value_to_store.data());
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
-
-    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniformMatrix4fv(id(),layout_location,1U,GL_TRUE,value_to_store.data());
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-
-bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
-    ASSUMPTION(value_to_store.size() <= num_elements(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA));
-
-    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniformMatrix4fv(id(),layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-
 std::string  vertex_shader_data::create_gl_shader()
 {
     if (id() != 0U)
@@ -249,7 +174,7 @@ std::string  vertex_shader_data::create_gl_shader()
         line_pointers.push_back((GLchar const*)line.data());
     ASSUMPTION(!line_pointers.empty());
     std::string  error_message;
-    m_id = detail::create_opengl_shader_program(GL_VERTEX_SHADER,line_pointers,error_message);
+    m_id = detail::create_opengl_shader(GL_VERTEX_SHADER,line_pointers,error_message);
     INVARIANT((id() != 0U && error_message.empty()) || (id() == 0U && !error_message.empty()));
     return error_message;
 }
@@ -262,8 +187,10 @@ void  vertex_shader_data::destroy_gl_shader()
 
     TMPROF_BLOCK();
 
-    glDeleteProgram(id());
+    glDeleteShader(id());
     INVARIANT(glGetError() == 0U);
+
+    m_id = 0U;
 }
 
 
@@ -298,127 +225,6 @@ fragment_shader_data::~fragment_shader_data()
 }
 
 
-bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(), variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform1i(id(), layout_location, (int)value_to_store);
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-
-bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform1ui(id(),layout_location,value_to_store);
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-
-bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform1f(id(),layout_location,value_to_store);
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(), variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform3fv(id(), layout_location, 1U, value_to_store.data());
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glGetUniformLocation(id(), variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniform4fv(id(), layout_location, 1U, value_to_store.data());
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
-
-    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniformMatrix4fv(id(),layout_location,1U,GL_TRUE,value_to_store.data());
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-
-bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
-    ASSUMPTION(value_to_store.size() <= num_elements(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA));
-
-    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
-    if (layout_location == -1)
-    {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
-        INVARIANT(glGetError() == 0U);
-        return false;
-    }
-    glProgramUniformMatrix4fv(id(),layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
-    INVARIANT(glGetError() == 0U);
-    return true;
-}
-
-
 std::string  fragment_shader_data::create_gl_shader()
 {
     if (id() != 0U)
@@ -431,7 +237,7 @@ std::string  fragment_shader_data::create_gl_shader()
         line_pointers.push_back((GLchar const*)line.data());
     ASSUMPTION(!line_pointers.empty());
     std::string  error_message;
-    m_id = detail::create_opengl_shader_program(GL_FRAGMENT_SHADER,line_pointers,error_message);
+    m_id = detail::create_opengl_shader(GL_FRAGMENT_SHADER,line_pointers,error_message);
     INVARIANT((id() != 0U && error_message.empty()) || (id() == 0U && !error_message.empty()));
     return error_message;
 }
@@ -444,8 +250,10 @@ void  fragment_shader_data::destroy_gl_shader()
 
     TMPROF_BLOCK();
 
-    glDeleteProgram(id());
+    glDeleteShader(id());
     INVARIANT(glGetError() == 0U);
+
+    m_id = 0U;
 }
 
 
@@ -461,16 +269,140 @@ shaders_binding_data::~shaders_binding_data()
     destroy_gl_binding();
 }
 
-void  shaders_binding_data::create_gl_binding()
+bool  shaders_binding_data::set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glGetUniformLocation(id(), variable_name.c_str());
+    if (layout_location == -1)
+    {
+        INVARIANT(glGetError() == 0U);
+        return false;
+    }
+    glUniform1i(layout_location, (int)value_to_store);
+    INVARIANT(glGetError() == 0U);
+    return true;
+}
+
+
+bool  shaders_binding_data::set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        INVARIANT(glGetError() == 0U);
+        return false;
+    }
+    glUniform1ui(layout_location,value_to_store);
+    INVARIANT(glGetError() == 0U);
+    return true;
+}
+
+
+bool  shaders_binding_data::set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        INVARIANT(glGetError() == 0U);
+        return false;
+    }
+    glUniform1f(layout_location,value_to_store);
+    INVARIANT(glGetError() == 0U);
+    return true;
+}
+
+bool  shaders_binding_data::set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glGetUniformLocation(id(), variable_name.c_str());
+    if (layout_location == -1)
+    {
+        INVARIANT(glGetError() == 0U);
+        return false;
+    }
+    glUniform3fv(layout_location, 1U, value_to_store.data());
+    INVARIANT(glGetError() == 0U);
+    return true;
+}
+
+bool  shaders_binding_data::set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glGetUniformLocation(id(), variable_name.c_str());
+    if (layout_location == -1)
+    {
+        INVARIANT(glGetError() == 0U);
+        return false;
+    }
+    glUniform4fv(layout_location, 1U, value_to_store.data());
+    INVARIANT(glGetError() == 0U);
+    return true;
+}
+
+bool  shaders_binding_data::set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+
+    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        INVARIANT(glGetError() == 0U);
+        return false;
+    }
+    glUniformMatrix4fv(layout_location,1U,GL_TRUE,value_to_store.data());
+    INVARIANT(glGetError() == 0U);
+    return true;
+}
+
+
+bool  shaders_binding_data::set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+    ASSUMPTION(value_to_store.size() <= num_elements(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA));
+
+    GLint const  layout_location = glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        INVARIANT(glGetError() == 0U);
+        return false;
+    }
+    glUniformMatrix4fv(layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
+    INVARIANT(glGetError() == 0U);
+    return true;
+}
+
+
+std::string  shaders_binding_data::create_gl_binding()
 {
     if (id() != 0U)
-        return;
+        return "";
 
     TMPROF_BLOCK();
 
-    glGenProgramPipelines(1U,&m_id);
-    INVARIANT(id() != 0U);
-    INVARIANT(glGetError() == 0U);
+    std::string  error_message;
+
+    error_message = get_vertex_shader().create_gl_shader();
+    if (!error_message.empty())
+        return error_message;
+
+    error_message = get_fragment_shader().create_gl_shader();
+    if (!error_message.empty())
+        return error_message;
+
+    m_id = create_opengl_program(get_vertex_shader().id(),get_fragment_shader().id(),error_message);
+    INVARIANT((id() != 0U && error_message.empty()) || (id() == 0U && !error_message.empty()));
+    return error_message;
 }
 
 
@@ -481,8 +413,11 @@ void  shaders_binding_data::destroy_gl_binding()
 
     TMPROF_BLOCK();
 
-    glDeleteProgramPipelines(1,&m_id);
+    glDeleteProgram(m_id);
     INVARIANT(glGetError() == 0U);
+
+    m_id = 0U;
+    m_ready = false;
 }
 
 
@@ -519,16 +454,11 @@ bool  shaders_binding::ready() const
     {
         if (!get_vertex_shader().loaded_successfully() || !get_fragment_shader().loaded_successfully())
             return false;
-        if (!get_vertex_shader().create_gl_shader().empty() || !get_fragment_shader().create_gl_shader().empty())
-            return false;
 
         shaders_binding* const  mutable_this = const_cast<shaders_binding*>(this);
 
-        mutable_this->create_gl_binding();
-        glBindProgramPipeline(id());
-
-        glUseProgramStages(id(), GL_VERTEX_SHADER_BIT, get_vertex_shader().id());
-        glUseProgramStages(id(), GL_FRAGMENT_SHADER_BIT, get_fragment_shader().id());
+        if (!mutable_this->create_gl_binding().empty())
+            return false;
 
         mutable_this->set_ready();
     }
@@ -544,7 +474,7 @@ bool  shaders_binding::make_current() const
     if (!ready())
         return false;
 
-    glBindProgramPipeline(id());
+    glUseProgram(id());
     INVARIANT(glGetError() == 0U);
 
     return true;

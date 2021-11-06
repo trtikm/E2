@@ -126,48 +126,48 @@ void  render_batch(
         return;
     detail::current_draw::set_num_instances(vertex_instanced_data_provider.get_num_instances());
 
+    shaders_binding  binding = vertex_instanced_data_provider.get_num_instances() > 0U ?
+                                        batch_.get_instancing_data_ptr()->m_shaders_binding :
+                                        batch_.get_shaders_binding();
     {
-        vertex_shader  shader = vertex_instanced_data_provider.get_num_instances() > 0U ?
-                                        batch_.get_instancing_data_ptr()->m_shaders_binding.get_vertex_shader() :
-                                        batch_.get_shaders_binding().get_vertex_shader();
-        for (VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
+        for (VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : binding.get_vertex_shader().get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_MATRIX_FROM_MODEL_TO_CAMERA());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_MATRIX_FROM_MODEL_TO_CAMERA());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_MATRIX_FROM_CAMERA_TO_CLIPSPACE());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_MATRIX_FROM_CAMERA_TO_CLIPSPACE());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_MATRICES_FROM_MODEL_TO_CAMERA());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_MATRICES_FROM_MODEL_TO_CAMERA());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_NUM_MATRICES_PER_VERTEX());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_NUM_MATRICES_PER_VERTEX());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::AMBIENT_COLOUR:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_AMBIENT_COLOUR());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_AMBIENT_COLOUR());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_DIFFUSE_COLOUR());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_DIFFUSE_COLOUR());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::SPECULAR_COLOUR:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_SPECULAR_COLOUR());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_SPECULAR_COLOUR());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_DIRECTION:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_DIRECTIONAL_LIGHT_DIRECTION());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_DIRECTIONAL_LIGHT_DIRECTION());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_COLOUR:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_DIRECTIONAL_LIGHT_COLOUR());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_DIRECTIONAL_LIGHT_COLOUR());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_COLOUR:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_FOG_COLOUR());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_FOG_COLOUR());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_NEAR:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_FOG_NEAR());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_FOG_NEAR());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_FAR:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_FOG_FAR());
+                binding.set_uniform_variable(name(uniform), vertex_uniform_provider.get_FOG_FAR());
                 break;
             default:
                 UNREACHABLE();
@@ -176,57 +176,40 @@ void  render_batch(
     }
 
     {
-        fragment_shader  shader = batch_.get_shaders_binding().get_fragment_shader();
-        for (FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
+        for (FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : binding.get_fragment_shader().get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE:
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR:
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL:
-                shader.set_uniform_variable(uniform, (integer_32_bit)value(uniform));
+                binding.set_uniform_variable(name(uniform), (integer_32_bit)value(uniform));
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::AMBIENT_COLOUR:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_AMBIENT_COLOUR());
+                binding.set_uniform_variable(name(uniform), fragment_uniform_provider.get_AMBIENT_COLOUR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_DIFFUSE_COLOUR());
+                binding.set_uniform_variable(name(uniform), fragment_uniform_provider.get_DIFFUSE_COLOUR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::SPECULAR_COLOUR:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_SPECULAR_COLOUR());
+                binding.set_uniform_variable(name(uniform), fragment_uniform_provider.get_SPECULAR_COLOUR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_DIRECTION:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_DIRECTIONAL_LIGHT_DIRECTION());
+                binding.set_uniform_variable(name(uniform), fragment_uniform_provider.get_DIRECTIONAL_LIGHT_DIRECTION());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_COLOUR:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_DIRECTIONAL_LIGHT_COLOUR());
+                binding.set_uniform_variable(name(uniform), fragment_uniform_provider.get_DIRECTIONAL_LIGHT_COLOUR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_COLOUR:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_COLOUR());
+                binding.set_uniform_variable(name(uniform), fragment_uniform_provider.get_FOG_COLOUR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_NEAR:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_NEAR());
+                binding.set_uniform_variable(name(uniform), fragment_uniform_provider.get_FOG_NEAR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_FAR:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_FAR());
+                binding.set_uniform_variable(name(uniform), fragment_uniform_provider.get_FOG_FAR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::ALPHA_TEST_CONSTANT:
-                shader.set_uniform_variable(uniform, batch_.get_available_resources().skins().at(batch_.get_skin_name()).alpha_testing().alpha_test_constant());
-                break;
-            default:
-                UNREACHABLE();
-                break;
-            }
-        for (FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION const location : shader.get_output_buffer_bindings())
-            switch (location)
-            {
-            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_COLOUR:
-                // Nothing to set here (a texture sampler cannot be set any data).
-                break;
-            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_POSITION:
-            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_NORMAL:
-            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_DIFFUSE:
-            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_SPECULAR:
-                NOT_IMPLEMENTED_YET();
+                binding.set_uniform_variable(name(uniform), batch_.get_available_resources().skins().at(batch_.get_skin_name()).alpha_testing().alpha_test_constant());
                 break;
             default:
                 UNREACHABLE();

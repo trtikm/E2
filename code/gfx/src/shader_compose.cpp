@@ -19,12 +19,12 @@
 
 #define DEFINE_FUNCTION_ambient_and_directional_lighting() \
         "vec4  ambient_and_directional_lighting(",\
-        "        const vec3  normal,",\
-        "        const vec3  light_dir,",\
-        "        const vec3  ambient_colour,",\
-        "        const vec3  light_colour",\
+        "        vec3  normal,",\
+        "        vec3  light_dir,",\
+        "        vec3  ambient_colour,",\
+        "        vec3  light_colour",\
         "        ) {",\
-        "    const float  mult = min(1.0f, max(0.5f - 0.5f * dot(normal, light_dir), 0.0f));",\
+        "    float  mult = min(1.0f, max(0.5f - 0.5f * dot(normal, light_dir), 0.0f));",\
         "    return vec4((1.0f - mult) * ambient_colour  + mult * light_colour, 1.0f);",\
         "}"
 
@@ -40,6 +40,20 @@ using  FS_IN = FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION;
 using  FS_OUT = FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION;
 using  FS_UNIFORM = FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME;
 
+static std::string  vs_get_version()
+{
+    //return "#version 330";
+    //return "#version 420";
+    return "#version 300 es";
+}
+
+static std::string  fs_get_version()
+{
+    //return "#version 330";
+    //return "#version 420";
+    return "#version 300 es\n"
+           "precision highp float;\n";
+}
 
 template<typename T>
 static std::string  layout(T const  location)
@@ -89,7 +103,7 @@ static std::string  uniform(FS_UNIFORM const  symbolic_name, std::unordered_set<
 
 static std::string  vs_backward_compatibility_declarations()
 {
-    return "out gl_PerVertex { vec4 gl_Position; float gl_PointSize; float gl_ClipDistance[]; };";
+    return "";//"out gl_PerVertex { vec4 gl_Position; float gl_PointSize; float gl_ClipDistance[]; };";
 }
 
 static void  add_new_line_terminators(std::vector<std::string>&  lines_of_shader_code)
@@ -150,7 +164,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         if (resources.skeletal() == nullptr)
                         {
                             vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -162,13 +176,13 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                "    mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = DIFFUSE_COLOUR;",
                                 "}",
                             };
                             vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -180,7 +194,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms_instancing),
 
                                 "void main() {",
-                                "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                "    mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = DIFFUSE_COLOUR;",
                                 "}",
@@ -189,7 +203,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         else
                         {
                             vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -204,11 +218,11 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    int i;",
+                                "    uint i;",
                                 "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
-                                "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                "    for (i = 0U; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                 "    {",
-                                "        const vec4 pos = vec4(in_position,1.0f) *",
+                                "        vec4 pos = vec4(in_position,1.0f) *",
                                 "                         MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                 "        result_position = result_position + in_weights_of_matrices[i] * pos;",
                                 "    }",
@@ -218,7 +232,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             };
                         }
                         fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                            "#version 420",
+                            fs_get_version(),
 
                             varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                             varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -240,7 +254,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         if (resources.skeletal() == nullptr)
                         {
                             vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -252,13 +266,13 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                "    mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = in_colour;",
                                 "}",
                             };
                             vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -270,7 +284,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms_instancing),
 
                                 "void main() {",
-                                "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                "    mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = in_colour;",
                                 "}",
@@ -279,7 +293,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         else
                         {
                             vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -294,11 +308,11 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    int i;",
+                                "    uint i;",
                                 "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
-                                "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                "    for (i = 0U; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                 "    {",
-                                "        const vec4 pos = vec4(in_position,1.0f) *",
+                                "        vec4 pos = vec4(in_position,1.0f) *",
                                 "                         MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                 "        result_position = result_position + in_weights_of_matrices[i] * pos;",
                                 "    }",
@@ -310,7 +324,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         if (effects.get_fog_type() == FOG_TYPE::DETAILED)
                         {
                             fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                "#version 420",
+                                fs_get_version(),
 
                                 varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -320,24 +334,24 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(FS_UNIFORM::FOG_FAR, fs_uniforms),
 
                                 "void main() {",
-                                //"    const vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
-                                //"    const float FOG_NEAR = 10.0f;",
-                                //"    const float FOG_FAR = 50.0f;",
-                                //"    const float FOG_DECAY_COEF = 2.0f;",
+                                //"    vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
+                                //"    float FOG_NEAR = 10.0f;",
+                                //"    float FOG_FAR = 50.0f;",
+                                //"    float FOG_DECAY_COEF = 2.0f;",
 
-                                //"    const float z = 1.0f / gl_FragCoord.w;",
-                                //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+                                //"    float z = 1.0f / gl_FragCoord.w;",
+                                //"    float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
 
-                                //"    const vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
-                                //"    const float distance = length(u);",
-                                //"    const float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
-                                //"    const float coef = pow(D, FOG_DECAY_COEF);",
+                                //"    vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
+                                //"    float distance = length(u);",
+                                //"    float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
+                                //"    float coef = pow(D, FOG_DECAY_COEF);",
 
-                                "    const float z = 1.0f / gl_FragCoord.w;",
-                                //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+                                "    float z = 1.0f / gl_FragCoord.w;",
+                                //"    float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
 
                                 //"    out_colour = (1.0f - coef) * in_colour + coef * FOG_COLOUR;",
-                                "    const float z01 = min(max(0.0f, (z - FOG_NEAR) / FOG_FAR), 1.0f);",
+                                "    float z01 = min(max(0.0f, (z - FOG_NEAR) / FOG_FAR), 1.0f);",
                                 "    out_colour = mix(in_colour, FOG_COLOUR, z01);",
                                 "}",
                             };
@@ -345,7 +359,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         else if (skin.alpha_testing().use_alpha_testing())
                         {
                             fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                "#version 420",
+                                fs_get_version(),
 
                                 varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -362,7 +376,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         else
                         {
                             fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                "#version 420",
+                                fs_get_version(),
 
                                 varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -385,7 +399,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         if (resources.skeletal() == nullptr)
                         {
                             vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -397,13 +411,13 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                "    mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_texture_coords = in_texture_coords;",
                                 "}",
                             };
                             vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -415,7 +429,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms_instancing),
 
                                 "void main() {",
-                                "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                "    mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_texture_coords = in_texture_coords;",
                                 "}",
@@ -424,7 +438,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         else
                         {
                             vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -439,11 +453,11 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    int i;",
+                                "    uint i;",
                                 "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
-                                "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                "    for (i = 0U; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                 "    {",
-                                "        const vec4 pos = vec4(in_position,1.0f) *",
+                                "        vec4 pos = vec4(in_position,1.0f) *",
                                 "                         MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                 "        result_position = result_position + in_weights_of_matrices[i] * pos;",
                                 "    }",
@@ -455,7 +469,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         if (skin.alpha_testing().use_alpha_testing())
                         {
                             fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                "#version 420",
+                                fs_get_version(),
 
                                 varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -464,7 +478,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
 
                                 "void main() {",
-                                "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                "    vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
                                 "    if (diffuse_colour.a < ALPHA_TEST_CONSTANT)",
                                 "        discard;",
                                 "    out_colour = diffuse_colour;",
@@ -474,7 +488,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         else
                         {
                             fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                "#version 420",
+                                fs_get_version(),
 
                                 varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -493,7 +507,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         if (resources.skeletal() == nullptr)
                         {
                             vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                "#version 420",
+                                vs_get_version(),
 
                                 vs_backward_compatibility_declarations(),
 
@@ -505,7 +519,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms_instancing),
 
                                 "void main() {",
-                                "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                "    mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = in_colour;",
                                 "}",
@@ -513,7 +527,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             if (skin.alpha_testing().use_alpha_testing())
                             {
                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                    "#version 420",
+                                    fs_get_version(),
 
                                     varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                     varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -530,7 +544,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             else
                             {
                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                    "#version 420",
+                                    fs_get_version(),
 
                                     varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                     varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -590,7 +604,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -609,7 +623,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
                                                     "void main() {",
                                                     "    gl_Position = vec4(in_position,1.0f) * (MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE);",
-                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec4 colour_mult = ambient_and_directional_lighting(",
                                                     "        vec3(vec4(in_normal, 0.0f) * MATRIX_FROM_MODEL_TO_CAMERA),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -619,7 +633,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                                 vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -638,7 +652,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
                                                     "void main() {",
                                                     "    gl_Position = vec4(in_position,1.0f) * (in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE);",
-                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec4 colour_mult = ambient_and_directional_lighting(",
                                                     "        vec3(vec4(in_normal, 0.0f) * in_from_model_to_camera),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -651,7 +665,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             else
                                             {
                                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -672,19 +686,19 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    int i;",
+                                                    "    uint i;",
                                                     "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
                                                     "    vec3 result_normal = vec3(0.0f, 0.0f, 0.0f);",
-                                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                                    "    for (i = 0U; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                                     "    {",
-                                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                                    "        vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                                     "        result_position = result_position + in_weights_of_matrices[i] * pos;",
-                                                    "        const vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
+                                                    "        vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
                                                     "        result_normal = result_normal + in_weights_of_matrices[i] * nor;",
                                                     "    }",
                                                     "    result_normal = normalize(result_normal);",
                                                     "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
-                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec4 colour_mult = ambient_and_directional_lighting(",
                                                     "        result_normal,",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -695,7 +709,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 };
                                             }
                                             fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                "#version 420",
+                                                fs_get_version(),
 
                                                 varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -717,7 +731,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -735,9 +749,9 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                                     "    gl_Position = vec4(in_position,1.0f) * T;",
-                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec4 colour_mult = ambient_and_directional_lighting(",
                                                     "        vec3(vec4(in_normal, 0.0f) * MATRIX_FROM_MODEL_TO_CAMERA),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -747,7 +761,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                                 vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -765,9 +779,9 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                                     "    gl_Position = vec4(in_position,1.0f) * T;",
-                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec4 colour_mult = ambient_and_directional_lighting(",
                                                     "        vec3(vec4(in_normal, 0.0f) * in_from_model_to_camera),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -780,7 +794,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             else
                                             {
                                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -801,19 +815,19 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    int i;",
+                                                    "    uint i;",
                                                     "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
                                                     "    vec3 result_normal = vec3(0.0f, 0.0f, 0.0f);",
-                                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                                    "    for (i = 0U; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                                     "    {",
-                                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                                    "        vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                                     "        result_position = result_position + in_weights_of_matrices[i] * pos;",
-                                                    "        const vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
+                                                    "        vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
                                                     "        result_normal = result_normal + in_weights_of_matrices[i] * nor;",
                                                     "    }",
                                                     "    result_normal = normalize(result_normal);",
                                                     "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
-                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec4 colour_mult = ambient_and_directional_lighting(",
                                                     "        result_normal,",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -826,7 +840,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             if (effects.get_fog_type() == FOG_TYPE::DETAILED)
                                             {
                                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                    "#version 420",
+                                                    fs_get_version(),
 
                                                     varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                                     varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -836,24 +850,24 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     uniform(FS_UNIFORM::FOG_FAR, fs_uniforms),
 
                                                     "void main() {",
-                                                    //"    const vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
-                                                    //"    const float FOG_NEAR = 10.0f;",
-                                                    //"    const float FOG_FAR = 50.0f;",
-                                                    //"    const float FOG_DECAY_COEF = 2.0f;",
+                                                    //"    vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
+                                                    //"    float FOG_NEAR = 10.0f;",
+                                                    //"    float FOG_FAR = 50.0f;",
+                                                    //"    float FOG_DECAY_COEF = 2.0f;",
 
-                                                    //"    const float z = 1.0f / gl_FragCoord.w;",
-                                                    //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+                                                    //"    float z = 1.0f / gl_FragCoord.w;",
+                                                    //"    float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
 
-                                                    //"    const vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
-                                                    //"    const float distance = length(u);",
-                                                    //"    const float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
-                                                    //"    const float coef = pow(D, FOG_DECAY_COEF);",
+                                                    //"    vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
+                                                    //"    float distance = length(u);",
+                                                    //"    float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
+                                                    //"    float coef = pow(D, FOG_DECAY_COEF);",
 
-                                                    "    const float z = 1.0f / gl_FragCoord.w;",
-                                                    //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+                                                    "    float z = 1.0f / gl_FragCoord.w;",
+                                                    //"    float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
 
                                                     //"    out_colour = (1.0f - coef) * in_colour + coef * FOG_COLOUR;",
-                                                    "    const float z01 = min(max(0.0f, (z - FOG_NEAR) / FOG_FAR), 1.0f);",
+                                                    "    float z01 = min(max(0.0f, (z - FOG_NEAR) / FOG_FAR), 1.0f);",
                                                     "    out_colour = mix(in_colour, FOG_COLOUR, z01);",
                                                     "}",
                                                 };
@@ -861,7 +875,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             else if (skin.alpha_testing().use_alpha_testing())
                                             {
                                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                    "#version 420",
+                                                    fs_get_version(),
 
                                                     varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                                     varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -878,7 +892,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             else
                                             {
                                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                    "#version 420",
+                                                    fs_get_version(),
 
                                                     varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                                     varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -901,7 +915,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -920,7 +934,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                                     "    gl_Position = vec4(in_position,1.0f) * T;",
                                                     "    out_texture_coords = in_texture_coords;",
                                                     "    out_colour_mult = ambient_and_directional_lighting(",
@@ -932,7 +946,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                                 vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -951,7 +965,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                                     "    gl_Position = vec4(in_position,1.0f) * T;",
                                                     "    out_texture_coords = in_texture_coords;",
                                                     "    out_colour_mult = ambient_and_directional_lighting(",
@@ -966,7 +980,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             else
                                             {
                                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -988,14 +1002,14 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    int i;",
+                                                    "    uint i;",
                                                     "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
                                                     "    vec3 result_normal = vec3(0.0f, 0.0f, 0.0f);",
-                                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                                    "    for (i = 0U; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                                     "    {",
-                                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                                    "        vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                                     "        result_position = result_position + in_weights_of_matrices[i] * pos;",
-                                                    "        const vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
+                                                    "        vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
                                                     "        result_normal = result_normal + in_weights_of_matrices[i] * nor;",
                                                     "    }",
                                                     "    result_normal = normalize(result_normal);",
@@ -1013,7 +1027,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             if (skin.alpha_testing().use_alpha_testing())
                                             {
                                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                    "#version 420",
+                                                    fs_get_version(),
 
                                                     varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
                                                     varying("in_colour_mult", FS_IN::BINDING_IN_DIFFUSE, fs_input),
@@ -1023,7 +1037,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
 
                                                     "void main() {",
-                                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                                    "    vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
                                                     "    if (diffuse_colour.a < ALPHA_TEST_CONSTANT)",
                                                     "        discard;",
                                                     "    out_colour = in_colour_mult * diffuse_colour;",
@@ -1033,7 +1047,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             else
                                             {
                                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                    "#version 420",
+                                                    fs_get_version(),
 
                                                     varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
                                                     varying("in_colour_mult", FS_IN::BINDING_IN_DIFFUSE, fs_input),
@@ -1042,7 +1056,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
 
                                                     "void main() {",
-                                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                                    "    vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
                                                     "    out_colour = in_colour_mult * diffuse_colour;",
                                                     "}",
                                                 };
@@ -1054,7 +1068,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -1072,9 +1086,9 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                                     "    gl_Position = vec4(in_position,1.0f) * T;",
-                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec4 colour_mult = ambient_and_directional_lighting(",
                                                     "        vec3(vec4(in_normal, 0.0f) * in_from_model_to_camera),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -1086,7 +1100,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 if (skin.alpha_testing().use_alpha_testing())
                                                 {
                                                     fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                        "#version 420",
+                                                        fs_get_version(),
 
                                                         varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                                         varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -1103,7 +1117,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 else
                                                 {
                                                     fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                        "#version 420",
+                                                        vs_get_version(),
 
                                                         varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                                         varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
@@ -1173,7 +1187,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -1200,7 +1214,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                                 vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -1230,7 +1244,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             else
                                             {
                                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                                    "#version 420",
+                                                    vs_get_version(),
 
                                                     vs_backward_compatibility_declarations(),
 
@@ -1252,23 +1266,23 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                                     "void main() {",
-                                                    "    int i;",
+                                                    "    uint i;",
                                                     "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
                                                     "    vec3 result_normal = vec3(0.0f, 0.0f, 0.0f);",
                                                     "    vec3 result_tangent = vec3(0.0f, 0.0f, 0.0f);",
                                                     "    vec3 result_bitangent = vec3(0.0f, 0.0f, 0.0f);",
-                                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                                    "    for (i = 0U; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                                     "    {",
-                                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                                    "        vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                                     "        result_position = result_position + in_weights_of_matrices[i] * pos;",
 
-                                                    "        const vec3 normal = (vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
+                                                    "        vec3 normal = (vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
                                                     "        result_normal = result_normal + in_weights_of_matrices[i] * normal;",
 
-                                                    "        const vec3 tangent = (vec4(in_tangent,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
+                                                    "        vec3 tangent = (vec4(in_tangent,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
                                                     "        result_tangent = result_tangent + in_weights_of_matrices[i] * tangent;",
 
-                                                    "        const vec3 bitangent = (vec4(in_bitangent,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
+                                                    "        vec3 bitangent = (vec4(in_bitangent,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
                                                     "        result_bitangent = result_bitangent + in_weights_of_matrices[i] * bitangent;",
                                                     "    }",
                                                     "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
@@ -1282,7 +1296,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             if (skin.alpha_testing().use_alpha_testing())
                                             {
                                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                    "#version 420",
+                                                    fs_get_version(),
 
                                                     varying("in_normal", FS_IN::BINDING_IN_NORMAL, fs_input),
                                                     varying("in_tangent", FS_IN::BINDING_IN_TANGENT, fs_input),
@@ -1300,12 +1314,12 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                                    "    vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
                                                     "    if (diffuse_colour.a < ALPHA_TEST_CONSTANT)",
                                                     "        discard;",
-                                                    "    const vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
-                                                    "    const vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
-                                                    "    const vec4  colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
+                                                    "    vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
+                                                    "    vec4  colour_mult = ambient_and_directional_lighting(",
                                                     "        normalize(normal),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -1318,7 +1332,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             else
                                             {
                                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                    "#version 420",
+                                                    fs_get_version(),
 
                                                     varying("in_normal", FS_IN::BINDING_IN_NORMAL, fs_input),
                                                     varying("in_tangent", FS_IN::BINDING_IN_TANGENT, fs_input),
@@ -1335,10 +1349,10 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
-                                                    "    const vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
-                                                    "    const vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
-                                                    "    const vec4  colour_mult = ambient_and_directional_lighting(",
+                                                    "    vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                                    "    vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
+                                                    "    vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
+                                                    "    vec4  colour_mult = ambient_and_directional_lighting(",
                                                     "        normalize(normal),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
@@ -1396,7 +1410,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             if (resources.skeletal() == nullptr)
                             {
                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                    "#version 420",
+                                    vs_get_version(),
 
                                     vs_backward_compatibility_declarations(),
 
@@ -1410,14 +1424,14 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                     "void main() {",
-                                    "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                    "    mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                     "    gl_Position = vec4(in_position,1.0f) * T;",
                                     "    out_texture_coords = in_texture_coords;",
                                     "    out_colour_mult = vec4(AMBIENT_COLOUR, 1.0f);",
                                     "}",
                                 };
                                 vs_uid_instancing = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
-                                    "#version 420",
+                                    vs_get_version(),
 
                                     vs_backward_compatibility_declarations(),
 
@@ -1431,7 +1445,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms_instancing),
 
                                     "void main() {",
-                                    "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                    "    mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                     "    gl_Position = vec4(in_position,1.0f) * T;",
                                     "    out_texture_coords = in_texture_coords;",
                                     "    out_colour_mult = vec4(AMBIENT_COLOUR, 1.0f);",
@@ -1441,7 +1455,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             else
                             {
                                 vs_uid = E2_GFX_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                                    "#version 420",
+                                    vs_get_version(),
 
                                     vs_backward_compatibility_declarations(),
 
@@ -1460,11 +1474,11 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                     "void main() {",
-                                    "    int i;",
+                                    "    uint i;",
                                     "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
-                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                    "    for (i = 0U; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                     "    {",
-                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                    "        vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                     "        result_position = result_position + in_weights_of_matrices[i] * pos;",
                                     "    }",
                                     "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
@@ -1476,7 +1490,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             if (skin.alpha_testing().use_alpha_testing())
                             {
                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                    "#version 420",
+                                    fs_get_version(),
 
                                     varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
                                     varying("in_colour_mult", FS_IN::BINDING_IN_DIFFUSE, fs_input),
@@ -1486,7 +1500,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
 
                                     "void main() {",
-                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                    "    vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
                                     "    if (diffuse_colour.a < ALPHA_TEST_CONSTANT)",
                                     "        discard;",
                                     "    out_colour = in_colour_mult * diffuse_colour;",
@@ -1496,7 +1510,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             else
                             {
                                 fs_uid = E2_GFX_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                    "#version 420",
+                                    fs_get_version(),
 
                                     varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
                                     varying("in_colour_mult", FS_IN::BINDING_IN_DIFFUSE, fs_input),
@@ -1505,7 +1519,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
 
                                     "void main() {",
-                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                    "    vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
                                     "    out_colour = in_colour_mult * diffuse_colour;",
                                     "}",
                                 };
