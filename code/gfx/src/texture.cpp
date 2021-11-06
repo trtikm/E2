@@ -48,9 +48,9 @@ texture_file_data::texture_file_data(async::finalise_load_on_destroy_ptr const  
     else if (line == "RGBA")
         pixel_format = GL_RGBA;
     else if (line == "COMPRESSED_RGB")
-        pixel_format = GL_COMPRESSED_RGB;
+        pixel_format = GL_RGB; //GL_COMPRESSED_RGB;
     else if (line == "COMPRESSED_RGBA")
-        pixel_format = GL_COMPRESSED_RGBA;
+        pixel_format = GL_RGBA; //GL_COMPRESSED_RGBA;
     else
         throw std::runtime_error(
                 msgstream() << "Unknown pixel format '" << line << "' in the texture file '" << path << "'."
@@ -64,7 +64,7 @@ texture_file_data::texture_file_data(async::finalise_load_on_destroy_ptr const  
     if (line == "REPEAT")
         x_wrapping_type= GL_REPEAT;
     else if (line == "CLAMP")
-        x_wrapping_type= GL_CLAMP;
+        x_wrapping_type= GL_CLAMP_TO_EDGE;
     else
         throw std::runtime_error(
                 msgstream() << "Unknown x-wrapping type '" << line << "' in the texture file '" << path << "'."
@@ -78,7 +78,7 @@ texture_file_data::texture_file_data(async::finalise_load_on_destroy_ptr const  
     if (line == "REPEAT")
         y_wrapping_type= GL_REPEAT;
     else if (line == "CLAMP")
-        y_wrapping_type= GL_CLAMP;
+        y_wrapping_type= GL_CLAMP_TO_EDGE;
     else
         throw std::runtime_error(
                 msgstream() << "Unknown y-wrapping type '" << line << "' in the texture file '" << path << "'."
@@ -150,13 +150,13 @@ void  texture_file_data::initialise(
         throw std::runtime_error(msgstream() << "The image file '" << image_pathname << "' does not exist.");
     if (pixel_format != GL_RGB
         && pixel_format != GL_RGBA
-        && pixel_format != GL_COMPRESSED_RGB
-        && pixel_format != GL_COMPRESSED_RGBA
+        //&& pixel_format != GL_COMPRESSED_RGB
+        //&& pixel_format != GL_COMPRESSED_RGBA
         && pixel_format != GL_DEPTH_COMPONENT)
         throw std::runtime_error(msgstream() << "Unknown pixel format '" << pixel_format << "'.");
-    if (x_wrapping_type != GL_REPEAT && x_wrapping_type != GL_CLAMP)
+    if (x_wrapping_type != GL_REPEAT && x_wrapping_type != GL_CLAMP_TO_EDGE)
         throw std::runtime_error(msgstream() << "Unknown x-wrapping type '" << x_wrapping_type << "'.");
-    if (y_wrapping_type != GL_REPEAT && y_wrapping_type != GL_CLAMP)
+    if (y_wrapping_type != GL_REPEAT && y_wrapping_type != GL_CLAMP_TO_EDGE)
         throw std::runtime_error(msgstream() << "Unknown y-wrapping type '" << y_wrapping_type << "'.");
     if (min_filtering_type != GL_NEAREST_MIPMAP_NEAREST &&
             min_filtering_type != GL_NEAREST_MIPMAP_LINEAR &&
