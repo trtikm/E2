@@ -16,7 +16,7 @@ std::string  chessboard_texture_id();
 
 
 texture  make_chessboard_texture(
-            natural_32_bit const  pixel_format = GL_COMPRESSED_RGBA,
+            natural_32_bit const  pixel_format = GL_RGBA,
             natural_32_bit const  x_wrapping_type = GL_REPEAT,
             natural_32_bit const  y_wrapping_type = GL_REPEAT,
             natural_32_bit const  min_filtering_type = GL_LINEAR_MIPMAP_LINEAR
