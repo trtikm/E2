@@ -256,7 +256,6 @@ void  simulator::initialise()
     glCullFace(GL_BACK);
     glDisable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    glDepthRangef(0.0f,1.0f);
 }
 
 
