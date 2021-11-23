@@ -4,7 +4,7 @@
 #   include <ai/motion_desire_props.hpp>
 #   include <utility/async_resource_load.hpp>
 #   include <boost/property_tree/ptree.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <string>
 #   include <unordered_map>
 #   include <memory>
@@ -25,9 +25,9 @@ struct  agent_config_data
     boost::property_tree::ptree  m_cortex;
 
 private:
-    void  load_data_from_dir(boost::filesystem::path const&  root_dir);
-    void  load_state_variables_from_dir(boost::filesystem::path const&  root_dir);
-    void  load_actions_from_dir(boost::filesystem::path const&  root_dir);
+    void  load_data_from_dir(std::filesystem::path const&  root_dir);
+    void  load_state_variables_from_dir(std::filesystem::path const&  root_dir);
+    void  load_actions_from_dir(std::filesystem::path const&  root_dir);
 };
 
 
@@ -43,7 +43,7 @@ struct  agent_config : public async::resource_accessor<detail::agent_config_data
     {}
 
     agent_config(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::load_priority_type const  priority,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )

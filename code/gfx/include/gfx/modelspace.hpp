@@ -3,7 +3,7 @@
 
 #   include <utility/async_resource_load.hpp>
 #   include <angeo/coordinate_system.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <vector>
 #   include <string>
 #   include <memory>
@@ -36,7 +36,7 @@ struct  modelspace : public async::resource_accessor<detail::modelspace_data>
     {}
 
     modelspace(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::load_priority_type const  priority,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr,
             std::string const&  data_type_name = "gfx::modelspace"
@@ -55,9 +55,9 @@ struct  modelspace : public async::resource_accessor<detail::modelspace_data>
 
     angeo::coordinate_system const&  at(natural_32_bit const  index) const { return get_coord_systems().at(index); }
 
-    boost::filesystem::path  get_skeleton_path() const
+    std::filesystem::path  get_skeleton_path() const
     {
-        return boost::filesystem::path(key().get_unique_id()).parent_path();
+        return std::filesystem::path(key().get_unique_id()).parent_path();
     }
 };
 

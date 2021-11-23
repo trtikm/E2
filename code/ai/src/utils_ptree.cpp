@@ -1,23 +1,23 @@
 #include <ai/utils_ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/filesystem.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <filesystem>
 
 namespace ai {
 
 
-void  load_ptree(boost::property_tree::ptree&  ptree, boost::filesystem::path const&  ptree_pathname)
+void  load_ptree(boost::property_tree::ptree&  ptree, std::filesystem::path const&  ptree_pathname)
 {
-    if (!boost::filesystem::is_regular_file(ptree_pathname))
+    if (!std::filesystem::is_regular_file(ptree_pathname))
         throw std::runtime_error(msgstream() << "Cannot access the file '" << ptree_pathname << "'.");
     boost::property_tree::read_json(ptree_pathname.string(), ptree);
 }
 
 
-std::shared_ptr<boost::property_tree::ptree>  load_ptree(boost::filesystem::path const&  ptree_pathname)
+std::shared_ptr<boost::property_tree::ptree>  load_ptree(std::filesystem::path const&  ptree_pathname)
 {
     std::shared_ptr<boost::property_tree::ptree>  ptree(new boost::property_tree::ptree);
     load_ptree(*ptree, ptree_pathname);

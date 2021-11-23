@@ -8,8 +8,7 @@
 #include <utility/basic_numeric_types.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 #include <iostream>
 
 
@@ -23,7 +22,7 @@ void run(int argc, char* argv[])
         std::cout << "Wrong usage of the tool. Use the command --help." << std::endl;
         return;
     }
-    if (!boost::filesystem::is_regular_file(get_program_options()->get_input_image()))
+    if (!std::filesystem::is_regular_file(get_program_options()->get_input_image()))
     {
         std::cout << "Cannot acces the input image '" << get_program_options()->get_input_image()  << "'" << std::endl;
         return;
@@ -32,7 +31,7 @@ void run(int argc, char* argv[])
     try
     {
         gfx::image_rgba_8888  img;
-        gfx::load_png_image(boost::filesystem::absolute(get_program_options()->get_input_image()), img);
+        gfx::load_png_image(std::filesystem::absolute(get_program_options()->get_input_image()), img);
         for (natural_32_bit  i = 0U, n = (natural_32_bit)img.data.size(); i < n; i += 4)
         {
             img.data.at(i + 3U) = img.data.at(i + 0U);
@@ -40,7 +39,7 @@ void run(int argc, char* argv[])
             img.data.at(i + 1U) = 255U;
             img.data.at(i + 2U) = 255U;
         }
-        gfx::save_png_image(boost::filesystem::absolute(get_program_options()->get_output_image()), img);
+        gfx::save_png_image(std::filesystem::absolute(get_program_options()->get_output_image()), img);
     }
     catch (std::exception const& e)
     {

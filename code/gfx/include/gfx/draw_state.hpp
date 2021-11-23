@@ -56,7 +56,7 @@ struct draw_state : public async::resource_accessor<detail::draw_state_data>
     {}
 
     draw_state(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : super(async::key_type("gfx::draw_state", path.string()), 0U, parent_finaliser)

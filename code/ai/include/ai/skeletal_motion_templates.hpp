@@ -8,7 +8,7 @@
 #   include <gfx/modelspace.hpp>
 #   include <utility/async_resource_load.hpp>
 #   include <boost/property_tree/ptree.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <unordered_map>
 #   include <string>
 #   include <vector>
@@ -137,7 +137,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     {}
 
     skeletal_motion_templates(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::load_priority_type const  priority,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )

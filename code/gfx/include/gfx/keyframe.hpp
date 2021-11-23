@@ -4,7 +4,7 @@
 #   include <utility/async_resource_load.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <utility/assumptions.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <vector>
 #   include <unordered_map>
 #   include <algorithm>
@@ -55,7 +55,7 @@ struct  keyframe : public async::resource_accessor<detail::keyframe_data>
     {}
 
     keyframe(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::keyframe_data>(
@@ -66,7 +66,7 @@ struct  keyframe : public async::resource_accessor<detail::keyframe_data>
     {}
 
     void  insert_load_request(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
     {
@@ -126,7 +126,7 @@ struct  keyframes : public async::resource_accessor<detail::keyframes_data>
     {}
 
     keyframes(
-            boost::filesystem::path const&  keyframes_dir,
+            std::filesystem::path const&  keyframes_dir,
             async::load_priority_type const  priority = 1U,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
@@ -138,7 +138,7 @@ struct  keyframes : public async::resource_accessor<detail::keyframes_data>
     {}
 
     void  insert_load_request(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::load_priority_type const  priority = 1U,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
     {

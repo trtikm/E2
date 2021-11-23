@@ -4,10 +4,9 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
+#include <filesystem>
 
 namespace com { namespace detail {
 
@@ -15,12 +14,12 @@ namespace com { namespace detail {
 imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : m_hierarchy()
 {
-    boost::filesystem::path const  scene_dir = finaliser->get_key().get_unique_id();
+    std::filesystem::path const  scene_dir = finaliser->get_key().get_unique_id();
 
     {
-        boost::filesystem::path  pathname = scene_dir / "hierarchy.json";
+        std::filesystem::path  pathname = scene_dir / "hierarchy.json";
 
-        if (!boost::filesystem::is_regular_file(pathname))
+        if (!std::filesystem::is_regular_file(pathname))
             throw std::runtime_error(msgstream() << "Cannot access scene file '" << pathname << "'.");
 
         std::ifstream  istr(pathname.string(), std::ios_base::binary);
@@ -32,9 +31,9 @@ imported_scene_data::imported_scene_data(async::finalise_load_on_destroy_ptr con
 }
 
 
-async::key_type  imported_scene::key_from_path(boost::filesystem::path const&  path)
+async::key_type  imported_scene::key_from_path(std::filesystem::path const&  path)
 {
-    return { "com::detail::imported_scene", boost::filesystem::absolute(path).string() };
+    return { "com::detail::imported_scene", std::filesystem::absolute(path).string() };
 }
 
 
@@ -236,8 +235,8 @@ static void  import_collider(
                 );
     else if (collider_kind == "TRIANGLE_MESH")
     {
-        boost::filesystem::path const  buffers_dir =
-                boost::filesystem::path(ctx.get_data_root_dir()) / "mesh" / hierarchy.get<std::string>("path");
+        std::filesystem::path const  buffers_dir =
+                std::filesystem::path(ctx.get_data_root_dir()) / "mesh" / hierarchy.get<std::string>("path");
         gfx::buffer  vertex_buffer(buffers_dir / "vertices.txt", std::numeric_limits<async::load_priority_type>::max());
         gfx::buffer  index_buffer(buffers_dir / "indices.txt", std::numeric_limits<async::load_priority_type>::max());
         if (!vertex_buffer.wait_till_load_is_finished())
@@ -510,18 +509,18 @@ static void  import_agent(
     std::vector<std::pair<std::string, gfx::batch> >  skeleton_attached_batches;
     {
         std::string const  skin = hierarchy.get<std::string>("skeleton_batch_skin");
-        boost::filesystem::path const  batch_path =
-            boost::filesystem::path(ctx.get_data_root_dir()) / "batch" / hierarchy.get<std::string>("skeleton_batch_disk_path")
+        std::filesystem::path const  batch_path =
+            std::filesystem::path(ctx.get_data_root_dir()) / "batch" / hierarchy.get<std::string>("skeleton_batch_disk_path")
             ;
-        auto const  add_batch_for_path = [&ctx, &skin, &skeleton_attached_batches](boost::filesystem::path const&  p) -> void {
+        auto const  add_batch_for_path = [&ctx, &skin, &skeleton_attached_batches](std::filesystem::path const&  p) -> void {
             gfx::batch const  agent_batch(p, gfx::default_effects_config(), skin);
             ctx.insert_imported_batch_to_cache(agent_batch);
             skeleton_attached_batches.push_back({ "BATCH." + p.filename().replace_extension("").string(), agent_batch});
         };
-        if (boost::to_lower_copy(boost::filesystem::extension(batch_path)) == ".txt")
+        if (boost::to_lower_copy(batch_path.extension().string()) == ".txt")
             add_batch_for_path(batch_path);
         else
-            for (boost::filesystem::directory_entry const& entry : boost::filesystem::directory_iterator(batch_path))
+            for (std::filesystem::directory_entry const& entry : std::filesystem::directory_iterator(batch_path))
                 if (boost::to_lower_copy(entry.path().filename().extension().string()) == ".txt")
                     add_batch_for_path(entry.path());
     }
@@ -529,7 +528,7 @@ static void  import_agent(
     ctx.request_late_insert_agent(
             folder_guid,
             ai::agent_config(
-                    boost::filesystem::path(ctx.get_data_root_dir()) / "ai" / hierarchy.get<std::string>("kind"),
+                    std::filesystem::path(ctx.get_data_root_dir()) / "ai" / hierarchy.get<std::string>("kind"),
                     1U,
                     nullptr
                     ),

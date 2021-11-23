@@ -4,7 +4,7 @@
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/canonical_path.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <lodepng.h>
 #include <algorithm>
 #include <stdexcept>
@@ -12,11 +12,11 @@
 namespace gfx { 
 
 
-void  load_png_image(boost::filesystem::path const&  path, image_rgba_8888&  img)
+void  load_png_image(std::filesystem::path const&  path, image_rgba_8888&  img)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(boost::filesystem::is_regular_file(path));
+    ASSUMPTION(std::filesystem::is_regular_file(path));
 
     unsigned int width, height;
     unsigned int error_code = lodepng::decode(img.data, width, height, path.string().c_str(), LCT_RGBA, 8U);
@@ -30,7 +30,7 @@ void  load_png_image(boost::filesystem::path const&  path, image_rgba_8888&  img
 }
 
 
-void  save_png_image(boost::filesystem::path const&  path, image_rgba_8888 const&  img)
+void  save_png_image(std::filesystem::path const&  path, image_rgba_8888 const&  img)
 {
     TMPROF_BLOCK();
     ASSUMPTION(img.width > 0U && img.height > 0U);

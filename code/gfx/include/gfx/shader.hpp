@@ -5,7 +5,7 @@
 #   include <gfx/shader_data_bindings.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/async_resource_load.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <unordered_set>
 #   include <string>
 #   include <vector>

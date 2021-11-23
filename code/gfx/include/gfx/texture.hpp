@@ -5,7 +5,7 @@
 #   include <gfx/shader_data_bindings.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/async_resource_load.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <vector>
 #   include <unordered_map>
 #   include <memory>
@@ -20,7 +20,7 @@ struct texture_file_data
 
     texture_file_data(
             async::finalise_load_on_destroy_ptr,
-            boost::filesystem::path const&  image_pathname,
+            std::filesystem::path const&  image_pathname,
             natural_32_bit const  pixel_format,
             natural_32_bit const  x_wrapping_type,
             natural_32_bit const  y_wrapping_type,
@@ -38,7 +38,7 @@ struct texture_file_data
                 );
     }
 
-    boost::filesystem::path const&  image_pathname() const { return m_image_pathname; }
+    std::filesystem::path const&  image_pathname() const { return m_image_pathname; }
     natural_32_bit  pixel_format() const { return m_pixel_format; }
     natural_32_bit  x_wrapping_type() const { return m_x_wrapping_type; }
     natural_32_bit  y_wrapping_type() const { return m_y_wrapping_type; }
@@ -47,7 +47,7 @@ struct texture_file_data
 
 private:
     void  initialise(
-            boost::filesystem::path const&  image_pathname,
+            std::filesystem::path const&  image_pathname,
             natural_32_bit const  pixel_format,
             natural_32_bit const  x_wrapping_type,
             natural_32_bit const  y_wrapping_type,
@@ -55,7 +55,7 @@ private:
             natural_32_bit const  mag_filtering_type
             );
 
-    boost::filesystem::path  m_image_pathname;
+    std::filesystem::path  m_image_pathname;
     natural_32_bit  m_pixel_format;
     natural_32_bit  m_x_wrapping_type;
     natural_32_bit  m_y_wrapping_type;
@@ -76,7 +76,7 @@ struct texture_file : public async::resource_accessor<detail::texture_file_data>
     {}
 
     texture_file(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::texture_file_data>(
@@ -87,7 +87,7 @@ struct texture_file : public async::resource_accessor<detail::texture_file_data>
     {}
 
     void  insert_load_request(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
     {
         async::resource_accessor<detail::texture_file_data>::insert_load_request(
@@ -98,7 +98,7 @@ struct texture_file : public async::resource_accessor<detail::texture_file_data>
     }
 
     texture_file(
-            boost::filesystem::path const&  image_pathname,
+            std::filesystem::path const&  image_pathname,
             natural_32_bit const  pixel_format,
             natural_32_bit const  x_wrapping_type,
             natural_32_bit const  y_wrapping_type,
@@ -119,7 +119,7 @@ struct texture_file : public async::resource_accessor<detail::texture_file_data>
                 )
     {}
 
-    boost::filesystem::path const&  image_pathname() const { return resource().image_pathname(); }
+    std::filesystem::path const&  image_pathname() const { return resource().image_pathname(); }
     natural_32_bit  pixel_format() const { return resource().pixel_format(); }
     natural_32_bit  x_wrapping_type() const { return resource().x_wrapping_type(); }
     natural_32_bit  y_wrapping_type() const { return resource().y_wrapping_type(); }
@@ -186,7 +186,7 @@ struct texture_image : public async::resource_accessor<detail::texture_image_dat
     {}
 
     texture_image(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::texture_image_data>(
@@ -197,7 +197,7 @@ struct texture_image : public async::resource_accessor<detail::texture_image_dat
     {}
 
     void  insert_load_request(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
     {
         async::resource_accessor<detail::texture_image_data>::insert_load_request(
@@ -284,7 +284,7 @@ struct texture : public async::resource_accessor<detail::texture_data>
     {}
 
     texture(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::texture_data>(
@@ -333,7 +333,7 @@ namespace gfx { namespace detail {
 struct textures_binding_data
 {
     using  binding_map_type = std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, texture>;
-    using  binding_paths_map_type = std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path>;
+    using  binding_paths_map_type = std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, std::filesystem::path>;
 
     textures_binding_data(
             async::finalise_load_on_destroy_ptr,

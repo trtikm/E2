@@ -21,8 +21,8 @@
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/dynamic_array.hpp>
-#   include <boost/filesystem/path.hpp>
 #   include <boost/property_tree/ptree.hpp>
+#   include <filesystem>
 #   include <unordered_map>
 #   include <vector>
 #   include <list>

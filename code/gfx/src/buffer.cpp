@@ -5,8 +5,8 @@
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/msgstream.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
+#include <filesystem>
 #include <limits>
 #include <iostream>
 #include <fstream>
@@ -35,15 +35,15 @@ buffer_file_data::buffer_file_data(async::finalise_load_on_destroy_ptr const  fi
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = finaliser->get_key().get_unique_id();
+    std::filesystem::path const  path = finaliser->get_key().get_unique_id();
 
-    if (!boost::filesystem::exists(path))
+    if (!std::filesystem::exists(path))
         throw std::runtime_error(msgstream() << "The buffer file '" << path << "' does not exists.");
-    if (!boost::filesystem::is_regular_file(path))
+    if (!std::filesystem::is_regular_file(path))
         throw std::runtime_error(msgstream() << "The buffer path '" << path
                                              << "' does not reference a regular file.");
 
-    std::vector<natural_8_bit> file_content(boost::filesystem::file_size(path) + 1UL);
+    std::vector<natural_8_bit> file_content(std::filesystem::file_size(path) + 1UL);
     {
         TMPROF_BLOCK();
 
@@ -471,8 +471,8 @@ namespace gfx { namespace detail {
 
 buffers_binding_data::buffers_binding_data(
         async::finalise_load_on_destroy_ptr const  finaliser,
-        boost::filesystem::path const&  index_buffer_path,
-        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
+        std::filesystem::path const&  index_buffer_path,
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, std::filesystem::path> const&  paths
         )
     : m_id(0U)
     , m_index_buffer()
@@ -499,7 +499,7 @@ buffers_binding_data::buffers_binding_data(
 buffers_binding_data::buffers_binding_data(
         async::finalise_load_on_destroy_ptr const  finaliser,
         natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
-        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, std::filesystem::path> const&  paths
         )
     : m_id(0U)
     , m_index_buffer()

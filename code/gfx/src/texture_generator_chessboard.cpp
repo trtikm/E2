@@ -6,13 +6,13 @@
 namespace gfx {
 
 
-boost::filesystem::path  chessboard_texture_file_path()
+std::filesystem::path  chessboard_texture_file_path()
 {
     return "generic/texture/chessboard_texture";
 }
 
 
-boost::filesystem::path  chessboard_texture_image_path()
+std::filesystem::path  chessboard_texture_image_path()
 {
     return chessboard_texture_file_path() / "image";
 }

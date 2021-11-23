@@ -4,7 +4,7 @@
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/msgstream.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <fstream>
 
 namespace gfx { namespace detail {
@@ -16,9 +16,9 @@ skeleton_alignment_data::skeleton_alignment_data(async::finalise_load_on_destroy
 {
     TMPROF_BLOCK();
 
-    if (!boost::filesystem::exists(get_skeleton_alignment_path()))
+    if (!std::filesystem::exists(get_skeleton_alignment_path()))
         throw std::runtime_error(msgstream() << "The file '" << get_skeleton_alignment_path() << "' does not exists.");
-    if (!boost::filesystem::is_regular_file(get_skeleton_alignment_path()))
+    if (!std::filesystem::is_regular_file(get_skeleton_alignment_path()))
         throw std::runtime_error(msgstream() << "The path '" << get_skeleton_alignment_path()
                                              << "' does not reference a regular file.");
 

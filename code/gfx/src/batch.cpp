@@ -7,8 +7,8 @@
 #include <utility/timeprof.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/canonical_path.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
+#include <filesystem>
 #include <limits>
 #include <iostream>
 #include <fstream>
@@ -231,8 +231,8 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
                 finaliser
             };
 
-    std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path>  buffer_paths;
-    std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path>  texture_paths;
+    std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, std::filesystem::path>  buffer_paths;
+    std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, std::filesystem::path>  texture_paths;
     for (auto const& location : vs_input)
     {
         switch (location)
@@ -282,7 +282,7 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
     {
         msgstream  sstr;
         sstr << "PATH="
-             << (boost::filesystem::path(get_available_resources().data_root_dir()) / get_available_resources().mesh_path()).string()
+             << (std::filesystem::path(get_available_resources().data_root_dir()) / get_available_resources().mesh_path()).string()
              << ",BUFFERS=";
         std::set<std::string>  names;
         for (auto const& x : buffer_paths)
@@ -295,7 +295,7 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
     m_buffers_binding = 
             get_available_resources().has_index_buffer() ?
                     buffers_binding(
-                        (boost::filesystem::path(get_available_resources().data_root_dir())
+                        (std::filesystem::path(get_available_resources().data_root_dir())
                             / get_available_resources().mesh_path()
                             / "indices.txt"
                             ).string(),
@@ -314,11 +314,11 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
 
     std::string  textures_binding_uid;
     {
-        std::string const  root_dir = boost::filesystem::path(get_available_resources().data_root_dir()).normalize().string();
+        std::string const  root_dir = std::filesystem::weakly_canonical(get_available_resources().data_root_dir()).string();
         std::set<std::string>  names;
         for (auto const& x : texture_paths)
         {
-            std::string  p = boost::filesystem::path(x.second).normalize().string();
+            std::string  p = std::filesystem::weakly_canonical(x.second).string();
             if (p.find(root_dir) == 0UL)
                 p = p.substr(root_dir.size());
             names.insert(msgstream() << name(x.first).substr(16) << "=" << p); // 16 == len("TEXTURE_SAMPLER_");
@@ -337,7 +337,7 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
                     modelspace()
                     :
                     modelspace(
-                        boost::filesystem::path(get_available_resources().data_root_dir())
+                        std::filesystem::path(get_available_resources().data_root_dir())
                         / get_available_resources().skeletal()->animation_dir()
                         / "pose.txt",
                         10U,

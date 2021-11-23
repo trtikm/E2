@@ -6,8 +6,8 @@
 #include <utility/msgstream.hpp>
 #include <utility/read_line.hpp>
 #include <utility/canonical_path.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <filesystem>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -27,15 +27,15 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
 {
     TMPROF_BLOCK();
 
-    if (!boost::filesystem::is_regular_file(batch_pathname()))
+    if (!std::filesystem::is_regular_file(batch_pathname()))
         throw std::runtime_error(msgstream() << "Cannot access the passed batch file '" << batch_pathname() << "'.");
 
-    boost::filesystem::path  data_root_dir = batch_pathname();
+    std::filesystem::path  data_root_dir = batch_pathname();
     while (true)
     {
         if (data_root_dir.empty())
             throw std::runtime_error(msgstream() << "Cannot find 'batch' parent directory in path: " << batch_pathname());
-        boost::filesystem::path const  current_dir = data_root_dir.filename();
+        std::filesystem::path const  current_dir = data_root_dir.filename();
         data_root_dir = data_root_dir.parent_path();
         if (current_dir == "batch")
             break;
@@ -47,13 +47,13 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
 
     m_mesh_path = std::string("mesh/") + batch_ptree.get<std::string>("mesh");
 
-    boost::filesystem::path const  buffers_dir = data_root_dir / m_mesh_path;
-    if (!boost::filesystem::is_directory(buffers_dir))
+    std::filesystem::path const  buffers_dir = data_root_dir / m_mesh_path;
+    if (!std::filesystem::is_directory(buffers_dir))
         throw std::runtime_error(msgstream() << "The buffer's directory '" << buffers_dir << "' does not exist.");
 
     std::unordered_set<natural_8_bit>  valid_texcoord_indices;
-    for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(buffers_dir))
-        if (boost::filesystem::is_regular_file(entry.path()))
+    for (std::filesystem::directory_entry const& entry : std::filesystem::directory_iterator(buffers_dir))
+        if (std::filesystem::is_regular_file(entry.path()))
         {
             std::string const  fname = entry.path().filename().string();
             if (fname == "indices.txt")
@@ -117,7 +117,7 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
                                                             << texcoord_index);
 
                 std::string const  texure_pathname = (data_root_dir / "texture" / it->second.get<std::string>("pathname")).string();
-                if (!boost::filesystem::is_regular_file(texure_pathname))
+                if (!std::filesystem::is_regular_file(texure_pathname))
                     throw std::runtime_error(msgstream() << "The texture type '" << it->first
                                                             << "' references a non-existing texture file: "
                                                             << texure_pathname);
@@ -145,26 +145,26 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
     if (m_skins.empty())
         throw std::runtime_error(msgstream() << "No skin was found.");
 
-    boost::filesystem::path const  skeletal_dir = buffers_dir / "skeletal";
-    if (boost::filesystem::is_directory(skeletal_dir))
+    std::filesystem::path const  skeletal_dir = buffers_dir / "skeletal";
+    if (std::filesystem::is_directory(skeletal_dir))
     {
         if (batch_ptree.count("skeleton") == 0UL)
             throw std::runtime_error(msgstream() << "Skeleton name is missing in batch file '" << batch_pathname() << "'.");
-        boost::filesystem::path const  alignment_pathname = canonical_path(skeletal_dir / "alignment.txt");
-        if (!boost::filesystem::is_regular_file(alignment_pathname))
+        std::filesystem::path const  alignment_pathname = canonical_path(skeletal_dir / "alignment.txt");
+        if (!std::filesystem::is_regular_file(alignment_pathname))
             throw std::runtime_error(msgstream() << "Cannot locate file:" << alignment_pathname);
 
-        boost::filesystem::path const  indices_pathname = canonical_path(skeletal_dir / "indices.txt");
-        if (!boost::filesystem::is_regular_file(indices_pathname))
+        std::filesystem::path const  indices_pathname = canonical_path(skeletal_dir / "indices.txt");
+        if (!std::filesystem::is_regular_file(indices_pathname))
             throw std::runtime_error(msgstream() << "Cannot locate file:" << indices_pathname);
 
-        boost::filesystem::path const  weights_pathname = canonical_path(skeletal_dir / "weights.txt");
-        if (!boost::filesystem::is_regular_file(weights_pathname))
+        std::filesystem::path const  weights_pathname = canonical_path(skeletal_dir / "weights.txt");
+        if (!std::filesystem::is_regular_file(weights_pathname))
             throw std::runtime_error(msgstream() << "Cannot locate file:" << weights_pathname);
 
         std::string const  animation_dir = std::string("animation/") + batch_ptree.get<std::string>("skeleton");
-        boost::filesystem::path const  skeleton_dir = canonical_path(data_root_dir / animation_dir);
-        if (!boost::filesystem::is_directory(skeleton_dir))
+        std::filesystem::path const  skeleton_dir = canonical_path(data_root_dir / animation_dir);
+        if (!std::filesystem::is_directory(skeleton_dir))
             throw std::runtime_error(msgstream() << "Cannot access the reference skeleton directory:" << skeleton_dir);
 
         m_skeletal = std::make_shared<skeletal_info>(

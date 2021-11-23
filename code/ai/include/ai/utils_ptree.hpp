@@ -4,7 +4,7 @@
 #   include <angeo/tensor_math.hpp>
 #   include <utility/assumptions.hpp>
 #   include <boost/property_tree/ptree.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <functional>
 #   include <memory>
 #   include <vector>
@@ -13,8 +13,8 @@
 namespace ai {
 
 
-void  load_ptree(boost::property_tree::ptree&  ptree, boost::filesystem::path const&  ptree_pathname);
-std::shared_ptr<boost::property_tree::ptree>  load_ptree(boost::filesystem::path const&  ptree_pathname);
+void  load_ptree(boost::property_tree::ptree&  ptree, std::filesystem::path const&  ptree_pathname);
+std::shared_ptr<boost::property_tree::ptree>  load_ptree(std::filesystem::path const&  ptree_pathname);
 
 
 vector3  read_vector3(boost::property_tree::ptree const&  ptree);

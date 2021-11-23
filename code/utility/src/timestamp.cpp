@@ -1,7 +1,7 @@
 #include <utility/timestamp.hpp>
 #include <utility/config.hpp>
 #include <boost/chrono.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 #include <ctime>
 #include <iomanip>
 
@@ -35,9 +35,9 @@ std::string  compute_timestamp()
 
 std::string  extend_file_path_name_by_timestamp(std::string const& file_path_name)
 {
-    boost::filesystem::path const file(file_path_name);
-    boost::filesystem::path path = file.branch_path();
-    boost::filesystem::path name = file.filename().replace_extension("");
-    boost::filesystem::path ext = file.extension();
+    std::filesystem::path const file(file_path_name);
+    std::filesystem::path path = file.parent_path();
+    std::filesystem::path name = file.filename().replace_extension("");
+    std::filesystem::path ext = file.extension();
     return (path / (name.string() + compute_timestamp() + ext.string())).string();
 }

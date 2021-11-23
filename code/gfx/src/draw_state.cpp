@@ -4,8 +4,8 @@
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/msgstream.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <filesystem>
 #include <unordered_map>
 #include <iostream>
 #include <fstream>
@@ -109,9 +109,9 @@ draw_state_data::draw_state_data(async::finalise_load_on_destroy_ptr const  fina
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
+    std::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
 
-    if (!boost::filesystem::exists(pathname))
+    if (!std::filesystem::exists(pathname))
         throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' does not exist.");
 
     boost::property_tree::ptree draw_state_ptree;

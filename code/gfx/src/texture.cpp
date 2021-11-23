@@ -6,8 +6,8 @@
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/canonical_path.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <fstream>
 #include <stdexcept>
 
 namespace gfx { namespace detail {
@@ -17,12 +17,12 @@ texture_file_data::texture_file_data(async::finalise_load_on_destroy_ptr const  
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = finaliser->get_key().get_unique_id();
+    std::filesystem::path const  path = finaliser->get_key().get_unique_id();
 
-    ASSUMPTION(boost::filesystem::exists(path));
-    ASSUMPTION(boost::filesystem::is_regular_file(path));
+    ASSUMPTION(std::filesystem::exists(path));
+    ASSUMPTION(std::filesystem::is_regular_file(path));
 
-    if (boost::filesystem::file_size(path) < 4ULL)
+    if (std::filesystem::file_size(path) < 4ULL)
         throw std::runtime_error(msgstream() << "The passed file '" << path
                                              << "' is not a gfx file (wrong size).");
 
@@ -36,7 +36,7 @@ texture_file_data::texture_file_data(async::finalise_load_on_destroy_ptr const  
         throw std::runtime_error(msgstream() << "Cannot read a path to an image file in the file '"
                                                 << path << "'.");
 
-    boost::filesystem::path const  image_file = canonical_path(path.parent_path() / line);
+    std::filesystem::path const  image_file = canonical_path(path.parent_path() / line);
 
     if (!read_line(istr,line))
         throw std::runtime_error(
@@ -136,7 +136,7 @@ texture_file_data::~texture_file_data()
 
 
 void  texture_file_data::initialise(
-        boost::filesystem::path const&  image_pathname,
+        std::filesystem::path const&  image_pathname,
         natural_32_bit const  pixel_format,
         natural_32_bit const  x_wrapping_type,
         natural_32_bit const  y_wrapping_type,
@@ -146,7 +146,7 @@ void  texture_file_data::initialise(
 {
     TMPROF_BLOCK();
 
-    if (!image_pathname.empty() && (!boost::filesystem::exists(image_pathname) || !boost::filesystem::is_regular_file(image_pathname)))
+    if (!image_pathname.empty() && (!std::filesystem::exists(image_pathname) || !std::filesystem::is_regular_file(image_pathname)))
         throw std::runtime_error(msgstream() << "The image file '" << image_pathname << "' does not exist.");
     if (pixel_format != GL_RGB
         && pixel_format != GL_RGBA
@@ -186,10 +186,10 @@ texture_image_data::texture_image_data(async::finalise_load_on_destroy_ptr const
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = finaliser->get_key().get_unique_id();
+    std::filesystem::path const  path = finaliser->get_key().get_unique_id();
 
-    ASSUMPTION(boost::filesystem::exists(path));
-    ASSUMPTION(boost::filesystem::is_regular_file(path));
+    ASSUMPTION(std::filesystem::exists(path));
+    ASSUMPTION(std::filesystem::is_regular_file(path));
 
     image_rgba_8888  img;
     load_png_image(path, img);
@@ -333,7 +333,7 @@ namespace gfx { namespace detail {
 
 textures_binding_data::textures_binding_data(
         async::finalise_load_on_destroy_ptr finaliser,
-        std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path> const&  texture_paths
+        std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, std::filesystem::path> const&  texture_paths
         )
     : m_bindings()
     , m_ready(false)

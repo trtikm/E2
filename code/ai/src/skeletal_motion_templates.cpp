@@ -10,19 +10,19 @@
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <filesystem>
 #include <unordered_set>
 #include <deque>
 
 namespace ai { namespace detail { namespace {
 
 
-std::unique_ptr<boost::property_tree::ptree>  load_ptree(boost::filesystem::path const&  ptree_pathname)
+std::unique_ptr<boost::property_tree::ptree>  load_ptree(std::filesystem::path const&  ptree_pathname)
 {
     std::unique_ptr<boost::property_tree::ptree>  ptree(new boost::property_tree::ptree);
-    if (!boost::filesystem::is_regular_file(ptree_pathname))
+    if (!std::filesystem::is_regular_file(ptree_pathname))
         throw std::runtime_error(msgstream() << "Cannot access the file '" << ptree_pathname << "'.");
     boost::property_tree::read_info(ptree_pathname.string(), *ptree);
     return std::move(ptree);
@@ -128,20 +128,20 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             );
 
     std::unordered_set<std::string>  visited;
-    std::deque<boost::filesystem::path>  work_list{ finaliser->get_key().get_unique_id() };
+    std::deque<std::filesystem::path>  work_list{ finaliser->get_key().get_unique_id() };
     do
     {
-        boost::filesystem::path const  pathname = work_list.front();
+        std::filesystem::path const  pathname = work_list.front();
         work_list.pop_front();
 
         if (visited.count(pathname.string()) != 0UL)
             continue;
         visited.insert(pathname.string());
 
-        if (!boost::filesystem::is_directory(pathname))
+        if (!std::filesystem::is_directory(pathname))
             throw std::runtime_error(msgstream() << "Cannot access directory '" << pathname << "'.");
 
-        if (boost::filesystem::is_regular_file(pathname / "imports.txt"))
+        if (std::filesystem::is_regular_file(pathname / "imports.txt"))
         {
             std::ifstream  istr;
             angeo::open_file_stream_for_reading(istr, pathname / "imports.txt");
@@ -153,12 +153,12 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (pose_frames.empty() && boost::filesystem::is_regular_file(pathname / "pose.txt"))
+        if (pose_frames.empty() && std::filesystem::is_regular_file(pathname / "pose.txt"))
             pose_frames = motion_template::reference_frames_type(pathname / "pose.txt", 10U, ultimate_finaliser);
 
-        if (names.empty() && boost::filesystem::is_regular_file(pathname / "names.txt"))
+        if (names.empty() && std::filesystem::is_regular_file(pathname / "names.txt"))
         {
-            boost::filesystem::path const  names_pathname = pathname / "names.txt";
+            std::filesystem::path const  names_pathname = pathname / "names.txt";
 
             std::ifstream  istr;
             angeo::open_file_stream_for_reading(istr, names_pathname);
@@ -179,9 +179,9 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (hierarchy.parents.empty() && boost::filesystem::is_regular_file(pathname / "parents.txt"))
+        if (hierarchy.parents.empty() && std::filesystem::is_regular_file(pathname / "parents.txt"))
         {
-            boost::filesystem::path const  parents_pathname = pathname / "parents.txt";
+            std::filesystem::path const  parents_pathname = pathname / "parents.txt";
 
             std::ifstream  istr;
             angeo::open_file_stream_for_reading(istr, parents_pathname);
@@ -209,9 +209,9 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             angeo::skeleton_compute_child_bones(hierarchy.parents, hierarchy.children);
         }
 
-        if (lengths.empty() && boost::filesystem::is_regular_file(pathname / "lengths.txt"))
+        if (lengths.empty() && std::filesystem::is_regular_file(pathname / "lengths.txt"))
         {
-            boost::filesystem::path const  lengths_pathname = pathname / "lengths.txt";
+            std::filesystem::path const  lengths_pathname = pathname / "lengths.txt";
             std::ifstream  istr;
             angeo::open_file_stream_for_reading(istr, lengths_pathname);
 
@@ -234,9 +234,9 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (joints.empty() && boost::filesystem::is_regular_file(pathname / "joints.txt"))
+        if (joints.empty() && std::filesystem::is_regular_file(pathname / "joints.txt"))
         {
-            boost::filesystem::path const  joints_pathname = pathname / "joints.txt";
+            std::filesystem::path const  joints_pathname = pathname / "joints.txt";
             
             std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(joints_pathname);
 	        for (boost::property_tree::ptree::value_type const&  void_and_bone_joints : *ptree)
@@ -262,7 +262,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (boost::filesystem::is_regular_file(pathname / "look_at.txt"))
+        if (std::filesystem::is_regular_file(pathname / "look_at.txt"))
         {
             std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "look_at.txt");
             look_at_origin_bone = ptree->get<natural_32_bit>("origin_bone");
@@ -282,7 +282,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (boost::filesystem::is_regular_file(pathname / "aim_at.txt"))
+        if (std::filesystem::is_regular_file(pathname / "aim_at.txt"))
         {
             std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "aim_at.txt");
             aim_at_origin_bone = ptree->get<natural_32_bit>("origin_bone");
@@ -305,7 +305,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (boost::filesystem::is_regular_file(pathname / "transitions.txt"))
+        if (std::filesystem::is_regular_file(pathname / "transitions.txt"))
         {
             std::unique_ptr<boost::property_tree::ptree> const  ptree = load_ptree(pathname / "transitions.txt");
             default_transition_props.first = ptree->get<natural_32_bit>("default_transition_props.index");
@@ -332,29 +332,29 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(pathname))
+        for (std::filesystem::directory_entry const& entry : std::filesystem::directory_iterator(pathname))
         {
-            if (!boost::filesystem::is_directory(entry.path()))
+            if (!std::filesystem::is_directory(entry.path()))
                 continue;
 
-            boost::filesystem::path const  entry_pathname = canonical_path(entry.path());
+            std::filesystem::path const  entry_pathname = canonical_path(entry.path());
             std::string const  dir_name = entry_pathname.filename().string();
 
             motion_template&  record = motions_map[dir_name];
 
-            if (boost::filesystem::is_regular_file(entry_pathname / "keyframe0.txt"))
+            if (std::filesystem::is_regular_file(entry_pathname / "keyframe0.txt"))
                 record.keyframes = motion_template::keyframes_type(entry_pathname, 1U, ultimate_finaliser);
 
-            if (boost::filesystem::is_directory(entry_pathname / "!meta"))
+            if (std::filesystem::is_directory(entry_pathname / "!meta"))
             {
-                boost::filesystem::path const  meta_pathname = entry_pathname / "!meta";
+                std::filesystem::path const  meta_pathname = entry_pathname / "!meta";
 
-                if (record.reference_frames.empty() && boost::filesystem::is_regular_file(meta_pathname / "reference_frames.txt"))
+                if (record.reference_frames.empty() && std::filesystem::is_regular_file(meta_pathname / "reference_frames.txt"))
                     record.reference_frames = motion_template::reference_frames_type(meta_pathname / "reference_frames.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::reference_frames");
 
-                if (record.bboxes.empty() && boost::filesystem::is_regular_file(meta_pathname / "bboxes.txt"))
+                if (record.bboxes.empty() && std::filesystem::is_regular_file(meta_pathname / "bboxes.txt"))
                 {
-                    boost::filesystem::path const  bboxes_pathname = meta_pathname / "bboxes.txt";
+                    std::filesystem::path const  bboxes_pathname = meta_pathname / "bboxes.txt";
                     std::ifstream  istr;
                     angeo::open_file_stream_for_reading(istr, bboxes_pathname);
                     natural_32_bit  num_bboxes = angeo::read_num_records(istr, bboxes_pathname);

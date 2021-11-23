@@ -6,7 +6,7 @@
 #   include <gfx/spatial_boundary.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/async_resource_load.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <array>
 #   include <vector>
 #   include <unordered_map>
@@ -129,7 +129,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
         : async::resource_accessor<detail::buffer_file_data>()
     {}
 
-    buffer( boost::filesystem::path const&  path,
+    buffer( std::filesystem::path const&  path,
             async::load_priority_type const  priority,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
@@ -141,7 +141,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     {}
 
     explicit buffer(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::buffer_file_data>(
@@ -152,7 +152,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     {}
 
     void  insert_load_request(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
     {
         async::resource_accessor<detail::buffer_file_data>::insert_load_request(
@@ -303,14 +303,14 @@ struct buffers_binding_data
 
     buffers_binding_data(
             async::finalise_load_on_destroy_ptr const  finaliser,
-            boost::filesystem::path const&  index_buffer_path,
-            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
+            std::filesystem::path const&  index_buffer_path,
+            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, std::filesystem::path> const&  paths
             );
 
     buffers_binding_data(
             async::finalise_load_on_destroy_ptr const  finaliser,
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
-            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
+            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, std::filesystem::path> const&  paths
             );
 
     ~buffers_binding_data();
@@ -395,8 +395,8 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
     {}
 
     buffers_binding(
-            boost::filesystem::path const&  index_buffer_path,
-            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
+            std::filesystem::path const&  index_buffer_path,
+            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, std::filesystem::path> const&  paths,
             std::string const&  key = "",
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
@@ -410,7 +410,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
 
     buffers_binding(
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
-            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
+            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, std::filesystem::path> const&  paths,
             std::string const&  key = "",
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )

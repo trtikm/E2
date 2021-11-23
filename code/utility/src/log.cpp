@@ -5,7 +5,8 @@
 #include <boost/log/attributes/clock.hpp>
 #include <boost/log/attributes/current_thread_id.hpp>
 #include <boost/chrono.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <fstream>
 #include <vector>
 #include <iostream>
 #include <sstream>
@@ -78,7 +79,7 @@ logging_setup_caller::logging_setup_caller(std::string const& log_file_name,
         }(log_file_name,add_creation_timestamp_to_filename,add_default_file_extension)
         )
 {
-    boost::filesystem::ofstream f(m_log_file_name);
+    std::ofstream f(m_log_file_name);
     f << "<!DOCTYPE html>\n"
          "<html>\n"
          "<head>\n"
@@ -123,7 +124,7 @@ logging_setup_caller::logging_setup_caller(std::string const& log_file_name,
 logging_setup_caller::~logging_setup_caller()
 {
     boost::log::core::get()->remove_all_sinks();
-    boost::filesystem::ofstream f(m_log_file_name,std::ios::out | std::ios::app);
+    std::ofstream f(m_log_file_name,std::ios::out | std::ios::app);
     f << "    </table>\n"
          "</body>\n"
          "</html>\n"

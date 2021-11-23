@@ -30,9 +30,9 @@ struct  imported_scene : public async::resource_accessor<imported_scene_data>
 {
     using  super = async::resource_accessor<imported_scene_data>;
     imported_scene() : super() {}
-    imported_scene(boost::filesystem::path const&  path) : super(key_from_path(path), 1U, nullptr) {}
+    imported_scene(std::filesystem::path const&  path) : super(key_from_path(path), 1U, nullptr) {}
     boost::property_tree::ptree const&  hierarchy() const { return resource().hierarchy(); }
-    static async::key_type  key_from_path(boost::filesystem::path const&  path);
+    static async::key_type  key_from_path(std::filesystem::path const&  path);
 };
 
 

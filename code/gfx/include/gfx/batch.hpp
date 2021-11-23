@@ -10,7 +10,7 @@
 #   include <gfx/skeleton_alignment.hpp>
 #   include <gfx/draw_state.hpp>
 #   include <utility/async_resource_load.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <unordered_set>
 #   include <functional>
 #   include <memory>
@@ -32,7 +32,7 @@ struct batch_data
 {
     batch_data(
             async::finalise_load_on_destroy_ptr const  finaliser,
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             effects_config const  effects_,
             std::string const&  skin_name_
             )
@@ -161,7 +161,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
         : super()
     {}
 
-    batch(  boost::filesystem::path const&  path,
+    batch(  std::filesystem::path const&  path,
             effects_config const  effects,
             std::string const&  skin_name = "default",
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr

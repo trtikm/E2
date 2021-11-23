@@ -5,11 +5,11 @@
 #   include <gfx/texture.hpp>
 #   include <gfx/image.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <array>
 #   include <vector>
 #   include <string>
-#   include <boost/filesystem/path.hpp>
-#   include <boost/property_tree/ptree.hpp>
+#   include <filesystem>
 
 namespace gfx {
 
@@ -358,10 +358,10 @@ struct  font_mono_props
 };
 
 
-void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_props&  output);
+void  load_font_mono_props(std::filesystem::path const&  pathname, font_mono_props&  output);
 void  save_font_mono_props(
-        boost::filesystem::path const&  pathname,
-        boost::filesystem::path const&  data_root_dir,
+        std::filesystem::path const&  pathname,
+        std::filesystem::path const&  data_root_dir,
         font_mono_props const&  props
         );
 void  build_font_batch_template_if_not_built_yet(font_mono_props const&  props, std::string const&  id = "");

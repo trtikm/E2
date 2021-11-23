@@ -3,8 +3,8 @@
 #include <utility/config.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <fstream>
 #include <stdexcept>
 #include <iostream>
 #if PLATFORM() == PLATFORM_WINDOWS()
@@ -19,7 +19,7 @@ extern void run(int argc, char* argv[]);
 static void save_crash_report(std::string const& crash_message)
 {
     std::cout << "ERROR: " << crash_message << "\n";
-    boost::filesystem::ofstream  ofile( get_program_name() + "_CRASH.txt", std::ios_base::app );
+    std::ofstream  ofile( get_program_name() + "_CRASH.txt", std::ios_base::app );
     ofile << crash_message << "\n";
 }
 #endif

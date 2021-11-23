@@ -11,10 +11,10 @@
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 #include <utility/config.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
+#include <filesystem>
 #include <algorithm>
 #include <sstream>
 
@@ -946,7 +946,7 @@ object_guid  simulation_context::load_batch(
             folder_guid,
             name,
             gfx::batch(
-                    boost::filesystem::path(get_data_root_dir()) / "batch" / relative_disk_path,
+                    std::filesystem::path(get_data_root_dir()) / "batch" / relative_disk_path,
                     gfx::default_effects_config(),
                     skin_name
                     ),
@@ -3553,7 +3553,7 @@ void  simulation_context::process_pending_late_requests()
                     gfx::batch const&  first_batch = request.skeleton_attached_batches.front().second;
                     ASSUMPTION(first_batch.get_available_resources().skeletal() != nullptr);
                     request.motion_templates = ai::skeletal_motion_templates(
-                            boost::filesystem::path(get_data_root_dir())
+                            std::filesystem::path(get_data_root_dir())
                                 / first_batch.get_available_resources().skeletal()->animation_dir(),
                             1U,
                             nullptr

@@ -145,7 +145,7 @@ struct  simulator : public com::simulator
         // TODO: Implement tool's custom render here.
     }
 
-    boost::filesystem::path  get_font_pathname() const
+    std::filesystem::path  get_font_pathname() const
     {
         return canonical_path(get_program_options()->data_root()) / "font" / get_program_options()->font_file_name();
     }

@@ -181,7 +181,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     {}
 
     batch_available_resources(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
         : async::resource_accessor<detail::batch_available_resources_data>(
             {"gfx::batch_available_resources", path.string()},
@@ -191,7 +191,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     {}
 
     void  insert_load_request(
-            boost::filesystem::path const&  path,
+            std::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
     {

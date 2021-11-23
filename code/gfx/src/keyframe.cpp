@@ -5,7 +5,8 @@
 #include <utility/timeprof.hpp>
 #include <utility/canonical_path.hpp>
 #include <utility/msgstream.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
+#include <fstream>
 
 namespace gfx { namespace detail {
 
@@ -18,12 +19,12 @@ keyframe_data::keyframe_data(async::finalise_load_on_destroy_ptr const  finalise
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
+    std::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
 
-    if (!boost::filesystem::exists(pathname))
+    if (!std::filesystem::exists(pathname))
         throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' does not exist.");
 
-    if (boost::filesystem::file_size(pathname) < 4ULL)
+    if (std::filesystem::file_size(pathname) < 4ULL)
         throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' is not a gfx file (wrong size).");
 
     std::ifstream  istr(pathname.string(),std::ios_base::binary);
@@ -63,9 +64,9 @@ keyframes_data::keyframes_data(
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  keyframes_dir = finaliser->get_key().get_unique_id();
+    std::filesystem::path const  keyframes_dir = finaliser->get_key().get_unique_id();
 
-    if (!boost::filesystem::is_directory(keyframes_dir))
+    if (!std::filesystem::is_directory(keyframes_dir))
         throw std::runtime_error("Cannot access the directory of keyframes: " + keyframes_dir.string());
 
     async::finalise_load_on_destroy_ptr const  keyframes_finaliser =
@@ -108,7 +109,7 @@ keyframes_data::keyframes_data(
                 finaliser
                 );
 
-    for (boost::filesystem::directory_entry const& entry : boost::filesystem::directory_iterator(keyframes_dir))
+    for (std::filesystem::directory_entry const& entry : std::filesystem::directory_iterator(keyframes_dir))
     {
         std::string const  filename = entry.path().filename().string();
         std::string const  extension = entry.path().filename().extension().string();
@@ -123,7 +124,7 @@ keyframes_data::keyframes_data(
             auto  to_bones_ptr = std::make_shared<translation_map>();
             auto  from_bones_ptr = std::make_shared<translation_map>();
 
-            boost::filesystem::path const  parents_pathname = canonical_path(entry.path());
+            std::filesystem::path const  parents_pathname = canonical_path(entry.path());
 
             std::ifstream  istr;
             angeo::open_file_stream_for_reading(istr, parents_pathname);

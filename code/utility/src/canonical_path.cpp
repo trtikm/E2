@@ -1,12 +1,12 @@
 #include <utility/canonical_path.hpp>
 #include <utility/timeprof.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 
-boost::filesystem::path  canonical_path(boost::filesystem::path const&  path)
+std::filesystem::path  canonical_path(std::filesystem::path const&  path)
 {
     TMPROF_BLOCK();
-    if (!boost::filesystem::exists(path))
-        return boost::filesystem::absolute(path);
-    return boost::filesystem::canonical(path);
+    if (!std::filesystem::exists(path))
+        return std::filesystem::absolute(path);
+    return std::filesystem::canonical(path);
 }

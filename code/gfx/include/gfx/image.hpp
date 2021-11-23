@@ -2,7 +2,7 @@
 #   define GFX_IMAGE_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <vector>
 
 namespace gfx {
@@ -16,8 +16,8 @@ struct image_rgba_8888
 };
 
 
-void  load_png_image(boost::filesystem::path const&  path, image_rgba_8888&  img);
-void  save_png_image(boost::filesystem::path const&  path, image_rgba_8888 const&  img);
+void  load_png_image(std::filesystem::path const&  path, image_rgba_8888&  img);
+void  save_png_image(std::filesystem::path const&  path, image_rgba_8888 const&  img);
 void  flip_image_vertically(image_rgba_8888&  img);
 
 

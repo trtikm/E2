@@ -4,14 +4,14 @@
 #   include <osi/opengl.hpp>
 #   include <gfx/texture.hpp>
 #   include <utility/basic_numeric_types.hpp>
-#   include <boost/filesystem/path.hpp>
+#   include <filesystem>
 #   include <string>
 
 namespace gfx {
 
 
-boost::filesystem::path  chessboard_texture_file_path();
-boost::filesystem::path  chessboard_texture_image_path();
+std::filesystem::path  chessboard_texture_file_path();
+std::filesystem::path  chessboard_texture_image_path();
 std::string  chessboard_texture_id();
 
 

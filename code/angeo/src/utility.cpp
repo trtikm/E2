@@ -7,8 +7,9 @@
 #include <utility/read_line.hpp>
 #include <utility/canonical_path.hpp>
 #include <utility/msgstream.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 #include <iostream>
 #include <fstream>
@@ -51,11 +52,11 @@ void  compute_tangent_space_of_unit_vector(
 }
 
 
-void  open_file_stream_for_reading(std::ifstream&  istr, boost::filesystem::path const&  pathname)
+void  open_file_stream_for_reading(std::ifstream&  istr, std::filesystem::path const&  pathname)
 {
-    if (!boost::filesystem::is_regular_file(pathname))
+    if (!std::filesystem::is_regular_file(pathname))
         throw std::runtime_error(msgstream() << "Cannot access file '" << pathname << "'.");
-    if (boost::filesystem::file_size(pathname) < 4ULL)
+    if (std::filesystem::file_size(pathname) < 4ULL)
         throw std::runtime_error(msgstream() << "The file '" << pathname << "' is invalid (wrong size).");
 
     istr.open(pathname.string(), std::ios_base::binary);
@@ -64,7 +65,7 @@ void  open_file_stream_for_reading(std::ifstream&  istr, boost::filesystem::path
 }
 
 
-natural_32_bit  read_num_records(std::ifstream&  istr, boost::filesystem::path const&  pathname)
+natural_32_bit  read_num_records(std::ifstream&  istr, std::filesystem::path const&  pathname)
 {
     natural_32_bit  num_records;
     {
@@ -84,7 +85,7 @@ natural_32_bit  read_scalar(
         float_32_bit&  output,
         std::ifstream&  istr,
         natural_32_bit const  line_number,
-        boost::filesystem::path const&  pathname
+        std::filesystem::path const&  pathname
         )
 {
     std::string  line;
@@ -101,7 +102,7 @@ natural_32_bit  read_vector3(
         vector3&  output,
         std::ifstream&  istr,
         natural_32_bit const  line_number,
-        boost::filesystem::path const&  pathname
+        std::filesystem::path const&  pathname
         )
 {
     for (natural_32_bit  j = 0U; j != 3U; ++j)
@@ -121,7 +122,7 @@ natural_32_bit  read_unit_quaternion(
         quaternion&  output,
         std::ifstream&  istr,
         natural_32_bit const  line_number,
-        boost::filesystem::path const&  pathname
+        std::filesystem::path const&  pathname
         )
 {
     float_32_bit  coords[4];
@@ -143,7 +144,7 @@ natural_32_bit  read_matrix33(
         matrix33&  output,
         std::ifstream&  istr,
         natural_32_bit const  line_number,
-        boost::filesystem::path const&  pathname
+        std::filesystem::path const&  pathname
         )
 {
     for (natural_32_bit i = 0U; i != 3U; ++i)
@@ -162,7 +163,7 @@ natural_32_bit  read_matrix33(
 
 void  read_coord_systems(
         std::ifstream&  istr,
-        boost::filesystem::path const&  pathname,
+        std::filesystem::path const&  pathname,
         natural_32_bit const  num_coord_systems_to_read,
         std::vector<coordinate_system>&  coord_systems
         )
@@ -184,7 +185,7 @@ void  read_coord_systems(
 
 natural_32_bit  read_all_coord_systems(
         std::ifstream&  istr,
-        boost::filesystem::path const&  pathname,
+        std::filesystem::path const&  pathname,
         std::vector<coordinate_system>&  coord_systems
         )
 {

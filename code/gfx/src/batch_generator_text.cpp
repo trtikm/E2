@@ -5,8 +5,8 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <filesystem>
 #include <stdexcept>
 #include <thread>
 #include <sstream>
@@ -14,17 +14,17 @@
 namespace gfx {
 
 
-void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_props&  output)
+void  load_font_mono_props(std::filesystem::path const&  pathname, font_mono_props&  output)
 {
-    if (!boost::filesystem::is_regular_file(pathname))
+    if (!std::filesystem::is_regular_file(pathname))
         throw std::runtime_error(msgstream() << "Cannot access the passed font file '" << pathname << "'.");
 
-    boost::filesystem::path  data_root_dir = pathname.parent_path();
+    std::filesystem::path  data_root_dir = pathname.parent_path();
     while (true)
     {
         if (data_root_dir.empty())
             throw std::runtime_error(msgstream() << "Cannot find 'font' parent directory in path: " << pathname);
-        boost::filesystem::path const  current_dir = data_root_dir.filename();
+        std::filesystem::path const  current_dir = data_root_dir.filename();
         data_root_dir = data_root_dir.parent_path();
         if (current_dir == "font")
             break;
@@ -54,13 +54,13 @@ void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_p
 
 
 void  save_font_mono_props(
-        boost::filesystem::path const&  pathname,
-        boost::filesystem::path const&  data_root_dir,
+        std::filesystem::path const&  pathname,
+        std::filesystem::path const&  data_root_dir,
         font_mono_props const&  props
         )
 {
     boost::property_tree::ptree  ptree;
-    ptree.add("font_texture", boost::filesystem::relative(props.font_texture, data_root_dir).string());
+    ptree.add("font_texture", std::filesystem::relative(props.font_texture, data_root_dir).string());
     ptree.add("min_ascii_code", props.min_ascii_code);
     ptree.add("max_ascii_code", props.max_ascii_code);
     ptree.add("max_chars_in_row", props.max_chars_in_row);
@@ -101,7 +101,7 @@ void  build_font_batch_template_if_not_built_yet(font_mono_props const&  props, 
         );
 
     textures_binding_paths_map_type const textures_binding_paths{
-        { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, boost::filesystem::path(props.font_texture) }
+        { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, std::filesystem::path(props.font_texture) }
     };
 
     texcoord_binding const  texcoord_binding_({
@@ -114,7 +114,7 @@ void  build_font_batch_template_if_not_built_yet(font_mono_props const&  props, 
         id.empty() ?
             async::generate_unique_custom_id(
                     "/generic/text/batch/__batch_template__<" +
-                    boost::filesystem::path(props.font_texture).filename().string() +
+                    std::filesystem::path(props.font_texture).filename().string() +
                     ">")
             :
             "/generic/text/batch/" + id,

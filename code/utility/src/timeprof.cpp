@@ -1,9 +1,9 @@
 #include <utility/timeprof.hpp>
 #include <utility/timestamp.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include <boost/noncopyable.hpp>
+#include <filesystem>
+#include <fstream>
 #include <list>
 #include <ostream>
 #include <map>
@@ -363,10 +363,10 @@ static std::string normalise_duration(float_64_bit const d, natural_32_bit const
     return sstr.str();
 }
 
-static boost::filesystem::path get_common_prefix(boost::filesystem::path const& p,
-                                                 boost::filesystem::path const& q)
+static std::filesystem::path get_common_prefix(std::filesystem::path const& p,
+                                                 std::filesystem::path const& q)
 {
-    boost::filesystem::path res;
+    std::filesystem::path res;
     auto pit = p.begin();
     auto qit = q.begin();
     for ( ; pit != p.end() && qit != q.end() && *pit == *qit; ++pit, ++qit)
@@ -374,14 +374,14 @@ static boost::filesystem::path get_common_prefix(boost::filesystem::path const& 
     return res;
 }
 
-static boost::filesystem::path get_relative_path(boost::filesystem::path const& dir,
-                                                 boost::filesystem::path const& file)
+static std::filesystem::path get_relative_path(std::filesystem::path const& dir,
+                                                 std::filesystem::path const& file)
 {
     auto dit = dir.begin();
     auto fit = file.begin();
     for ( ; dit != dir.end() && fit != file.end() && *dit == *fit; ++dit, ++fit)
         ;
-    boost::filesystem::path res;
+    std::filesystem::path res;
     for ( ; fit != file.end(); ++fit)
         res = res / *fit;
     return res;
@@ -408,10 +408,10 @@ std::ostream& print_time_profile_data_to_stream(
     if (summary_duration < 0.00001)
         summary_duration = 0.00001;
 
-    boost::filesystem::path common_path_prefix(
+    std::filesystem::path common_path_prefix(
         data.empty() ?
-            boost::filesystem::path("") :
-            boost::filesystem::path(data.front().file_name()).branch_path()
+            std::filesystem::path("") :
+            std::filesystem::path(data.front().file_name()).parent_path()
         );
     for (auto it = data.begin(); it != data.end(); ++it)
         if (it->number_of_executions() > 0ULL)
@@ -583,7 +583,7 @@ std::ostream& print_time_profile_to_stream(std::ostream& os)
 void print_time_profile_to_file(std::string const& file_path_name,
                                 bool const extend_file_name_by_timestamp)
 {
-    boost::filesystem::ofstream file(
+    std::ofstream file(
                 extend_file_name_by_timestamp ?
                         extend_file_path_name_by_timestamp(file_path_name) :
                         file_path_name
