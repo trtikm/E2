@@ -1,63 +1,18 @@
 #include <utility/log.hpp>
 #include <utility/timestamp.hpp>
 #include <utility/assumptions.hpp>
-#include <boost/log/utility/setup/file.hpp>
-#include <boost/log/attributes/clock.hpp>
-#include <boost/log/attributes/current_thread_id.hpp>
-#include <boost/chrono.hpp>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <vector>
 #include <iostream>
 #include <sstream>
 #include <ctime>
+#include <thread>
 
-static logging_severity_level global_minimal_severity_level = debug;
 
-logging_severity_level get_minimal_severity_level()
-{
-    return global_minimal_severity_level;
-}
+static logging_severity_level global_minimal_severity_level = LSL_DEBUG;
 
-void  set_minimal_severity_level(logging_severity_level const level)
-{
-    ASSUMPTION(level >= logging_severity_level::debug && level <= logging_severity_level::testing);
-    global_minimal_severity_level = level;
-}
-
-static bool LOG_SETUP(std::string const& log_file_name, logging_severity_level const minimal_severity_level)
-{
-    static bool first_call = true;
-    if (!first_call)
-    {
-        LOG(info,"LOG_SETUP was already called ==> ignoring this call.");
-        return false;
-    }
-    first_call = false;
-
-    boost::log::core::get()->add_global_attribute("TimeStamp",boost::log::attributes::local_clock());
-    boost::log::core::get()->add_global_attribute("ThreadID",boost::log::attributes::current_thread_id());
-
-    namespace expr = boost::log::expressions;
-    boost::log::add_file_log(
-        boost::log::keywords::file_name = log_file_name,
-        boost::log::keywords::auto_flush = true,
-        boost::log::keywords::open_mode = (std::ios::out | std::ios::app),
-        boost::log::keywords::format = //"[%TimeStamp%][%ThreadID%][%File%][%Line%][%Level%]: %Message%"
-            "    <tr>\n"
-            "        <td>%TimeStamp%</td>\n"
-            "        <td>%ThreadID%</td>\n"
-            "        <td>%File%</td>\n"
-            "        <td>%Line%</td>\n"
-            "        <td>%Level%</td>\n"
-            "        <td>%Message%</td>\n"
-            "    </tr>\n"
-    );
-
-    global_minimal_severity_level = minimal_severity_level;
-
-    return true;
-}
 
 std::string const& logging_severity_level_name(logging_severity_level const level)
 {
@@ -66,36 +21,77 @@ std::string const& logging_severity_level_name(logging_severity_level const leve
     return level_names.at(static_cast<unsigned int>(level));
 }
 
-logging_setup_caller::logging_setup_caller(std::string const& log_file_name,
-                                           bool const add_creation_timestamp_to_filename,
-                                           bool const add_default_file_extension,
-                                           logging_severity_level const minimal_severity_level)
-    : m_log_file_name(
-        [](std::string const& log_file_name, bool const add_creation_timestamp_to_filename,
-                                             bool const add_default_file_extension)
-        {
-            std::string const file_name = log_file_name + (add_default_file_extension ? ".html" : "");
-            return add_creation_timestamp_to_filename ? extend_file_path_name_by_timestamp(file_name) : file_name;
-        }(log_file_name,add_creation_timestamp_to_filename,add_default_file_extension)
-        )
+
+logging_severity_level logging_get_minimal_severity_level()
 {
-    std::ofstream f(m_log_file_name);
-    f << "<!DOCTYPE html>\n"
-         "<html>\n"
-         "<head>\n"
-         "    <meta charset=\"UTF-8\">\n"
-         "    <title>LOG-FILE: " << log_file_name << "</title>\n"
-         "    <style type=\"text/css\">\n"
-         "        body\n"
-         "        {\n"
-         "            font-family:arial;\n"
-         "            font-size:10px;\n"
-         "        }\n"
-         "        table,th,td\n"
-         "        {\n"
-         "            border:1px solid black;\n"
-         "            border-collapse:collapse;\n"
-         "        }\n"
+    return global_minimal_severity_level;
+}
+
+
+void  logging_set_minimal_severity_level(logging_severity_level const level)
+{
+    ASSUMPTION(level >= logging_severity_level::LSL_DEBUG && level <= logging_severity_level::LSL_FATAL);
+    global_minimal_severity_level = level;
+}
+
+
+html_file_logger& html_file_logger::instance()
+{
+    static html_file_logger  logger;
+    return logger;
+}
+
+
+html_file_logger::html_file_logger()
+    : m_log_file_ptr(nullptr)
+    , m_mutex()
+{}
+
+
+html_file_logger::~html_file_logger()
+{
+    close();
+}
+
+
+bool  html_file_logger::open(std::string const& log_file_path_name)
+{
+    close();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    std::string const file_name = [](std::string const& log_file_name) {
+            std::filesystem::path  fpath = log_file_name;
+            if (fpath.extension().string().empty())
+                fpath.replace_extension(".html");
+            return extend_file_path_name_by_timestamp(fpath.string(), "_LOG");
+            }(log_file_path_name);
+
+    m_log_file_ptr = std::make_unique<std::ofstream>(file_name, std::ios_base::app);
+    if (m_log_file_ptr == nullptr)
+        return false;
+    if (!m_log_file_ptr->good())
+    {
+        close();
+        return false;
+    }
+    *m_log_file_ptr
+        <<  "<!DOCTYPE html>\n"
+            "<html>\n"
+            "<head>\n"
+            "    <meta charset=\"UTF-8\">\n"
+            "    <title>LOG-FILE: " << file_name << "</title>\n"
+            "    <style type=\"text/css\">\n"
+            "        body\n"
+            "        {\n"
+            "            font-family:arial;\n"
+            "            font-size:10px;\n"
+            "        }\n"
+            "        table,th,td\n"
+            "        {\n"
+            "            border:1px solid black;\n"
+            "            border-collapse:collapse;\n"
+            "        }\n"
 //         "        th,td\n"
 //         "        {\n"
 //         "            padding:5px;\n"
@@ -104,31 +100,61 @@ logging_setup_caller::logging_setup_caller(std::string const& log_file_name,
 //         "        {\n"
 //         "            text-align:left;\n"
 //         "        }\n"
-         "   </style>\n"
-         "</head>\n"
-         "<body>\n"
+            "   </style>\n"
+            "</head>\n"
+            "<body>\n"
 //         "    <table style=\"width:300px\">\n"
-         "    <table>\n"
-         "    <tr>\n"
-         "        <th>Time stamp</th>\n"
-         "        <th>Thread ID</th>\n"
-         "        <th>File</th>\n"
-         "        <th>Line</th>\n"
-         "        <th>Level</th>\n"
-         "        <th>Message</th>\n"
-         "    </tr>\n"
-         ;
-    LOG_SETUP(m_log_file_name,minimal_severity_level);
+            "    <table>\n"
+            "    <tr>\n"
+            "        <th>Time stamp</th>\n"
+            "        <th>Thread ID</th>\n"
+            "        <th>File</th>\n"
+            "        <th>Line</th>\n"
+            "        <th>Level</th>\n"
+            "        <th>Message</th>\n"
+            "    </tr>\n"
+            ;
+    return m_log_file_ptr->good();
 }
 
-logging_setup_caller::~logging_setup_caller()
+
+void  html_file_logger::close()
 {
-    boost::log::core::get()->remove_all_sinks();
-    std::ofstream f(m_log_file_name,std::ios::out | std::ios::app);
-    f << "    </table>\n"
-         "</body>\n"
-         "</html>\n"
-         ;
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    if (m_log_file_ptr != nullptr)
+    {
+        if (m_log_file_ptr->good())
+            *m_log_file_ptr << "    </table>\n</body>\n</html>\n";
+        m_log_file_ptr->close();
+        m_log_file_ptr = nullptr;
+    }
+}
+
+
+void  html_file_logger::append(logging_severity_level const level, std::string const& file, int const line, std::string const& message)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    if (level < logging_get_minimal_severity_level())
+        return;
+
+    auto const  now = std::chrono::system_clock::now();
+    auto const  time_t = std::chrono::system_clock::to_time_t(now);
+    auto const  ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+    *m_log_file_ptr
+        << "    <tr>\n"
+        << "        <td>" << std::put_time(std::localtime(&time_t), "%Y-%m-%d--%H:%M:%S.") << ms.count() << "</td>\n"
+        << "        <td>" << std::this_thread::get_id() << "</td>\n"
+        << "        <td>" << file << "</td>\n"
+        << "        <td>" << line << "</td>\n"
+        << "        <td>" << logging_severity_level_name(level) << "</td>\n"
+        << "        <td>" << message << "</td>\n"
+        << "    </tr>\n"
+        ;
+
+    m_log_file_ptr->flush();
 }
 
 

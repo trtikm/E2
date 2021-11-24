@@ -49,7 +49,7 @@ void run(int argc, char* argv[])
                   << "'" << get_program_options()->get_output_image() << "'"
                   << ". Details:\n"
                   << e.what() << std::endl;
-        LOG(error, e.what());
+        LOG(LSL_ERROR, e.what());
         return;
     }
 }

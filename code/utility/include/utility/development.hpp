@@ -7,11 +7,11 @@
 #   include <string>
 #   include <iostream>
 
-#   define NOT_IMPLEMENTED_YET() { LOG(error,"NOT IMPLEMENTED YET !");\
+#   define NOT_IMPLEMENTED_YET() { LOG(LSL_ERROR,"NOT IMPLEMENTED YET !");\
                                    throw under_construction(FAIL_MSG("NOT IMPLEMENTED YET !")); }
-#   define NOT_SUPPORTED() { LOG(error,"NOT SUPPORTED !");\
+#   define NOT_SUPPORTED() { LOG(LSL_ERROR,"NOT SUPPORTED !");\
                              throw under_construction(FAIL_MSG("NOT SUPPORTED !")); }
-#   define TODO(MSG) { LOG(info,"TODO: " << MSG); }
+#   define TODO(MSG) { LOG(LSL_INFO,"TODO: " << MSG); }
 
 struct under_construction : public std::logic_error {
     explicit under_construction(std::string const& msg) : std::logic_error(msg) {}

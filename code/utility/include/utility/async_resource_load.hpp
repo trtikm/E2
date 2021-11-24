@@ -128,12 +128,7 @@ private:
             key_type const&  key,
             finalise_load_on_destroy_ptr const  parent,
             callback_function_type const&  callback 
-            )
-        : m_key(key)
-        , m_error_message()
-        , m_parent(parent)
-        , m_callback(callback)
-    {}
+            );
 
     key_type  m_key;
     std::string  m_error_message;

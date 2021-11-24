@@ -3564,22 +3564,22 @@ void  simulation_context::process_pending_late_requests()
             [this](request_data_insert_agent&  request) {
                 if (!request.config.loaded_successfully())
                 {
-                    LOG(error, "Failed to import agent config '" << request.config.key().get_unique_id() << "' " <<
-                               "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
+                    LOG(LSL_ERROR, "Failed to import agent config '" << request.config.key().get_unique_id() << "' " <<
+                                   "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
                     return;
                 }
                 if (!request.motion_templates.loaded_successfully())
                 {
-                    LOG(error, "Failed to import motion templates '" << request.motion_templates.key().get_unique_id() << "' " <<
-                               "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
+                    LOG(LSL_ERROR, "Failed to import motion templates '" << request.motion_templates.key().get_unique_id() << "' " <<
+                                   "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
                     return;
                 }
                 for (auto const&  name_and_batch : request.skeleton_attached_batches)
                     if (!name_and_batch.second.loaded_successfully())
                     {
-                        LOG(error, "Failed to import skeleton attached batch '" <<
-                                   name_and_batch.second.key().get_unique_id() << "' " <<
-                                   "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
+                        LOG(LSL_ERROR, "Failed to import skeleton attached batch '" <<
+                                       name_and_batch.second.key().get_unique_id() << "' " <<
+                                       "for agent imported under folder '" << name_of_folder(request.under_folder_guid) << "'.");
                         return;
                     }
                 if (!request.config.empty())

@@ -1,14 +1,24 @@
 #include <utility/timestamp.hpp>
 #include <utility/config.hpp>
-#include <boost/chrono.hpp>
+#include <chrono>
 #include <filesystem>
 #include <ctime>
 #include <iomanip>
+#include <sstream>
+
+
+static std::string const  program_start_timestamp = compute_timestamp();
+
+
+std::string const& get_program_start_timestamp()
+{
+    return program_start_timestamp;
+}
 
 
 std::string  compute_timestamp()
 {
-    std::time_t t = boost::chrono::system_clock::to_time_t(boost::chrono::system_clock::now());
+    std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 #   if COMPILER() == COMPILER_VC()
     struct tm timeinfo;
     localtime_s(&timeinfo, &t);
@@ -33,11 +43,19 @@ std::string  compute_timestamp()
     return sstr.str();
 }
 
-std::string  extend_file_path_name_by_timestamp(std::string const& file_path_name)
+std::string  extend_file_path_name_by_timestamp(
+        std::string const& file_path_name,
+        std::string const& suffix,
+        bool const use_start_timestamp
+        )
 {
     std::filesystem::path const file(file_path_name);
     std::filesystem::path path = file.parent_path();
     std::filesystem::path name = file.filename().replace_extension("");
     std::filesystem::path ext = file.extension();
-    return (path / (name.string() + compute_timestamp() + ext.string())).string();
+    return (path / (name.string() +
+                   (use_start_timestamp ? get_program_start_timestamp() : compute_timestamp()) +
+                   suffix +
+                   ext.string())
+           ).string();
 }

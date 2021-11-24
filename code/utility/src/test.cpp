@@ -54,20 +54,20 @@ void print_test_statistical_data_to_log_and_standard_output()
 
     if (total_num_failed_tests == 0)
     {
-        LOG(testing,"The testing was SUCCESSFUL. [Total/Succeeded/Failed = "
-                    << total_num_tests << "/"
-                    << total_num_succeeded_tests << "/"
-                    << total_num_failed_tests
-                    << "]");
+        LOG(LSL_ERROR,  "The testing was SUCCESSFUL. [Total/Succeeded/Failed = "
+                        << total_num_tests << "/"
+                        << total_num_succeeded_tests << "/"
+                        << total_num_failed_tests
+                        << "]");
         std::cout << "The testing was SUCCESSFUL.\n";
     }
     else
     {
-        LOG(testing,"The testing has FAILED. [Total/Succeeded/Failed = "
-                    << total_num_tests << "/"
-                    << total_num_succeeded_tests << "/"
-                    << total_num_failed_tests
-                    << "]");
+        LOG(LSL_ERROR,  "The testing has FAILED. [Total/Succeeded/Failed = "
+                        << total_num_tests << "/"
+                        << total_num_succeeded_tests << "/"
+                        << total_num_failed_tests
+                        << "]");
         std::cout << "The testing has FAILED.\n";
     }
 }

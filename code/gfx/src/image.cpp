@@ -22,7 +22,7 @@ void  load_png_image(std::filesystem::path const&  path, image_rgba_8888&  img)
     unsigned int error_code = lodepng::decode(img.data, width, height, path.string().c_str(), LCT_RGBA, 8U);
     if (error_code != 0)
         throw std::runtime_error(msgstream() << "lodepng::decode() failed to load PNG image '" << path.string()
-                                             << "'. Error code=" << error_code << ", message=" << lodepng_error_text(error));
+                                             << "'. Error code=" << error_code << ", message=" << lodepng_error_text(error_code));
     INVARIANT((unsigned int)img.data.size() == width * height * 4U);
 
     img.width = (natural_32_bit)width;

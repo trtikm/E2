@@ -7,21 +7,21 @@
 
 #   define TEST_EVALUATION(COND,RESULT,LOGSUCCESS) \
     {\
-        logging_severity_level const  original_severity_level = get_minimal_severity_level();\
+        logging_severity_level const  original_severity_level = logging_get_minimal_severity_level();\
         try\
         {\
             if (!(RESULT))\
-                set_minimal_severity_level(logging_severity_level::testing);\
+                logging_set_minimal_severity_level(logging_severity_level::testing);\
             if ((COND) == (RESULT))\
             {\
                 ++test_statistics::num_tests_which_succeeded_without_exception();\
-                if (LOGSUCCESS) { LOG(testing,"TEST SUCCEEDED: " #COND); }\
+                if (LOGSUCCESS) { LOG(LSL_TESTING,"TEST SUCCEEDED: " #COND); }\
                 if (LOGSUCCESS) { std::cout << "TEST SUCCEEDED: " #COND << "\n"; }\
             }\
             else\
             {\
                 ++test_statistics::num_tests_which_failed_without_exception();\
-                if (true) { LOG(testing,"TEST FAILED: " #COND); }\
+                if (true) { LOG(LSL_TESTING,"TEST FAILED: " #COND); }\
                 if (true) { std::cout << "TEST FAILED: " #COND << "\n"; }\
                 if (true) { ::private_test_internal_implementation_details::on_test_fail(); }\
             }\
@@ -33,14 +33,14 @@
             if (RESULT)\
             {\
                 ++test_statistics::num_tests_which_failed_by_exception();\
-                if (true) { LOG(testing,"TEST FAILED (by throwing exception): " #COND); }\
+                if (true) { LOG(LSL_TESTING,"TEST FAILED (by throwing exception): " #COND); }\
                 if (true) { std::cout << "TEST FAILED (by throwing exception): " #COND << "\n"; }\
                 if (true) { ::private_test_internal_implementation_details::on_test_fail(); }\
             }\
             else\
             {\
                 ++test_statistics::num_tests_which_succeeded_by_exception();\
-                if (LOGSUCCESS) { LOG(testing,"TEST SUCCEEDED (by throwing exception): " #COND); }\
+                if (LOGSUCCESS) { LOG(LSL_TESTING,"TEST SUCCEEDED (by throwing exception): " #COND); }\
                 if (LOGSUCCESS) { std::cout << "TEST SUCCEEDED (by throwing exception): " #COND << "\n"; }\
             }\
         }\
@@ -60,10 +60,10 @@
 
 #   define TEST_LOG(LVL,MSG) \
             {\
-                logging_severity_level const  old_level = get_minimal_severity_level();\
-                set_minimal_severity_level(LVL);\
+                logging_severity_level const  old_level = logging_get_minimal_severity_level();\
+                logging_set_minimal_severity_level(LVL);\
                 LOG(LVL,MSG);\
-                set_minimal_severity_level(old_level);\
+                logging_set_minimal_severity_level(old_level);\
             }
 
 

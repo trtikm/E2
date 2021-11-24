@@ -75,6 +75,18 @@ finalise_load_on_destroy_ptr  finalise_load_on_destroy::create(
 }
 
 
+finalise_load_on_destroy::finalise_load_on_destroy(
+    key_type const& key,
+    finalise_load_on_destroy_ptr const  parent,
+    callback_function_type const& callback
+)
+    : m_key(key)
+    , m_error_message()
+    , m_parent(parent)
+    , m_callback(callback)
+{}
+
+
 finalise_load_on_destroy::~finalise_load_on_destroy()
 {
     TMPROF_BLOCK();
@@ -271,7 +283,9 @@ void  resource_load_planner::worker()
 
         {
             TMPROF_BLOCK();
+            LOG(LSL_DEBUG, "async::detail::resource_load_planner::worker(): STARTING key_type=" << m_resource_just_being_loaded.first);
             perform_load_of_resource_load_data(m_resource_just_being_loaded);
+            LOG(LSL_DEBUG, "async::detail::resource_load_planner::worker(): FINISHED key_type=" << m_resource_just_being_loaded.first);
         }
 
         resource_load_data_type const  auto_delete_resource_in_the_end_of_the_interation = m_resource_just_being_loaded;
@@ -308,7 +322,7 @@ void  resource_holder_type::finalise_load(std::string const&  force_error_messag
         {
             m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
             m_error_message = force_error_message;
-            LOG(error, m_error_message);
+            LOG(LSL_ERROR, m_error_message);
         }
         break;
     case LOAD_STATE::FINISHED_SUCCESSFULLY:
@@ -316,14 +330,14 @@ void  resource_holder_type::finalise_load(std::string const&  force_error_messag
         {
             m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
             m_error_message = force_error_message;
-            LOG(error, m_error_message);
+            LOG(LSL_ERROR, m_error_message);
         }
         break;
     case LOAD_STATE::FINISHED_WITH_ERROR:
         if (!force_error_message.empty())
         {
             m_error_message += " " + force_error_message;
-            LOG(error, m_error_message);
+            LOG(LSL_ERROR, m_error_message);
         }
         break;
     default: UNREACHABLE();

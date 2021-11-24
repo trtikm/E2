@@ -58,13 +58,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/code")
 # find and add Boost
 message("Searching for Boost library ...")
 find_package(Boost COMPONENTS
-                chrono
-                log_setup
-                log
-                filesystem
                 program_options
              REQUIRED)
-add_definitions("-DBOOST_LOG_SETUP")
 set(BOOST_LIST_OF_LIBRARIES_TO_LINK_WITH
         ${Boost_LIBRARIES}
     )

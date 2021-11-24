@@ -12,10 +12,10 @@
         struct invariant_failure : public std::logic_error {
             explicit invariant_failure(std::string const& msg) : std::logic_error(msg) {}
         };
-#       define INVARIANT(C) do { if (!(C)) { LOG(error,"Invariant failure.");\
+#       define INVARIANT(C) do { if (!(C)) { LOG(LSL_ERROR,"Invariant failure.");\
                                              throw invariant_failure(FAIL_MSG("Invariant failure.")); }\
                                } while (false)
-#       define UNREACHABLE() do { LOG(error,"Unreachable location reached.");\
+#       define UNREACHABLE() do { LOG(LSL_ERROR,"Unreachable location reached.");\
                                   throw invariant_failure(FAIL_MSG("Unreachable location reached."));\
                                 } while (false)
 #   else

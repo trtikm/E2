@@ -32,18 +32,18 @@ struct Record
     natural_32_bit  line() const { return m_line; }
     std::string  function_name() const { return std::string(m_function_name); }
 
-    void  on_begin_of_execution(boost::chrono::system_clock::time_point&  start_time_point);
-    void  on_end_of_execution(boost::chrono::system_clock::time_point const&  begin_time_point,
-                              boost::chrono::system_clock::time_point const&  end_time_point);
+    void  on_begin_of_execution(std::chrono::system_clock::time_point&  start_time_point);
+    void  on_end_of_execution(std::chrono::system_clock::time_point const&  begin_time_point,
+                              std::chrono::system_clock::time_point const&  end_time_point);
 
 private:
     natural_64_bit  m_number_of_executions;
-    boost::chrono::system_clock::duration  m_summary_duration;
-    boost::chrono::system_clock::duration  m_duration_of_longest_execution;
+    std::chrono::system_clock::duration  m_summary_duration;
+    std::chrono::system_clock::duration  m_duration_of_longest_execution;
     natural_32_bit  m_num_running_executions;
-    boost::chrono::system_clock::time_point  m_run_begin_time_point;
-    boost::chrono::system_clock::time_point  m_run_end_time_point;
-    boost::chrono::system_clock::duration  m_genuine_duration;
+    std::chrono::system_clock::time_point  m_run_begin_time_point;
+    std::chrono::system_clock::time_point  m_run_end_time_point;
+    std::chrono::system_clock::duration  m_genuine_duration;
     char const*  m_file_name;
     int  m_line;
     char const*  m_function_name;
@@ -74,14 +74,14 @@ natural_64_bit  Record::number_of_executions() const
 float_64_bit  Record::summary_duration() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    float_64_bit const  result = boost::chrono::duration<float_64_bit>(m_summary_duration).count();
+    float_64_bit const  result = std::chrono::duration<float_64_bit>(m_summary_duration).count();
     return result;
 }
 
 float_64_bit  Record::duration_of_longest_execution() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    float_64_bit const  result = boost::chrono::duration<float_64_bit>(m_duration_of_longest_execution).count();
+    float_64_bit const  result = std::chrono::duration<float_64_bit>(m_duration_of_longest_execution).count();
     return result;
 }
 
@@ -95,18 +95,18 @@ natural_32_bit  Record::num_running_executions() const
 float_64_bit  Record::genuine_duration() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    float_64_bit  result = boost::chrono::duration<float_64_bit>(m_genuine_duration).count();
+    float_64_bit  result = std::chrono::duration<float_64_bit>(m_genuine_duration).count();
     if (m_num_running_executions != 0U)
-        result += boost::chrono::duration<float_64_bit>(
-                            boost::chrono::system_clock::now() - m_run_begin_time_point
+        result += std::chrono::duration<float_64_bit>(
+                            std::chrono::system_clock::now() - m_run_begin_time_point
                             ).count();
     return result;
 }
 
-void  Record::on_begin_of_execution(boost::chrono::system_clock::time_point&  start_time_point)
+void  Record::on_begin_of_execution(std::chrono::system_clock::time_point&  start_time_point)
 {
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    start_time_point = boost::chrono::system_clock::now();
+    start_time_point = std::chrono::system_clock::now();
     if (m_num_running_executions == 0U)
     {
         m_run_begin_time_point = start_time_point;
@@ -115,10 +115,10 @@ void  Record::on_begin_of_execution(boost::chrono::system_clock::time_point&  st
     ++m_num_running_executions;
 }
 
-void  Record::on_end_of_execution(boost::chrono::system_clock::time_point const&  begin_time_point,
-                                  boost::chrono::system_clock::time_point const&  end_time_point)
+void  Record::on_end_of_execution(std::chrono::system_clock::time_point const&  begin_time_point,
+                                  std::chrono::system_clock::time_point const&  end_time_point)
 {
-    boost::chrono::system_clock::duration const  duration_of_execution = end_time_point - begin_time_point;
+    std::chrono::system_clock::duration const  duration_of_execution = end_time_point - begin_time_point;
     std::lock_guard<std::mutex> lock(m_mutex);
     ++m_number_of_executions;
     m_summary_duration += duration_of_execution;
@@ -142,7 +142,7 @@ block_stop_watches::block_stop_watches(Record* const  storage_for_results)
 
 block_stop_watches::~block_stop_watches()
 {
-    m_storage_for_results->on_end_of_execution(m_start_time,boost::chrono::system_clock::now());
+    m_storage_for_results->on_end_of_execution(m_start_time,std::chrono::system_clock::now());
 }
 
 
@@ -157,12 +157,12 @@ struct time_profile_statistics : private boost::noncopyable
 
     Record*  add_record(char const* const file, int const line, char const* const func);
     void copy_time_profile_data(std::vector<time_profile_data_of_block>& storage);
-    boost::chrono::system_clock::time_point  start_time() const { return m_start_time; }
+    std::chrono::system_clock::time_point  start_time() const { return m_start_time; }
 
 private:
     std::list<Record>  m_records;
     std::mutex  m_mutex_to_list_of_records;
-    boost::chrono::system_clock::time_point  m_start_time;
+    std::chrono::system_clock::time_point  m_start_time;
 };
 
 
@@ -170,7 +170,7 @@ Record*  time_profile_statistics::add_record(char const* const file, int const l
 {
     std::lock_guard<std::mutex> lock(m_mutex_to_list_of_records);
     if (m_records.empty())
-        m_start_time = boost::chrono::system_clock::now();
+        m_start_time = std::chrono::system_clock::now();
     m_records.emplace_back(file,line,func);
     Record* const  result = &m_records.back();
     return result;
@@ -316,7 +316,7 @@ float_64_bit  compute_summary_duration_of_all_executions_of_all_blocks_in_second
     return result;
 }
 
-boost::chrono::system_clock::time_point  get_time_profiling_start_time_point()
+std::chrono::system_clock::time_point  get_time_profiling_start_time_point()
 {
     return statistics.start_time();
 }
@@ -585,7 +585,7 @@ void print_time_profile_to_file(std::string const& file_path_name,
 {
     std::ofstream file(
                 extend_file_name_by_timestamp ?
-                        extend_file_path_name_by_timestamp(file_path_name) :
+                        extend_file_path_name_by_timestamp(file_path_name + ".html", "_TMPROF") :
                         file_path_name
                 );
     print_time_profile_to_stream(file);

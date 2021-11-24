@@ -3,55 +3,55 @@
 
 #   include <utility/config.hpp>
 #   include <utility/msgstream.hpp>
-#   include <boost/log/sources/record_ostream.hpp>
-#   include <boost/log/sources/logger.hpp>
-#   include <boost/log/attributes/constant.hpp>
+#   include <iosfwd>
+#   include <memory>
 #   include <string>
 #   include <deque>
+#   include <mutex>
 
 #   define LOG(LVL,MSG) \
-        if ((LVL) >= BUILD_RELEASE() * 2 && (LVL) >= get_minimal_severity_level())\
-        {\
-            boost::log::sources::logger lg;\
-            namespace attrs = boost::log::attributes;\
-            lg.add_attribute("File",attrs::constant<std::string>(__FILE__));\
-            lg.add_attribute("Line",attrs::constant<unsigned int>(__LINE__));\
-            lg.add_attribute("Level",attrs::constant<std::string>(::logging_severity_level_name(LVL)));\
-            BOOST_LOG(lg) << MSG;\
-        }
-#   define LOG_INITIALISE(log_file_path_name,add_creation_timestamp_to_filename,add_default_file_extension,\
-                          minimal_severity_level)\
-        namespace E2 { namespace utility { namespace detail { namespace { namespace {\
-            ::logging_setup_caller __logger_setup_caller_instance(log_file_path_name,\
-                                                                  add_creation_timestamp_to_filename,\
-                                                                  add_default_file_extension,\
-                                                                  minimal_severity_level);\
-        }}}}}
+        do {\
+            if ((LVL) >= BUILD_RELEASE() * 2 && (LVL) >= logging_get_minimal_severity_level())\
+            {\
+                msgstream  mstr;\
+                mstr << MSG;\
+                html_file_logger::instance().append(LVL,__FILE__,__LINE__,mstr);\
+            }\
+        } while (false)
+#   define LOG_INITIALISE(log_file_path_name,minimal_severity_level)\
+        do {\
+            logging_set_minimal_severity_level(minimal_severity_level);\
+            html_file_logger::instance().open(log_file_path_name);\
+        } while (false)
 #   define SLOG(MSG) screen_text_logger::instance().append(msgstream() << MSG)
 #   define CLOG(MSG) continuous_text_logger::instance().append(msgstream() << MSG)
 
 
 enum logging_severity_level
 {
-    debug = 0,
-    info = 1,
-    warning = 2,
-    error = 3,
-    testing = 4,
+    LSL_DEBUG = 0,
+    LSL_INFO = 1,
+    LSL_WARNING = 2,
+    LSL_ERROR = 3,
+    LSL_FATAL = 4,
 };
 std::string const&  logging_severity_level_name(logging_severity_level const level);
-logging_severity_level  get_minimal_severity_level();
-void  set_minimal_severity_level(logging_severity_level const level);
+logging_severity_level  logging_get_minimal_severity_level();
+void  logging_set_minimal_severity_level(logging_severity_level const level);
 
-struct logging_setup_caller
+
+struct  html_file_logger
 {
-    logging_setup_caller(std::string const& log_file_name = "./log.html",
-                         bool const add_creation_timestamp_to_filename = true,
-                         bool const add_default_file_extension = true,
-                         logging_severity_level const minimal_severity_level = debug);
-    ~logging_setup_caller();
+    static html_file_logger& instance();
+    ~html_file_logger();
+
+    bool  open(std::string const& log_file_path_name);
+    void  append(logging_severity_level const level, std::string const& file, int const line, std::string const& message);
 private:
-    std::string m_log_file_name;
+    html_file_logger();
+    void  close();
+    std::unique_ptr<std::ofstream>  m_log_file_ptr;
+    std::mutex  m_mutex;
 };
 
 

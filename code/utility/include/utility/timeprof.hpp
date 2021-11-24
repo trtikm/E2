@@ -3,7 +3,7 @@
 
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/config.hpp>
-#   include <boost/chrono.hpp>
+#   include <chrono>
 #   include <iosfwd>
 #   include <string>
 #   include <vector>
@@ -42,7 +42,7 @@ struct block_stop_watches
     ~block_stop_watches();
 private:
     Record*  m_storage_for_results;
-    boost::chrono::system_clock::time_point  m_start_time;
+    std::chrono::system_clock::time_point  m_start_time;
 };
 
 
@@ -97,7 +97,7 @@ float_64_bit  compute_summary_duration_of_all_executions_of_all_blocks_in_second
         std::vector<time_profile_data_of_block> const& collected_profile_data
         );
 
-boost::chrono::system_clock::time_point  get_time_profiling_start_time_point();
+std::chrono::system_clock::time_point  get_time_profiling_start_time_point();
 
 std::ostream& print_time_profile_data_to_stream(
         std::ostream& os,
