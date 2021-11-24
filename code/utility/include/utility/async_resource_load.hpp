@@ -14,6 +14,7 @@
 #   include <string>
 #   include <mutex>
 #   include <queue>
+#   include <thread>
 #   include <atomic>
 #   include <memory>
 #   include <iosfwd>

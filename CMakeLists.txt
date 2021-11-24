@@ -38,6 +38,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wno-unused-lambda-capture
         -Wno-potentially-evaluated-expression
         -Wno-#pragma-messages
+        -Wno-deprecated-declarations
         ")
     message("Compiler = Clang/LLVM")
 else()

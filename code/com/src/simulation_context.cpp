@@ -3527,7 +3527,7 @@ void  simulation_context::process_pending_late_requests()
 #if BUILD_RELEASE() == 1
                     catch (std::exception const&  e)
                     {
-                        LOG(error, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
+                        LOG(LSL_ERROR, "Failed to import scene " << request.scene.key().get_unique_id() << ". Details: " << e.what());
                         // To prevent subsequent attempts to load the scene from disk.
                         m_cache_of_imported_scenes.insert({ request.scene.key(), request.scene });
                     }
