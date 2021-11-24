@@ -1,32 +1,16 @@
 #ifndef E2_TOOL_E2SIM_PROGRAM_OPTIONS_HPP_INCLUDED
 #   define E2_TOOL_E2SIM_PROGRAM_OPTIONS_HPP_INCLUDED
 
-#   include <boost/program_options.hpp>
-#   include <boost/noncopyable.hpp>
-#   include <ostream>
+#   include <utility/program_options_base.hpp>
 #   include <memory>
-#   include <string>
 
-class program_options : private boost::noncopyable
+class program_options : public program_options_default
 {
 public:
     program_options(int argc, char* argv[]);
 
-    bool helpMode() const { return vm.count("help") > 0; }
-    bool versionMode() const { return vm.count("version") > 0; }
-    
-    std::string  data_root() const { return vm["data"].as<std::string>(); }
-
-    bool  has_scene_dir() const { return vm.count("scene") != 0UL; }
-    std::string  scene_dir() const { return vm["scene"].as<std::string>(); }
-
-    // Add more option access/query functions here, if needed.
-
-    std::ostream& operator<<(std::ostream& ostr) const;
-
-private:
-    boost::program_options::variables_map vm;
-    boost::program_options::options_description desc;
+    bool  has_scene_dir() const { return has("scene"); }
+    std::string  scene_dir() const { return value("scene"); }
 };
 
 typedef std::shared_ptr<program_options const> program_options_ptr;

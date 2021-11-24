@@ -73,6 +73,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/utility/lock_bool.hpp
 
     ./include/utility/dynamic_array.hpp
+
+    ./include/utility/program_options_base.hpp
+    ./src/program_options_base.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

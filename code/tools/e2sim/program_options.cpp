@@ -5,35 +5,17 @@
 #include <iostream>
 
 program_options::program_options(int argc, char* argv[])
-    : vm()
-    , desc(get_program_description() + "\nUsage")
+    : program_options_default(argc, argv)
 {
-    namespace bpo = boost::program_options;
-
-    desc.add_options()
-        ("help,h","Produces this help message.")
-        ("version,v", "Prints the version string.")
-        ("data,D",
-            bpo::value<std::string>()->default_value("../data"),
-            "A root directory under which program's data are stored.")
-        ("scene,s",
-            bpo::value<std::string>(),
-            "A directory of a scene to be loaded. A scene directory always "
-            "contains a file 'hierarchy.json'. The scene is  a relative "
-            "path to the data root directory (see --data option).")
-        // Specify more options here, if needed.
-        ;
-
-    bpo::positional_options_description pos_desc;
-
-    bpo::store(bpo::command_line_parser(argc,argv).allow_unregistered().
-               options(desc).positional(pos_desc).run(),vm);
-    bpo::notify(vm);
-}
-
-std::ostream& program_options::operator<<(std::ostream& ostr) const
-{
-    return ostr << desc;
+    add_option(
+        "scene",
+        
+        "A directory of a scene to be loaded. A scene directory always "
+        "contains a file 'hierarchy.json'. The scene is  a relative "
+        "path to the data root directory (see --data option).",
+        
+        "1"
+        );
 }
 
 static program_options_ptr  global_program_options;
