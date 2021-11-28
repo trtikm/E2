@@ -976,7 +976,8 @@ def save_textures(
                     continue
                 if isinstance(link.to_node, bpy.types.ShaderNodeNormalMap):
                     tex_nodes.append(("normal", link.from_node))
-                elif isinstance(link.to_node, bpy.types.ShaderNodeBsdfPrincipled):
+                elif isinstance(link.to_node, bpy.types.ShaderNodeBsdfPrincipled) or\
+                     isinstance(link.to_node, bpy.types.ShaderNodeOutputMaterial):
                     tex_nodes.append(("diffuse", link.from_node))
 
             for texture_kind_name, node in tex_nodes:
@@ -1004,9 +1005,7 @@ def save_textures(
 
                 src_image_pathname = export_image(image)  # Get the saved image disc location
 
-                dst_image_name = os.path.splitext(os.path.basename(node.name))[0]
-                if len(dst_image_name) == 0:
-                    dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
+                dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
                 dst_image_extension = ".png"  # The final image is always PNG, see 'image.pack(as_png=True)' above
                 dst_image_pathname = os.path.join(texture_output_dir, dst_image_name + dst_image_extension)
 
