@@ -4,6 +4,7 @@
 #   include <angeo/coordinate_system.hpp>
 #   include <angeo/tensor_math.hpp>
 #	include <angeo/skeleton_kinematics.hpp>
+#   include <angeo/axis_aligned_bounding_box.hpp>
 #   include <gfx/keyframe.hpp>
 #   include <gfx/modelspace.hpp>
 #   include <utility/async_resource_load.hpp>
@@ -107,6 +108,9 @@ struct  skeletal_motion_templates_data
     motion_template::reference_frames_type  pose_frames;
     std::vector<matrix44>  from_pose_matrices;  // I.e. matrices from spaces of pose bones to the motion tempalte space.
     std::vector<matrix44>  to_pose_matrices;    // I.e. matrices from the motion tempalte space to spaces of pose bones.
+    angeo::axis_aligned_bounding_box  pose_bbox;
+    vector3  pose_bbox_half_sizes_delta;
+    vector3  pose_shift;
     bone_names  names;
     bone_hierarchy  hierarchy;
     bone_lengths  lengths;
@@ -119,6 +123,12 @@ struct  skeletal_motion_templates_data
     std::unordered_map<std::string, motion_template>  motions_map;
     transitions_map  transitions;
     std::pair<natural_32_bit, float_32_bit>  default_transition_props;
+
+    motion_template::reference_frames_type  original_pose_frames; // Pose for which motion templates were created.
+                                                                    // This can be original by "pose_frames" of the
+                                                                    // current skeleton, e.g. taller, smaller.
+    angeo::axis_aligned_bounding_box  original_pose_bbox;
+    bone_lengths  original_lengths;
 
     explicit skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~skeletal_motion_templates_data();
@@ -171,6 +181,9 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     reference_frames  pose_frames() const { return resource().pose_frames; }
     std::vector<matrix44> const&  from_pose_matrices() const { return resource().from_pose_matrices; }
     std::vector<matrix44> const&  to_pose_matrices() const { return resource().to_pose_matrices; }
+    angeo::axis_aligned_bounding_box const&  pose_bbox() const { return resource().pose_bbox; }
+    vector3 const&  pose_bbox_half_sizes_delta() const { return resource().pose_bbox_half_sizes_delta; }
+    vector3 const&  pose_shift() const { return resource().pose_shift; }
     bone_names const&  names() const { return resource().names; }
     bone_hierarchy const&  hierarchy() const { return resource().hierarchy; }
     bone_hierarchy::parents_vector const&  parents() const { return hierarchy().parents; }
@@ -186,6 +199,9 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }
     transitions_map const&  transitions() const { return resource().transitions; }
     std::pair<natural_32_bit, float_32_bit> const&  default_transition_props() const { return resource().default_transition_props; }
+
+    reference_frames  original_pose_frames() const { return resource().original_pose_frames; }
+    angeo::axis_aligned_bounding_box const&  original_pose_bbox() const { return resource().original_pose_bbox; }
 };
 
 

@@ -29,6 +29,68 @@ std::unique_ptr<boost::property_tree::ptree>  load_ptree(std::filesystem::path c
 }
 
 
+void  read_bone_lengths(std::filesystem::path const&  lengths_pathname, skeletal_motion_templates_data::bone_lengths&  lengths)
+{
+    std::ifstream  istr;
+    angeo::open_file_stream_for_reading(istr, lengths_pathname);
+
+    for (natural_32_bit i = 0U, n = angeo::read_num_records(istr, lengths_pathname); i != n; ++i)
+    {
+        std::string  line;
+        if (!read_line(istr, line))
+            throw std::runtime_error(msgstream() << "Cannot read length #" << i << " in the file '" << lengths_pathname << "'.");
+        boost::algorithm::trim(line);
+
+        float_32_bit  length;
+        {
+            std::istringstream sstr(line);
+            sstr >> length;
+        }
+        if (length < 0.001f)
+            throw std::runtime_error(msgstream() << "Wrong value " << length << " for length #" << i << " in the file '" << lengths_pathname << "'.");
+
+        lengths.push_back(length);
+    }
+}
+
+
+void  compute_pose_from_to_matrices(
+        motion_template::reference_frames_type const  pose_frames,
+        skeletal_motion_templates_data::bone_hierarchy const&  hierarchy,
+        std::vector<matrix44>&  from_pose_matrices,
+        std::vector<matrix44>&  to_pose_matrices
+        )
+{
+    from_pose_matrices.resize(pose_frames.size());
+    to_pose_matrices.resize(pose_frames.size());
+    for (natural_32_bit bone = 0U; bone != pose_frames.size(); ++bone)
+    {
+        angeo::from_base_matrix(pose_frames.at(bone), from_pose_matrices.at(bone));
+        angeo::to_base_matrix(pose_frames.at(bone), to_pose_matrices.at(bone));
+        if (hierarchy.parents.at(bone) >= 0)
+        {
+            to_pose_matrices.at(bone) = to_pose_matrices.at(bone) * to_pose_matrices.at(hierarchy.parents.at(bone));
+            from_pose_matrices.at(bone) = from_pose_matrices.at(hierarchy.parents.at(bone)) * from_pose_matrices.at(bone);
+        }
+    }
+}
+
+
+void  compute_pose_bbox(
+        std::vector<matrix44> const&  from_pose_matrices,
+        skeletal_motion_templates_data::bone_lengths const&  lengths,
+        angeo::axis_aligned_bounding_box&  pose_bbox
+        )
+{
+    pose_bbox.min_corner = pose_bbox.max_corner = transform_point(vector3_zero(), from_pose_matrices.front());
+    for (std::size_t i = 1U; i < from_pose_matrices.size(); ++i)
+    {
+        angeo::extend_union_bbox(pose_bbox, transform_point(vector3_zero(), from_pose_matrices.at(i)));
+        angeo::extend_union_bbox(pose_bbox, transform_point(lengths.at(i) * vector3_unit_y(), from_pose_matrices.at(i)));
+    }
+}
+
+
 }}}
 
 namespace ai { namespace detail {
@@ -47,6 +109,9 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
     : pose_frames()
     , from_pose_matrices()
     , to_pose_matrices()
+    , pose_bbox()
+    , pose_bbox_half_sizes_delta()
+    , pose_shift()
     , names()
     , hierarchy()
     , lengths()
@@ -59,6 +124,10 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
     , motions_map()
     , transitions()
     , default_transition_props({ 0U, 0.0f })
+
+    , original_pose_frames()
+    , original_pose_bbox()
+    , original_lengths()
 {
     TMPROF_BLOCK();
 
@@ -67,18 +136,33 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
 
                 // All data are loaded. Let's apply post-load setup.
 
-                from_pose_matrices.resize(pose_frames.size());
-                to_pose_matrices.resize(pose_frames.size());
-                for (natural_32_bit  bone = 0U; bone != pose_frames.size(); ++bone)
+                compute_pose_from_to_matrices(pose_frames, hierarchy, from_pose_matrices, to_pose_matrices);
+                compute_pose_bbox(from_pose_matrices, lengths, pose_bbox);
+                if (length(pose_bbox.max_corner - pose_bbox.min_corner) < 0.001f)
+                    throw std::runtime_error("The pose's bbox is too small.");
+
+                if (original_pose_frames.empty())
                 {
-                    angeo::from_base_matrix(pose_frames.at(bone), from_pose_matrices.at(bone));
-                    angeo::to_base_matrix(pose_frames.at(bone), to_pose_matrices.at(bone));
-                    if (hierarchy.parents.at(bone) >= 0)
-                    {
-                        to_pose_matrices.at(bone) = to_pose_matrices.at(bone) * to_pose_matrices.at(hierarchy.parents.at(bone));
-                        from_pose_matrices.at(bone) = from_pose_matrices.at(hierarchy.parents.at(bone)) * from_pose_matrices.at(bone);
-                    }
+                    original_pose_frames = pose_frames;
+                    original_pose_bbox = pose_bbox;
                 }
+                else
+                {
+                    std::vector<matrix44> from, to;
+                    compute_pose_from_to_matrices(original_pose_frames, hierarchy, from, to);
+                    compute_pose_bbox(from, original_lengths, original_pose_bbox);
+                }
+
+                if (length(original_pose_bbox.max_corner - original_pose_bbox.min_corner) < 0.001f)
+                    throw std::runtime_error("The original pose's bbox is too small.");
+
+                pose_bbox_half_sizes_delta = 0.5f * (
+                        (pose_bbox.max_corner - pose_bbox.min_corner) -
+                        (original_pose_bbox.max_corner - original_pose_bbox.min_corner)
+                        );
+
+                pose_shift = (pose_frames.at(0U).origin() - original_pose_frames.at(0U).origin()) -
+                             (angeo::center_of_bbox(pose_bbox) - angeo::center_of_bbox(original_pose_bbox));
 
                 // And now let's check for consistency of loaded data.
 
@@ -153,8 +237,13 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             }
         }
 
-        if (pose_frames.empty() && std::filesystem::is_regular_file(pathname / "pose.txt"))
-            pose_frames = motion_template::reference_frames_type(pathname / "pose.txt", 10U, ultimate_finaliser);
+        if (std::filesystem::is_regular_file(pathname / "pose.txt"))
+        {
+            if (pose_frames.empty())
+                pose_frames = motion_template::reference_frames_type(pathname / "pose.txt", 10U, ultimate_finaliser);
+            else if (original_pose_frames.empty())
+                original_pose_frames = motion_template::reference_frames_type(pathname / "pose.txt", 10U, ultimate_finaliser);
+        }
 
         if (names.empty() && std::filesystem::is_regular_file(pathname / "names.txt"))
         {
@@ -209,29 +298,12 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             angeo::skeleton_compute_child_bones(hierarchy.parents, hierarchy.children);
         }
 
-        if (lengths.empty() && std::filesystem::is_regular_file(pathname / "lengths.txt"))
+        if (std::filesystem::is_regular_file(pathname / "lengths.txt"))
         {
-            std::filesystem::path const  lengths_pathname = pathname / "lengths.txt";
-            std::ifstream  istr;
-            angeo::open_file_stream_for_reading(istr, lengths_pathname);
-
-            for (natural_32_bit i = 0U, n = angeo::read_num_records(istr, lengths_pathname); i != n; ++i)
-            {
-                std::string  line;
-                if (!read_line(istr, line))
-                    throw std::runtime_error(msgstream() << "Cannot read length #" << i << " in the file '" << lengths_pathname << "'.");
-                boost::algorithm::trim(line);
-
-                float_32_bit  length;
-                {
-                    std::istringstream sstr(line);
-                    sstr >> length;
-                }
-                if (length < 0.001f)
-                    throw std::runtime_error(msgstream() << "Wrong value " << length << " for length #" << i << " in the file '" << lengths_pathname << "'.");
-
-                lengths.push_back(length);
-            }
+            if (lengths.empty())
+                read_bone_lengths(pathname / "lengths.txt", lengths);
+            else if (original_lengths.empty())
+                read_bone_lengths(pathname / "lengths.txt", original_lengths);
         }
 
         if (joints.empty() && std::filesystem::is_regular_file(pathname / "joints.txt"))

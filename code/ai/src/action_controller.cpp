@@ -191,7 +191,10 @@ agent_action::agent_action(
     load_effects(get_ptree_or_empty("EFFECTS", ptree_), get_ptree_or_empty("EFFECTS", defaults_));
     load_motion_object_config(get_ptree_or_empty("MOTION_OBJECT_CONFIG", ptree_), get_ptree_or_empty("MOTION_OBJECT_CONFIG", defaults_));
     AABB_HALF_SIZE =
-            read_aabb_half_size("AABB_HALF_SIZE", "AABB_HALF_SIZE_FROM_KEYFRAME", motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree_);
+            read_aabb_half_size("AABB_HALF_SIZE", "AABB_HALF_SIZE_FROM_KEYFRAME",
+                                motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree_) +
+            motion_templates().pose_bbox_half_sizes_delta()
+            ;
     load_sensors(get_ptree_or_empty("SENSORS", ptree_));
     load_transitions(get_ptree("TRANSITIONS", ptree_), get_ptree_or_empty("TRANSITIONS", defaults_));
 }
@@ -245,7 +248,10 @@ void  agent_action::load_motion_object_config(
 {
     MOTION_OBJECT_CONFIG.shape_type = angeo::as_collision_shape_type(get_value<std::string>("shape_type", ptree, &defaults));
     MOTION_OBJECT_CONFIG.aabb_half_size =
-            read_aabb_half_size("aabb_half_size", "aabb_half_size_from_keyframe", motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree);
+            read_aabb_half_size("aabb_half_size", "aabb_half_size_from_keyframe",
+                                motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree) +
+            motion_templates().pose_bbox_half_sizes_delta()
+            ;
     MOTION_OBJECT_CONFIG.aabb_alignment = aabb_alignment_from_string(get_value("aabb_alignment", "Z_LO", ptree, &defaults));
     MOTION_OBJECT_CONFIG.collision_material =
             angeo::read_collison_material_from_string(get_value<std::string>("collision_material", ptree, &defaults));
@@ -720,6 +726,10 @@ void  agent_action::collect_motion_object_relocation_frame(agent_action const* c
         vector3  pos;
         matrix33  rot;
         decompose_matrix44(W * F, pos, rot);
+        pos += angeo::vector3_from_coordinate_system(
+                    motion_templates().pose_bbox_half_sizes_delta(),
+                    motion_templates().at(MOTION_TEMPLATE_NAME).reference_frames.at(0)
+                    );
         info.motion_object_relocation_frame.set_origin(pos);
         info.motion_object_relocation_frame.set_orientation(rotation_matrix_to_quaternion(rot));
         return;

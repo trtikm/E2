@@ -45,7 +45,11 @@ void  skeleton_interpolator_animation::set_target(
 
     m_src_offset = m_current_offset;
     m_dst_offset = motion_templates.at(cursor.motion_name).keyframes.coord_system_at(cursor.keyframe_index, 0U).origin() -
-                   motion_templates.at(cursor.motion_name).reference_frames.at(cursor.keyframe_index).origin();
+                   motion_templates.at(cursor.motion_name).reference_frames.at(cursor.keyframe_index).origin() +
+                   angeo::vector3_from_coordinate_system(
+                            motion_templates.pose_shift(),
+                            motion_templates.at(cursor.motion_name).reference_frames.at(cursor.keyframe_index)
+                            );
 }
 
 
