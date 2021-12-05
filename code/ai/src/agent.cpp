@@ -96,7 +96,9 @@ void  agent::update_system_state()
 {
     system_state_ref() = {
             get_binding()->context->frame_explicit_coord_system_in_world_space(get_binding()->frame_guid_of_motion_object),
-            *get_sight_controller().get_camera()->coordinate_system()
+            get_sight_controller().get_camera() == nullptr ?
+                    angeo::get_world_coord_system_explicit() :
+                    *get_sight_controller().get_camera()->coordinate_system()
             };
 }
 

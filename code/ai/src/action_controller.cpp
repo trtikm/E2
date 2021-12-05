@@ -491,7 +491,9 @@ void  agent_action::update_look_at(float_32_bit const  time_step_in_seconds, tra
     float_32_bit const  longitude = 0.5f * PI() * (desire().look_at.longitude - 1.0f);
     float_32_bit const  altitude = 0.5f * PI() * desire().look_at.altitude;
     float_32_bit const  magnitude = (0.5f * (1.0f + desire().look_at.magnitude)) *
-                                    myself().get_sight_controller().get_camera()->far_plane();
+                                    (myself().get_sight_controller().get_camera() == nullptr ?
+                                            10.0f :
+                                            myself().get_sight_controller().get_camera()->far_plane());
     float_32_bit const  cos_altitude = std::cosf(desire().look_at.altitude);
     vector3 const  target_in_skeleton_space = {
         magnitude * cos_altitude * std::cosf(longitude),
