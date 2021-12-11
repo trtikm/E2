@@ -292,21 +292,27 @@ void  simulator::round()
 
     screen_text_logger::instance().clear();
 
-    update_viewports();
+    bool const  is_window_minimised = get_window_props().minimised();
+
+    if (!is_window_minimised)
+        update_viewports();
 
     on_begin_round();
 
-        ++m_FPS_num_rounds;
-        m_FPS_time += round_seconds();
-        if (m_FPS_time >= 0.25f)
+        if (!is_window_minimised)
         {
-            m_FPS = (natural_32_bit)(m_FPS_num_rounds / m_FPS_time + 0.5f);
-            m_FPS_num_rounds = 0U;
-            do m_FPS_time -= 0.25f; while (m_FPS_time >= 0.25f);
+            ++m_FPS_num_rounds;
+            m_FPS_time += round_seconds();
+            if (m_FPS_time >= 0.25f)
+            {
+                m_FPS = (natural_32_bit)(m_FPS_num_rounds / m_FPS_time + 0.5f);
+                m_FPS_num_rounds = 0U;
+                do m_FPS_time -= 0.25f; while (m_FPS_time >= 0.25f);
+            }
+            if (render_config().render_text && render_config().render_fps)
+                SLOG(render_config().fps_prefix << FPS() << "\n");
+                //CLOG(render_config().fps_prefix << FPS());
         }
-        if (render_config().render_text && render_config().render_fps)
-            SLOG(render_config().fps_prefix << FPS() << "\n");
-            //CLOG(render_config().fps_prefix << FPS());
 
         on_begin_simulation();
             context()->process_pending_late_requests();
@@ -334,13 +340,16 @@ void  simulator::round()
             }
         on_end_simulation();
 
-        on_begin_camera_update();
-            camera_update();
-        on_end_camera_update();
+        if (!is_window_minimised)
+        {
+            on_begin_camera_update();
+                camera_update();
+            on_end_camera_update();
 
-        on_begin_render();
-            render();
-        on_end_render();
+            on_begin_render();
+                render();
+            on_end_render();
+        }
 
     on_end_round();
 }
