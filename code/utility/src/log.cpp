@@ -136,6 +136,8 @@ void  html_file_logger::append(logging_severity_level const level, std::string c
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
+    if (m_log_file_ptr == nullptr)
+        return;
     if (level < logging_get_minimal_severity_level())
         return;
 
