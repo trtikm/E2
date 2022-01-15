@@ -5,6 +5,7 @@
 #   include <gfx/shader_data_bindings.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/async_resource_load.hpp>
+#   include <utility/config.hpp>
 #   include <filesystem>
 #   include <unordered_set>
 #   include <string>
@@ -208,6 +209,9 @@ struct shaders_binding_data
     GLuint  id() const { return m_id; }
     vertex_shader  get_vertex_shader() const { return m_vertex_shader; }
     fragment_shader  get_fragment_shader() const { return m_fragment_shader; }
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+    std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> const& get_locations() const { return m_locations; }
+#endif
 
     bool  set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store);
     bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store);
@@ -234,6 +238,9 @@ private:
     GLuint  m_id;
     vertex_shader  m_vertex_shader;
     fragment_shader  m_fragment_shader;
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+    std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> m_locations;
+#endif
 
     bool  m_ready;
 };
@@ -269,6 +276,9 @@ struct  shaders_binding : public async::resource_accessor<detail::shaders_bindin
     GLuint  id() const { return resource().id(); }
     vertex_shader  get_vertex_shader() const { return resource().get_vertex_shader(); }
     fragment_shader  get_fragment_shader() const { return resource().get_fragment_shader(); }
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+    std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> const& get_locations() const { return resource().get_locations(); }
+#endif
 
     template<typename value_type>
     bool  set_uniform_variable(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name, value_type const&  value_to_store)

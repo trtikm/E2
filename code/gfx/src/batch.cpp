@@ -132,8 +132,8 @@ batch_data::batch_data(
         {
             switch (location)
             {
-            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
-            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_DIFFUSE_COLOUR:
                 instancing_data.m_buffers.insert(location);
                 break;
             default:
@@ -237,26 +237,26 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
     {
         switch (location)
         {
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_SPECULAR:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_DIFFUSE:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_SPECULAR:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_NORMAL:
             buffer_paths.insert({location, get_available_resources().buffers().at(location)});
             break;
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TANGENT:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TANGENT:
             buffer_paths.insert({ location, get_available_resources().buffers().at(location) });
             break;
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_BITANGENT:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_BITANGENT:
             buffer_paths.insert({ location, get_available_resources().buffers().at(location) });
             break;
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INDICES_OF_MATRICES:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INDICES_OF_MATRICES:
             buffer_paths.insert({location, get_available_resources().skeletal()->indices()});
             break;
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_WEIGHTS_OF_MATRICES:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_WEIGHTS_OF_MATRICES:
             buffer_paths.insert({location, get_available_resources().skeletal()->weights()});
             break;
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD1:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD1:
             {
                 buffer_paths.insert({location, get_available_resources().buffers().at(location)});
                 bool  used = false;
@@ -269,8 +269,8 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
                 INVARIANT(used == true);
             }
             break;
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_DIFFUSE_COLOUR:
             UNREACHABLE();
             break;
         default:
@@ -286,7 +286,7 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
              << ",BUFFERS=";
         std::set<std::string>  names;
         for (auto const& x : buffer_paths)
-            names.insert(name(x.first).substr(11)); // 11 == len("BINDING_IN_");
+            names.insert(name(x.first));
         for (auto const&  name : names)
             sstr << name << ",";
         buffers_binding_uid = sstr.get();
@@ -357,8 +357,8 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
         {
             switch (location)
             {
-            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
-            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_DIFFUSE_COLOUR:
                 instancing_data.m_buffers.insert(location);
                 break;
             default:
@@ -402,8 +402,12 @@ bool  batch::ready() const
         return false;
     if (!resource().ready())
     {
-        if (!get_buffers_binding().ready() ||
-            !get_shaders_binding().ready() ||
+        if (!get_shaders_binding().ready() ||
+            !get_buffers_binding().ready(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+                    get_shaders_binding().get_locations()
+#endif
+                    ) ||
             !get_textures_binding().ready() ||
             !get_draw_state().loaded_successfully() ||
             (is_attached_to_skeleton() && (
@@ -428,7 +432,11 @@ bool  batch::make_current(draw_state const&  previous_state, bool  for_instancin
 
     bool  result;
 
-    result = get_buffers_binding().make_current();
+    result = get_buffers_binding().make_current(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+                    get_shaders_binding().get_locations()
+#endif
+                    );
     INVARIANT(result == true);
 
     ASSUMPTION((!for_instancing || has_instancing_data()) && (for_instancing || !get_shaders_binding().empty()));

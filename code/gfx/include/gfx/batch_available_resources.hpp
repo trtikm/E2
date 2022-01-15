@@ -18,12 +18,12 @@ struct  batch_available_resources_data  final
                 std::unordered_map<
                         VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION,
                             // Only allowed values are:
-                            //        BINDING_IN_POSITION
-                            //        BINDING_IN_DIFFUSE
-                            //        BINDING_IN_SPECULAR
-                            //        BINDING_IN_NORMAL
-                            //        BINDING_IN_TANGENT
-                            //        BINDING_IN_BITANGENT
+                            //        IN_POSITION
+                            //        IN_DIFFUSE
+                            //        IN_SPECULAR
+                            //        IN_NORMAL
+                            //        IN_TANGENT
+                            //        IN_BITANGENT
                         std::string
                             // Full path-name of the corresponding resource file on the disk, or any other string
                             // (typically "") in case of generated buffer (e.g. for grid, lines, sphere, box)
@@ -38,8 +38,8 @@ struct  batch_available_resources_data  final
                         std::pair<
                                 VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION,
                                     // Only allowed values are:
-                                    //        BINDING_IN_TEXCOORD0
-                                    //        BINDING_IN_TEXCOORD1
+                                    //        IN_TEXCOORD0
+                                    //        IN_TEXCOORD1
                                 std::string
                                     // Full path-name of the corresponding the texture file on the disk, or any other string
                                     // (typically "") in case of generated texture.

@@ -238,10 +238,10 @@ namespace gfx {
 struct fragment_shader_output_texture_provider_base
 {
     virtual ~fragment_shader_output_texture_provider_base() {}
-    virtual texture  get_texture_for_BINDING_OUT_TEXTURE_POSITION() const = 0;
-    virtual texture  get_texture_for_BINDING_OUT_TEXTURE_NORMAL() const = 0;
-    virtual texture  get_texture_for_BINDING_OUT_TEXTURE_DIFFUSE() const = 0;
-    virtual texture  get_texture_for_BINDING_OUT_TEXTURE_SPECULAR() const = 0;
+    virtual texture  get_texture_for_OUT_TEXTURE_POSITION() const = 0;
+    virtual texture  get_texture_for_OUT_TEXTURE_NORMAL() const = 0;
+    virtual texture  get_texture_for_OUT_TEXTURE_DIFFUSE() const = 0;
+    virtual texture  get_texture_for_OUT_TEXTURE_SPECULAR() const = 0;
 };
 
 
@@ -268,10 +268,10 @@ struct fragment_shader_output_texture_provider : public fragment_shader_output_t
 
     virtual ~fragment_shader_output_texture_provider() {}
 
-    texture  get_texture_for_BINDING_OUT_TEXTURE_POSITION() const override { return m_position; }
-    texture  get_texture_for_BINDING_OUT_TEXTURE_NORMAL() const override { return m_normal; }
-    texture  get_texture_for_BINDING_OUT_TEXTURE_DIFFUSE() const override { return m_diffuse; }
-    texture  get_texture_for_BINDING_OUT_TEXTURE_SPECULAR() const override { return m_specular; }
+    texture  get_texture_for_OUT_TEXTURE_POSITION() const override { return m_position; }
+    texture  get_texture_for_OUT_TEXTURE_NORMAL() const override { return m_normal; }
+    texture  get_texture_for_OUT_TEXTURE_DIFFUSE() const override { return m_diffuse; }
+    texture  get_texture_for_OUT_TEXTURE_SPECULAR() const override { return m_specular; }
 
 private:
 

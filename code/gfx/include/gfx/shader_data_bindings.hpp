@@ -11,18 +11,18 @@ namespace gfx {
 
 enum struct VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION : natural_8_bit
 {
-    BINDING_IN_POSITION             = 0,    // vec3; always in model space
-    BINDING_IN_DIFFUSE              = 1,    // vec4; each component in range <0,1>
-    BINDING_IN_SPECULAR             = 2,    // vec4; RGB components are in range <0,1>; The alpha component is used as the coeficient for specular lighting.
-    BINDING_IN_NORMAL               = 3,    // vec3; Always in model space; normalised (unit vector)
-    BINDING_IN_TANGENT              = 4,    // vec3; Always in model space; normalised (unit vector)
-    BINDING_IN_BITANGENT            = 5,    // vec3; Always in model space; normalised (unit vector)
-    BINDING_IN_INDICES_OF_MATRICES  = 6,    // uint[VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX]; indices to the array VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA
-    BINDING_IN_WEIGHTS_OF_MATRICES  = 7,    // float[VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX]; weights (in range <0,1> each) of matrices in the array VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA
-    BINDING_IN_TEXCOORD0            = 8,    // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD1            = 9,    // vec2; texture uv coordinates
-    BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA = 10,  // mat4=4*vec4; matrices for individual instances
-    BINDING_IN_INSTANCED_DIFFUSE_COLOUR              = 14,  // vec4; diffuse colours for individual instances
+    IN_POSITION             = 0,    // vec3; always in model space
+    IN_DIFFUSE              = 1,    // vec4; each component in range <0,1>
+    IN_SPECULAR             = 2,    // vec4; RGB components are in range <0,1>; The alpha component is used as the coeficient for specular lighting.
+    IN_NORMAL               = 3,    // vec3; Always in model space; normalised (unit vector)
+    IN_TANGENT              = 4,    // vec3; Always in model space; normalised (unit vector)
+    IN_BITANGENT            = 5,    // vec3; Always in model space; normalised (unit vector)
+    IN_INDICES_OF_MATRICES  = 6,    // uint[VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX]; indices to the array VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA
+    IN_WEIGHTS_OF_MATRICES  = 7,    // float[VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX]; weights (in range <0,1> each) of matrices in the array VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA
+    IN_TEXCOORD0            = 8,    // vec2; texture uv coordinates
+    IN_TEXCOORD1            = 9,    // vec2; texture uv coordinates
+    IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA = 10,  // mat4=4*vec4; matrices for individual instances
+    IN_INSTANCED_DIFFUSE_COLOUR              = 14,  // vec4; diffuse colours for individual instances
 
 };
 
@@ -32,19 +32,19 @@ std::string  name(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
 std::string  type_name(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
 inline natural_8_bit  get_num_texcoord_binding_locations()
 {
-    return value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD1) -
-           value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0) + 1U;
+    return value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD1) -
+           value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0) + 1U;
 }
 inline VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  get_texcoord_binding_location(natural_8_bit const  texcood_index)
 {
     return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION(
-                value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0) + texcood_index
+                value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0) + texcood_index
                 );
 }
 inline constexpr VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  min_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION() noexcept
-{ return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION; }
+{ return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION; }
 inline constexpr VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  max_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION() noexcept
-{ return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR; }
+{ return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_DIFFUSE_COLOUR; }
 inline constexpr natural_8_bit  num_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATIONs() noexcept
 { return static_cast<natural_8_bit>(max_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION()) -
          static_cast<natural_8_bit>(min_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION()) +
@@ -53,14 +53,14 @@ inline constexpr natural_8_bit  num_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATIONs
 
 enum struct VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION : natural_8_bit
 {
-    BINDING_OUT_POSITION            = 0,    // vec3; always in camera space; without projection transformation
-    BINDING_OUT_DIFFUSE             = 1,    // vec4; each component in range <0,1>
-    BINDING_OUT_SPECULAR            = 2,    // vec4; The alpha component is used as the coeficient for specular lighting.
-    BINDING_OUT_NORMAL              = 3,    // vec3; Always in camera space; normalised (unit vector)
-    BINDING_OUT_TANGENT             = 4,    // vec3; Always in camera space; normalised (unit vector)
-    BINDING_OUT_BITANGENT           = 5,    // vec3; Always in camera space; normalised (unit vector)
-    BINDING_OUT_TEXCOORD0           = 6,    // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD1           = 7,    // vec2; texture uv coordinates
+    PASS_POSITION            = 0,    // vec3; always in camera space; without projection transformation
+    PASS_DIFFUSE             = 1,    // vec4; each component in range <0,1>
+    PASS_SPECULAR            = 2,    // vec4; The alpha component is used as the coeficient for specular lighting.
+    PASS_NORMAL              = 3,    // vec3; Always in camera space; normalised (unit vector)
+    PASS_TANGENT             = 4,    // vec3; Always in camera space; normalised (unit vector)
+    PASS_BITANGENT           = 5,    // vec3; Always in camera space; normalised (unit vector)
+    PASS_TEXCOORD0           = 6,    // vec2; texture uv coordinates
+    PASS_TEXCOORD1           = 7,    // vec2; texture uv coordinates
 };
 
 inline natural_32_bit  value(VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION const  location)
@@ -74,7 +74,7 @@ enum struct VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME : natural_8_bit
     MATRIX_FROM_MODEL_TO_CAMERA     = 0,    // mat4; from model space to the the camera space; without a projection transformation
     MATRIX_FROM_CAMERA_TO_CLIPSPACE = 1,    // mat4; a projection matrix
     MATRICES_FROM_MODEL_TO_CAMERA   = 2,    // mat4[64]; an array of matrices, each of the kind MATRIX_FROM_MODEL_TO_CAMERA
-    NUM_MATRICES_PER_VERTEX         = 3,    // uint; says how many indices to the array MATRICES_FROM_MODEL_TO_CAMERA there are for each vertex (see VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INDICES_OF_MATRICES/BINDING_IN_WEIGHTS_OF_MATRICES)
+    NUM_MATRICES_PER_VERTEX         = 3,    // uint; says how many indices to the array MATRICES_FROM_MODEL_TO_CAMERA there are for each vertex (see VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INDICES_OF_MATRICES/IN_WEIGHTS_OF_MATRICES)
 
     AMBIENT_COLOUR                  = 4,    // vec3; each component in range <0,1>
     DIFFUSE_COLOUR                  = 5,    // vec4; each component in range <0,1>
@@ -105,14 +105,14 @@ inline constexpr natural_8_bit  num_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAMEs()
 
 enum struct FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION : natural_8_bit
 {
-    BINDING_IN_POSITION             = 0,    // vec3; Always in camera space; without a projection transformation
-    BINDING_IN_DIFFUSE              = 1,    // vec4; each component in range <0,1>; Fragments with alpha component less than 0.5 are automatically discarded.
-    BINDING_IN_SPECULAR             = 2,    // vec4; RGB components are in range <0,1>; The alpha component is used as the coeficient for specular lighting.
-    BINDING_IN_NORMAL               = 3,    // vec3; Always in camera space; without a projection transformation
-    BINDING_IN_TANGENT              = 4,    // vec3; Always in camera space; normalised (unit vector)
-    BINDING_IN_BITANGENT            = 5,    // vec3; Always in camera space; normalised (unit vector)
-    BINDING_IN_TEXCOORD0            = 6,    // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD1            = 7,    // vec2; texture uv coordinates
+    PASS_POSITION             = 0,    // vec3; Always in camera space; without a projection transformation
+    PASS_DIFFUSE              = 1,    // vec4; each component in range <0,1>; Fragments with alpha component less than 0.5 are automatically discarded.
+    PASS_SPECULAR             = 2,    // vec4; RGB components are in range <0,1>; The alpha component is used as the coeficient for specular lighting.
+    PASS_NORMAL               = 3,    // vec3; Always in camera space; without a projection transformation
+    PASS_TANGENT              = 4,    // vec3; Always in camera space; normalised (unit vector)
+    PASS_BITANGENT            = 5,    // vec3; Always in camera space; normalised (unit vector)
+    PASS_TEXCOORD0            = 6,    // vec2; texture uv coordinates
+    PASS_TEXCOORD1            = 7,    // vec2; texture uv coordinates
 };
 
 inline natural_32_bit  value(FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location)
@@ -123,11 +123,11 @@ std::string  type_name(FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION const  loca
 
 enum struct FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION : natural_8_bit
 {
-    BINDING_OUT_COLOUR              = 0,    // vec4; each component in range <0,1>; The default output to the framgment buffer (screen)
-    BINDING_OUT_TEXTURE_POSITION    = 1,    // vec3; always in camera space; For sampling to output G-buffer
-    BINDING_OUT_TEXTURE_NORMAL      = 2,    // vec3; always in camera space; normalised (unit) vector; For sampling to output G-buffer
-    BINDING_OUT_TEXTURE_DIFFUSE     = 3,    // vec4; each component in range <0,1>; For sampling to output G-buffer
-    BINDING_OUT_TEXTURE_SPECULAR    = 4,    // vec4; RGB components in range <0,1>; The alpha component is used as the coeficient for specular lighting; For sampling to output G-buffer
+    OUT_COLOUR              = 0,    // vec4; each component in range <0,1>; The default output to the framgment buffer (screen)
+    OUT_TEXTURE_POSITION    = 1,    // vec3; always in camera space; For sampling to output G-buffer
+    OUT_TEXTURE_NORMAL      = 2,    // vec3; always in camera space; normalised (unit) vector; For sampling to output G-buffer
+    OUT_TEXTURE_DIFFUSE     = 3,    // vec4; each component in range <0,1>; For sampling to output G-buffer
+    OUT_TEXTURE_SPECULAR    = 4,    // vec4; RGB components in range <0,1>; The alpha component is used as the coeficient for specular lighting; For sampling to output G-buffer
 };
 
 inline natural_32_bit  value(FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION const  location)

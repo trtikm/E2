@@ -435,7 +435,7 @@ void  buffer_file_data::destroy_gl_buffer() const
 }
 
 
-bool  buffer_file_data::make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance) const
+bool  buffer_file_data::make_current(natural_32_bit const  start_location, bool const  use_per_instance) const
 {
     TMPROF_BLOCK();
 
@@ -444,7 +444,7 @@ bool  buffer_file_data::make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION
     glBindBuffer(GL_ARRAY_BUFFER, id());
     for (natural_32_bit  location_shift = 0U; location_shift * 4U < num_components_per_primitive(); ++location_shift)
     {
-        natural_32_bit const  location = value(start_location) + location_shift;
+        natural_32_bit const  location = start_location + location_shift;
         natural_32_bit const  num_components = std::min(4U, num_components_per_primitive() - location_shift * 4U);
         glEnableVertexAttribArray(location);
         glVertexAttribPointer(
@@ -551,8 +551,8 @@ void  buffers_binding_data::initialise(
         (!m_index_buffer.empty() && m_num_indices_per_primitive == 0U)
         );
     ASSUMPTION(m_buffers.size() <= (natural_64_bit)GL_MAX_VERTEX_ATTRIBS);
-    ASSUMPTION(m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION) == 1UL);
-    ASSUMPTION(m_buffers.at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION).has_boundary());
+    ASSUMPTION(m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION) == 1UL);
+    ASSUMPTION(m_buffers.at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION).has_boundary());
     ASSUMPTION(
         [this]() -> bool {
                 for (auto const& elem : m_buffers)
@@ -598,7 +598,11 @@ void  buffers_binding_data::destroy_gl_binding()
 namespace gfx {
 
 
-bool  buffers_binding::ready() const
+bool  buffers_binding::ready(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> const&  locations
+#endif
+        ) const
 {
     TMPROF_BLOCK();
 
@@ -623,7 +627,13 @@ bool  buffers_binding::ready() const
             get_index_buffer().create_gl_buffer();
 
         for (auto const& location_and_buffer : get_buffers())
-            if (location_and_buffer.second.make_current(location_and_buffer.first, false) == false)
+            if (location_and_buffer.second.make_current(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+                    locations.at(location_and_buffer.first),
+#else
+                    value(location_and_buffer.first),
+#endif
+                    false) == false)
                 return false;
 
         mutable_this->set_ready();
@@ -633,11 +643,19 @@ bool  buffers_binding::ready() const
 }
 
 
-bool  buffers_binding::make_current() const
+bool  buffers_binding::make_current(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> const&  locations
+#endif
+        ) const
 {
     TMPROF_BLOCK();
 
-    if (!ready())
+    if (!ready(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+            locations
+#endif
+            ))
         return false;
 
     glBindVertexArray(id());
@@ -648,7 +666,7 @@ bool  buffers_binding::make_current() const
         detail::current_draw::set_index_buffer_id(0U);
         detail::current_draw::set_num_components_per_primitive(get_num_indices_per_primitive());
         detail::current_draw::set_num_primitives(
-            get_buffers().at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION).num_primitives()
+            get_buffers().at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION).num_primitives()
             );
     }
     else
@@ -663,9 +681,18 @@ bool  buffers_binding::make_current() const
 }
 
 
-bool  make_current(buffers_binding const&  binding)
+bool  make_current(
+        buffers_binding const&  binding
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+        ,std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> const&  locations
+#endif
+        )
 {
-    return binding.make_current();
+    return binding.make_current(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+            locations
+#endif
+            );
 }
 
 

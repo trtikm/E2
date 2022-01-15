@@ -6,13 +6,13 @@
 #   include <gfx/spatial_boundary.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/async_resource_load.hpp>
+#   include <utility/config.hpp>
 #   include <filesystem>
 #   include <array>
 #   include <vector>
 #   include <unordered_map>
 #   include <memory>
 #   include <utility>
-
 
 namespace gfx { namespace detail {
 
@@ -85,7 +85,7 @@ struct  buffer_file_data
     void  create_gl_buffer() const;
     void  destroy_gl_buffer() const;
 
-    bool  make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance) const;
+    bool  make_current(natural_32_bit const  start_location, bool const  use_per_instance) const;
 
 private:
     void  initialise(
@@ -267,7 +267,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     void  create_gl_buffer() const { resource().create_gl_buffer(); }
     void  destroy_gl_buffer() const { resource().destroy_gl_buffer(); }
 
-    bool  make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance) const
+    bool  make_current(natural_32_bit const  start_location, bool const  use_per_instance) const
     { return resource().make_current(start_location, use_per_instance); }
 };
 
@@ -322,7 +322,7 @@ struct buffers_binding_data
 
     spatial_boundary const& get_boundary() const
     {
-        return get_buffers().at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION).boundary();
+        return get_buffers().at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION).boundary();
     }
 
     bool  ready() const { return m_ready; }
@@ -435,14 +435,23 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
 
     natural_32_bit  num_matrices_per_vertex() const
     {
-        auto const  it = get_buffers().find(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INDICES_OF_MATRICES);
+        auto const  it = get_buffers().find(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INDICES_OF_MATRICES);
         return it == get_buffers().cend() ? 0U : it->second.num_components_per_primitive();
     }
 
     spatial_boundary const& get_boundary() const { return resource().get_boundary(); }
 
-    bool  ready() const;
-    bool  make_current() const;
+    bool  ready(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> const&  locations
+#endif
+        ) const;
+
+    bool  make_current(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> const&  locations
+#endif
+        ) const;
 
 private:
 
@@ -455,7 +464,12 @@ private:
 using  buffers_binding_map_type = buffers_binding::buffers_map_type;
 
 
-bool  make_current(buffers_binding const&  binding);
+bool  make_current(
+        buffers_binding const&  binding
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+        ,std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, GLint> const&  locations
+#endif
+        );
 
 
 }

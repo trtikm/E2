@@ -25,9 +25,9 @@ batch  create_lines3d(
             0U,
             2U,
             {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION,
                   buffer(vertices, true, (id.empty() ? id : "/generic/sketch/buffer/vertices/" + id)) },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_DIFFUSE,
                   buffer(colours, id.empty() ? id : "/generic/sketch/buffer/diffuse/" + id) },
             },
             id.empty() ? id : "/generic/sketch/buffers_binding/" + id

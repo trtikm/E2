@@ -92,9 +92,9 @@ void  build_font_batch_template_if_not_built_yet(font_mono_props const&  props, 
         0U,
         3U,
         {
-            { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+            { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION,
                 buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
-            { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+            { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0,
                 buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
         },
         id.empty() ? id : "/generic/text/buffers_binding/" + id
@@ -105,7 +105,7 @@ void  build_font_batch_template_if_not_built_yet(font_mono_props const&  props, 
     };
 
     texcoord_binding const  texcoord_binding_({
-        { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
+        { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0 }
         });
 
     draw_state const  dstate(nullptr, true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -341,9 +341,9 @@ batch  create_text(
             0U,
             3U,
             {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION,
                         buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0,
                         buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
             },
             id.empty() ? id : "/generic/text/buffers_binding/" + id

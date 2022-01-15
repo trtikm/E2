@@ -33,8 +33,8 @@ batch  create_triangle_mesh(
             0U,
             index_buffer,
             {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, vertex_buffer },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION, vertex_buffer },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_DIFFUSE,
                   buffer(colours, id.empty() ? id : "/generic/sketch/buffer/diffuse/" + id) },
             },
             id.empty() ? id : "/generic/sketch/buffers_binding/" + id
@@ -86,9 +86,9 @@ batch  create_triangle_mesh(
             0U,
             index_buffer,
             {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, vertex_buffer },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL, normal_buffer },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION, vertex_buffer },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_NORMAL, normal_buffer },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_DIFFUSE,
                   buffer(colours, id.empty() ? id : "/generic/sketch/buffer/diffuse/" + id) },
             },
             id.empty() ? id : "/generic/sketch/buffers_binding/" + id
@@ -135,8 +135,8 @@ batch  create_triangle_mesh(
             0U,
             index_buffer,
             {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, vertex_buffer },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0, texcoord_buffer },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION, vertex_buffer },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0, texcoord_buffer },
             },
             id.empty() ? id : "/generic/sketch/buffers_binding/" + id
             ),
@@ -144,7 +144,7 @@ batch  create_triangle_mesh(
             { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, diffuse }
             }),
         texcoord_binding({
-            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
+            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0 }
             }),
         effects_config{
             nullptr,
@@ -181,9 +181,9 @@ batch  create_triangle_mesh(
             0U,
             3U,
             {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION,
                   buffer(vertices, true, (id.empty() ? id : "/generic/sketch/buffer/vertices/" + id)) },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0,
                   buffer(texcoords, (id.empty() ? id : "/generic/sketch/buffer/texcoords/" + id)) },
             },
             id.empty() ? id : "/generic/sketch/buffers_binding/" + id
@@ -192,7 +192,7 @@ batch  create_triangle_mesh(
             { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, diffuse }
             }),
         texcoord_binding({
-            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
+            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TEXCOORD0 }
             }),
         effects_config{
             nullptr,
@@ -237,9 +237,9 @@ batch  create_triangle_mesh(
             0U,
             3U,
             {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION,
                   buffer(vertices, true, (id.empty() ? id : "/generic/sketch/buffer/vertices/" + id)) },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_DIFFUSE,
                   buffer(colours, id.empty() ? id : "/generic/sketch/buffer/diffuse/" + id) },
             },
             id.empty() ? id : "/generic/sketch/buffers_binding/" + id
@@ -293,11 +293,11 @@ batch  create_triangle_mesh(
             0U,
             3U,
             {
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION,
                   buffer(vertices, true, (id.empty() ? id : "/generic/sketch/buffer/vertices/" + id)) },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_NORMAL,
                   buffer(normals, false, (id.empty() ? id : "/generic/sketch/buffer/normals/" + id)) },
-                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_DIFFUSE,
                   buffer(colours, id.empty() ? id : "/generic/sketch/buffer/diffuse/" + id) },
             },
             id.empty() ? id : "/generic/sketch/buffers_binding/" + id

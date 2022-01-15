@@ -402,6 +402,18 @@ std::string  shaders_binding_data::create_gl_binding()
 
     m_id = create_opengl_program(get_vertex_shader().id(),get_fragment_shader().id(),error_message);
     INVARIANT((id() != 0U && error_message.empty()) || (id() == 0U && !error_message.empty()));
+    if (!error_message.empty())
+        return error_message;
+
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+    for (VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const location : get_vertex_shader().get_input_buffer_bindings())
+    {
+        GLint const gl_location = glGetAttribLocation(m_id, name(location).c_str());
+        INVARIANT(gl_location >= 0);
+        m_locations.insert({ location, gl_location });
+    }
+#endif
+
     return error_message;
 }
 
@@ -417,6 +429,9 @@ void  shaders_binding_data::destroy_gl_binding()
     INVARIANT(glGetError() == 0U);
 
     m_id = 0U;
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+    m_locations.clear();
+#endif
     m_ready = false;
 }
 
@@ -432,6 +447,9 @@ void  shaders_binding_data::initialise(
     m_id = id;
     m_vertex_shader = vertex_shader;
     m_fragment_shader = fragment_shader;
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+    m_locations.clear();
+#endif
     m_ready = false;
 
     ASSUMPTION(compatible(get_vertex_shader().get_output_buffer_bindings(),get_fragment_shader().get_input_buffer_bindings()));

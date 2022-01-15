@@ -2,6 +2,7 @@
 #include <utility/invariants.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/timeprof.hpp>
+#include <utility/config.hpp>
 #include <algorithm>
 #include <iterator>
 
@@ -82,7 +83,7 @@ vertex_shader_instanced_data_provider::vertex_shader_instanced_data_provider(bat
 void  vertex_shader_instanced_data_provider::insert_from_model_to_camera_matrix(matrix44 const&  from_model_to_camera_matrix)
 {
     TMPROF_BLOCK();
-    ASSUMPTION(m_batch.get_instancing_data_ptr()->m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL);
+    ASSUMPTION(m_batch.get_instancing_data_ptr()->m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL);
     matrix44  Z = transpose44(from_model_to_camera_matrix);
     std::copy(
         (natural_8_bit const*)Z.data(),
@@ -95,7 +96,7 @@ void  vertex_shader_instanced_data_provider::insert_from_model_to_camera_matrix(
 void  vertex_shader_instanced_data_provider::insert_diffuse_colour(vector4 const&  diffuse_colour)
 {
     TMPROF_BLOCK();
-    ASSUMPTION(m_batch.get_instancing_data_ptr()->m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR) != 0UL);
+    ASSUMPTION(m_batch.get_instancing_data_ptr()->m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_DIFFUSE_COLOUR) != 0UL);
     std::copy(
         (natural_8_bit const*)diffuse_colour.data(),
         (natural_8_bit const*)diffuse_colour.data() + 4U * sizeof(float_32_bit),
@@ -119,7 +120,7 @@ bool  vertex_shader_instanced_data_provider::make_current() const
         for (auto const buffer_type : m_batch.get_instancing_data_ptr()->m_buffers)
             switch (buffer_type)
             {
-            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
                 m_buffers.insert({
                     buffer_type,
                     buffer(
@@ -133,7 +134,7 @@ bool  vertex_shader_instanced_data_provider::make_current() const
                         )
                     });
                 break;
-            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_DIFFUSE_COLOUR:
                 m_buffers.insert({
                     buffer_type,
                     buffer(
@@ -151,7 +152,13 @@ bool  vertex_shader_instanced_data_provider::make_current() const
             }
     }
     for (auto&  location_and_buffer : m_buffers)
-        if (location_and_buffer.second.make_current(location_and_buffer.first, true) == false)
+        if (location_and_buffer.second.make_current(
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+                    m_batch.get_instancing_data_ptr()->m_shaders_binding.get_locations().at(location_and_buffer.first),
+#else
+                    value(location_and_buffer.first),
+#endif
+                    true) == false)
             return false;
 
     return true;
@@ -171,10 +178,10 @@ bool  vertex_shader_instanced_data_provider::compute_num_instances() const
         integer_32_bit  current_size;
         switch (buffer_type)
         {
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
             current_size = (integer_32_bit)m_from_model_to_camera_matrices->size() / (16 * sizeof(float_32_bit));
             break;
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_INSTANCED_DIFFUSE_COLOUR:
             current_size = (integer_32_bit)m_diffuse_colours->size() / (4 * sizeof(float_32_bit));
             break;
         default: UNREACHABLE();

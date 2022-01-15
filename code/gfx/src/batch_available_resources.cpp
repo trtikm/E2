@@ -59,22 +59,22 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
             if (fname == "indices.txt")
                 m_num_indices_per_primitive = 0U;
             else if (fname == "vertices.txt")
-                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION,
                                     canonical_path(entry.path()).string()});
             else if (fname == "normals.txt")
-                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL,
+                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_NORMAL,
                                     canonical_path(entry.path()).string()});
             else if (fname == "tangents.txt")
-                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TANGENT,
+                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_TANGENT,
                                     canonical_path(entry.path()).string()});
             else if (fname == "bitangents.txt")
-                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_BITANGENT,
+                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_BITANGENT,
                                     canonical_path(entry.path()).string()});
             else if (fname == "diffuse.txt")
-                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_DIFFUSE,
                                     canonical_path(entry.path()).string()});
             else if (fname == "specular.txt")
-                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_SPECULAR,
+                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_SPECULAR,
                                     canonical_path(entry.path()).string()});
             else if (fname.find("texcoords") == 0UL && entry.path().filename().extension() == ".txt")
                 for (natural_8_bit  i = 0U, n = get_num_texcoord_binding_locations(); i != n; ++i)
@@ -85,7 +85,7 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
                         break;
                     }
         }
-    if (m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION) == 0UL)
+    if (m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::IN_POSITION) == 0UL)
         throw std::runtime_error(msgstream() << "Cannot find the vertex buffer file: " << (buffers_dir / "vertices.txt"));
     if (m_num_indices_per_primitive != 0U) // TODO: Extend structure of 'batch' file on the disk, so that non-index buffer batches could be loaded.
         throw std::runtime_error(msgstream() << "Cannot find the index buffer file: " << (buffers_dir / "indices.txt"));

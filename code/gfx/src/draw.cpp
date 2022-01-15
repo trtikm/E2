@@ -410,7 +410,11 @@ void  render_batch(
     if (world_matrices_.empty())
         return;
 
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+    bool const  use_instancing = false;
+#else
     bool const  use_instancing = world_matrices_.size() > 1UL && !batch_.is_attached_to_skeleton() && batch_.has_instancing_data();
+#endif
 
     if (!make_current(batch_, draw_state_ptr_ == nullptr ? draw_state() : *draw_state_ptr_, use_instancing))
         return;
