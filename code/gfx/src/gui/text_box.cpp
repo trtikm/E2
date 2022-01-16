@@ -4,6 +4,7 @@
 #include <osi/provider.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/log.hpp>
+#include <utility/config.hpp>
 
 namespace gfx { namespace gui {
 
@@ -133,7 +134,9 @@ void  text_box::render(draw_state&  dstate) const
     gfx::projection_matrix_orthogonal(-1.0f, 1.0f, left_m, right_m, bottom_m, top_m, ortho_projection);
 
     gfx::make_current(vp);
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+#endif
 
     if (m_cursor_visible && gfx::make_current(m_cursor_batch, dstate))
     {

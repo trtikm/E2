@@ -12,6 +12,7 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
+#include <utility/config.hpp>
 
 namespace com { namespace detail {
 
@@ -626,7 +627,9 @@ void  simulator::render()
 
     glClearColor(cfg.clear_colour(0), cfg.clear_colour(1), cfg.clear_colour(2), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     glPolygonMode(GL_FRONT_AND_BACK, cfg.render_in_wireframe ? GL_LINE : GL_FILL);
+#endif
 
     for (auto const&  id_and_task : render_tasks_opaque)
         render_task(id_and_task.second);
@@ -813,14 +816,18 @@ void  simulator::render_colliders()
 
     // And here we do the actual rendering of prepared render tasks.
 
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     GLint  backup_polygon_mode[2];
     glGetIntegerv(GL_POLYGON_MODE, &backup_polygon_mode[0]);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+#endif
 
     for (auto const&  id_and_task : tasks)
         render_task(id_and_task.second);
 
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     glPolygonMode(GL_FRONT_AND_BACK, backup_polygon_mode[0]);
+#endif
 }
 
 
@@ -1204,7 +1211,9 @@ void  simulator::render_text()
     if (gfx::make_current(m_text_cache.batch, cfg.draw_state))
     {
         gfx::make_current(get_viewport(VIEWPORT_TYPE::SCENE));
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+#endif
         gfx::render_batch(
             m_text_cache.batch,
             pos,
