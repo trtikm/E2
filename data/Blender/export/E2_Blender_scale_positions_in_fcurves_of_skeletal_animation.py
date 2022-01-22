@@ -17,11 +17,11 @@ import math
 ################################################################
 # CONFIG SECTION - update the values to desired ones !!!
 
-armature_name = "Agent"
+armature_name = "Armature"
 
 FCURVE_INFO_SIZE_PER_BONE = 4 + 3 + 3   # rot[wxyz] + pos[xyz] + scale[xyz]
-FCURVE_ROT_OFFSET = 0
-FCURVE_POS_OFFSET = 4
+FCURVE_ROT_OFFSET = 3
+FCURVE_POS_OFFSET = 0
 FCURVE_SCALE_OFFSET = 7
 
 POS_SCALE_XYZ = 0.01

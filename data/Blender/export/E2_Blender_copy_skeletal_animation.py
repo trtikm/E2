@@ -66,7 +66,7 @@ class CopySkeletalAnimation:
         #############################################################################################
         # CONFIG SECTION - set variables below to desired values before running the script !!!
 
-        self.src_armature_name = "TODO"
+        self.src_armature_name = "Armature"
         self.dst_armature_name = "agent/TODO"
 
         self.bones_map = {
@@ -82,7 +82,7 @@ class CopySkeletalAnimation:
             "TODO_LeftShoulder": "to_arm.L",
             "TODO_LeftArm": "upper_arm.L",
             "TODO_LeftForeArm": "lower_arm.L",
-            "TODO_LeftHand": "ik_arm.L",
+            "TODO_LeftHand": "arm.IK.L",
 
             "TODO_LeftHandPinky1": "upper_finger4.L",
             "TODO_LeftHandPinky2": "middle_finger4.L",
@@ -106,7 +106,7 @@ class CopySkeletalAnimation:
             "TODO_RightShoulder": "to_arm.R",
             "TODO_RightArm": "upper_arm.R",
             "TODO_RightForeArm": "lower_arm.R",
-            "TODO_RightHand": "ik_arm.R",
+            "TODO_RightHand": "arm.IK.R",
 
             "TODO_RightHandPinky1": "upper_finger4.R",
             "TODO_RightHandPinky2": "middle_finger4.R",
@@ -129,12 +129,12 @@ class CopySkeletalAnimation:
 
             "TODO_LeftUpLeg": "upper_leg.L",
             "TODO_LeftLeg": "lower_leg.L",
-            "TODO_LeftFoot": "IK_leg.L",
+            "TODO_LeftFoot": "leg.IK.L",
             "TODO_LeftToeBase": "lower_foot.L",
 
             "TODO_RightUpLeg": "upper_leg.R",
             "TODO_RightLeg": "lower_leg.R",
-            "TODO_RightFoot": "IK_leg.R",
+            "TODO_RightFoot": "leg.IK.R",
             "TODO_RightToeBase": "lower_foot.R",
         }
 
@@ -142,11 +142,11 @@ class CopySkeletalAnimation:
             # This map allows you to change parents of bones of the destination armature. This is perhaps
             # useful only of IK bones which often do not follow the standard parent-child chain of bones.
 
-            "ik_arm.L": "lower_arm.L",
-            "ik_arm.R": "lower_arm.R",
+            "arm.IK.L": "lower_arm.L",
+            "arm.IK.R": "lower_arm.R",
 
-            "IK_leg.L": "lower_leg.L",
-            "IK_leg.R": "lower_leg.R",
+            "leg.IK.L": "lower_leg.L",
+            "leg.IK.R": "lower_leg.R",
         }
 
         self.pole_targets = {
@@ -157,11 +157,11 @@ class CopySkeletalAnimation:
             # of the distance defines on what side of the joint the pole target should be placed. Typically, the
             # distance is opposite of pole targets of elbow and knee, because they bend in opposite directions.
 
-            "pole_arm.L": {"parent": "upper_arm.L", "child": "lower_arm.L", "distance": 1.0},
-            "pole_arm.R": {"parent": "upper_arm.R", "child": "lower_arm.R", "distance": 1.0},
+            "arm.pole.IK.L": {"parent": "upper_arm.L", "child": "lower_arm.L", "distance": 1.0},
+            "arm.pole.IK.R": {"parent": "upper_arm.R", "child": "lower_arm.R", "distance": 1.0},
 
-            "pole_leg.L": {"parent": "upper_leg.L", "child": "lower_leg.L", "distance": -1.0},
-            "pole_leg.R": {"parent": "upper_leg.R", "child": "lower_leg.R", "distance": -1.0},
+            "leg.pole.IK.L": {"parent": "upper_leg.L", "child": "lower_leg.L", "distance": -1.0},
+            "leg.pole.IK.R": {"parent": "upper_leg.R", "child": "lower_leg.R", "distance": -1.0},
         }
 
         # The script automatically mutes all IK constraints of all bones of the destination armature before
@@ -302,9 +302,9 @@ class CopySkeletalAnimation:
             for bone_name, info in self.pole_targets.items():
                 parent_bone = self.dst_armature.pose.bones[info["parent"]]
                 child_bone = self.dst_armature.pose.bones[info["child"]]
-                joint_location = (child_bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0))).to_3d()
-                parent_y_vector = (parent_bone.matrix.to_3x3() * mathutils.Vector((0.0, -1.0, 0.0))).normalized()
-                child_y_vector = (child_bone.matrix.to_3x3() * mathutils.Vector((0.0, 1.0, 0.0))).normalized()
+                joint_location = (child_bone.matrix @ mathutils.Vector((0.0, 0.0, 0.0, 1.0))).to_3d()
+                parent_y_vector = (parent_bone.matrix.to_3x3() @ mathutils.Vector((0.0, -1.0, 0.0))).normalized()
+                child_y_vector = (child_bone.matrix.to_3x3() @ mathutils.Vector((0.0, 1.0, 0.0))).normalized()
                 if parent_y_vector.angle(child_y_vector, math.pi) >= math.pi - 5.0 * (math.pi / 180.0):
                     pole_vector = mathutils.Vector((0.0, info["distance"], 0.0))
                 else:
@@ -343,27 +343,27 @@ class CoordSystem:
 
     def get_matrix_from(self):
         if self._matrix_from is None:
-            self._matrix_from = mathutils.Matrix.Translation(self.position) * self.orientation.to_matrix().to_4x4()
+            self._matrix_from = mathutils.Matrix.Translation(self.position) @ self.orientation.to_matrix().to_4x4()
         return self._matrix_from
 
     def get_matrix_to(self):
         if self._matrix_to is None:
-            self._matrix_to = self.orientation.to_matrix().transposed().to_4x4() * mathutils.Matrix.Translation(-self.position)
+            self._matrix_to = self.orientation.to_matrix().transposed().to_4x4() @ mathutils.Matrix.Translation(-self.position)
         return self._matrix_to
 
     def transform_to_my_frame(self, coord_system):
         assert isinstance(coord_system, CoordSystem)
-        return CoordSystem.make_from_matrix44(self.get_matrix_to() * coord_system.get_matrix_from())
+        return CoordSystem.make_from_matrix44(self.get_matrix_to() @ coord_system.get_matrix_from())
 
     def transform_from_my_frame(self, coord_system):
         assert isinstance(coord_system, CoordSystem)
-        return CoordSystem.make_from_matrix44(self.get_matrix_from() * coord_system.get_matrix_from())
+        return CoordSystem.make_from_matrix44(self.get_matrix_from() @ coord_system.get_matrix_from())
 
     @staticmethod
     def make_from_matrix44(matrix_4x4):
         assert isinstance(matrix_4x4, mathutils.Matrix)
         return CoordSystem(
-            (matrix_4x4 * mathutils.Vector((0.0, 0.0, 0.0, 1.0))).to_3d(),
+            (matrix_4x4 @ mathutils.Vector((0.0, 0.0, 0.0, 1.0))).to_3d(),
             matrix_4x4.to_3x3().to_quaternion().normalized()
             )
 
@@ -387,23 +387,23 @@ class MotionDifference:
     def transform_from_frame(self, coord_system):
         assert isinstance(coord_system, CoordSystem)
         rotation = coord_system.orientation.to_matrix()
-        return MotionDifference(rotation * self.translation, rotation * self.axis, self.angle)
+        return MotionDifference(rotation @ self.translation, rotation @ self.axis, self.angle)
 
     def transform_to_frame(self, coord_system):
         assert isinstance(coord_system, CoordSystem)
         rotation = coord_system.orientation.to_matrix().transposed()
-        return MotionDifference(rotation * self.translation, rotation * self.axis, self.angle)
+        return MotionDifference(rotation @ self.translation, rotation @ self.axis, self.angle)
 
     def apply_to_frame(self, coord_system):
         assert isinstance(coord_system, CoordSystem)
-        rotation = mathutils.Quaternion(self.axis, self.angle).to_matrix() * coord_system.orientation.to_matrix()
+        rotation = mathutils.Quaternion(self.axis, self.angle).to_matrix() @ coord_system.orientation.to_matrix()
         return CoordSystem(coord_system.position + self.translation, rotation.to_quaternion().normalized())
 
     @staticmethod
     def make_from_frames(start_coord_system, end_coord_system):
         assert isinstance(start_coord_system, CoordSystem)
         assert isinstance(end_coord_system, CoordSystem)
-        rotation = end_coord_system.orientation.to_matrix() * start_coord_system.orientation.to_matrix().transposed()
+        rotation = end_coord_system.orientation.to_matrix() @ start_coord_system.orientation.to_matrix().transposed()
         axis, angle = rotation.to_quaternion().to_axis_angle()
         return MotionDifference(end_coord_system.position - start_coord_system.position, axis, angle)
 
@@ -458,8 +458,8 @@ def get_coord_systems_of_all_bones_of_base_pose_of_armature(armature):
         parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
         for xbone in bones_list:
             bone_to_base_matrix = CoordSystem(parent_tail + xbone.head, xbone.matrix.to_quaternion()).get_matrix_to()
-            transform_matrix = bone_to_base_matrix * transform_matrix
-            parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
+            transform_matrix = bone_to_base_matrix @ transform_matrix
+            parent_tail = bone_to_base_matrix @ (parent_tail + xbone.tail).to_4d()
             parent_tail.resize_3d()
 
         result[bone.name] = CoordSystem.make_from_matrix44(transform_matrix.inverted())
