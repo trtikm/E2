@@ -13,7 +13,7 @@ class program_options_base
 public:
     program_options_base(int argc, char* argv[]);
 
-    bool  has(std::string const& key) const { return m_values.count(key) != 0UL; }
+    bool  has(std::string const& key) const;
     std::vector<std::string> const& values(std::string const& key) const;
     std::string const&  value(std::string const& key) const;
     int  value_as_int(std::string const& key) const;

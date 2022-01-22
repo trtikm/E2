@@ -48,6 +48,13 @@ program_options_base::program_options_base(int argc, char* argv[])
 }
 
 
+bool  program_options_base::has(std::string const& key) const
+{
+    const_cast<program_options_base*>(this)->parse();
+    return m_values.count(key) != 0UL;
+}
+
+
 std::vector<std::string> const&  program_options_base::values(std::string const& key) const
 {
     const_cast<program_options_base*>(this)->parse();
