@@ -1,4 +1,4 @@
-font_texture texture\\font\\Consolas_16.txt
+font_texture texture/font/Consolas_16.txt
 min_ascii_code 0
 max_ascii_code 255
 max_chars_in_row 16
