@@ -1,4 +1,5 @@
 #include <utility/async_resource_load.hpp>
+#include <utility/config.hpp>
 #include <boost/algorithm/string.hpp>
 
 
@@ -246,7 +247,9 @@ resource_load_planner::resource_load_planner()
 void  resource_load_planner::start_worker_if_not_running()
 {
     TMPROF_BLOCK();
-
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+    resource_load_planner::worker();
+#else
     if (m_worker_finished)
     {
         if (m_worker_thread.joinable())
@@ -254,6 +257,7 @@ void  resource_load_planner::start_worker_if_not_running()
         m_worker_finished = false;
         m_worker_thread = std::thread(&resource_load_planner::worker,this);
     }
+#endif
 }
 
 

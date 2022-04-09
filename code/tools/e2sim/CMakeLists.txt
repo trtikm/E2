@@ -13,6 +13,13 @@ add_executable(${THIS_TARGET_NAME}
     run.cpp
     )
 
+if(EMSCRIPTEN)
+    set_target_properties(${THIS_TARGET_NAME}
+        PROPERTIES
+        LINK_FLAGS "--preload-file ${CMAKE_SOURCE_DIR}/data@/"
+        )
+endif()
+
 target_link_libraries(${THIS_TARGET_NAME}
     ai
     angeo

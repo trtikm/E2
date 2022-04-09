@@ -2,6 +2,10 @@
 #include <osi/provider.hpp>
 #include <utility/async_resource_load.hpp>
 #include <utility/config.hpp>
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+#   include <emscripten.h> // For emscripten_get_device_pixel_ratio()
+#   include <emscripten/html5.h> // For Emscripten HTML5 WebGL context creation API
+#endif
 #include <stdexcept>
 
 namespace osi {
@@ -33,6 +37,30 @@ void  simulator::send_close_request() { osi::send_close_request(); }
 
 std::string const&  simulator::error_text() const { return osi::error_text(); }
 
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+static std::unique_ptr<simulator> s_sim_ptr = nullptr;
+static void loop(void)
+{
+    if (false) // should terminate game?
+    {
+        async::terminate();
+
+        s_sim_ptr->terminate();
+        s_sim_ptr.reset();
+
+        osi::close();
+
+        emscripten_cancel_main_loop();
+        return;
+    }
+
+    osi::start_round();
+
+    s_sim_ptr->round();
+
+    osi::finish_round();
+}
+#endif
 
 void  run(std::unique_ptr<simulator>  s)
 {
@@ -49,6 +77,10 @@ void  run(std::unique_ptr<simulator>  s)
 
         s->initialise();
 
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+        s_sim_ptr = std::move(s);
+        emscripten_set_main_loop(&loop, 0 , 0);
+#else
         while (!osi::is_close_requested())
         {
             osi::start_round();
@@ -64,6 +96,7 @@ void  run(std::unique_ptr<simulator>  s)
         s.reset();
 
         osi::close();
+#endif
     }
 #if BUILD_RELEASE() == 1
     catch (std::exception const&  e)

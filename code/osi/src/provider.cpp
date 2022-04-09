@@ -2,10 +2,14 @@
 #include <GLFW/glfw3.h>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/config.hpp>
+#include <utility/log.hpp>
 #include <array>
 #include <algorithm>
 #include <iostream>
-
+#if PLATFORM() == PLATFORM_WEBASSEMBLY()
+#   include <emscripten.h>
+#endif
 namespace osi { namespace {
 
 
@@ -352,6 +356,7 @@ void  open()
 
     glfwMakeContextCurrent(window_ptr);
 
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         glfwDestroyWindow(window_ptr);
@@ -360,6 +365,7 @@ void  open()
     }
 
     glfwSwapInterval(0);
+#endif
 
     glfwSetKeyCallback(window_ptr, on_keyboard_event);
     glfwSetCharCallback(window_ptr, on_character_event);
@@ -444,7 +450,11 @@ void  maximise_window()
 natural_16_bit  window_frame_size_left()
 {
     int  left;
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     glfwGetWindowFrameSize(window_ptr, &left, nullptr, nullptr, nullptr);
+#else
+    left = 0;
+#endif
     return (natural_16_bit)left;
 }
 
@@ -452,7 +462,12 @@ natural_16_bit  window_frame_size_left()
 natural_16_bit  window_frame_size_right()
 {
     int  right;
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     glfwGetWindowFrameSize(window_ptr, nullptr, nullptr, &right, nullptr);
+#else
+    int h,f;
+    emscripten_get_canvas_size(&right,&h,&f);
+#endif
     return (natural_16_bit)right;
 }
 
@@ -460,7 +475,11 @@ natural_16_bit  window_frame_size_right()
 natural_16_bit  window_frame_size_top()
 {
     int  top;
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     glfwGetWindowFrameSize(window_ptr, nullptr, &top, nullptr, nullptr);
+#else
+    top = 0;
+#endif
     return (natural_16_bit)top;
 }
 
@@ -468,7 +487,12 @@ natural_16_bit  window_frame_size_top()
 natural_16_bit  window_frame_size_bottom()
 {
     int bottom;
+#if PLATFORM() != PLATFORM_WEBASSEMBLY()
     glfwGetWindowFrameSize(window_ptr, nullptr, nullptr, nullptr, &bottom);
+#else
+    int w,f;
+    emscripten_get_canvas_size(&w,&bottom,&f);
+#endif
     return (natural_16_bit)bottom;
 }
 

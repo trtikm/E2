@@ -9,20 +9,33 @@
 #   include <deque>
 #   include <mutex>
 
-#   define LOG(LVL,MSG) \
-        do {\
-            if ((LVL) >= BUILD_RELEASE() * 2 && (LVL) >= logging_get_minimal_severity_level())\
-            {\
-                msgstream  mstr;\
-                mstr << MSG;\
-                html_file_logger::instance().append(LVL,__FILE__,__LINE__,mstr);\
-            }\
-        } while (false)
-#   define LOG_INITIALISE(log_file_path_name,minimal_severity_level)\
-        do {\
-            logging_set_minimal_severity_level(minimal_severity_level);\
-            html_file_logger::instance().open(log_file_path_name);\
-        } while (false)
+#   if PLATFORM() == PLATFORM_WEBASSEMBLY()
+#       define LOG(LVL,MSG) \
+            do {\
+                /*if ((LVL) >= BUILD_RELEASE() * 2 && (LVL) >= logging_get_minimal_severity_level())*/\
+                {\
+                    msgstream  mstr;\
+                    mstr << __FILE__ << '[' << __LINE__ << "][" << logging_severity_level_name(LVL) << "]: " << MSG << '\n';\
+                    printf("%s", mstr.get().c_str());\
+                }\
+            } while (false)
+#       define LOG_INITIALISE(log_file_path_name,minimal_severity_level) 
+#   else
+#       define LOG(LVL,MSG) \
+            do {\
+                if ((LVL) >= BUILD_RELEASE() * 2 && (LVL) >= logging_get_minimal_severity_level())\
+                {\
+                    msgstream  mstr;\
+                    mstr << MSG;\
+                    html_file_logger::instance().append(LVL,__FILE__,__LINE__,mstr);\
+                }\
+            } while (false)
+#       define LOG_INITIALISE(log_file_path_name,minimal_severity_level)\
+            do {\
+                logging_set_minimal_severity_level(minimal_severity_level);\
+                html_file_logger::instance().open(log_file_path_name);\
+            } while (false)
+#   endif
 #   define SLOG(MSG) screen_text_logger::instance().append(msgstream() << MSG)
 #   define CLOG(MSG) continuous_text_logger::instance().append(msgstream() << MSG)
 
