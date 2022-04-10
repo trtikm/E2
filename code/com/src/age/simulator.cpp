@@ -803,13 +803,13 @@ void PlayerInteraction::render(gfx::draw_state& dstate) const
 
 ActionHistory::Record ActionHistory::Record::make(ObjectId const actor_, PlayerAction const& action_, ActionContext const& context_)
 {
-    return make(actor_, typeid(action_).name(), context_);
+    return make(actor_, boost::core::demangle(typeid(action_).name()), context_);
 }
 
 
 ActionHistory::Record ActionHistory::Record::make(ObjectId const actor_, RobotAction const& action_, ActionContext const& context_)
 {
-    return make(actor_, typeid(action_).name(), context_);
+    return make(actor_, boost::core::demangle(typeid(action_).name()), context_);
 }
 
 
