@@ -106,6 +106,8 @@ struct  WorldState : public Serialisable
 
     virtual std::unique_ptr<WorldState>  clone() const;
 
+    void clear();
+
     void insertEntity(ObjectId const& entity);
     void eraseEntity(ObjectId const& entity);
     bool hasEntity(ObjectId const& entity) const;
@@ -171,6 +173,8 @@ struct  MessagePassing : public Serialisable
     virtual ~MessagePassing() {}
 
     virtual std::unique_ptr<MessagePassing>  clone() const;
+
+    void clear();
 
     bool hasMessage(ObjectId const& receiver, Message const& message) const;
     bool hasMessage(ObjectId const& receiver, ObjectId const& sender, Message const& message) const;
@@ -461,6 +465,8 @@ private:
 struct  SimulatorState final : public Serialisable
 {
     SimulatorState();
+
+    void clear();
 
     void insertRobot(std::unique_ptr<ActorState> robotState, std::shared_ptr<RobotScore> const robotScore, unsigned int const maxSearchDepth);
     void insertPlayer(std::unique_ptr<ActorState> playerState, std::shared_ptr<PlayerInteraction> const interaction);

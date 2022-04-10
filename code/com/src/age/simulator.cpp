@@ -31,6 +31,17 @@ std::unique_ptr<WorldState> WorldState::clone() const
 }
 
 
+void WorldState::clear()
+{
+    fromEntitiesToFeatures.clear();
+    fromFeaturesToEntities.clear();
+    relationsForward.clear();
+    relationsInverse.clear();
+    fromRelationToFeatures.clear();
+    fromRelationToLabels.clear();
+}
+
+
 void WorldState::insertEntity(ObjectId const& entity)
 {
     fromEntitiesToFeatures.insert({ entity, {} });
@@ -409,6 +420,14 @@ std::unique_ptr<MessagePassing>  MessagePassing::clone() const
     std::unique_ptr<MessagePassing>  result = std::make_unique<MessagePassing>();
     *result = *this;
     return result;
+}
+
+
+void MessagePassing::clear()
+{
+    m_messages.clear();
+    m_pendingMessages.clear();
+    m_history.clear();
 }
 
 
@@ -873,6 +892,15 @@ SimulatorState::SimulatorState()
     , order()
     , activeActorIterator(order.end())
 {}
+
+
+void SimulatorState::clear()
+{
+    robots.clear();
+    players.clear();
+    order.clear();
+    activeActorIterator = order.end();
+}
 
 
 void SimulatorState::insertRobot(
