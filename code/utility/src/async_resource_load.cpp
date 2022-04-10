@@ -287,9 +287,10 @@ void  resource_load_planner::worker()
 
         {
             TMPROF_BLOCK();
-            LOG(LSL_DEBUG, "async::detail::resource_load_planner::worker(): STARTING key_type=" << m_resource_just_being_loaded.first);
+            auto const loaded_key = m_resource_just_being_loaded.first;
+            LOG(LSL_DEBUG, "async::detail::resource_load_planner::worker(): STARTING key_type=" << loaded_key);
             perform_load_of_resource_load_data(m_resource_just_being_loaded);
-            LOG(LSL_DEBUG, "async::detail::resource_load_planner::worker(): FINISHED key_type=" << m_resource_just_being_loaded.first);
+            LOG(LSL_DEBUG, "async::detail::resource_load_planner::worker(): FINISHED key_type=" << loaded_key);
         }
 
         resource_load_data_type const  auto_delete_resource_in_the_end_of_the_interation = m_resource_just_being_loaded;
