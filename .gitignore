@@ -2,7 +2,7 @@
 /dist
 /out
 /temp
-/code/tools/testapps 
+testapps/
 .idea
 .vscode
 .vs
