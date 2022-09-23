@@ -203,7 +203,7 @@ void  program_options_base::parse()
 }
 
 
-program_options_default::program_options_default(int argc, char* argv[])
+program_options_default::program_options_default(int argc, char* argv[], std::string const&  data_dir_prefix)
     : program_options_base(argc, argv)
 {
     add_option("help", "Produces this help message.", "0");
@@ -211,7 +211,9 @@ program_options_default::program_options_default(int argc, char* argv[])
     add_option("data", "A root directory under which program's data are stored.", "1");
 #if PLATFORM() == PLATFORM_WEBASSEMBLY()
     add_value("data", "/");
+#elif BUILD_RELEASE() == 1
+    add_value("data", "data/");
 #else
-    add_value("data", "../data");
+    add_value("data", data_dir_prefix + "/data/");
 #endif
 }

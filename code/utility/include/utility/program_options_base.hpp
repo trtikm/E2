@@ -44,7 +44,7 @@ private:
 class program_options_default : public program_options_base
 {
 public:
-    program_options_default(int argc, char* argv[]);
+    program_options_default(int argc, char* argv[], std::string const&  data_dir_prefix = "..");
 
     bool  helpMode() const { return has("help"); }
     bool  versionMode() const { return has("version"); }
