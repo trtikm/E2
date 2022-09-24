@@ -2,6 +2,7 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
+#include <utility/config.hpp>
 #include <boost/algorithm/string.hpp>
 #include <unordered_set>
 #include <deque>
@@ -876,7 +877,15 @@ std::string ActionHistory::load(boost::property_tree::ptree const& input)
         boost::property_tree::ptree const& rec = it->second;
         boost::property_tree::ptree const& ctx = rec.get_child("context");
 
-        Record r { rec.get<std::string>("actor"), rec.get<std::string>("action"), {} };
+        std::string  action = rec.get<std::string>("action");
+#if PLATFORM() == PLATFORM_WINDOWS()
+        if (!boost::starts_with(action, "struct "))
+            action = "struct " + action;
+#else
+        if (boost::starts_with(action, "struct "))
+            action = action.substr(7);
+#endif
+        Record r { rec.get<std::string>("actor"), action, {} };
         for (auto cit = ctx.begin(); cit != ctx.end(); ++cit)
             r.context.push_back({ cit->first, cit->second.get_value<std::string>() });
         data.push_back(r);
