@@ -42,5 +42,12 @@ set_target_properties(${THIS_TARGET_NAME} PROPERTIES
     RELWITHDEBINFO_OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_RelWithDebInfo"
     )
 
-install(TARGETS ${THIS_TARGET_NAME} DESTINATION "tools")
+    
+if(EMSCRIPTEN)
+    install(TARGETS ${THIS_TARGET_NAME} DESTINATION "tools/webgl")
+    file(GLOB target_install_files "${CMAKE_CURRENT_BINARY_DIR}/*_Emscripten_*")
+    install(FILES ${target_install_files} DESTINATION "tools/webgl")
+else()
+    install(TARGETS ${THIS_TARGET_NAME} DESTINATION "tools")
+endif()
 
