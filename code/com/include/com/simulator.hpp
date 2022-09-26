@@ -180,7 +180,12 @@ struct  simulator : public osi::simulator
     void  render_batch(gfx::batch  batch, std::vector<matrix44> const&  world_matrices);
 
     object_guid  find_collider_under_mouse() const;
-    std::string  paste_object_path_to_command_line_of_console(object_guid  guid, bool const  prefer_owner_guid = false);
+    std::string  paste_object_path_to_command_line_of_console(
+            object_guid  guid,
+            bool const  prefer_owner_guid = false,
+            bool const  replace_text_after_cursor = false,
+            bool const  move_cursor = true
+            );
 
 private:
 

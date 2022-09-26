@@ -152,8 +152,8 @@ struct  simulator : public com::simulator
             {
                 if (ctrl)
                 {
-                    std::string const  txt = paste_object_path_to_command_line_of_console(guid, shift);
-                    CLOG("Clicked: " << (txt.empty() ? "NONE" : txt.c_str()));
+                    std::string const  txt = paste_object_path_to_command_line_of_console(guid, shift, true, false);
+                    CLOG("Clicked: " << (txt.empty() ? "NONE" : txt));
                 }
             }
             else

@@ -199,10 +199,11 @@ std::string  console::text() const
 }
 
 
-void  console::paste_to_command_line(std::string const&  txt)
+void  console::paste_to_command_line(std::string const&  txt, bool const  replace_text_after_cursor, bool const  move_cursor)
 {
-    m_command_line = m_command_line.substr(0U, m_cursor) + ' ' + txt + m_command_line.substr(m_cursor);
-    m_cursor += (natural_32_bit)txt.size() + 1U;
+    m_command_line = m_command_line.substr(0U, m_cursor) + ' ' + txt + (replace_text_after_cursor ? "" : m_command_line.substr(m_cursor));
+    if (move_cursor)
+        m_cursor += (natural_32_bit)txt.size() + 1U;
 }
 
 
