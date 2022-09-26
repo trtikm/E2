@@ -1335,7 +1335,8 @@ object_guid  simulation_context::ray_cast_to_nearest_collider(
         bool const  search_dynamic,
         collision_scene_index const  scene_index,
         float_32_bit* const  ray_parameter_to_nearest_collider,
-        std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter
+        std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter,
+        float_32_bit const  min_parameter_value
         ) const
 {
     if (m_collision_scenes_ptr->at(scene_index) == nullptr)
@@ -1350,7 +1351,8 @@ object_guid  simulation_context::ray_cast_to_nearest_collider(
             ray_parameter_to_nearest_collider,
             [this,&collider_filter,scene_index](angeo::collision_object_id const  coid, angeo::COLLISION_CLASS const  cc) {
                     return collider_filter(to_collider_guid(coid, scene_index), cc);
-                    }
+                    },
+            min_parameter_value
             ))
         return invalid_object_guid();
     return m_coids_to_guids.at({nearest_coid, scene_index});

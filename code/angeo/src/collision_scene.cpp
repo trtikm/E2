@@ -1269,7 +1269,8 @@ bool  collision_scene::ray_cast(
         bool const  search_dynamic,
         collision_object_id*  nearest_coid,
         float_32_bit*  ray_parameter_to_nearest_coid,
-        std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter
+        std::function<bool(collision_object_id, COLLISION_CLASS)> const&  collider_filter,
+        float_32_bit const  min_parameter_value
         ) const
 {
     collision_object_id  tmp_nearest_coid;
@@ -1292,8 +1293,9 @@ bool  collision_scene::ray_cast(
                 coid,
                 ray_origin,
                 ray_end,
-                [nearest_coid, ray_parameter_to_nearest_coid](collision_object_id const  coid, float_32_bit const  ray_param) -> bool {
-                        if (ray_param < *ray_parameter_to_nearest_coid)
+                [nearest_coid, ray_parameter_to_nearest_coid,min_parameter_value]
+                    (collision_object_id const  coid, float_32_bit const  ray_param) -> bool {
+                        if (ray_param >= min_parameter_value && ray_param < *ray_parameter_to_nearest_coid)
                         {
                             *ray_parameter_to_nearest_coid = ray_param;
                             *nearest_coid = coid;

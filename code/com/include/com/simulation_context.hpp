@@ -382,7 +382,8 @@ struct  simulation_context
             collision_scene_index const  scene_index,
             float_32_bit* const  ray_parameter_to_nearest_collider = nullptr,
             std::function<bool(object_guid, angeo::COLLISION_CLASS)> const&  collider_filter =
-                    [](object_guid, angeo::COLLISION_CLASS) { return true; }
+                    [](object_guid, angeo::COLLISION_CLASS) { return true; },
+            float_32_bit const  min_parameter_value = 1e-6f
             ) const;
     void  request_enable_collider(object_guid const  collider_guid, bool const  state) const;
     void  request_enable_colliding(object_guid const  collider_1, object_guid const  collider_2, const bool  state) const;
