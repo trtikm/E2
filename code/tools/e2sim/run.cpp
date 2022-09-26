@@ -150,14 +150,14 @@ struct  simulator : public com::simulator
             com::object_guid const  guid = find_collider_under_mouse();
             if (guid != com::invalid_object_guid())
             {
-                CLOG("Object under mouse: " << context()->to_absolute_path(guid));
                 if (ctrl)
-                    paste_object_path_to_command_line_of_console(guid, shift);
+                {
+                    std::string const  txt = paste_object_path_to_command_line_of_console(guid, shift);
+                    CLOG("Clicked: " << (txt.empty() ? "NONE" : txt.c_str()));
+                }
             }
             else
-            {
-                CLOG("Object under mouse: NONE");
-            }
+                CLOG("Clicked: NONE");
         }
     }
 

@@ -1388,15 +1388,17 @@ object_guid  simulator::find_collider_under_mouse() const
 }
 
 
-void  simulator::paste_object_path_to_command_line_of_console(object_guid  guid, bool const  prefer_owner_guid)
+std::string  simulator::paste_object_path_to_command_line_of_console(object_guid  guid, bool const  prefer_owner_guid)
 {
     if (render_config().show_console == false || guid == invalid_object_guid())
-        return;
+        return {};
     simulation_context&  ctx = *context();
     if (prefer_owner_guid && ctx.is_valid_collider_guid(guid) && ctx.owner_of_collider(guid) != invalid_object_guid())
         guid = ctx.owner_of_collider(guid);
-    m_console.console.paste_to_command_line(ctx.to_absolute_path(ctx.folder_of(guid)));
+    std::string const  text_to_paste = ctx.to_absolute_path(ctx.folder_of(guid));
+    m_console.console.paste_to_command_line(text_to_paste);
     m_console.text_box.set_text(m_console.console.text());
+    return  text_to_paste;
 }
 
 
