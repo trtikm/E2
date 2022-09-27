@@ -29,6 +29,13 @@ private:
     void  execute_help(std::vector<std::string> const&  words, simulator const&  sim);
     void  execute_ls(std::vector<std::string> const&  words, simulator const&  sim);
     void  execute_cd(std::vector<std::string> const&  words, simulator const&  sim);
+    void  execute_pa(std::vector<std::string> const&  words, simulator const&  sim);
+    void  execute_pb(std::vector<std::string> const&  words, simulator const&  sim);
+    void  execute_pc(std::vector<std::string> const&  words, simulator const&  sim);
+    void  execute_pf(std::vector<std::string> const&  words, simulator const&  sim);
+    void  execute_pr(std::vector<std::string> const&  words, simulator const&  sim);
+    void  execute_ps(std::vector<std::string> const&  words, simulator const&  sim);
+    void  execute_pt(std::vector<std::string> const&  words, simulator const&  sim);
 
     natural_32_bit  m_cursor;
     std::string  m_command_line;

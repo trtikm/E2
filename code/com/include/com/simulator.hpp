@@ -244,6 +244,7 @@ private:
             , text_box(font, viewport)
         {
             text_box.set_text(console.text());
+            text_box.set_character_escaping(false);
         }
         console  console;
         gfx::gui::text_box  text_box;

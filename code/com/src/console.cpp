@@ -9,6 +9,24 @@
 #include <boost/algorithm/string.hpp>
 #include <sstream>
 
+
+namespace {
+
+
+std::string  print_vector3(vector3 const&  v)
+{
+    return msgstream() << "[ " << v(0) << ", " << v(1) << ", " << v(2) << " ]";
+}
+
+
+std::string  print_quaternion(quaternion const&  q)
+{
+    return msgstream() << "[ " << q.w() << "; " << q.x() << ", " << q.y() << ", " << q.z() << " ]";
+}
+
+
+}
+
 namespace com { namespace detail {
 
 
@@ -388,6 +406,20 @@ void  console::execute_command_line(simulator&  sim)
         execute_ls(words, sim);
     else if (words.front() == "cd")
         execute_cd(words, sim);
+    else if (words.front() == "pa")
+        execute_pa(words, sim);
+    else if (words.front() == "pb")
+        execute_pb(words, sim);
+    else if (words.front() == "pc")
+        execute_pc(words, sim);
+    else if (words.front() == "pf")
+        execute_pf(words, sim);
+    else if (words.front() == "pr")
+        execute_pr(words, sim);
+    else if (words.front() == "ps")
+        execute_ps(words, sim);
+    else if (words.front() == "pt")
+        execute_pt(words, sim);
     else
         push_to_history(msgstream() << "Unknown command '" << words.front() << "'. Use the command 'help'.");
 
@@ -406,6 +438,12 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
     push_to_history("                       on the passed <path>, which may be");
     push_to_history("                       either absolute (starting with '/')");
     push_to_history("                       or relative.");
+    push_to_history("p<a|f|r>               Print properties of object type");
+    push_to_history("                       AGENT|FRAME|RIGID_BODY located in the");
+    push_to_history("                       active folder.");
+    push_to_history("p<b|c|s|t> <name>      Print properties of object type");
+    push_to_history("                       BATCH|COLLIDER|SENSOR|TIMER of the name");
+    push_to_history("                       <name> located in the active folder.");
     push_to_history("");
     push_to_history("Special keys:");
     push_to_history("TAB                    Auto-complete of paths in commands");
@@ -481,6 +519,90 @@ void  console::execute_cd(std::vector<std::string> const&  words, simulator cons
     }
     else
         push_to_history(msgstream() << "Error: The path '" << path << "' is NOT a valid folder.");
+}
+
+
+void  console::execute_pa(std::vector<std::string> const&  words, simulator const&  sim)
+{
+    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+}
+
+
+void  console::execute_pb(std::vector<std::string> const&  words, simulator const&  sim)
+{
+    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+}
+
+
+void  console::execute_pc(std::vector<std::string> const&  words, simulator const&  sim)
+{
+    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+}
+
+
+void  console::execute_pf(std::vector<std::string> const&  words, simulator const&  sim)
+{
+    if (words.size() != 1ULL)
+    {
+        push_to_history("pf: The command accepts no argument.");
+        return;
+    }
+
+    simulation_context const&  ctx = *sim.context();
+    object_guid const  current_folder_guid = ctx.from_absolute_path(scene_path_to_string());
+    object_guid const  frame_guid = ctx.folder_content_frame(current_folder_guid);
+    if (!ctx.is_valid_frame_guid(frame_guid))
+    {
+        push_to_history(msgstream() << "There is no FRAME in the folder.");
+        return;
+    }
+
+    object_guid const  parent_frame_guid = ctx.parent_frame(frame_guid);
+
+    angeo::coordinate_system const&  local_frame = ctx.frame_coord_system(frame_guid);
+    angeo::coordinate_system_explicit const&  local_frame_ex = ctx.frame_explicit_coord_system(frame_guid);
+    push_to_history(msgstream() << "Local:");
+    push_to_history(msgstream() << "   origin = " << print_vector3(local_frame.origin()));
+    push_to_history(msgstream() << "   orientation = " << print_quaternion(local_frame.orientation()));
+    push_to_history(msgstream() << "   I = " << print_vector3(local_frame_ex.basis_vector_x()));
+    push_to_history(msgstream() << "   J = " << print_vector3(local_frame_ex.basis_vector_y()));
+    push_to_history(msgstream() << "   K = " << print_vector3(local_frame_ex.basis_vector_z()));
+    if (ctx.is_valid_frame_guid(parent_frame_guid))
+    {
+        angeo::coordinate_system const&  world_frame = ctx.frame_coord_system_in_world_space(frame_guid);
+        angeo::coordinate_system_explicit const&  world_frame_ex = ctx.frame_explicit_coord_system_in_world_space(frame_guid);
+        push_to_history(msgstream() << "World:");
+        push_to_history(msgstream() << "   origin = " << print_vector3(world_frame.origin()));
+        push_to_history(msgstream() << "   orientation = " << print_quaternion(world_frame.orientation()));
+        push_to_history(msgstream() << "   I = " << print_vector3(world_frame_ex.basis_vector_x()));
+        push_to_history(msgstream() << "   J = " << print_vector3(world_frame_ex.basis_vector_y()));
+        push_to_history(msgstream() << "   K = " << print_vector3(world_frame_ex.basis_vector_z()));
+
+        push_to_history(msgstream() << "Parent:");
+        push_to_history(msgstream() << "    absolute = " << ctx.to_absolute_path(ctx.folder_of_frame(parent_frame_guid)));
+        push_to_history(msgstream() << "    relative = " << ctx.to_relative_path(ctx.folder_of_frame(parent_frame_guid), current_folder_guid));
+    }
+    else
+        push_to_history(msgstream() << "Parent: NONE");
+
+}
+
+
+void  console::execute_pr(std::vector<std::string> const&  words, simulator const&  sim)
+{
+    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+}
+
+
+void  console::execute_ps(std::vector<std::string> const&  words, simulator const&  sim)
+{
+    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+}
+
+
+void  console::execute_pt(std::vector<std::string> const&  words, simulator const&  sim)
+{
+    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
 }
 
 

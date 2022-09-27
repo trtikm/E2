@@ -38,7 +38,8 @@ text_box::text_box(
         std::shared_ptr<viewport const> const  vp,
         bool const  resize_with_viewport_,
         vector2 const&  lo,
-        vector2 const&  hi
+        vector2 const&  hi,
+        bool  do_char_escaping
         )
     : window(vp, resize_with_viewport_, lo, hi)
 
@@ -47,6 +48,7 @@ text_box::text_box(
     , m_tid()
     , m_text_info()
     , m_text_batch()
+    , m_do_char_escaping(do_char_escaping)
 
     , m_bottom_line_index(0U)
     , m_scroll_lines_delta(5U)
@@ -69,7 +71,7 @@ void  text_box::update(float_32_bit const  round_seconds, osi::keyboard_props co
     if (tid != m_tid)
     {
         m_tid = tid;
-        m_text_batch = gfx::create_text(m_text, *m_font, m_tid.width / m_tid.scale, &m_text_info);
+        m_text_batch = gfx::create_text(m_text, *m_font, m_tid.width / m_tid.scale, &m_text_info, 255U, true, m_do_char_escaping, "");
         m_cursor_countdown_seconds = 1.0f;
         m_cursor_visible = true;
         m_bottom_line_index = m_text_info.num_rows == 0U ? 0U : m_text_info.num_rows - 1U;

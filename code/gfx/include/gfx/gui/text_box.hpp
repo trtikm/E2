@@ -19,10 +19,12 @@ struct  text_box : public  window
         std::shared_ptr<viewport const> const  vp,
         bool const  resize_with_viewport_ = true,
         vector2 const&  lo = { 0.0f, 0.0f },
-        vector2 const&  hi = { 1.0f, 1.0f }
+        vector2 const&  hi = { 1.0f, 1.0f },
+        bool  do_char_escaping = true
         );
 
     void  set_text(std::string const&  text) { m_text = text; }
+    void  set_character_escaping(bool const  state) { m_do_char_escaping = state; }
 
     void  update(float_32_bit const  round_seconds, osi::keyboard_props const&  keyboard, osi::mouse_props const&  mouse) override;
     void  render(draw_state&  dstate) const override;
@@ -47,6 +49,7 @@ private:
     text_id  m_tid;
     gfx::text_info  m_text_info;
     gfx::batch  m_text_batch;
+    bool  m_do_char_escaping;
 
     natural_32_bit  m_bottom_line_index;
     natural_32_bit  m_scroll_lines_delta;
