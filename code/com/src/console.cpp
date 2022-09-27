@@ -421,6 +421,10 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
     push_to_history("                       the commands history.");
     push_to_history("DOWN                   Same as the key UP, but it moves in the");
     push_to_history("                       commands history in the opposite direction.");
+    push_to_history("CTRL                   With the key LEFT/RIGHT the cursor jumps");
+    push_to_history("                       over whole worlds in left/right direction.");
+    push_to_history("                       With BACKSPACE whole word in front of the");
+    push_to_history("                       cursor is erased.");
 }
 
 
