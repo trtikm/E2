@@ -109,70 +109,122 @@ std::string  console::update(simulator&  sim)
     if (typed_text.empty())
     {
         osi::keyboard_props const&  kb = sim.get_keyboard_props();
-        if (kb.keys_just_pressed().count(osi::KEY_RETURN()))
+        if (kb.keys_pressed().count(osi::KEY_LCTRL()) || kb.keys_pressed().count(osi::KEY_RCTRL()))
         {
-            push_to_history(scene_path_to_string() + '#' + m_command_line);
-            execute_command_line(sim);
-            m_command_line.clear();
-            m_cursor = 0U;
-        }
-        else if (kb.keys_just_pressed().count(osi::KEY_TAB()))
-        {
-            if (m_cursor == m_command_line.size())
+            auto const  is_white = [](char  c) { return c == ' ' || c == '\t'; };
+            auto const  is_terminal = [](char  c) { return c == ' ' || c == '\t' || c == '/'; };
+
+            if (kb.keys_just_pressed().count(osi::KEY_LEFT()))
             {
-                if (m_seconds_since_last_tab_key < 0.0f)
+                if (m_cursor > 0U)
                 {
-                    if (on_tab(sim))
-                        m_cursor = (natural_32_bit)m_command_line.size();
+                    if (is_white(m_command_line.at(m_cursor - 1U)))
+                        do --m_cursor; while (m_cursor > 0U && is_white(m_command_line.at(m_cursor - 1U)));
+                    else if (m_command_line.at(m_cursor - 1U) == '/')
+                        --m_cursor;
                     else
-                        m_seconds_since_last_tab_key = 0.0f;
+                        do --m_cursor; while (m_cursor > 0U && !is_terminal(m_command_line.at(m_cursor - 1U)));
                 }
-                else
+            }
+            else if (kb.keys_just_pressed().count(osi::KEY_RIGHT()))
+            {
+                if (m_cursor < (natural_32_bit)m_command_line.size())
                 {
-                    on_double_tab(sim);
-                    m_seconds_since_last_tab_key = -1.0f;
+                    if (is_white(m_command_line.at(m_cursor)))
+                        do ++m_cursor; while (m_cursor < (natural_32_bit)m_command_line.size() && is_white(m_command_line.at(m_cursor)));
+                    else if (m_command_line.at(m_cursor) == '/')
+                        ++m_cursor;
+                    else
+                        do ++m_cursor; while (m_cursor < (natural_32_bit)m_command_line.size() && !is_terminal(m_command_line.at(m_cursor)));
+                }
+            }
+            else if (kb.keys_just_pressed().count(osi::KEY_BACKSPACE()))
+            {
+                if (m_cursor > 0U)
+                {
+                    natural_32_bit const  old_cursor = m_cursor;
+                    if (is_white(m_command_line.at(m_cursor - 1U)))
+                        do --m_cursor; while (m_cursor > 0U && is_white(m_command_line.at(m_cursor - 1U)));
+                    else if (m_command_line.at(m_cursor - 1U) == '/')
+                        --m_cursor;
+                    else
+                        do --m_cursor; while (m_cursor > 0U && !is_terminal(m_command_line.at(m_cursor - 1U)));
+                    m_command_line.erase(m_cursor, old_cursor - m_cursor);
                 }
             }
         }
-        else if (kb.keys_just_pressed().count(osi::KEY_UP()))
+        else
         {
-            if (m_command_history_index + 1 < (integer_32_bit)m_command_history.size())
+            if (kb.keys_just_pressed().count(osi::KEY_RETURN()))
             {
-                ++m_command_history_index;
-                m_command_line = m_command_history.at(m_command_history_index);
-                m_cursor = (natural_32_bit)m_command_line.size();
-            }
-        }
-        else if (kb.keys_just_pressed().count(osi::KEY_DOWN()))
-        {
-            if (m_command_history_index > 0)
-            {
-                --m_command_history_index;
-                m_command_line = m_command_history.at(m_command_history_index);
-                m_cursor = (natural_32_bit)m_command_line.size();
-            }
-            else if (m_command_history_index == 0)
-            {
-                m_command_history_index = -1;
+                push_to_history(scene_path_to_string() + '#' + m_command_line);
+                execute_command_line(sim);
                 m_command_line.clear();
                 m_cursor = 0U;
             }
+            else if (kb.keys_just_pressed().count(osi::KEY_ESCAPE()))
+            {
+                m_command_line.clear();
+                m_cursor = 0U;
+            }
+            else if (kb.keys_just_pressed().count(osi::KEY_TAB()))
+            {
+                if (m_cursor == m_command_line.size())
+                {
+                    if (m_seconds_since_last_tab_key < 0.0f)
+                    {
+                        if (on_tab(sim))
+                            m_cursor = (natural_32_bit)m_command_line.size();
+                        else
+                            m_seconds_since_last_tab_key = 0.0f;
+                    }
+                    else
+                    {
+                        on_double_tab(sim);
+                        m_seconds_since_last_tab_key = -1.0f;
+                    }
+                }
+            }
+            else if (kb.keys_just_pressed().count(osi::KEY_UP()))
+            {
+                if (m_command_history_index + 1 < (integer_32_bit)m_command_history.size())
+                {
+                    ++m_command_history_index;
+                    m_command_line = m_command_history.at(m_command_history_index);
+                    m_cursor = (natural_32_bit)m_command_line.size();
+                }
+            }
+            else if (kb.keys_just_pressed().count(osi::KEY_DOWN()))
+            {
+                if (m_command_history_index > 0)
+                {
+                    --m_command_history_index;
+                    m_command_line = m_command_history.at(m_command_history_index);
+                    m_cursor = (natural_32_bit)m_command_line.size();
+                }
+                else if (m_command_history_index == 0)
+                {
+                    m_command_history_index = -1;
+                    m_command_line.clear();
+                    m_cursor = 0U;
+                }
+            }
+            else if (kb.keys_just_pressed().count(osi::KEY_LEFT()) && m_cursor > 0U)
+                --m_cursor;
+            else if (kb.keys_just_pressed().count(osi::KEY_RIGHT()) && m_cursor < (natural_32_bit)m_command_line.size())
+                ++m_cursor;
+            else if (kb.keys_just_pressed().count(osi::KEY_BACKSPACE()) && m_cursor > 0U)
+            {
+                m_command_line.erase(m_cursor - 1U, 1ULL);
+                --m_cursor;
+            }
+            else if (kb.keys_just_pressed().count(osi::KEY_DELETE()) && m_cursor < (natural_32_bit)m_command_line.size())
+                m_command_line.erase(m_cursor, 1ULL);
+            else if (kb.keys_just_pressed().count(osi::KEY_HOME()))
+                m_cursor = 0U;
+            else if (kb.keys_just_pressed().count(osi::KEY_END()))
+                m_cursor = (natural_32_bit)m_command_line.size();
         }
-        else if (kb.keys_just_pressed().count(osi::KEY_LEFT()) && m_cursor > 0U)
-            --m_cursor;
-        else if (kb.keys_just_pressed().count(osi::KEY_RIGHT()) && m_cursor < (natural_32_bit)m_command_line.size())
-            ++m_cursor;
-        else if (kb.keys_just_pressed().count(osi::KEY_BACKSPACE()) && m_cursor > 0U)
-        {
-            m_command_line.erase(std::next(m_command_line.begin(), m_cursor - 1U));
-            --m_cursor;
-        }
-        else if (kb.keys_just_pressed().count(osi::KEY_DELETE()) && m_cursor < (natural_32_bit)m_command_line.size())
-            m_command_line.erase(std::next(m_command_line.begin(), m_cursor));
-        else if (kb.keys_just_pressed().count(osi::KEY_HOME()))
-            m_cursor = 0U;
-        else if (kb.keys_just_pressed().count(osi::KEY_END()))
-            m_cursor = (natural_32_bit)m_command_line.size();
     }
     else
     {
