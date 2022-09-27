@@ -441,9 +441,12 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
     push_to_history("p<a|f|r>               Print properties of object type");
     push_to_history("                       AGENT|FRAME|RIGID_BODY located in the");
     push_to_history("                       active folder.");
-    push_to_history("p<b|c|s|t> <name>      Print properties of object type");
+    push_to_history("p<b|c|s|t> [<name>]    Print properties of object type");
     push_to_history("                       BATCH|COLLIDER|SENSOR|TIMER of the name");
     push_to_history("                       <name> located in the active folder.");
+    push_to_history("                       If there is exactly one object of the");
+    push_to_history("                       kind in the active folder, then <name>");
+    push_to_history("                       can be omitted.");
     push_to_history("");
     push_to_history("Special keys:");
     push_to_history("TAB                    Auto-complete of paths in commands");
@@ -536,7 +539,82 @@ void  console::execute_pb(std::vector<std::string> const&  words, simulator cons
 
 void  console::execute_pc(std::vector<std::string> const&  words, simulator const&  sim)
 {
-    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+    if (words.size() > 2ULL)
+    {
+        push_to_history("pc: The command accepts zero or one argument (collider name).");
+        return;
+    }
+
+    simulation_context const&  ctx = *sim.context();
+    object_guid const  current_folder_guid = ctx.from_absolute_path(scene_path_to_string());
+
+    std::string  collider_name;
+    if (words.size() == 1ULL)
+    {
+        simulation_context::folder_content_type const&  fct = ctx.folder_content(current_folder_guid);
+        auto const  content_it = fct.content_index.find(OBJECT_KIND::COLLIDER);
+        if (content_it == fct.content_index.end() || content_it->second.empty())
+        {
+            push_to_history(msgstream() << "There is no COLLIDER in the folder.");
+            return;
+        }
+        if (content_it->second.size() > 1ULL)
+        {
+            push_to_history(msgstream() << "There is more than one COLLIDER in the folder.");
+            push_to_history(msgstream() << "    => Pass COLLIDER name to 'pc' command.");
+            push_to_history(msgstream() << "[Use 'ls' command to see folder content.]");
+            return;
+        }
+        collider_name = *content_it->second.begin();
+    }
+    else
+        collider_name = words.at(1);
+
+    object_guid const  collider_guid = ctx.folder_content_of_name(current_folder_guid, collider_name);
+    if (!ctx.is_valid_collider_guid(collider_guid))
+    {
+        push_to_history(msgstream() << "There is no COLLIDER of the name '" << collider_name << "' in the folder.");
+        return;
+    }
+
+    push_to_history(msgstream() << "Scene index: " << (natural_32_bit)ctx.collider_scene_index(collider_guid));
+    push_to_history(msgstream() << "Material: " << angeo::to_string(ctx.collision_material_of(collider_guid)));
+    push_to_history(msgstream() << "Class: " << angeo::to_string(ctx.collision_class_of(collider_guid)));
+    push_to_history(msgstream() << "Density multiplier: " << ctx.collider_density_multiplier(collider_guid));
+    push_to_history(msgstream() << "Enabled: " << ctx.is_collider_enabled(collider_guid));
+    push_to_history(msgstream() << "Type: " << angeo::as_string(ctx.collider_shape_type(collider_guid)));
+
+    switch (ctx.collider_shape_type(collider_guid))
+    {
+    case angeo::COLLISION_SHAPE_TYPE::BOX:
+        push_to_history(msgstream() << "   Half sizes = " << print_vector3(ctx.collider_box_half_sizes_along_axes(collider_guid)));
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+        push_to_history(msgstream() << "   End points distance = " << ctx.collider_capsule_half_distance_between_end_points(collider_guid));
+        push_to_history(msgstream() << "   Thickness = " << ctx.collider_capsule_thickness_from_central_line(collider_guid));
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+        push_to_history(msgstream() << "   Radius = " << ctx.collider_sphere_radius(collider_guid));
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
+        push_to_history(msgstream() << "   Num triangles = " << ctx.collider_num_coids(collider_guid));
+        break;
+    default:
+        push_to_history("Error: Unknown collider type.");
+        break;
+    }
+
+    push_to_history(msgstream() << "Frame = " << ctx.to_relative_path(ctx.folder_of_frame(ctx.frame_of_collider(collider_guid)), current_folder_guid));
+
+    if (ctx.owner_of_collider(collider_guid) != invalid_object_guid())
+        push_to_history(msgstream() << "Owner = " << ctx.to_relative_path(ctx.folder_of(ctx.owner_of_collider(collider_guid)), current_folder_guid));
+    else
+        push_to_history("Owner = NONE");
+
+    if (ctx.is_valid_rigid_body_guid(ctx.rigid_body_of_collider(collider_guid)))
+        push_to_history(msgstream() << "Rigid body = " << ctx.to_relative_path(ctx.folder_of(ctx.rigid_body_of_collider(collider_guid)), current_folder_guid));
+    else
+        push_to_history("Rigid body = NONE");
 }
 
 
