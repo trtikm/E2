@@ -1222,6 +1222,12 @@ float_32_bit  simulation_context::collider_sphere_radius(object_guid const  coll
     return m_collision_scenes_ptr->at(collider.scene_index)->get_sphere_radius(collider.id.front());
 }
 
+natural_32_bit  simulation_context::collider_num_coids(object_guid const  collider_guid) const
+{
+    ASSUMPTION(is_valid_collider_guid(collider_guid));
+    folder_element_collider const&  collider = m_colliders.at(collider_guid.index);
+    return (natural_32_bit)collider.id.size();
+}
 
 bool  simulation_context::is_collider_enabled(object_guid const  collider_guid) const
 {
@@ -3089,7 +3095,7 @@ std::string  simulation_context::to_relative_path(object_guid const  guid, objec
         sstr << *guid_it << '/';
     std::string  path = sstr.str();
     if (path.empty())
-        path.push_back('.');
+        path = "./";
     if (guid.kind != OBJECT_KIND::FOLDER && path.back() == '/')
         path.pop_back();
 

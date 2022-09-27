@@ -338,6 +338,7 @@ struct  simulation_context
     float_32_bit  collider_capsule_half_distance_between_end_points(object_guid const  collider_guid) const;
     float_32_bit  collider_capsule_thickness_from_central_line(object_guid const  collider_guid) const;
     float_32_bit  collider_sphere_radius(object_guid const  collider_guid) const;
+    natural_32_bit  collider_num_coids(object_guid const  collider_guid) const;
     bool  is_collider_enabled(object_guid const  collider_guid) const;
     float_32_bit  collider_density_multiplier(object_guid const  collider_guid) const;
     collision_scene_index  collider_scene_index(object_guid const  collider_guid) const;
