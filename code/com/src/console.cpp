@@ -302,7 +302,7 @@ void  console::validate_scene_path(simulator const&  sim)
 void  console::push_to_history(std::string const&  txt)
 {
     m_history.push_front(txt);
-    if (m_history.size() > 100ULL)
+    if (m_history.size() > 500ULL)
         m_history.pop_back();
 }
 
@@ -327,7 +327,7 @@ bool  console::on_tab(simulator const&  sim)
     detail::split_string(m_command_line, ' ', words);
     if (words.empty())
         return false;
-    if (words.front() == "ls" || words.front() == "cd")
+    if (words.front() == "ls" || words.front() == "cd" || words.front() == "tree")
     {
         simulation_context const&  ctx = *sim.context();
         auto const  folder_guid_and_last = detail::build_path(words, 1U, scene_path_to_string(), ctx);
@@ -378,7 +378,7 @@ void  console::on_double_tab(simulator const&  sim)
     detail::split_string(m_command_line, ' ', words);
     if (words.empty() || words.size() > 2UL)
         return;
-    if (words.front() == "ls" || words.front() == "cd")
+    if (words.front() == "ls" || words.front() == "cd" || words.front() == "tree")
     {
         simulation_context const&  ctx = *sim.context();
         auto const  folder_guid_and_last = detail::build_path(words, 1U, scene_path_to_string(), ctx);
@@ -420,6 +420,8 @@ void  console::execute_command_line(simulator&  sim)
         execute_ps(words, sim);
     else if (words.front() == "pt")
         execute_pt(words, sim);
+    else if (words.front() == "tree")
+        execute_tree(words, sim);
     else
         push_to_history(msgstream() << "Unknown command '" << words.front() << "'. Use the command 'help'.");
 
@@ -438,6 +440,9 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
     push_to_history("                       on the passed <path>, which may be");
     push_to_history("                       either absolute (starting with '/')");
     push_to_history("                       or relative.");
+    push_to_history("tree [<path>]          Prints the tree of the scene hierarchy");
+    push_to_history("                       under the passed <path>. If no path is");
+    push_to_history("                       passed, the <path> is set to '.'.");
     push_to_history("p<a|f|r>               Print properties of object type");
     push_to_history("                       AGENT|FRAME|RIGID_BODY located in the");
     push_to_history("                       active folder.");
@@ -450,7 +455,7 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
     push_to_history("");
     push_to_history("Special keys:");
     push_to_history("TAB                    Auto-complete of paths in commands");
-    push_to_history("                       ls and cd based on the typed prefix.");
+    push_to_history("                       accepting a path based on the typed prefix.");
     push_to_history("TAB+TAB                When TAB key is pressed twice in short");
     push_to_history("                       time window, then folders of the typed");
     push_to_history("                       path are printed. This works only for");
@@ -681,6 +686,52 @@ void  console::execute_ps(std::vector<std::string> const&  words, simulator cons
 void  console::execute_pt(std::vector<std::string> const&  words, simulator const&  sim)
 {
     push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+}
+
+
+void  console::execute_tree(std::vector<std::string> const&  words, simulator const&  sim)
+{
+    if (words.size() > 2ULL)
+    {
+        push_to_history("tree: The command accepts zero or one argument (path).");
+        return;
+    }
+
+    simulation_context const&  ctx = *sim.context();
+
+    object_guid  current_folder_guid;
+    if (words.size() == 1ULL)
+        current_folder_guid = ctx.from_absolute_path(scene_path_to_string());
+    else
+    {
+        std::string const  path =
+                (words.at(1).front() == '/' ? "" : scene_path_to_string()) +
+                words.at(1) +
+                (words.at(1).back() == '/' ? "" : "/")
+                ;
+        current_folder_guid = ctx.from_absolute_path(path);
+        if (!ctx.is_valid_folder_guid(current_folder_guid))
+        {
+            push_to_history(msgstream() << "Error: The path '" << path << "' is NOT a valid folder.");
+            return;
+        }
+    }
+
+    ctx.for_each_child_folder(current_folder_guid, true, true,
+        [this, &ctx, current_folder_guid](object_guid const  folder_guid, simulation_context::folder_content_type const&  fct) -> bool {
+            std::stringstream  sstr;
+            if (current_folder_guid != folder_guid)
+            {
+                for (object_guid  guid = ctx.parent_folder(folder_guid); guid != current_folder_guid; guid = ctx.parent_folder(guid))
+                    sstr << "|  ";
+                push_to_history(msgstream() << sstr.str() << "+ " << fct.folder_name);
+            }
+            sstr << "|  ";
+            for (auto const&  kind_and_names : fct.content_index)
+                for (auto const&  name : kind_and_names.second)
+                    push_to_history(msgstream() << sstr.str() << '<' << to_string(kind_and_names.first) << "> " << name);
+            return true;
+        });
 }
 
 

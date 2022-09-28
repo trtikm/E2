@@ -36,6 +36,7 @@ private:
     void  execute_pr(std::vector<std::string> const&  words, simulator const&  sim);
     void  execute_ps(std::vector<std::string> const&  words, simulator const&  sim);
     void  execute_pt(std::vector<std::string> const&  words, simulator const&  sim);
+    void  execute_tree(std::vector<std::string> const&  words, simulator const&  sim);
 
     natural_32_bit  m_cursor;
     std::string  m_command_line;
