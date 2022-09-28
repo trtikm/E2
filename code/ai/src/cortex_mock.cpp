@@ -12,14 +12,20 @@ void  cortex_mock::next_round(float_32_bit const  time_step_in_seconds, mock_inp
 {
     TMPROF_BLOCK();
 
+    if (!mock_input.viewport->is_point_inside({ mock_input.mouse->cursor_x(), mock_input.mouse->cursor_y() }))
+    {
+        motion_desire_props_ref().move.clear();
+        return;
+    }
+
     // Screen space: Origin is in the center of the screen, x-axis goes to the right, and y-axis goes up.
     //               Range of coords along both axes is <-1,1>.
 
     auto const  clip = [](float_32_bit const  x) -> float_32_bit { return std::max(-1.0f, std::min(x, 1.0f)); };
 
     vector2 const  mouse_pos {
-        clip(2.0f * (mock_input.mouse->cursor_x() / (float_32_bit)mock_input.window->window_width()) - 1.0f),
-        clip(2.0f * (1.0f - mock_input.mouse->cursor_y() / (float_32_bit)mock_input.window->window_height()) - 1.0f)
+        clip(2.0f * ((mock_input.mouse->cursor_x() - mock_input.viewport->left) / (float_32_bit)mock_input.viewport->width()) - 1.0f),
+        clip(2.0f * (1.0f - (mock_input.mouse->cursor_y() - mock_input.viewport->bottom) / (float_32_bit)mock_input.viewport->height()) - 1.0f)
     };
 
     // states of buttons & keys -----------------------

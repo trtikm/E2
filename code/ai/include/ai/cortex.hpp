@@ -6,6 +6,7 @@
 #   include <ai/agent_system_variables.hpp>
 #   include <ai/agent_state_variables.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <gfx/viewport.hpp>
 #   include <osi/window_props.hpp>
 #   include <osi/keyboard_props.hpp>
 #   include <osi/mouse_props.hpp>
@@ -22,11 +23,13 @@ struct  cortex
         mock_input_props(
                 osi::keyboard_props const* const  keyboard_,
                 osi::mouse_props const* const  mouse_,
-                osi::window_props const* const  window_
+                osi::window_props const* const  window_,
+                gfx::viewport const* const  viewport_
                 );
         osi::keyboard_props const*  keyboard;
         osi::mouse_props const*  mouse;
         osi::window_props const*  window;
+        gfx::viewport const*  viewport;
     };
 
     cortex(agent const*  myself_);

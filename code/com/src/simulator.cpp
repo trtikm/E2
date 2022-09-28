@@ -362,7 +362,9 @@ void  simulator::simulate()
 
     simulation_context&  ctx = *context();
 
-    static ai::cortex::mock_input_props const  mock_input{ &get_keyboard_props(), &get_mouse_props(), &get_window_props() };
+    ai::cortex::mock_input_props const  mock_input{
+            &get_keyboard_props(), &get_mouse_props(), &get_window_props(), &get_viewport(VIEWPORT_TYPE::SCENE)
+            };
     ai::cortex::mock_input_props const* const  mock_input_ptr =
             render_config().camera_controller_type == CAMERA_CONTROLLER_TYPE::CAMERA_IS_LOCKED ? &mock_input : nullptr;
 
