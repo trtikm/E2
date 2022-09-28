@@ -86,13 +86,6 @@ void  text_box::update(float_32_bit const  round_seconds, osi::keyboard_props co
         }
     }
 
-    float_32_bit  raw_line_idx = 
-            (float_32_bit)m_bottom_line_index - m_scroll_lines_delta *
-            (get_viewport().is_point_inside({ mouse.cursor_x(), mouse.cursor_y() }) ? mouse.wheel_delta_y() : 0.0f);
-    raw_line_idx = std::max(0.0f, std::min((float_32_bit)(m_text_info.num_rows == 0U ? 0U : m_text_info.num_rows - 1U),
-                                           raw_line_idx + 0.5f));
-    m_bottom_line_index = (natural_32_bit)raw_line_idx;
-
     if (m_cursor_batch.empty() || m_cursor_scale != m_tid.scale)
     {
         m_cursor_scale = m_tid.scale;
@@ -108,6 +101,25 @@ void  text_box::update(float_32_bit const  round_seconds, osi::keyboard_props co
         m_cursor_visible = true;
     }
 
+    integer_32_bit  min_bottom_line_index, max_bottom_line_index;
+    {
+        gfx::viewport const&  vp = get_viewport();
+        float_32_bit const  vp_dy = 0.001f * vp.height() * vp.pixel_height_mm;
+        float_32_bit const  line_dy = m_tid.scale * (m_font->char_height + m_font->char_separ_dist_y);
+
+        min_bottom_line_index = line_dy < 1e-6f ? 0 : std::max(0, (integer_32_bit)std::floorf(vp_dy / line_dy) - 1);
+        max_bottom_line_index = m_text_info.num_rows - 1;
+    }
+
+    integer_32_bit num_lines_to_scroll;
+    {
+        if (std::fabsf(mouse.wheel_delta_y()) > 1e-6f && get_viewport().is_point_inside({ mouse.cursor_x(), mouse.cursor_y() }))
+            num_lines_to_scroll = (integer_32_bit)std::roundf(m_scroll_lines_delta * -mouse.wheel_delta_y());
+        else
+            num_lines_to_scroll = 0;
+    }
+
+    m_bottom_line_index = std::max(min_bottom_line_index, std::min(max_bottom_line_index, (integer_32_bit)m_bottom_line_index + num_lines_to_scroll));
 }
 
 
@@ -115,13 +127,10 @@ void  text_box::render(draw_state&  dstate) const
 {
     gfx::viewport const&  vp = get_viewport();
 
-    natural_16_bit const  left_pixel = (natural_16_bit)vp.left;
-    natural_16_bit const  right_pixel = (natural_16_bit)vp.right;
-
-    float_32_bit  left_m = 0.001f * left_pixel * vp.pixel_width_mm;
-    float_32_bit  right_m = 0.001f * right_pixel * vp.pixel_width_mm;
-    float_32_bit  bottom_m = 0.001f * -(vp.height() / 2.0f) * vp.pixel_height_mm;
-    float_32_bit  top_m = 0.001f * (vp.height() / 2.0f) * vp.pixel_height_mm;
+    float_32_bit  left_m = 0.001f * vp.left * vp.pixel_width_mm;
+    float_32_bit  right_m = 0.001f * vp.right * vp.pixel_width_mm;
+    float_32_bit  bottom_m = 0.001f * vp.bottom * vp.pixel_height_mm;
+    float_32_bit  top_m = 0.001f * vp.top * vp.pixel_height_mm;
 
     float_32_bit const  line_dy = m_tid.scale * (m_font->char_height + m_font->char_separ_dist_y);
     bool const  all_fits_in = top_m - bottom_m >= line_dy * m_text_info.num_rows;
