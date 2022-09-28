@@ -1,6 +1,11 @@
 #include <com/console.hpp>
 #include <com/simulator.hpp>
 #include <com/simulation_context.hpp>
+#include <ai/cortex_default.hpp>
+#include <ai/cortex_mock.hpp>
+#include <ai/cortex_netlab.hpp>
+#include <ai/cortex_random.hpp>
+#include <ai/cortex_robot.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
@@ -22,6 +27,22 @@ std::string  print_vector3(vector3 const&  v)
 std::string  print_quaternion(quaternion const&  q)
 {
     return msgstream() << "[ " << q.w() << "; " << q.x() << ", " << q.y() << ", " << q.z() << " ]";
+}
+
+
+std::unordered_set<std::string> const&  get_tab_key_using_commands()
+{
+    static std::unordered_set<std::string> const  cmds {
+        "ls", "cd", "tree",
+        "pa", "pc", "pf"
+    };
+    return cmds;
+}
+
+
+bool is_tab_key_using_command(std::string const&  cmd)
+{
+    return get_tab_key_using_commands().count(cmd) != 0ULL;
 }
 
 
@@ -327,7 +348,7 @@ bool  console::on_tab(simulator const&  sim)
     detail::split_string(m_command_line, ' ', words);
     if (words.empty())
         return false;
-    if (words.front() == "ls" || words.front() == "cd" || words.front() == "tree")
+    if (is_tab_key_using_command(words.front()))
     {
         simulation_context const&  ctx = *sim.context();
         auto const  folder_guid_and_last = detail::build_path(words, 1U, scene_path_to_string(), ctx);
@@ -378,7 +399,7 @@ void  console::on_double_tab(simulator const&  sim)
     detail::split_string(m_command_line, ' ', words);
     if (words.empty() || words.size() > 2UL)
         return;
-    if (words.front() == "ls" || words.front() == "cd" || words.front() == "tree")
+    if (is_tab_key_using_command(words.front()))
     {
         simulation_context const&  ctx = *sim.context();
         auto const  folder_guid_and_last = detail::build_path(words, 1U, scene_path_to_string(), ctx);
@@ -443,10 +464,11 @@ void  console::execute_help(std::vector<std::string> const&  words, simulator co
     push_to_history("tree [<path>]          Prints the tree of the scene hierarchy");
     push_to_history("                       under the passed <path>. If no path is");
     push_to_history("                       passed, the <path> is set to '.'.");
-    push_to_history("p<a|f|r>               Print properties of object type");
+    push_to_history("p<a|f|r> [<path>]      Prints properties of object type");
     push_to_history("                       AGENT|FRAME|RIGID_BODY located in the");
-    push_to_history("                       active folder.");
-    push_to_history("p<b|c|s|t> [<name>]    Print properties of object type");
+    push_to_history("                       <path> folder. If no path is passed,");
+    push_to_history("                       the <path> is set to '.'.");
+    push_to_history("p<b|c|s|t> [<name>]    Prints properties of object type");
     push_to_history("                       BATCH|COLLIDER|SENSOR|TIMER of the name");
     push_to_history("                       <name> located in the active folder.");
     push_to_history("                       If there is exactly one object of the");
@@ -532,7 +554,141 @@ void  console::execute_cd(std::vector<std::string> const&  words, simulator cons
 
 void  console::execute_pa(std::vector<std::string> const&  words, simulator const&  sim)
 {
-    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+    if (words.size() > 2ULL)
+    {
+        push_to_history("pa: The command accepts at most one argument (folder path).");
+        return;
+    }
+
+    std::string const  path = words.size() == 1UL ? scene_path_to_string() :
+            (words.at(1).front() == '/' ? "" : scene_path_to_string()) +
+            words.at(1) +
+            (words.at(1).back() == '/' ? "" : "/")
+            ;
+
+    simulation_context const&  ctx = *sim.context();
+    object_guid const  current_folder_guid = ctx.from_absolute_path(path);
+    if (!ctx.is_valid_folder_guid(current_folder_guid))
+    {
+        push_to_history(msgstream() << "Error: The path '" << path << "' is NOT a valid folder.");
+        return;
+    }
+
+    object_guid const  agent_guid = ctx.folder_content_agent(current_folder_guid);
+    if (!ctx.is_valid_agent_guid(agent_guid))
+    {
+        push_to_history(msgstream() << "There is no AGENT in the folder.");
+        return;
+    }
+
+    push_to_history(msgstream() << "ID: " << const_cast<simulation_context&>(ctx).from_agent_guid(agent_guid));
+
+    push_to_history("State variables:");
+    for (auto const&  name_and_props : ctx.agent_state_variables(agent_guid))
+        push_to_history(msgstream() << "   " << name_and_props.first << " = "
+                                    << name_and_props.second.get_value()
+                                    << " [ " << name_and_props.second.get_min_value() << ", " << name_and_props.second.get_max_value() << " ] "
+                                    << name_and_props.second.get_ideal_value()
+                                    );
+
+    push_to_history("System variables:");
+    for (auto const&  name_and_value : ctx.agent_system_variables(agent_guid))
+        push_to_history(msgstream() << "   " << name_and_value.first << " = " << name_and_value.second);
+
+    ai::agent_system_state const&  sys_state = ctx.agent_system_state(agent_guid);
+    push_to_history("System state:");
+    push_to_history("   Motion object frame:");
+    push_to_history(msgstream() << "      origin = " << print_vector3(sys_state.motion_object_frame.origin()));
+    push_to_history(msgstream() << "      I = " << print_vector3(sys_state.motion_object_frame.basis_vector_x()));
+    push_to_history(msgstream() << "      J = " << print_vector3(sys_state.motion_object_frame.basis_vector_y()));
+    push_to_history(msgstream() << "      K = " << print_vector3(sys_state.motion_object_frame.basis_vector_z()));
+    push_to_history("   Camera frame:");
+    push_to_history(msgstream() << "      origin = " << print_vector3(sys_state.camera_frame.origin()));
+    push_to_history(msgstream() << "      I = " << print_vector3(sys_state.camera_frame.basis_vector_x()));
+    push_to_history(msgstream() << "      J = " << print_vector3(sys_state.camera_frame.basis_vector_y()));
+    push_to_history(msgstream() << "      K = " << print_vector3(sys_state.camera_frame.basis_vector_z()));
+
+    ai::scene_binding_ptr const  binding = ctx.agent_scene_binding(agent_guid);
+    push_to_history("Binding folders:");
+    push_to_history(msgstream() << "   agent                     : " << ctx.to_relative_path(binding->folder_guid_of_agent, current_folder_guid));
+    push_to_history(msgstream() << "   motion object             : " << ctx.to_relative_path(binding->folder_guid_of_motion_object, current_folder_guid));
+    push_to_history(msgstream() << "   motion object frame       : " << ctx.to_relative_path(ctx.folder_of_frame(binding->frame_guid_of_motion_object), current_folder_guid));
+    push_to_history(msgstream() << "   skeleton                  : " << ctx.to_relative_path(binding->folder_guid_of_skeleton, current_folder_guid));
+    push_to_history(msgstream() << "   skeleton frame            : " << ctx.to_relative_path(ctx.folder_of_frame(binding->frame_guid_of_skeleton), current_folder_guid));
+    push_to_history(msgstream() << "   skeleton sync             : " << ctx.to_relative_path(binding->folder_guid_of_skeleton_sync, current_folder_guid));
+    push_to_history(msgstream() << "   skeleton sync source frame: " << ctx.to_relative_path(ctx.folder_of_frame(binding->frame_guid_of_skeleton_sync_source), current_folder_guid));
+    push_to_history(msgstream() << "   skeleton sync target frame: " << ctx.to_relative_path(ctx.folder_of_frame(binding->frame_guid_of_skeleton_sync_target), current_folder_guid));
+
+    push_to_history("Motion templates:");
+    for (auto const&  name_and_template : ctx.agent_motion_templates(agent_guid).motions_map())
+        push_to_history(msgstream() << "   " << name_and_template.first);
+
+    ai::action_controller const&  action_ctrl = ctx.agent_action_controller(agent_guid);
+    push_to_history("Action controller:");
+    push_to_history("   Current action:");
+    push_to_history(msgstream() << "      name: " << action_ctrl.get_current_action()->get_name());
+    push_to_history(msgstream() << "      cyclic: " << action_ctrl.get_current_action()->is_cyclic());
+    push_to_history(msgstream() << "      complete: " << action_ctrl.get_current_action()->is_complete());
+    push_to_history(msgstream() << "      ghost complete: " << action_ctrl.get_current_action()->is_ghost_complete());
+    push_to_history(msgstream() << "      guard valid: " << action_ctrl.get_current_action()->is_guard_valid());
+    push_to_history(msgstream() << "      interpolation param: " << action_ctrl.get_current_action()->interpolation_parameter());
+
+    ai::sight_controller const&  sight_ctrl = ctx.agent_sight_controller(agent_guid);
+    push_to_history("Sight controller:");
+    push_to_history("   Camera config:");
+    ai::sight_controller::camera_config const& camera_cfg = sight_ctrl.get_camera_config();
+    push_to_history(msgstream() << "      origin z-shift: " << camera_cfg.origin_z_shift);
+    push_to_history(msgstream() << "      horizontal fov: " << camera_cfg.horizontal_fov_angle);
+    push_to_history(msgstream() << "      vertical fov  : " << camera_cfg.vertical_fov_angle);
+    push_to_history(msgstream() << "      near plane    : " << camera_cfg.near_plane);
+    push_to_history(msgstream() << "      far plane     : " << camera_cfg.far_plane);
+    ai::sight_controller::camera_perspective_ptr const  camera = sight_ctrl.get_camera();
+    if (camera != nullptr)
+    {
+        push_to_history("   Camera:");
+        push_to_history(msgstream() << "      near plane: " << camera->near_plane());
+        push_to_history(msgstream() << "      far plane: " << camera->far_plane());
+        push_to_history(msgstream() << "      left: " << camera->left());
+        push_to_history(msgstream() << "      right: " << camera->right());
+        push_to_history(msgstream() << "      bottom: " << camera->bottom());
+        push_to_history(msgstream() << "      top: " << camera->top());
+    }
+    else
+        push_to_history("   Camera: NONE");
+    push_to_history("   Ray cast config:");
+    ai::sight_controller::ray_cast_config const&  ray_cast = sight_ctrl.get_ray_cast_config();
+    push_to_history(msgstream() << "      do direct ray casts   : " << ray_cast.do_directed_ray_casts);
+    push_to_history(msgstream() << "      random rays per second: " << ray_cast.num_random_ray_casts_per_second);
+    push_to_history(msgstream() << "      ray seconds in history: " << ray_cast.max_ray_cast_info_life_time_in_seconds);
+    push_to_history(msgstream() << "      update depth image    : " << ray_cast.do_update_depth_image);
+    push_to_history(msgstream() << "      image cells x         : " << ray_cast.num_cells_along_x_axis);
+    push_to_history(msgstream() << "      image cells y         : " << ray_cast.num_cells_along_y_axis);
+    push_to_history(msgstream() << "   Num direct ray casts in history: " << sight_ctrl.get_directed_ray_casts_in_time().size());
+    push_to_history(msgstream() << "   Num random ray casts in history: " << sight_ctrl.get_random_ray_casts_in_time().size());
+
+    push_to_history("Cortex:");
+    if (ai::cortex_robot const * cortex_ptr = dynamic_cast<ai::cortex_robot const *>(&ctx.agent_cortex(agent_guid)))
+    {
+        push_to_history("   Type: ROBOT");
+    }
+    else if (ai::cortex_netlab const * cortex_ptr = dynamic_cast<ai::cortex_netlab const *>(&ctx.agent_cortex(agent_guid)))
+    {
+        push_to_history("   Type: NETLAB");
+    }
+    else if (ai::cortex_random const * cortex_ptr = dynamic_cast<ai::cortex_random const *>(&ctx.agent_cortex(agent_guid)))
+    {
+        push_to_history("   Type: RANDOM");
+    }
+    else if (ai::cortex_default const * cortex_ptr = dynamic_cast<ai::cortex_default const *>(&ctx.agent_cortex(agent_guid)))
+    {
+        push_to_history("   Type: DEFAULT");
+    }
+    else if (ai::cortex_mock const * cortex_ptr = dynamic_cast<ai::cortex_mock const *>(&ctx.agent_cortex(agent_guid)))
+    {
+        push_to_history("   Type: MOCK");
+    }
+    else
+        push_to_history("Error: Unknown cortex type.");
 }
 
 
@@ -625,14 +781,26 @@ void  console::execute_pc(std::vector<std::string> const&  words, simulator cons
 
 void  console::execute_pf(std::vector<std::string> const&  words, simulator const&  sim)
 {
-    if (words.size() != 1ULL)
+    if (words.size() > 2ULL)
     {
-        push_to_history("pf: The command accepts no argument.");
+        push_to_history("pf: The command accepts at most one argument (folder path).");
         return;
     }
 
+    std::string const  path = words.size() == 1UL ? scene_path_to_string() :
+            (words.at(1).front() == '/' ? "" : scene_path_to_string()) +
+            words.at(1) +
+            (words.at(1).back() == '/' ? "" : "/")
+            ;
+
     simulation_context const&  ctx = *sim.context();
-    object_guid const  current_folder_guid = ctx.from_absolute_path(scene_path_to_string());
+    object_guid const  current_folder_guid = ctx.from_absolute_path(path);
+    if (!ctx.is_valid_folder_guid(current_folder_guid))
+    {
+        push_to_history(msgstream() << "Error: The path '" << path << "' is NOT a valid folder.");
+        return;
+    }
+
     object_guid const  frame_guid = ctx.folder_content_frame(current_folder_guid);
     if (!ctx.is_valid_frame_guid(frame_guid))
     {
@@ -667,12 +835,31 @@ void  console::execute_pf(std::vector<std::string> const&  words, simulator cons
     }
     else
         push_to_history(msgstream() << "Parent: NONE");
-
 }
 
 
 void  console::execute_pr(std::vector<std::string> const&  words, simulator const&  sim)
 {
+    if (words.size() > 2ULL)
+    {
+        push_to_history("pr: The command accepts at most one argument (folder path).");
+        return;
+    }
+
+    std::string const  path = words.size() == 1UL ? scene_path_to_string() :
+            (words.at(1).front() == '/' ? "" : scene_path_to_string()) +
+            words.at(1) +
+            (words.at(1).back() == '/' ? "" : "/")
+            ;
+
+    simulation_context const&  ctx = *sim.context();
+    object_guid const  current_folder_guid = ctx.from_absolute_path(path);
+    if (!ctx.is_valid_folder_guid(current_folder_guid))
+    {
+        push_to_history(msgstream() << "Error: The path '" << path << "' is NOT a valid folder.");
+        return;
+    }
+
     push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
 }
 

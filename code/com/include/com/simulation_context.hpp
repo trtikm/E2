@@ -18,7 +18,14 @@
 #   include <angeo/custom_constraint_id.hpp>
 #   include <ai/agent_id.hpp>
 #   include <ai/agent_config.hpp>
+#   include <ai/agent_state_variables.hpp>
+#   include <ai/agent_system_variables.hpp>
+#   include <ai/agent_system_state.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
+#   include <ai/action_controller.hpp>
+#   include <ai/sight_controller.hpp>
+#   include <ai/cortex.hpp>
+#   include <ai/navigation.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/dynamic_array.hpp>
 #   include <boost/property_tree/ptree.hpp>
@@ -30,6 +37,7 @@
 #   include <functional>
 #   include <algorithm>
 #   include <memory>
+
 
 namespace angeo {
     struct  collision_scene;
@@ -656,6 +664,14 @@ struct  simulation_context
     std::string const&  name_of_agent(object_guid const  agent_guid) const;
     std::unordered_set<object_guid> const&  colliders_of_agent(object_guid const  agent_guid) const;
     object_guid  to_agent_guid(ai::agent_id const  agid) const;
+    ai::agent_state_variables const&  agent_state_variables(object_guid const  agent_guid) const;
+    ai::agent_system_variables const&  agent_system_variables(object_guid const  agent_guid) const;
+    ai::agent_system_state const&  agent_system_state(object_guid const  agent_guid) const;
+    ai::skeletal_motion_templates  agent_motion_templates(object_guid const  agent_guid) const;
+    ai::scene_binding_ptr  agent_scene_binding(object_guid const  agent_guid) const;
+    ai::action_controller const&  agent_action_controller(object_guid const  agent_guid) const;
+    ai::sight_controller const&  agent_sight_controller(object_guid const  agent_guid) const;
+    ai::cortex const&  agent_cortex(object_guid const  agent_guid) const;
     agent_guid_iterator  agents_begin() const;
     agent_guid_iterator  agents_end() const;
     void  request_late_insert_agent(

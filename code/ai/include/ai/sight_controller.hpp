@@ -7,7 +7,6 @@
 #   include <angeo/tensor_math.hpp>
 #   include <gfx/camera.hpp>
 #   include <com/object_guid.hpp>
-#   include <com/simulation_context.hpp>
 #   include <utility/random.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <unordered_map>

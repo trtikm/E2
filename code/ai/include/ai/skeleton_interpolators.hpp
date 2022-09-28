@@ -3,7 +3,6 @@
 
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/scene_binding.hpp>
-#   include <ai/sight_controller.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <vector>

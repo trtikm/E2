@@ -2623,6 +2623,70 @@ object_guid  simulation_context::to_agent_guid(ai::agent_id const  agid) const
 }
 
 
+ai::agent_state_variables const&  simulation_context::agent_state_variables(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    return m_ai_simulator_ptr->get_agent(self->from_agent_guid(agent_guid)).get_state_variables();
+}
+
+
+ai::agent_system_variables const&  simulation_context::agent_system_variables(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    return m_ai_simulator_ptr->get_agent(self->from_agent_guid(agent_guid)).get_system_variables();
+}
+
+
+ai::agent_system_state const&  simulation_context::agent_system_state(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    return m_ai_simulator_ptr->get_agent(self->from_agent_guid(agent_guid)).get_system_state();
+}
+
+
+ai::skeletal_motion_templates  simulation_context::agent_motion_templates(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    return m_ai_simulator_ptr->get_agent(self->from_agent_guid(agent_guid)).get_motion_templates();
+}
+
+
+ai::scene_binding_ptr  simulation_context::agent_scene_binding(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    return m_ai_simulator_ptr->get_agent(self->from_agent_guid(agent_guid)).get_binding();
+}
+
+
+ai::action_controller const&  simulation_context::agent_action_controller(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    return m_ai_simulator_ptr->get_agent(self->from_agent_guid(agent_guid)).get_action_controller();
+}
+
+
+ai::sight_controller const&  simulation_context::agent_sight_controller(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    return m_ai_simulator_ptr->get_agent(self->from_agent_guid(agent_guid)).get_sight_controller();
+}
+
+
+ai::cortex const&  simulation_context::agent_cortex(object_guid const  agent_guid) const
+{
+    ASSUMPTION(is_valid_agent_guid(agent_guid));
+    simulation_context* const  self = const_cast<simulation_context*>(this);
+    return m_ai_simulator_ptr->get_agent(self->from_agent_guid(agent_guid)).get_cortex();
+}
+
+
 simulation_context::agent_guid_iterator  simulation_context::agents_begin() const
 {
     return agent_guid_iterator(m_agents.valid_indices().begin());
