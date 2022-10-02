@@ -105,6 +105,35 @@ std::size_t  motion_template_cursor::hasher::operator()(motion_template_cursor c
 }
 
 
+motion_template::bounding_boxes_half_sizes_data::bounding_boxes_half_sizes_data(async::finalise_load_on_destroy_ptr const  finaliser)
+    : m_half_sizes()
+{
+    TMPROF_BLOCK();
+
+    std::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
+
+    if (!std::filesystem::is_regular_file(pathname))
+        throw std::runtime_error(msgstream() << "Cannot access file '" << pathname << "'.");
+
+    std::ifstream  istr;
+    angeo::open_file_stream_for_reading(istr, pathname);
+    natural_32_bit  num_bboxes = angeo::read_num_records(istr, pathname);
+    for (natural_32_bit i = 0U, line_number = 0U; i != num_bboxes; ++i)
+    {
+        vector3  sizes;
+        line_number = angeo::read_vector3(sizes, istr, line_number, pathname);
+        m_half_sizes.push_back(sizes);
+    }
+    istr.close();
+}
+
+
+motion_template::bounding_boxes_half_sizes_data::~bounding_boxes_half_sizes_data()
+{
+    TMPROF_BLOCK();
+}
+
+
 skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : pose_frames()
     , from_pose_matrices()
@@ -204,7 +233,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes is less than 2 in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.reference_frames.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'reference_frames' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.bboxes.size())
+                    if (record.keyframes.num_keyframes() != record.bboxes.half_sizes().size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'bboxes' differ in 'motions_map[" << entry.first << "]'.");
                 }
             },
@@ -425,19 +454,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     record.reference_frames = motion_template::reference_frames_type(meta_pathname / "reference_frames.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::reference_frames");
 
                 if (record.bboxes.empty() && std::filesystem::is_regular_file(meta_pathname / "bboxes.txt"))
-                {
-                    std::filesystem::path const  bboxes_pathname = meta_pathname / "bboxes.txt";
-                    std::ifstream  istr;
-                    angeo::open_file_stream_for_reading(istr, bboxes_pathname);
-                    natural_32_bit  num_bboxes = angeo::read_num_records(istr, bboxes_pathname);
-                    for (natural_32_bit i = 0U, line_number = 0U; i != num_bboxes; ++i)
-                    {
-                        vector3  sizes;
-                        line_number = angeo::read_vector3(sizes, istr, line_number, pathname);
-                        record.bboxes.push_back(sizes);
-                    }
-                    istr.close();
-                }
+                    record.bboxes = motion_template::bounding_boxes_size(meta_pathname / "bboxes.txt", 1U, ultimate_finaliser, "ai::skeletal_motion_templates_data::bbox_half_sizes");
             }
         }
     }

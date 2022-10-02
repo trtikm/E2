@@ -46,12 +46,50 @@ struct  motion_template_cursor
 
 struct  motion_template
 {
+private:
+
+    struct  bounding_boxes_half_sizes_data
+    {
+        bounding_boxes_half_sizes_data(async::finalise_load_on_destroy_ptr const  finaliser);
+        ~bounding_boxes_half_sizes_data();
+
+        std::vector<vector3> const& half_sizes() const { return m_half_sizes; }
+
+    private:
+
+        std::vector<vector3>  m_half_sizes;
+    };
+
+public:
+
+    struct  bounding_boxes_size : public async::resource_accessor<bounding_boxes_half_sizes_data>
+    {
+        bounding_boxes_size()
+            : async::resource_accessor<bounding_boxes_half_sizes_data>()
+        {}
+
+        bounding_boxes_size(
+            std::filesystem::path const& path,
+            async::load_priority_type const  priority,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr,
+            std::string const& data_type_name = "ai::motion_template::bounding_boxes_half_sizes"
+        )
+            : async::resource_accessor<bounding_boxes_half_sizes_data>(
+                { data_type_name, path.string() },
+                priority,
+                parent_finaliser
+                )
+        {}
+
+        std::vector<vector3> const& half_sizes() const { return resource().half_sizes(); }
+    };
+
     using  keyframes_type = gfx::keyframes;
     using  reference_frames_type = gfx::modelspace;
 
     keyframes_type  keyframes;
     reference_frames_type  reference_frames;
-    std::vector<vector3>  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
+    bounding_boxes_size  bboxes;   // Half sizes of bboxes along axes. They are expressed in corresponding 'reference_frames'.
 };
 
 

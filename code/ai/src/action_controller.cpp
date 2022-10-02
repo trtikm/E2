@@ -192,7 +192,7 @@ agent_action::agent_action(
     load_motion_object_config(get_ptree_or_empty("MOTION_OBJECT_CONFIG", ptree_), get_ptree_or_empty("MOTION_OBJECT_CONFIG", defaults_));
     AABB_HALF_SIZE =
             read_aabb_half_size("AABB_HALF_SIZE", "AABB_HALF_SIZE_FROM_KEYFRAME",
-                                motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree_) +
+                                motion_templates().at(MOTION_TEMPLATE_NAME).bboxes.half_sizes(), ptree_) +
             motion_templates().pose_bbox_half_sizes_delta()
             ;
     load_sensors(get_ptree_or_empty("SENSORS", ptree_));
@@ -249,7 +249,7 @@ void  agent_action::load_motion_object_config(
     MOTION_OBJECT_CONFIG.shape_type = angeo::as_collision_shape_type(get_value<std::string>("shape_type", ptree, &defaults));
     MOTION_OBJECT_CONFIG.aabb_half_size =
             read_aabb_half_size("aabb_half_size", "aabb_half_size_from_keyframe",
-                                motion_templates().at(MOTION_TEMPLATE_NAME).bboxes, ptree) +
+                                motion_templates().at(MOTION_TEMPLATE_NAME).bboxes.half_sizes(), ptree) +
             motion_templates().pose_bbox_half_sizes_delta()
             ;
     MOTION_OBJECT_CONFIG.aabb_alignment = aabb_alignment_from_string(get_value("aabb_alignment", "Z_LO", ptree, &defaults));
