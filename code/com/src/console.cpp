@@ -34,7 +34,7 @@ std::unordered_set<std::string> const&  get_tab_key_using_commands()
 {
     static std::unordered_set<std::string> const  cmds {
         "ls", "cd", "tree",
-        "pa", "pc", "pf"
+        "pa", "pf", "pr"
     };
     return cmds;
 }
@@ -860,7 +860,35 @@ void  console::execute_pr(std::vector<std::string> const&  words, simulator cons
         return;
     }
 
-    push_to_history(msgstream() << "NOT IMPLEMENTED YET!");
+    object_guid const  rb_guid = ctx.folder_content_rigid_body(current_folder_guid);
+    if (!ctx.is_valid_rigid_body_guid(rb_guid))
+    {
+        push_to_history(msgstream() << "There is no RIGID_BODY in the folder.");
+        return;
+    }
+
+    push_to_history(msgstream() << "ID: " << const_cast<simulation_context&>(ctx).from_rigid_body_guid(rb_guid));
+    push_to_history(msgstream() << "Moveable: " << ctx.is_rigid_body_moveable(rb_guid));
+    push_to_history(msgstream() << "Inverted mass: " << ctx.inverted_mass_of_rigid_body(rb_guid));
+    push_to_history(msgstream() << "Mass centre: " << print_vector3(ctx.mass_centre_of_rigid_body(rb_guid)));
+    push_to_history(msgstream() << "Orientation: " << print_quaternion(ctx.orientation_of_rigid_body(rb_guid)));
+    push_to_history(msgstream() << "Linear velocity: " << print_vector3(ctx.linear_velocity_of_rigid_body(rb_guid)));
+    push_to_history(msgstream() << "Angular velocity: " << print_vector3(ctx.angular_velocity_of_rigid_body(rb_guid)));
+    push_to_history(msgstream() << "Linear acceleration: " << print_vector3(ctx.linear_acceleration_of_rigid_body(rb_guid)));
+    push_to_history(msgstream() << "Angular acceleration: " << print_vector3(ctx.angular_acceleration_of_rigid_body(rb_guid)));
+    push_to_history(msgstream() << "Initial linear accel: " << print_vector3(ctx.initial_linear_acceleration_of_rigid_body(rb_guid)));
+    push_to_history(msgstream() << "Initial angular accel: " << print_vector3(ctx.initial_angular_acceleration_of_rigid_body(rb_guid)));
+    if (ctx.colliders_of_rigid_body(rb_guid).empty())
+        push_to_history("Colliders: NONE");
+    else
+    {
+        push_to_history("Colliders:");
+        for (object_guid const  collider_guid : ctx.colliders_of_rigid_body(rb_guid))
+            push_to_history(msgstream() << "  " << ctx.to_relative_path(ctx.folder_of_collider(collider_guid), current_folder_guid)
+                                        << "  [" << ctx.name_of_collider(collider_guid)
+                                        << "][" << angeo::as_string(ctx.collider_shape_type(collider_guid))
+                                        << "]");
+    }
 }
 
 
