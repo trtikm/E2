@@ -12,6 +12,15 @@
 namespace gfx { 
 
 
+image_rgba_8888::image_rgba_8888(natural_32_bit const  width_, natural_32_bit const  height_)
+    : width(width_)
+    , height(height_)
+    , data()
+{
+    data.resize(width * height * 4U, 0U);
+}
+
+
 void  load_png_image(std::filesystem::path const&  path, image_rgba_8888&  img)
 {
     TMPROF_BLOCK();
