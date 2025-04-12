@@ -46,7 +46,7 @@ static std::string  vs_get_version()
 #if PLATFORM() == PLATFORM_WEBASSEMBLY()
     return "#version 300 es";
 #else
-    return "#version 330";
+    return "#version 420";
 #endif    
 }
 
@@ -56,7 +56,7 @@ static std::string  fs_get_version()
     return "#version 300 es\n"
            "precision highp float;\n";
 #else
-    return "#version 330";
+    return "#version 420";
 #endif    
 }
 

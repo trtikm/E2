@@ -1,0 +1,8 @@
+{
+    "dependencies": [
+        "glad",
+        "glfw3",
+        "lodepng",
+        "eigen3"
+    ]
+}

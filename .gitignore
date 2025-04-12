@@ -9,3 +9,4 @@ testapps/
 *.user
 animeta_state.json
 /CMakeSettings.json
+/vcpkg.json

@@ -2,7 +2,23 @@
 #   define ANGEO_TENSOR_MATH_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
+#   include <cmath>
 
+namespace std
+{
+    using ::sinf;
+    using ::cosf;
+    using ::tanf;
+    using ::asinf;
+    using ::acosf;
+    using ::atanf;
+    using ::fabsf;
+    using ::sqrtf;
+    using ::powf;
+    using ::floorf;
+    using ::ceilf;
+    using ::roundf;
+}
 
 #   ifdef E2_USE_UBLAS_MATH_LIBRARY
 

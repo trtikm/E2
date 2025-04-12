@@ -20,7 +20,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(CMAKE_COMPILER_IS_GNUCXX)
-    add_definitions("-std=c++11 -Wall -Wno-unused-local-typedefs")
+    add_definitions("-Wall -Wno-unused-local-typedefs")
     if ((CMAKE_BUILD_TYPE STREQUAL Debug) OR
         (CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo))
         add_definitions("-ggdb3")
@@ -109,6 +109,9 @@ else()
     message("Searching for Eigen ...")
     find_package(Eigen3 CONFIG REQUIRED)
     set(EIGEN_LIST_OF_LIBRARIES_TO_LINK_WITH "Eigen3::Eigen")
+    message("Eigen3 found at: ${EIGEN3_INCLUDE_DIRS}")
+    add_definitions( ${EIGEN3_DEFINITIONS} )
+    include_directories("${EIGEN3_INCLUDE_DIRS}")
 
     # find and add OpenGL
     message("Searching for OpenGL ...")
@@ -138,6 +141,8 @@ else()
     # find and add LODEPNG library
     message("Searching for LODEPNG ...")
     find_package(lodepng CONFIG REQUIRED)
+    find_path(lodepng_INCLUDES lodepng.h)
+    include_directories("${lodepng_INCLUDES}")
     set(LODEPNG_LIST_OF_LIBRARIES_TO_LINK_WITH "lodepng")
 endif()
 
